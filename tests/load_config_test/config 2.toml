@@ -1,0 +1,18 @@
+[topics]
+"application.status"="application.status"
+"pmudata"="pmudata"
+"pmu.coords"="pmu.coords"
+"modeestimation"="modeestimation"
+
+
+[kafka]
+use_nqkafka=true
+bootstrap_servers="localhost:9092"
+
+
+[geo_data]
+countries=["Norway", "Sweden", "Denmark", "Finland"]
+line_data_path='data/power_system_data/openinframap/scandinavia/numpy_data.npz'
+
+[misc]
+logo_path='statnett.svg'

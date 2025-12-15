@@ -1,0 +1,43 @@
+# # include=['model_measurement_map.toml']
+include=['startup_apps.toml']
+model_data_path='data/model_data.json'
+
+
+[pmus]
+ip='localhost'
+port=50000
+
+[pdc]
+ip='localhost'
+port=50000
+id=1
+
+
+# ['graphics']
+# background_color=[255, 255, 255]
+# gl_mode='translucent'
+
+[topics]
+"application.status"="application.status"
+"application.commands"="application.commands"
+"pmudata"="pmudata"
+"pmu.coords"="pmu.coords"
+"modeestimation"="modeestimation"
+"voltage.stability.index"="voltage.stability.index"
+"alarms"="alarms"
+"islanding"="islanding"
+"grid.events"="grid.events"
+"model.data"="model.data"
+
+[kafka]
+use_nqkafka=true
+bootstrap_servers="localhost:60000"
+# bootstrap_servers="127.0.0.1:40000"
+
+
+[geo_data]
+countries=["Norway", "Sweden", "Denmark", "Finland"]
+line_data_path='data/sld_geo.dxf'
+
+[sld_data]
+line_data_path='data/sld.dxf'

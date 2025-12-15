@@ -1,0 +1,41 @@
+[project]
+name = "p-swamp"
+version = "0.1.1"
+description = ""
+authors = [
+    {name = "Hallvar Haugdal", email = "hallvar.haugdal@sintef.no"},
+    {name = "Hallvar Haugdal", email = "hallvhau@gmail.com"},
+]
+dependencies = [
+    "numpy>=2.2.5",
+    "scipy",
+    "tomli",
+    "pandas>=2.3.1",
+	"numpy-dynamic-array",
+]
+requires-python = "<3.13,>=3.11"
+readme = "README.md"
+license = {text = "MIT"}
+
+[project.optional-dependencies]
+full = [
+    "tqdm>=4.67.1",
+    "PySide6==6.8.3",
+	"pyqtgraph",
+    "kafka-python",
+    "synchrophasor @ git+https://github.com/hallvar-h/pypmu",
+    "nqkafka @ git+https://github.com/hallvar-h/nqkafka",
+    "tops-rt @ git+https://github.com/hallvar-h/tops-rt",
+    "nfoursid",
+	"pyshp",
+	"pyopengl",
+	"qtrangeslider",
+	"ezdxf",
+    "paho-mqtt"
+]
+[build-system]
+requires = ["pdm-backend"]
+build-backend = "pdm.backend"
+
+[tool.pdm]
+distribution = true
