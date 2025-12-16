@@ -1,6 +1,6 @@
 # p-SWAMP (Power Stability Wide area Monitoring and Protection)
 
-The code in this repository is based on previous code from the research project NEWEPS.
+The code in this repository is based on previous code from the NEWEPS research project.
 
 ## Installation
 This Python package can be installed as follows:

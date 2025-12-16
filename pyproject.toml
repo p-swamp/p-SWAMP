@@ -36,6 +36,14 @@ full = [
 dev = [
     "pytest>=9.0.2",
 ]
+
+doc = [
+  "sphinx",
+  "sphinx-rtd-theme",
+  "sphinx-autoapi",
+  "sphinx-mdinclude"
+]
+
 [build-system]
 requires = ["pdm-backend"]
 build-backend = "pdm.backend"

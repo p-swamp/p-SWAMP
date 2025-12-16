@@ -1,0 +1,17 @@
+examples_dir
+│
+├── apps/
+│   ├── time_window_plot.py
+│   ├── app_launcher.py
+│   └── ...
+│
+├── data/
+│   ├── sld.dxf
+│   ├── sld_geo.dxf
+│   ├── model_data.json
+│   └── ...
+│
+├── config.toml
+├── run_case.py
+├── readme.md
+└── ...
