@@ -80,11 +80,11 @@ if __name__ == '__main__':
     # with open(config['model_data_path']) as file:
         # model_data = json.load(file)
 
-    line_data = read_model_data(config, 'lines')
-    trafo_data = read_model_data(config, 'transformers')
-    load_data = read_model_data(config, 'loads')
-    gen_data = read_model_data(config, 'generators')
-    bus_data = read_model_data(config, 'buses')
+    line_data = read_model_data(config, 'line')
+    trafo_data = read_model_data(config, 'trafo')
+    load_data = read_model_data(config, 'load')
+    gen_data = read_model_data(config, 'gen:GEN')
+    bus_data = read_model_data(config, 'bus')
     data = {
         'lines': {'Line': line_data},
         'trafos': {'Trafo': trafo_data},

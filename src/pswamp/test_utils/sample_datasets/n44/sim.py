@@ -1,10 +1,26 @@
 import numpy as np
 import tops.dynamic as dps
 from pathlib import Path
+import json
 
 
 def create_sim():
-    ps = dps.PowerSystemModel(model=str(Path(__file__).parent/'model_data.json'))
+
+    with open(str(Path(__file__).parent/'model_data.json')) as f:
+        data = f.read()
+    model_data = json.loads(data)
+    model_data["buses"] = model_data.pop("bus")
+    model_data["lines"] = model_data.pop("line")
+    model_data["trafos"] = model_data.pop("trafo")
+    model_data["loads"] = model_data.pop("load")
+    keys = list(model_data.keys())
+    for key in keys:
+        spl = key.split(":")
+        if len(spl) <= 1:
+            continue
+        model_data[spl[0]] = {spl[1]: model_data.pop(key)}    
+    
+    ps = dps.PowerSystemModel(model=model_data)
 
     control_data = {}
     control_data['gov'] = {'TGOV1':

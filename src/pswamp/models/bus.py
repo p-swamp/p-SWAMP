@@ -55,13 +55,13 @@ if __name__ == '__main__':
     import pandas as pd
     config = load_config()
 
-    line_data = read_model_data(config, 'lines')
-    trafo_data = read_model_data(config, 'transformers')
+    line_data = read_model_data(config, 'line')
+    trafo_data = read_model_data(config, 'trafo')
     
     # copy_bus = model_data['buses'][-1].copy()
     # copy_bus[0] = '8701'
     # model_data['buses'].append(copy_bus)
-    bus_data = read_model_data(config, 'buses')
+    bus_data = read_model_data(config, 'bus')
     # len(bus_data)
     # popped_bus = model_data['buses'].pop()
     # bus_data_mod = read_model_data(model_data, 'buses')

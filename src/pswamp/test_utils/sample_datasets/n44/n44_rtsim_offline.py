@@ -40,7 +40,7 @@ def run_n44_rtsim_offline(config, events_spec=None, t_end=10):
     # Wait for a while, to make sure the server has started before continuing
     # time.sleep(2)
 
-    # runners.create_topics(config)
+    runners.create_topics(config)
     # runners.publish_geo_data(config, load_coordinates())
     runners.publish_model_data(config)
 

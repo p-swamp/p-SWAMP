@@ -60,7 +60,7 @@ if __name__ == '__main__':
     config = load_config()
 
     all_model_data = read_model_data(config)
-    model_data_subset = read_model_data(config, 'lines')
+    model_data_subset = read_model_data(config, 'line')
     
     model_data_raw = read_model_data(config, format='raw')
     

@@ -129,9 +129,9 @@ if __name__ == '__main__':
     # with open(config['model_data_path']) as file:
         # model_data = json.load(file)
 
-    line_data = read_model_data(config, 'lines')
-    trafo_data = read_model_data(config, 'transformers')
-    bus_data = read_model_data(config, 'buses')
+    line_data = read_model_data(config, 'line')
+    trafo_data = read_model_data(config, 'trafo')
+    bus_data = read_model_data(config, 'bus')
 
     from topsrt.pmu_currents_freq import PMUPublisherCurrentsFreq
     obj = type('', (), {'stations': None, 'ip': '', 'port': 0, 'pdc_id': 1, 'fs': 50})()
