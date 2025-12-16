@@ -33,6 +33,9 @@ full = [
 	"ezdxf",
     "paho-mqtt"
 ]
+dev = [
+    "pytest>=9.0.2",
+]
 [build-system]
 requires = ["pdm-backend"]
 build-backend = "pdm.backend"

@@ -27,7 +27,7 @@ The examples can be run in two different modes:
 By default, the examples are configured to use the second option (NQKafka).
 
 ## Status
-Currently, a few sample monitoring applications/microservices are included in the repository:
+Currently, a few sample monitoring applications/microservices are included in the repository, among others:
 * **N4SID Mode Estimation:** Monitoring of electromechanical oscillations, producing estimates of oscillation frequency, damping and observability mode shapes.
 * **Mode Estimation Visualization:** Visualization of results from Mode Estimation applications.
 * **FFT Visualization:** Visualization of FFT (Fast Fourier Transform) of signals.

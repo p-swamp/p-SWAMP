@@ -31,5 +31,5 @@ def test_app_offline_rtsim():
 
 
 if __name__ == '__main__':
-    test_app_online()
+    # test_app_online()
     test_app_offline_rtsim()
