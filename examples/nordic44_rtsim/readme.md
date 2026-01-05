@@ -1,19 +1,17 @@
 # Example: Real-time Simulation of the Nordic 44 Bus System
 *Located in the repository in **examples/nordi44_rtsim***
 
-In this example, a real-time simulation of the Nordic 44 Bus System is performed using the packages tops and topsrt. The voltages at all buses are streamed during the simulation in the C37.118 format using the PyPMU package. The PMU stream is forwarded to Kafka, and analyzed/visualized with any of the selected applications.
+In this example, a real-time simulation of the Nordic 44 Bus System is performed using the packages TOPS and TOPS-RT. The voltages at all buses, as well as electric frequency and line and transformer currents, are streamed during the simulation in the C37.118 format using the PyPMU package. The PMU stream is forwarded to Kafka, and analyzed/visualized with any of the selected applications.
 
 By default, the example uses NQKafka instead of real Kafka. NQKafka (Not-Quite-Kafka) was written to allow the code to run without requiring setting up a Kafka server.  To use real Kafka instead, the field use_nqkafka_server can be set to False in the config.py file (this requires a running Kafka server).
 
 ## To run the example
-1. Run the script **start_sim.py**. This will start a real-time simulation of the Nordic 44 bus system, with an outgoing C37.118 stream.
-2. Run the script **run_case.py**. This will automatically start/run a number of things:
+1. Run the script **run_case.py**. This will automatically start/run a number of things:
    * Starting a NQKafka server,
    * Creating the required topics,
-   * Put PMU coordinates into Kafka (allowing their locations to be plotted on the map),
-   * Putting C37.118 dataframes (from the simulation) into Kafka,
+   * Starting a real-time simulation of the Nordic 44 bus system, which sends C37.118 data frames to the NQKafka server,
    * Starting the main window.
-3. Launch an application by clicking one or more of the buttons that appear, or by running one of the scripts in the folder
+2. Launch an application by clicking one or more of the buttons that appear, or by running one of the "apps" in the folder
    * **main_window.py**: Run main window
    * **fft_viz.py**: FFT visualization
    * **time_window_plot.py**: Time window plot of the PMU stream
