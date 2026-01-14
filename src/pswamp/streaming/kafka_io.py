@@ -1,6 +1,39 @@
 import time
-from pswamp.streaming.kafka_extras import KafkaConsumer, KafkaProducer, get_last_message_from_topic, consumer_seek_relative_offset
-import pickle
+from kafka import KafkaConsumer, KafkaProducer
+from kafka.structs import TopicPartition
+from pswamp.streaming.utils import encoder, decoder
+
+
+
+def consumer_seek_relative_offset(consumer, relative_offset):
+    consumer.topics()
+    partition_assignment = consumer.assignment()
+    assert len(partition_assignment) == 1
+    partition = next(iter(partition_assignment))
+    current_offset = consumer.position(partition)
+    new_offset = current_offset + relative_offset
+    try:
+        consumer.seek(partition, new_offset)
+    except AssertionError:
+        consumer.seek(partition, 0)
+
+
+def get_last_message_from_topic(topic, **io_kwargs):
+    consumer = KafkaConsumer(**io_kwargs)
+    partition_idxs = consumer.partitions_for_topic(topic)
+    partition_idx = next(iter(partition_idxs))
+    partition = TopicPartition(topic, partition_idx)
+
+    end_offset = consumer.end_offsets([partition])[partition]
+
+    consumer = KafkaConsumer(
+        **io_kwargs, value_deserializer=decoder
+    )  # , offset=end_offset)
+    consumer.assign([partition])
+    end_offset = end_offset - 1 if end_offset > 0 else 0
+    consumer.seek(partition, end_offset)
+
+    return next(iter(consumer)).value
 
 
 class KafkaIO:
@@ -9,7 +42,7 @@ class KafkaIO:
     TODO: Remove t_start from arguments.
     
     Args:
-        kafka_kwargs: Kwargs that will be used in kafka consumers and producers.
+        io_kwargs: Kwargs that will be used in kafka consumers and producers.
         input_topic: Kafka topic for input data stream.
         output_topic: Kafka topic for output data stream.
         status_topic: Kafka topic for status messages.
@@ -19,42 +52,43 @@ class KafkaIO:
     """
     def __init__(
         self,
-        kafka_kwargs,
+        io_kwargs,
         input_topic='pmudata',
         output_topic=None,
         status_topic='application.status',
         t_start=None,
         command_topic="application.commands",
+        # **io_kwargs,
         # auto_adjust_offset=True,
         # *args,
     ):
 
         self.input_topic = input_topic
-        self.kafka_kwargs = kafka_kwargs
-        self.kafka_server = kafka_kwargs['bootstrap_servers']
+        self.io_kwargs = io_kwargs
+        self.kafka_server = io_kwargs['bootstrap_servers']
         self.command_topic = command_topic
 
         self.input_stream = KafkaConsumer(
-            self.input_topic, value_deserializer=pickle.loads, **kafka_kwargs
+            self.input_topic, value_deserializer=decoder, **io_kwargs
         )
-        sample_frame = self.get_sample_data_frame()
+        # sample_frame = self.get_sample_data_frame()
   
         # If output topic is specified, the results returned by "run_analysis" will be forwarded to this topic.
         self.output_topic = output_topic
 
         if self.output_topic is not None:
             self.kafka_producer = KafkaProducer(
-                **kafka_kwargs, value_serializer=pickle.dumps
+                **io_kwargs, value_serializer=encoder
             )
         else:
             self.kafka_producer = None
 
         self.status_topic = status_topic
         self.status_producer = KafkaProducer(
-            **kafka_kwargs, value_serializer=pickle.dumps)
+            **io_kwargs, value_serializer=encoder)
         
         self.command_consumer = KafkaConsumer(
-            self.command_topic, **self.kafka_kwargs)
+            self.command_topic, **self.io_kwargs)
 
     def get_sample_data_frame(self):
         """Get sample data frame from input (without affecting input stream)
@@ -64,7 +98,8 @@ class KafkaIO:
         """
         while True:
             sample_data_frame = get_last_message_from_topic(
-                self.kafka_kwargs, self.input_topic)
+                self.input_topic, **self.io_kwargs
+            )
             if sample_data_frame is not None:
                 break
             time.sleep(1)

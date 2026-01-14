@@ -1,13 +1,12 @@
 import numpy as np
-from pswamp.utils.pmu_time_window import PMUTimeWindowOnline
 from pswamp.utils.load_config import load_config
 from pswamp.gui.components.channel_select_geo import ChannelSelectMap
 from pswamp.gui.components.channel_select import ChannelSelect
-from pswamp.streaming.kafka_extras import get_last_message_from_topic
+from pswamp.streaming import get_last_message_from_topic
 from pswamp.visualization.components.date_time_axis import DateAxisItem
 # from pswamp.visualization.time_window_plot_v2 import TimeWindowPlotV2
 import threading
-from PySide6 import QtWidgets, QtCore, QtGui
+from PySide6 import QtWidgets, QtCore
 import pyqtgraph as pg
 import sys
 from pswamp.app_templates.time_window_app import TimeWindowApp
@@ -123,7 +122,7 @@ class TimeWindowPlotV2(QtWidgets.QWidget):
 class TimeWindowPlotGUI(QtWidgets.QMainWindow):
     def __init__(
             self,
-            kafka_kwargs,
+            io_kwargs,
             input_topic="pmudata",
             pmu_coords_topic="pmu_coords_topic",
             countries=[],
@@ -138,7 +137,7 @@ class TimeWindowPlotGUI(QtWidgets.QMainWindow):
         
         # pmu_tw = PMUTimeWindowOnline(
         #     *args,
-        #     kafka_kwargs,
+        #     io_kwargs,
         #     kafka_topic=kafka_topic,
         #     # phasor_selection=phasor_selection,
         #     window_length=30,
@@ -146,7 +145,7 @@ class TimeWindowPlotGUI(QtWidgets.QMainWindow):
         #     **kwargs
         # )
         tw_app = TimeWindowApp(
-            kafka_kwargs=kafka_kwargs,  # config['kafka'],
+            io_kwargs=io_kwargs,  # config["streaming"],
             **kwargs,
         )
         # pmu_tw.initialize()
@@ -164,7 +163,7 @@ class TimeWindowPlotGUI(QtWidgets.QMainWindow):
         # channel_select = ChannelSelect(channels)
         if include_map:
             bus_names, bus_coords = get_last_message_from_topic(
-                kafka_kwargs, pmu_coords_topic,
+                pmu_coords_topic, **io_kwargs
             )
                     
             channel_select_map = ChannelSelectMap(
@@ -210,7 +209,7 @@ def run_time_window_plot(*config_args, update_freq=25, n_max_plots=50, **kwargs)
     time_window_plot_gui = TimeWindowPlotGUI(
         input_topic=config['topics']['pmudata'],
         pmu_coords_topic=config['topics']['pmu.coords'],
-        kafka_kwargs=config['kafka'],
+        io_kwargs=config["streaming"],
         countries=config['geo_data']['countries'] if 'geo_data' in config and 'countries' in config['geo_data'] else [],
         update_freq=update_freq,
         n_max_plots=n_max_plots,
@@ -230,7 +229,7 @@ if __name__ == '__main__':
         run_time_window_plot(config)
     else:
         from pswamp.test_utils.sample_datasets.mock_case import run_mock_case, stop_mock_case
-        # config['kafka']['bootstrap_servers'] = 'localhost:50000'
+        # config["streaming"]['bootstrap_servers'] = 'localhost:50000'
         mock_case = run_mock_case(config)
         run_time_window_plot(config)
         stop_mock_case(config)

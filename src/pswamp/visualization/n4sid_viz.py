@@ -6,10 +6,8 @@ import pyqtgraph as pg
 import sys
 from pswamp.visualization.eigenvalue_plot import EigenvaluePlot
 from pswamp.visualization.components.phasor_plot import PhasorPlotFancy
-from pswamp.streaming.kafka_extras import KafkaConsumer
-import pickle
+from pswamp.streaming import Consumer
 from pswamp.utils.load_config import load_config
-from pswamp.utils.get_station_coords import load_bus_coords_for_current_stations
 
 
 # class PhasorPlotUI(QtWidgets.QWidget):
@@ -62,10 +60,10 @@ from pswamp.utils.get_station_coords import load_bus_coords_for_current_stations
 
 class N4SIDViz(QtWidgets.QMainWindow):
     request_text_update = QtCore.Signal()
-    def __init__(self, kafka_kwargs, kafka_topic, geo_plot_kwargs):
+    def __init__(self, io_kwargs, kafka_topic, geo_plot_kwargs):
         super().__init__()
-        self.mode_estimation_stream = KafkaConsumer(
-            kafka_topic, value_deserializer=pickle.loads, **kafka_kwargs
+        self.mode_estimation_stream = Consumer(
+            kafka_topic, **io_kwargs
         )
         self._stopped = False
 
@@ -229,7 +227,7 @@ class N4SIDViz(QtWidgets.QMainWindow):
 
 
 def n4sid_viz(
-    kafka_kwargs,
+    io_kwargs,
     kafka_topic="modeestimation",
     geo_plot_kwargs=None,
 ):
@@ -237,7 +235,7 @@ def n4sid_viz(
     app = QtWidgets.QApplication(sys.argv)
     viz = N4SIDViz(
         kafka_topic=kafka_topic,
-        kafka_kwargs=kafka_kwargs,
+        io_kwargs=io_kwargs,
         geo_plot_kwargs=geo_plot_kwargs,
     )
     viz_thread = threading.Thread(target=viz.run, daemon=True)
@@ -252,7 +250,7 @@ def run_n4sid_viz(*config_args):
     config = load_config(*config_args)
     n4sid_viz(
         kafka_topic=config['topics']["modeestimation"],
-        kafka_kwargs=config['kafka'],
+        io_kwargs=config["streaming"],
     )
 
 

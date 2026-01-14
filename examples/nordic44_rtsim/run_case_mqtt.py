@@ -25,7 +25,10 @@ if __name__ == '__main__':
     # runners.publish_model_data(config)
 
     create_database(config)
-    run_rtsim(pmu_publisher_type=PMUToMQTTPublisher, pmu_kwargs={'topic': 'pmudata', 'mqtt_kwargs': config['streaming']})
+
+    mqtt_kwargs = config['streaming']
+
+    run_rtsim(pmu_publisher_type=PMUToMQTTPublisher, pmu_kwargs={'topic': 'pmudata', 'mqtt_kwargs': mqtt_kwargs})
 
     # # p_3 = mp.Process(target=run_main_window, args=(config,))
     # # p_3.start()
@@ -37,5 +40,5 @@ if __name__ == '__main__':
     # # time.sleep(2)
     input("Press a key to quit")
 
-    # if config['kafka']['use_nqkafka']:
-    #     stop_nqkafka_server(config['kafka']['bootstrap_servers'])
+    # if config["streaming"]['use_nqkafka']:
+    #     stop_nqkafka_server(config["streaming"]['bootstrap_servers'])

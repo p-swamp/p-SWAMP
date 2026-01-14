@@ -54,7 +54,7 @@ class TimeWindowApp(SnapshotApp):
             window_length=None,
             report_status=False,
             auto_adjust_offset=None,
-            **io_kwargs):
+            **kwargs):
         
         decoder_extra_kwargs = {
             'channel_selection': channel_selection,
@@ -63,7 +63,7 @@ class TimeWindowApp(SnapshotApp):
         SnapshotApp.__init__(
             self, io, eval_freq, t_end, t_start, app_name, input_decoder,
             decoder_kwargs={**decoder_extra_kwargs, **decoder_kwargs},
-            report_status=report_status, **io_kwargs)
+            report_status=report_status, **kwargs)
         
         header = self.decoder.generate_header(sample_data_frame=self.get_sample_data_frame())
 

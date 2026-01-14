@@ -3,7 +3,7 @@ import threading
 import uuid
 from pswamp.utils.get_station_coords import load_bus_coords_for_current_stations
 import pyqtgraph.opengl as gl
-from pswamp.streaming.kafka_extras import KafkaConsumer
+from pswamp.streaming.kafka_extras import Consumer
 from pswamp.utils.misc import lookup_strings
 from pswamp.utils.gl import set_gl_options
 
@@ -23,8 +23,8 @@ class GridEvents:
 
         self.affected_stations = np.zeros_like(self.stations, dtype=bool)
 
-        self.consumer = KafkaConsumer(
-            config['topics']['grid.events'], **config['kafka'])
+        self.consumer = Consumer(
+            config['topics']['grid.events'], **config["streaming"])
         self.stopped = False
         self.newest_message = None
 

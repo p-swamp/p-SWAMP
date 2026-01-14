@@ -7,7 +7,7 @@ import numpy as np
 from pswamp.visualization.time_window_plot import TimeSeriesPlot
 import threading
 import datetime
-from pswamp.streaming.kafka_extras import consumer_seek_relative_offset
+from pswamp.streaming import consumer_seek_relative_offset
 import time
 from pswamp.visualization.voltage_phasor_plot import VoltagePhasorPlot
 from pswamp.visualization.components.phasor_plot import PhasorPlotFast, PhasorPlotFastFancy, PhasorBasePlot, xy_from_phasors
@@ -52,7 +52,7 @@ class IslandingAlarmView(InteractiveAlarmView):
         super().__init__(config, *args, define_layout=False, channel_selection=channel_selection,**kwargs)
         
         self.islanding_results = IslandingResultKeeper(
-            kafka_kwargs=config['kafka'],
+            io_kwargs=config["streaming"],
             input_topic=config['topics']['islanding'],
             t_start=self.time_stamp_start,
             t_end=self.t_end_seconds,
@@ -238,11 +238,11 @@ if __name__ == '__main__':
 
     run_online = True
     if run_online:
-        config['kafka']['consumers_seek_to_beginning'] = True
-        config['kafka']['bootstrap_servers'] = 'localhost:40000'
+        config["streaming"]['consumers_seek_to_beginning'] = True
+        config["streaming"]['bootstrap_servers'] = 'localhost:40000'
 
         alarm_monitor = AlarmMonitor(
-            kafka_kwargs=config['kafka'],
+            io_kwargs=config["streaming"],
             alarm_topic=config['topics']['alarms'],
         )
         alarm_monitor.start()
@@ -256,7 +256,7 @@ if __name__ == '__main__':
                 time.sleep(1)
                 pass
 
-        config['kafka']['consumers_seek_to_beginning'] = False
+        config["streaming"]['consumers_seek_to_beginning'] = False
         app = QtWidgets.QApplication()
 
         grid_view = GridViewContainer(config, True)
@@ -272,7 +272,7 @@ if __name__ == '__main__':
         # from pswamp.test_utils.mock_case import run_mock_case, stop_mock_case, KafkaProducer
         from pswamp.test_utils.sample_datasets.n44_mock_case import run_mock_case, stop_mock_case
         from pswamp.test_utils.sample_datasets.n44.n44_rtsim_offline import run_n44_rtsim_offline, stop_case
-        config['kafka']['bootstrap_servers'] = 'localhost:50000'
+        config["streaming"]['bootstrap_servers'] = 'localhost:50000'
 
 
         # islanding_data_frames = [{
@@ -285,7 +285,7 @@ if __name__ == '__main__':
 
         # mock_case = run_mock_case(config, topic_data={'islanding': islanding_data_frames})
 
-        config['kafka']['consumers_seek_to_beginning'] = True
+        config["streaming"]['consumers_seek_to_beginning'] = True
 
         events = [
             (10, ('line', 'L3244-6500', 'disconnect')),
@@ -304,14 +304,14 @@ if __name__ == '__main__':
         run_islanding_application(config, t_end=50)
 
         # from pswamp.streaming import KafkaProducer
-        # producer = KafkaProducer(**config['kafka'])
+        # producer = KafkaProducer(**config["streaming"])
 
 
         # topic_data={'islanding': islanding_data_frames}
         # for topic, data in topic_data.items():
         #     [producer.send(topic, data_) for data_ in data]
         alarm_monitor = AlarmMonitor(
-            kafka_kwargs=config['kafka'],
+            io_kwargs=config["streaming"],
             alarm_topic=config['topics']['alarms'],
         )
         alarm_monitor.start()
@@ -340,7 +340,7 @@ if __name__ == '__main__':
             config, alarm_uuid=alarm_uuid, alarm_data=alarm_data, grid_view=grid_view)
         alarm_view.show()
 
-        # producer = KafkaProducer(**config['kafka'])
+        # producer = KafkaProducer(**config["streaming"])
         # [producer.send('islanding', df) for df in islanding_data_frames]       
         
         app.exec()

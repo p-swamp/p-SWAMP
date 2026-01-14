@@ -24,7 +24,7 @@ class LinesFreq(LineLayer):
         self.uuid = uuid.uuid4()
         super().__init__(parent, config, *args, **kwargs)
         
-        self.pmu_tw = PMUTimeWindowOnline(n_samples=1, kafka_topic=config['topics']['pmudata'], kafka_kwargs=config['kafka'])
+        self.pmu_tw = PMUTimeWindowOnline(n_samples=1, kafka_topic=config['topics']['pmudata'], io_kwargs=config["streaming"])
         self.pmu_tw.initialize()
         self.col_idx = self.get_col_idx()
         pmu_tw_thread = threading.Thread(target=self.pmu_tw.run, daemon=True)
@@ -59,7 +59,7 @@ if __name__ == '__main__':
         'test_utils/sample_datasets/n44'
 
     config = load_config()
-    print(config['kafka'])
+    print(config["streaming"])
     config['sld_data'] = {'line_data_path': sample_dataset_path/'sld.dxf'}
     config['model_data_path'] = sample_dataset_path/'model_data.json'
 

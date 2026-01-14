@@ -12,7 +12,7 @@ if __name__ == "__main__":
         input_topic=config['topics']["pmudata"],
         output_topic=config['topics']["modeestimation"],
         sys_order=10,
-        kafka_kwargs=config['kafka'],
+        io_kwargs=config["streaming"],
     )
 
     sid_thread = threading.Thread(target=sid.run, daemon=True)

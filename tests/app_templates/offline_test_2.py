@@ -11,7 +11,7 @@ class OfflineTestingAdapterMod(CustomInstructions, OfflineTestingAdapter):
 if __name__ == '__main__':
     config_file_path = pathlib.Path(r'examples/voltage_stability_case/config.toml')
     config = load_config(config_file_path)
-    config['kafka']['bootstrap_servers'] = 'localhost:51003'
+    config["streaming"]['bootstrap_servers'] = 'localhost:51003'
 
     pmu_data_folder=pathlib.Path(pathlib.PureWindowsPath(r'examples\voltage_stability_case\data\pmu_data'))
 

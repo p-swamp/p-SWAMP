@@ -2,9 +2,8 @@ from pswamp.app_templates.snapshot_app import SnapshotApp
 from pswamp.test_utils.sample_datasets.n44_mock_case import run_mock_case,\
     stop_mock_case  # , generate_pmu_cfg_from_model, DataFrameGenerator
     
-import numpy as np
 import sys
-from pswamp.streaming.kafka_extras import KafkaProducer
+from pswamp.streaming import Producer
 
 
 class SomeRTApp(SnapshotApp):
@@ -19,15 +18,15 @@ if __name__ == '__main__':
     import time
     config = load_config()
     config['topics']['application.commands'] = 'application.commands'
-    config['kafka']['consumers_seek_to_beginning'] = True
-    config['kafka']['bootstrap_servers'] = 'localhost:51002'
+    config["streaming"]['consumers_seek_to_beginning'] = True
+    config["streaming"]['bootstrap_servers'] = 'localhost:51002'
         
     run_mock_case(config, t_end=10)
 
-    app = SomeRTApp(kafka_kwargs=config['kafka'])
+    app = SomeRTApp(io_kwargs=config["streaming"])
 
     def issue_command():
-        producer = KafkaProducer(**config['kafka'])
+        producer = Producer(**config["streaming"])
         time.sleep(2)
         producer.send('application.commands', {'target_uuid': app.uuid, 'command': 'open_console'})
 

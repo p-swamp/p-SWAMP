@@ -7,7 +7,7 @@ from pswamp.visualization.time_window_plot import TimeSeriesPlot
 from pswamp.utils.misc import convert_datetime_to_seconds, flatten_array_insert_nan, convert_seconds_to_datetime
 import threading
 import datetime
-from pswamp.streaming.kafka_extras import consumer_seek_relative_offset
+from pswamp.streaming import consumer_seek_relative_offset
 import time
 from pswamp.visualization.components.timeline import add_timeline_entry
 
@@ -73,7 +73,7 @@ class BaseAlarmView(QtWidgets.QWidget):
         if self.simplified_alarm_views: update_freq = 5
 
         self.tw_app = TimeWindowAppMod(
-            kafka_kwargs=config['kafka'],
+            io_kwargs=config["streaming"],
             input_topic=config['topics']['pmudata'],
             t_start=time_stamp_start,
             t_end=t_end_seconds,
@@ -157,11 +157,11 @@ if __name__ == '__main__':
 
     run_online = True
     if run_online:
-        config['kafka']['consumers_seek_to_beginning'] = True
-        config['kafka']['bootstrap_servers'] = 'localhost:40000'
+        config["streaming"]['consumers_seek_to_beginning'] = True
+        config["streaming"]['bootstrap_servers'] = 'localhost:40000'
 
         alarm_monitor = AlarmMonitor(
-            kafka_kwargs=config['kafka'],
+            io_kwargs=config["streaming"],
             alarm_topic=config['topics']['alarms'],
         )
         alarm_monitor.start()
@@ -175,7 +175,7 @@ if __name__ == '__main__':
                 time.sleep(1)
                 pass
 
-        config['kafka']['consumers_seek_to_beginning'] = False
+        config["streaming"]['consumers_seek_to_beginning'] = False
         app = QtWidgets.QApplication()
 
         alarm_view = DefaultAlarmView(config, alarm_uuid=alarm_uuid, alarm_data=alarm_data)
@@ -183,9 +183,9 @@ if __name__ == '__main__':
         app.exec()
 
     else:
-        from pswamp.test_utils.sample_datasets.n44_mock_case import run_mock_case, stop_mock_case, KafkaProducer
-        config['kafka']['bootstrap_servers'] = 'localhost:50000'
-        # config['kafka']['consumers_seek_to_beginning'] = True
+        from pswamp.test_utils.sample_datasets.n44_mock_case import run_mock_case, stop_mock_case, Producer
+        config["streaming"]['bootstrap_servers'] = 'localhost:50000'
+        # config["streaming"]['consumers_seek_to_beginning'] = True
 
         mock_case = run_mock_case(config, t_end=50)
 

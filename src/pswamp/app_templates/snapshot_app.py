@@ -1,3 +1,4 @@
+from pswamp.streaming import BaseIO
 import threading
 import time
 import numpy as np
@@ -39,10 +40,10 @@ class SnapshotApp:
         input_decoder=None,
         decoder_kwargs={},
         report_status=False,
-        **io_kwargs,
+        **kwargs,
     ):
         self.app_name = app_name if app_name is not None else self.__class__.__name__
-        self.uuid = uuid.uuid4()
+        self.uuid = str(uuid.uuid4())
         self.status = 'Undefined'
 
 
@@ -62,8 +63,7 @@ class SnapshotApp:
         self.update_callbacks = []
 
         if io is None:
-            from pswamp.streaming.kafka_io import KafkaIO
-            self.io = KafkaIO(**io_kwargs)
+            self.io = BaseIO(**kwargs)
         else:
             self.io = io
         if input_decoder is None:

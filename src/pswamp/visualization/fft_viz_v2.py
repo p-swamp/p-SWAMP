@@ -14,12 +14,11 @@ import numpy as np
 from scipy.fft import fft, fftfreq
 import time
 from pswamp.utils.time_window import TimeWindow
-from pswamp.streaming.kafka_extras import get_last_message_from_topic
 from pswamp.utils.pmu_time_window import PMUTimeWindow
 from PySide6.QtWidgets import *
 from pswamp.gui.components.channel_select import ChannelSelect
 import multiprocessing as mp
-from pswamp.streaming.kafka_extras import get_last_message_from_topic, consumer_seek_relative_offset
+from pswamp.streaming import get_last_message_from_topic, consumer_seek_relative_offset
 import time
 from pswamp.monitoring.fft import calculate_fft_spectrum
 
@@ -28,7 +27,7 @@ from pswamp.monitoring.fft import calculate_fft_spectrum
 class FFTOnlineSingleChannel(TimeWindowApp):
     def __init__(
         self,
-        kafka_kwargs,
+        io_kwargs,
         fft_window=5,
         # input_meta_topic="pmudata.meta",
         kafka_topic='pmudata',
@@ -36,7 +35,7 @@ class FFTOnlineSingleChannel(TimeWindowApp):
         *args,
         **kwargs
     ):
-        sample_msg = get_last_message_from_topic(kafka_kwargs, kafka_topic)
+        sample_msg = get_last_message_from_topic(kafka_topic, **io_kwargs)
         dt = 1 / sample_msg.cfg.get_data_rate()
         n_samples_fft = 2 ** int(np.ceil(np.log(fft_window / dt) / np.log(2)))
 
@@ -44,7 +43,7 @@ class FFTOnlineSingleChannel(TimeWindowApp):
             self,
             n_samples=n_samples_fft,
             input_topic=kafka_topic,
-            kafka_kwargs=kafka_kwargs,
+            io_kwargs=io_kwargs,
             auto_adjust_offset=False,
             channel_selection_idx=channel_selection_idx,
             *args,
@@ -76,13 +75,13 @@ class FFTOnlineSingleChannel(TimeWindowApp):
 
 
 class FFTViz(QWidget):
-    def __init__(self, kafka_kwargs, fft_window=10, kafka_topic="pmudata", channel_selection_idx=None):
+    def __init__(self, io_kwargs, fft_window=10, kafka_topic="pmudata", channel_selection_idx=None):
         super().__init__()
 
         fft_anl = FFTOnlineSingleChannel(
             fft_window=fft_window,
             kafka_topic=kafka_topic,
-            kafka_kwargs=kafka_kwargs,
+            io_kwargs=io_kwargs,
             channel_selection_idx=channel_selection_idx,
         )
 
@@ -147,7 +146,7 @@ class FFTViz(QWidget):
 #     fft_viz = FFTViz(
 #         fft_window=fft_window,
 #         kafka_topic=config['topics']['pmudata'],
-#         kafka_kwargs=config['kafka'],
+#         io_kwargs=config["streaming"],
 #         channel_selection_idx=channel_selection_idx,
 #     )
 #     fft_viz.show()
@@ -171,8 +170,8 @@ class RunApp(QWidget):
 
         while True:
             pmu_data_frame = get_last_message_from_topic(
-                kafka_kwargs=config['kafka'],
                 topic=config['topics']['pmudata'],
+                **config["streaming"],
             )
             if not pmu_data_frame is None:
                 break
@@ -209,7 +208,7 @@ class RunApp(QWidget):
                 fft_viz = FFTViz(
                     fft_window=self.parameters['fft_window'],
                     kafka_topic=self.config['topics']['pmudata'],
-                    kafka_kwargs=self.config['kafka'],
+                    io_kwargs=self.config["streaming"],
                     channel_selection_idx=[idx],
                 )
                 fft_viz.show()
@@ -242,7 +241,7 @@ if __name__ == "__main__":
     fft_viz = FFTViz(
         fft_window=10,
         kafka_topic=config['topics']['pmudata'],
-        kafka_kwargs=config['kafka'],
+        io_kwargs=config["streaming"],
         channel_selection_idx=0,
     )
     fft_viz.show()

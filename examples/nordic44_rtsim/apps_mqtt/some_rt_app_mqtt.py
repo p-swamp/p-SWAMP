@@ -28,7 +28,7 @@ if __name__ == "__main__":
     # Define the application
     from pswamp.streaming.mqtt_io import MQTT_IO
     io = MQTT_IO(
-        mqtt_kwargs=config["mqtt"],
+        io_kwargs=config["mqtt"],
         input_topic="pmudata",
         output_topic="test_topic")
 
@@ -38,7 +38,7 @@ if __name__ == "__main__":
         # input_topic=config['topics']['pmudata'],
         # output_topic="test_topic",
         # command_topic=config['topics']['application.commands']
-        # kafka_kwargs=config['kafka'],
+        # io_kwargs=config["streaming"],
     )
 
     # Run the application

@@ -11,7 +11,9 @@ dependencies = [
     "scipy",
     "tomli",
     "pandas>=2.3.1",
-	"numpy-dynamic-array",
+    "numpy-dynamic-array",
+    "synchrophasor @ git+https://github.com/hallvar-h/pypmu",
+    "pydantic>=2.12.5",
 ]
 requires-python = "<3.13,>=3.11"
 readme = "README.md"
@@ -23,7 +25,7 @@ full = [
     "PySide6==6.8.3",
 	"pyqtgraph",
     "kafka-python",
-    "synchrophasor @ git+https://github.com/hallvar-h/pypmu",
+    # "synchrophasor @ git+https://github.com/hallvar-h/pypmu",
     "nqkafka @ git+https://github.com/hallvar-h/nqkafka",
     "tops-rt @ git+https://github.com/hallvar-h/tops-rt",
     "nfoursid",
@@ -35,6 +37,7 @@ full = [
 ]
 dev = [
     "pytest>=9.0.2",
+    "ipython>=9.9.0",
 ]
 [build-system]
 requires = ["pdm-backend"]

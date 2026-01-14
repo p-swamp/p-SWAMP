@@ -33,7 +33,7 @@ class Events:
 
 def run_n44_rtsim_offline(config, events_spec=None, t_end=10):
 
-    if config['kafka']['use_nqkafka']:
+    if config["streaming"]['use_nqkafka']:
         runners.run_nqkafka_server(config, run_in_process=False)
         print('Started NQKafka Server')
     
@@ -52,7 +52,7 @@ def run_n44_rtsim_offline(config, events_spec=None, t_end=10):
         events = Events(events_spec)
         rts.interface_functions['Events'] = events.update
     
-    pmus = PMUToKafkaPublisher(rts=rts, **{'topic': 'pmudata', 'kafka_kwargs': config['kafka']})
+    pmus = PMUToKafkaPublisher(rts=rts, **{'topic': 'pmudata', 'io_kwargs': config["streaming"]})
     pmus.start()
     rts.run()
 
@@ -61,14 +61,14 @@ def run_n44_rtsim_offline(config, events_spec=None, t_end=10):
 
 def stop_case(config):
     from nqkafka.utils import stop_server
-    stop_server(config['kafka']['bootstrap_servers'])
+    stop_server(config["streaming"]['bootstrap_servers'])
 
 if __name__ == '__main__':
     
     from pswamp.monitoring.islanding import run_islanding_application
     
     config = load_config()
-    config['kafka']['consumers_seek_to_beginning'] = True
+    config["streaming"]['consumers_seek_to_beginning'] = True
 
     # events = [
     #     (1, ('line', 'L3359-5101-1', 'disconnect')),

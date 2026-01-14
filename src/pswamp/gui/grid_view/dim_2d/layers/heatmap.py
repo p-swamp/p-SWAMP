@@ -37,7 +37,7 @@ class FrequencyHeatMap:
         )
         self.heatmap.im.setZValue(-10)
 
-        pmu_tw = PMUTimeWindowOnline(n_samples=1, kafka_topic=config['topics']['pmudata'], kafka_kwargs=config['kafka'])
+        pmu_tw = PMUTimeWindowOnline(n_samples=1, kafka_topic=config['topics']['pmudata'], io_kwargs=config["streaming"])
         pmu_tw.initialize()
         self.pmu_tw = pmu_tw
         self.freq_col_idx = self.pmu_tw.tw.get_col_idx(measurement='f')
@@ -61,7 +61,7 @@ class FrequencyHeatMap:
 #         heatmap_kwargs = dict(y_scale=1, lims=[-0.035, 0.035], z_offset=0)
 #         super().__init__(heatmap_kwargs)
 
-        # pmu_tw = PMUTimeWindow(n_samples=1, kafka_topic=config['topics']['pmudata'], kafka_kwargs=config['kafka'])
+        # pmu_tw = PMUTimeWindow(n_samples=1, kafka_topic=config['topics']['pmudata'], io_kwargs=config["streaming"])
         # col_idx = [pmu_tw.tw.get_col_idx(station=station_name, measurement='v')[0] for station_name in pmu_tw.station_names]
         # def update_fun():
         # phasors = pmu_tw.tw.get_col(col_idx).flatten()

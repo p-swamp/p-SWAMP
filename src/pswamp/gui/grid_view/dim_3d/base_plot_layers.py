@@ -114,7 +114,7 @@ class GridBasePlot3DLayers(GridBasePlot3D):
 def main():
     app = QtWidgets.QApplication(sys.argv)
     config = load_config()
-    config['kafka']['bootstrap_servers'] = 'localhost:40011'
+    config["streaming"]['bootstrap_servers'] = 'localhost:40011'
     # config['graphics'] = {
         # 'background_color': [255, 255, 255],
         # 'gl_mode': 'translucent'}

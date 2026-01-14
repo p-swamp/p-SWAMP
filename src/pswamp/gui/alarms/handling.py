@@ -1,13 +1,9 @@
 from PySide6 import QtWidgets, QtCore, QtGui
-import threading
-from pswamp.streaming.kafka_extras import KafkaProducer, KafkaConsumer
+from pswamp.streaming import Producer
 from pswamp.utils.load_config import load_config
-import pickle
 import time
 import datetime
-import uuid
-from pswamp.coordination.alarm_handling import AlarmSender, AlarmMonitor
-import numpy as np
+from pswamp.coordination.alarm_handling import AlarmMonitor
 from pswamp.gui.alarms.views.default import DefaultAlarmView
 from pswamp.gui.alarms.views.islanding import IslandingAlarmView
 from pswamp.gui.alarms.views.voltage_stability import VoltageStabilityAlarmView
@@ -97,8 +93,8 @@ class AlarmHandlingDialogue(QtWidgets.QWidget):
 
         # self.update_message_display()
 
-        self.output_stream = KafkaProducer(
-            value_serializer=pickle.dumps, **config['kafka']
+        self.output_stream = Producer(
+            **config["streaming"]
         )
 
         self.timer = QtCore.QTimer()
@@ -234,11 +230,11 @@ class AlarmHandlingDialogue(QtWidgets.QWidget):
 
 if __name__ == '__main__':
     config = load_config()
-    config['kafka']['consumers_seek_to_beginning'] = True
-    config['kafka']['bootstrap_servers'] = 'localhost:40000'
+    config["streaming"]['consumers_seek_to_beginning'] = True
+    config["streaming"]['bootstrap_servers'] = 'localhost:40000'
 
     alarm_monitor = AlarmMonitor(
-        kafka_kwargs=config['kafka'],
+        io_kwargs=config["streaming"],
         alarm_topic=config['topics']['alarms'],
     )
     alarm_monitor.start()
@@ -253,9 +249,9 @@ if __name__ == '__main__':
             time.sleep(1)
             pass
 
-    config['kafka']['consumers_seek_to_beginning'] = False
+    config["streaming"]['consumers_seek_to_beginning'] = False
     app = QtWidgets.QApplication()
 
-    alarm_view = AlarmHandlingDialogue(config['kafka'], config['topics'], alarm_uuid=alarm_uuid, alarm_data=alarm_data)
+    alarm_view = AlarmHandlingDialogue(config["streaming"], config['topics'], alarm_uuid=alarm_uuid, alarm_data=alarm_data)
     alarm_view.show()
     app.exec()

@@ -13,10 +13,10 @@ class LineOutages(LineLayer):
         self.uuid = uuid.uuid4()
         super().__init__(parent, config, *args, **kwargs)
         
-        self.snapshot_app = SnapshotApp(kafka_kwargs=config['kafka'])
+        self.snapshot_app = SnapshotApp(io_kwargs=config["streaming"])
         self.line_model = Line(self.config, self.snapshot_app.get_config_frame())
         # n_samples = 2
-        # self.pmu_tw = PMUTimeWindowOnline(n_samples=n_samples, kafka_topic=config['topics']['pmudata'], kafka_kwargs=config['kafka'])
+        # self.pmu_tw = PMUTimeWindowOnline(n_samples=n_samples, kafka_topic=config['topics']['pmudata'], io_kwargs=config["streaming"])
         # self.pmu_tw.initialize()
         # self.col_idx, self.currents_in_measurements = self.get_col_idx()
         app_thread = threading.Thread(target=self.snapshot_app.run, daemon=True)

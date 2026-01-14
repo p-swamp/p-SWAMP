@@ -1,27 +1,25 @@
 import numpy as np
 from scipy.fft import fft, fftfreq
 from .utils import TimeWindowRTApp, StatusCom
-from pswamp.streaming.kafka_extras import get_last_message_from_topic
-
-from pswamp.monitoring.fft import calculate_fft_spectrum
-
+from pswamp.streaming import get_last_message_from_topic
 
 class FFTOnline(TimeWindowRTApp, StatusCom):
+    # TODO: Change TimeWindowRTApp with TimeWindowApp.
     def __init__(
         self,
-        kafka_kwargs,
+        io_kwargs,
         fft_window=5,
         kafka_topic='pmudata',
         status_topic='application.status',
         *args,
         **kwargs
     ):
-        sample_msg = get_last_message_from_topic(kafka_kwargs, kafka_topic)
+        sample_msg = get_last_message_from_topic(kafka_topic, **io_kwargs)
         dt = 1 / sample_msg.cfg.get_data_rate()
         n_samples_fft = 2 ** int(np.ceil(np.log(fft_window / dt) / np.log(2)))
 
-        TimeWindowRTApp.__init__(self, n_samples_window=n_samples_fft, input_topic=kafka_topic, kafka_kwargs=kafka_kwargs, auto_adjust_offset=True, *args, **kwargs)
-        StatusCom.__init__(self, kafka_kwargs=kafka_kwargs, status_topic=status_topic)
+        TimeWindowRTApp.__init__(self, n_samples_window=n_samples_fft, input_topic=kafka_topic, io_kwargs=io_kwargs, auto_adjust_offset=True, *args, **kwargs)
+        StatusCom.__init__(self, io_kwargs=io_kwargs, status_topic=status_topic)
 
         self.n_samples_store = 500
 

@@ -15,8 +15,8 @@ from pswamp.utils.misc import convert_time_stamp_to_seconds
 def test_islanding(show_plots=False):
     
     config = load_config()
-    config['kafka']['bootstrap_servers'] = 'localhost:51005'
-    config['kafka']['consumers_seek_to_beginning'] = True
+    config["streaming"]['bootstrap_servers'] = 'localhost:51005'
+    config["streaming"]['consumers_seek_to_beginning'] = True
 
     events = [
         (20, ('line', 'L3244-6500', 'disconnect')),
@@ -30,14 +30,14 @@ def test_islanding(show_plots=False):
     ]
 
     run_n44_rtsim_offline(config, events, t_end=70)
-    app = IslandingApp(kafka_kwargs=config['kafka'], t_end=70)
+    app = IslandingApp(io_kwargs=config["streaming"], t_end=70)
     app.run()
 
     topic_data = {}
     for topic in config['topics']:
         print(f'Getting topic {topic}...')
         topic_data[topic] = TopicGetter(
-            topic=topic, kafka_kwargs=config['kafka'],
+            topic=topic, io_kwargs=config["streaming"],
             empty_topic_timeout=1).data
 
     alarm_time = convert_time_stamp_to_seconds(

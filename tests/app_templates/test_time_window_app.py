@@ -9,12 +9,12 @@ from tops.simulator import Simulator
 
 def test_app_online():
     config = load_config()
-    config['kafka']['bootstrap_servers'] = 'localhost:51000'
-    config['kafka']['consumers_seek_to_beginning'] = True
+    config["streaming"]['bootstrap_servers'] = 'localhost:51000'
+    config["streaming"]['consumers_seek_to_beginning'] = True
     run_mock_case(config)
     time.sleep(1)
     app = TimeWindowApp(
-        kafka_kwargs=config['kafka'],
+        io_kwargs=config["streaming"],
         report_status=True,
         t_end=10)
     

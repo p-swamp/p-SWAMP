@@ -94,7 +94,7 @@ def run_line_outage_application(config):
         input_topic=config['topics']['pmudata'],
         output_topic=config['topics']['grid.events'],
         status_topic=config['topics']['application.status'],
-        kafka_kwargs=config['kafka'],
+        io_kwargs=config["streaming"],
         eval_freq=10,
     )
 
@@ -104,6 +104,6 @@ def run_line_outage_application(config):
 
 if __name__ == '__main__':
     config = load_config()
-    config['kafka']['bootstrap_servers'] = 'localhost:40000'
-    config['kafka']['consumers_seek_to_beginning'] = True
+    config["streaming"]['bootstrap_servers'] = 'localhost:40000'
+    config["streaming"]['consumers_seek_to_beginning'] = True
     run_line_outage_application(config)

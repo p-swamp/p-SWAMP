@@ -26,6 +26,7 @@ import threading
 
 
 class SomeRTApp(TimeWindowRTApp):
+    #TODO: Change TimeWindowRTApp with TimeWindowApp
     def run_analysis(self, t, phasors):
         sys.stdout.write("\rTime window {:.2f}% complete".format(100 * (1 - (sum(np.isnan(t))) / len(t))))
 
@@ -51,7 +52,7 @@ def test_case():
     test_app = SomeRTApp(
         time_window_length=1,
         input_topic=config['topics']['pmudata'],
-        kafka_kwargs=config['kafka'],
+        io_kwargs=config["streaming"],
     )
 
     app_thread = threading.Thread(target=test_app.run)
@@ -63,7 +64,7 @@ def test_case():
     print('Stopped test app')
     time.sleep(2)
     
-    stop_nqkafka_server(config['kafka']['bootstrap_servers'])
+    stop_nqkafka_server(config["streaming"]['bootstrap_servers'])
 
 
 if __name__ == '__main__':

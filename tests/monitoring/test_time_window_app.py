@@ -11,14 +11,14 @@ class MyApp(TimeWindowApp):
 if __name__ == "__main__":
 
     config = load_config()
-    config['kafka']['bootstrap_servers'] = 'localhost:51004'
-    config['kafka']['consumers_seek_to_beginning'] = True
+    config["streaming"]['bootstrap_servers'] = 'localhost:51004'
+    config["streaming"]['consumers_seek_to_beginning'] = True
         
     mock_case = run_mock_case(config)
     
     print('Defining app')
     tw_app = MyApp(
-        kafka_kwargs=config['kafka'],
+        io_kwargs=config["streaming"],
         input_topic='pmudata',
         n_samples=10,
         t_end=10,

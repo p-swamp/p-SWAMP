@@ -27,14 +27,14 @@ class CoordinationModuleGUI(QMainWindow):
         # self.grid_plot.grid_plot_2d.station_was_clicked.connect(self.show_time_series_plot_popup)
 
         # alarm_sender = AlarmSender(
-        #     kafka_kwargs=config['kafka'],
+        #     io_kwargs=config["streaming"],
         #     input_topic=config['topics']['application.status'],
         #     alarm_topic=config['topics']['alarms'],
         # )
         # alarm_sender.start()
 
         alarm_monitor = AlarmMonitor(
-            kafka_kwargs=config['kafka'],
+            io_kwargs=config['streaming'],
             alarm_topic=config['topics']['alarms'],
         )
         alarm_monitor.start()
@@ -43,7 +43,7 @@ class CoordinationModuleGUI(QMainWindow):
             alarm_monitors_other_tsos = []
             for config_ in config['other_tso']:
                 alarm_monitor_other_tso = AlarmMonitor(
-                    kafka_kwargs=config_['kafka'],
+                    io_kwargs=config_['streaming'],
                     alarm_topic=config_['topics']['alarms'],
                 )
                 alarm_monitor_other_tso.start()
@@ -124,7 +124,7 @@ class CoordinationModuleGUI(QMainWindow):
             self.time_series_plot_popup = TimeWindowPlotGUI(
                 kafka_topic=self.config['topics']['pmudata'],
                 kafka_topic_pmu_coords=self.config['topics']['pmu.coords'],
-                kafka_kwargs=self.config['kafka'],
+                io_kwargs=self.config["streaming"],
                 countries=self.config['geo_data']['countries'],
                 update_freq=self.update_freq,
                 n_max_plots=50,
@@ -160,5 +160,5 @@ def run_main_window(*config_args, activate_default_layers=True):
 
 if __name__ == '__main__':
     config = load_config()
-    # config['kafka']['consumers_seek_to_beginning'] = True
+    # config["streaming"]['consumers_seek_to_beginning'] = True
     run_main_window(config, activate_default_layers=False)

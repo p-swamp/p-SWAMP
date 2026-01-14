@@ -1,9 +1,9 @@
-import paho.mqtt.client as mqtt #import the client1
+import queue
+
+import paho.mqtt.client as mqtt  #import the client1
 import paho.mqtt.subscribe as subscribe
 
-import queue
-import time
-import pickle
+from pswamp.streaming.utils import decoder, encoder
 
 
 class MQTTConsumer:
@@ -18,7 +18,8 @@ class MQTTConsumer:
     
     def get_next(self):
         new_msg = self.output_queue.get()
-        return pickle.loads(new_msg.payload)
+        value = decoder(new_msg.payload)
+        return type("MQTTMsg", (), {"value": value})
 
     def on_message(self, client, userdata, message):
         self.output_queue.put(message)
@@ -39,7 +40,7 @@ class MQTTProducer:
 
 
     def publish(self, topic, msg):
-        msg_bytes = pickle.dumps(msg)
+        msg_bytes = encoder(msg)
         return self.client.publish(topic, msg_bytes)
     
     def send(self, *args, **kwargs):
@@ -55,7 +56,7 @@ class MQTT_IO:
     TODO: Remove t_start from arguments.
     
     Args:
-        kafka_kwargs: Kwargs that will be used in kafka consumers and producers.
+        io_kwargs: Kwargs that will be used in kafka consumers and producers.
         input_topic: Kafka topic for input data stream.
         output_topic: Kafka topic for output data stream.
         status_topic: Kafka topic for status messages.
@@ -65,7 +66,7 @@ class MQTT_IO:
     """
     def __init__(
         self,
-        mqtt_kwargs,
+        io_kwargs,
         input_topic='pmudata',
         output_topic=None,
         status_topic='application.status',
@@ -75,24 +76,24 @@ class MQTT_IO:
     ):
 
         self.input_topic = input_topic
-        self.mqtt_kwargs = mqtt_kwargs
+        self.io_kwargs = io_kwargs
         # self.mqtt_server = mqtt_kwargs['ip'], mqtt_kwargs['port']
         self.command_topic = command_topic
 
-        self.input_stream = MQTTConsumer(self.input_topic, **mqtt_kwargs)
+        self.input_stream = MQTTConsumer(self.input_topic, **io_kwargs)
 
         # If output topic is specified, the results returned by "run_analysis" will be forwarded to this topic.
         self.output_topic = output_topic
 
         if self.output_topic is not None:
-            self.producer = MQTTProducer(**mqtt_kwargs)
+            self.producer = MQTTProducer(**io_kwargs)
         else:
             self.producer = None
 
         self.status_topic = status_topic
-        self.status_producer = MQTTProducer(**mqtt_kwargs)
+        self.status_producer = MQTTProducer(**io_kwargs)
         
-        self.command_consumer = MQTTConsumer(self.command_topic, **self.mqtt_kwargs)
+        self.command_consumer = MQTTConsumer(self.command_topic, **self.io_kwargs)
 
     def get_sample_data_frame(self):
         """Get sample data frame from input (without affecting input stream)
@@ -100,8 +101,8 @@ class MQTT_IO:
         Returns:
             _type_: Data frame
         """
-        msg = subscribe.simple(self.input_topic, **self.mqtt_kwargs)
-        return pickle.loads(msg.payload)
+        msg = subscribe.simple(self.input_topic, **self.io_kwargs)
+        return decoder(msg.payload)
 
     
     def get_config_frame(self):

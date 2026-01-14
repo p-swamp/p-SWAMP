@@ -5,7 +5,7 @@ import uuid
 from pswamp.utils.get_station_coords import load_bus_coords_for_stations
 import pyqtgraph.opengl as gl
 import pickle
-from pswamp.streaming.kafka_extras import KafkaConsumer, get_last_message_from_topic
+from pswamp.streaming import Consumer, get_last_message_from_topic
 from pswamp.utils.gl import set_gl_options
 
 
@@ -13,12 +13,14 @@ class VoltageStability:
     def __init__(self, parent, config, geo=True) -> None:
         self.config = config
 
-        self.input_stream = KafkaConsumer(
-            topic=config['topics']['voltage.stability.index'], **config['kafka'], value_deserializer=pickle.loads)
+        self.input_stream = Consumer(
+            topic=config['topics']['voltage.stability.index'], **config["streaming"], value_deserializer=pickle.loads)
 
         self.is_stopped = False
 
-        sample_msg = get_last_message_from_topic(config['kafka'], config['topics']['voltage.stability.index'])
+        sample_msg = get_last_message_from_topic(
+            config["topics"]["voltage.stability.index"], **config["streaming"]
+        )
         station = sample_msg['info']['locations']
 
         consumer_thread = threading.Thread(target=self.run_consumer)

@@ -14,7 +14,7 @@ from pswamp.utils.load_config import load_config
 
 
 def fft_viz(
-    kafka_kwargs,
+    io_kwargs,
     fft_window=5,
     kafka_topic="pmudata",
     channel_selection_idx=None,
@@ -25,7 +25,7 @@ def fft_viz(
     fft_anl = FFTOnline(
         fft_window=fft_window,
         kafka_topic=kafka_topic,
-        kafka_kwargs=kafka_kwargs,
+        io_kwargs=io_kwargs,
         channel_selection=channel_selection,
         channel_selection_idx=channel_selection_idx,
         **kwargs,
@@ -185,7 +185,7 @@ class FFTControlWidget(QtWidgets.QWidget):
 def run_fft_viz(*config_args, fft_window=5, channel_selection_idx=None):
     config = load_config(*config_args)
     fft_viz(
-        kafka_kwargs=config['kafka'],
+        io_kwargs=config["streaming"],
         fft_window=fft_window,
         kafka_topic=config['topics']['pmudata'],
         channel_selection_idx=channel_selection_idx,
@@ -203,7 +203,7 @@ if __name__ == "__main__":
         run_fft_viz(config)
     else:
         from pswamp.test_utils.sample_datasets.mock_case import run_mock_case, stop_mock_case
-        # config['kafka']['bootstrap_servers'] = 'localhost:50000'
+        # config["streaming"]['bootstrap_servers'] = 'localhost:50000'
         mock_case = run_mock_case(config)
         run_fft_viz(config)
         stop_mock_case(config)

@@ -168,7 +168,7 @@ class N4SIDApp(N4SID, TimeWindowApp):
 
 def run_n4sid(config, window_length=45, sys_order=10, channel_selection_idx=None,):
     sid = N4SIDApp(
-        kafka_kwargs=config['kafka'],
+        io_kwargs=config["streaming"],
         window_length=window_length,
         input_topic=config['topics']["pmudata"],
         output_topic=config['topics']["modeestimation"],

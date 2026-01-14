@@ -8,7 +8,7 @@ from pswamp.visualization.time_window_plot import TimeWindowPlot
 
 
 def plot_time_window(
-    kafka_kwargs,
+    io_kwargs,
     kafka_topic="pmudata",
     update_freq=25,
     phasor_selection=None,
@@ -22,7 +22,7 @@ def plot_time_window(
 
     pmu_tw = PMUTimeWindowOnline(
         *args,
-        kafka_kwargs,
+        io_kwargs,
         kafka_topic=kafka_topic,
         # phasor_selection=phasor_selection,
         auto_adjust_offset=auto_adjust_offset,
@@ -63,7 +63,7 @@ class RunAppLocal(RunApp):
         else:
             self.tw_plots.append(plot_time_window(
                 kafka_topic=self.config['topics']['pmudata'],
-                kafka_kwargs=self.config['kafka'],
+                io_kwargs=self.config["streaming"],
                 # update_freq=update_freq,
                 channel_selection_idx=channel_selection_idx,
                 # **kwargs
@@ -90,7 +90,7 @@ if __name__ == "__main__":
         run_time_window_plot(config)
     else:
         from pswamp.test_utils.sample_datasets.mock_case import run_mock_case, stop_mock_case
-        # config['kafka']['bootstrap_servers'] = 'localhost:50000'
+        # config["streaming"]['bootstrap_servers'] = 'localhost:50000'
         mock_case = run_mock_case(config)
         run_time_window_plot(config)
         stop_mock_case(config)

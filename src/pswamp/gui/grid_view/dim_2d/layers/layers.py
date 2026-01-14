@@ -49,7 +49,7 @@ class PhasorPlotLayer:
         self.parent = parent
 
         pmu_tw = PMUTimeWindowOnline(
-            n_samples=1, kafka_topic=config['topics']['pmudata'], kafka_kwargs=config['kafka'])
+            n_samples=1, kafka_topic=config['topics']['pmudata'], io_kwargs=config["streaming"])
         pmu_tw.initialize()
         self.pmu_tw = pmu_tw
 

@@ -28,7 +28,7 @@ if __name__ == "__main__":
     app = SomeRTApp(
         window_length=10,
         input_topic=config['topics']['pmudata'],
-        kafka_kwargs=config['kafka'],
+        io_kwargs=config["streaming"],
     )
 
     # Run the application

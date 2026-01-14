@@ -109,11 +109,11 @@ if __name__ == '__main__':
 
     run_online = False
     if run_online:
-        config['kafka']['consumers_seek_to_beginning'] = True
-        config['kafka']['bootstrap_servers'] = 'localhost:40000'
+        config["streaming"]['consumers_seek_to_beginning'] = True
+        config["streaming"]['bootstrap_servers'] = 'localhost:40000'
 
         alarm_monitor = AlarmMonitor(
-            kafka_kwargs=config['kafka'],
+            io_kwargs=config["streaming"],
             alarm_topic=config['topics']['alarms'],
         )
         alarm_monitor.start()
@@ -127,7 +127,7 @@ if __name__ == '__main__':
                 time.sleep(1)
                 pass
 
-        config['kafka']['consumers_seek_to_beginning'] = False
+        config["streaming"]['consumers_seek_to_beginning'] = False
         app = QtWidgets.QApplication()
 
         grid_view = GridViewContainer(config, True)
@@ -142,7 +142,7 @@ if __name__ == '__main__':
         config = load_config()
         # from pswamp.test_utils.mock_case import run_mock_case, stop_mock_case, KafkaProducer
         from pswamp.test_utils.sample_datasets.n44_mock_case import run_mock_case, stop_mock_case
-        config['kafka']['bootstrap_servers'] = 'localhost:50000'
+        config["streaming"]['bootstrap_servers'] = 'localhost:50000'
 
         islanding_data_frames = [{
             'parameters': {'eval_freq': 1},
@@ -170,7 +170,7 @@ if __name__ == '__main__':
             config, alarm_uuid=alarm_uuid, alarm_data=alarm_data, grid_view=grid_view)
         alarm_view.show()
 
-        # producer = KafkaProducer(**config['kafka'])
+        # producer = KafkaProducer(**config["streaming"])
         # [producer.send('islanding', df) for df in islanding_data_frames]
 
         app.exec()

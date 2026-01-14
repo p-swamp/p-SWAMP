@@ -31,9 +31,9 @@ class Events:
 
 def run_n44_mock_case(config, events=None):
     config = load_config()
-    config['kafka']['consumers_seek_to_beginning'] = True
+    config["streaming"]['consumers_seek_to_beginning'] = True
 
-    if config['kafka']['use_nqkafka']:
+    if config["streaming"]['use_nqkafka']:
         runners.run_nqkafka_server(config, run_in_process=False)
         print('Started NQKafka Server')
     
@@ -56,11 +56,11 @@ def run_n44_mock_case(config, events=None):
     rts.interface_functions['printer'] = lambda rts: print(rts.sol.t)
     rts.interface_functions['Events'] = events.update
     
-    pmus = PMUToKafkaPublisher(rts=rts, **{'topic': 'pmudata', 'kafka_kwargs': config['kafka']})
+    pmus = PMUToKafkaPublisher(rts=rts, **{'topic': 'pmudata', 'io_kwargs': config["streaming"]})
     pmus.start()
     rts.run()
 
-    alarm_sender = AlarmSender(kafka_kwargs=config['kafka'])
+    alarm_sender = AlarmSender(io_kwargs=config["streaming"])
     alarm_sender.start()
 
 

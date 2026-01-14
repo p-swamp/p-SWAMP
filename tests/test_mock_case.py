@@ -5,7 +5,7 @@ import time
 
 def test_mock_case():
     config = load_config()
-    config['kafka']['bootstrap_servers'] = 'localhost:51007'
+    config["streaming"]['bootstrap_servers'] = 'localhost:51007'
     run_mock_case(config)
     time.sleep(1)
     stop_mock_case(config)

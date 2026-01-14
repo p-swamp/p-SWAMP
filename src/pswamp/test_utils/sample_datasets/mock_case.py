@@ -2,7 +2,7 @@ import time
 from nqkafka import NQKafkaServer
 from nqkafka.utils import stop_server
 from pswamp.test_utils import runners
-from pswamp.streaming.kafka_extras import KafkaProducer
+from pswamp.streaming.kafka_extras import Producer
 from pswamp.test_utils.csv_playback.data_frame_generator import DataFrameGenerator
 import threading
 import numpy as np
@@ -10,7 +10,7 @@ import numpy as np
 
 def run_mock_case(config, topic_data={}, publish_frequency=50, t_end=10):
     server = NQKafkaServer(
-        config['kafka']['bootstrap_servers'], run_in_process=False)
+        config["streaming"]['bootstrap_servers'], run_in_process=False)
     server.start()
     runners.create_topics(config)
 
@@ -20,7 +20,7 @@ def run_mock_case(config, topic_data={}, publish_frequency=50, t_end=10):
     cfg = DataFrameGenerator.generate_cfg(['PMU1', 'PMU2', 'PMU3'], [['V'], ['V'], [
                                           'V']], publish_frequency=publish_frequency)
 
-    producer = KafkaProducer(**config['kafka'])
+    producer = Producer(**config["streaming"])
 
     for topic, data in topic_data.items():
         [producer.send(topic, data_) for data_ in data]
@@ -62,7 +62,7 @@ def run_mock_case(config, topic_data={}, publish_frequency=50, t_end=10):
 
 def stop_mock_case(config):
     from nqkafka.utils import stop_server
-    stop_server(config['kafka']['bootstrap_servers'])
+    stop_server(config["streaming"]['bootstrap_servers'])
 
 
 if __name__ == '__main__':

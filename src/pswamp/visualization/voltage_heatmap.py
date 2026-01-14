@@ -3,7 +3,6 @@ import sys
 import numpy as np
 from pswamp.visualization.components.heatmap import HeatMapGeo
 import threading
-from pswamp.streaming.kafka_extras import get_last_message_from_topic
 from pswamp.utils.pmu_time_window import PMUTimeWindow
 from pswamp.utils.load_config import load_config
 from pswamp.utils.get_station_coords import load_bus_coords_for_current_stations
@@ -16,7 +15,7 @@ def run_voltage_heatmap(*config_args):
 
     bus_names, bus_coords = load_bus_coords_for_current_stations(config)
 
-    pmu_tw = PMUTimeWindow(n_samples=1, kafka_topic=config['topics']['pmudata'], kafka_kwargs=config['kafka'])
+    pmu_tw = PMUTimeWindow(n_samples=1, kafka_topic=config['topics']['pmudata'], io_kwargs=config["streaming"])
     pmu_tw.initialize()
 
     pmu_tw_thread = threading.Thread(target=pmu_tw.run, daemon=True)

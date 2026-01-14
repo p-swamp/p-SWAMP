@@ -4,7 +4,7 @@ from pswamp.utils.time_window import TimeWindow
 from pswamp.app_templates.time_window_app import TimeWindowApp
 from scipy.signal import detrend
 
-from pswamp.streaming.kafka_extras import get_last_message_from_topic, consumer_seek_relative_offset
+from pswamp.streaming import get_last_message_from_topic, consumer_seek_relative_offset
 
 
 def calculate_fft_spectrum(y):
@@ -26,7 +26,7 @@ def calculate_fft_spectrum(y):
 class FFTOnline(TimeWindowApp):
     def __init__(
         self,
-        kafka_kwargs,
+        io_kwargs,
         fft_window=5,
         time_window_store=10,
         kafka_topic='pmudata',
@@ -35,7 +35,7 @@ class FFTOnline(TimeWindowApp):
         *args,
         **kwargs
     ):
-        sample_msg = get_last_message_from_topic(kafka_kwargs, kafka_topic)
+        sample_msg = get_last_message_from_topic(kafka_topic, **io_kwargs)
         dt = 1 / sample_msg.cfg.get_data_rate()
         n_samples_fft = 2 ** int(np.ceil(np.log(fft_window / dt) / np.log(2)))
         self.n_samples_store = int(round(time_window_store/dt))
@@ -44,7 +44,7 @@ class FFTOnline(TimeWindowApp):
             self,
             n_samples=n_samples_fft,
             input_topic=kafka_topic,
-            kafka_kwargs=kafka_kwargs,
+            io_kwargs=io_kwargs,
             auto_adjust_offset=False,
             channel_selection=channel_selection,
             report_status=True,

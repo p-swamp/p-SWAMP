@@ -1,18 +1,14 @@
-from pswamp.streaming.kafka_extras import KafkaConsumer
 import numpy as np
 import threading
-from pswamp.streaming.kafka_extras import consumer_seek_relative_offset
 import time
-from pswamp.streaming.kafka_extras import KafkaConsumer
-import numpy as np
-import threading
+from pswamp.streaming import Consumer
 import pickle
 
 
 class TopicGetter:
-    def __init__(self, topic, kafka_kwargs, relative_start_offset=-np.inf, empty_topic_timeout=0.2):
+    def __init__(self, topic, io_kwargs, relative_start_offset=-np.inf, empty_topic_timeout=0.2):
         self.data = []
-        self.consumer = KafkaConsumer(topic, value_deserializer=pickle.loads, **kafka_kwargs)
+        self.consumer = Consumer(topic, **io_kwargs)
         # consumer_seek_relative_offset(self.consumer, relative_start_offset)
         self.consumer_thread = threading.Thread(target=self.run, daemon=True)
         self.consumer_thread.start()

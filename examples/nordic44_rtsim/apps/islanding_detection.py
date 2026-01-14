@@ -10,7 +10,7 @@ if __name__ == "__main__":
         mean_threshold=0.1,
         input_topic=config['topics']['pmudata'],
         output_topic=config['topics']['islanding'],
-        kafka_kwargs=config['kafka'],
+        io_kwargs=config["streaming"],
         eval_freq=1,
     )
 

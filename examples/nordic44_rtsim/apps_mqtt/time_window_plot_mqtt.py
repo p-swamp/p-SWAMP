@@ -14,7 +14,7 @@ def plot_time_window(
     **kwargs
 ):
 
-    io = MQTT_IO(mqtt_kwargs=io_kwargs)
+    io = MQTT_IO(io_kwargs=io_kwargs)
     tw_app = TimeWindowApp(
         io=io,
         **kwargs,

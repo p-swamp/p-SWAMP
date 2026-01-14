@@ -1,7 +1,19 @@
-from kafka import KafkaConsumer as KafkaPythonConsumer, KafkaProducer as KafkaPythonProducer
-from nqkafka import KafkaConsumer as NQKafkaConsumer, KafkaProducer as NQKafkaProducer
+try:
+    from kafka import KafkaConsumer as KafkaPythonConsumer, KafkaProducer as KafkaPythonProducer
+except ImportError:
+    _has_kafka = False
+else:
+    _has_kafka = True
+    
+try:
+    from nqkafka import KafkaConsumer as NQKafkaConsumer, KafkaProducer as NQKafkaProducer
+    import nqkafka.utils as nqkafka_utils
+except ImportError:
+    _has_nqkafka = False
+else:
+    _has_nqkafka = True
+
 import pswamp.streaming.kafka_extras.utils as utils
-import nqkafka.utils as nqkafka_utils
 import numpy as np
 
 
@@ -11,7 +23,7 @@ def consumer_seek_relative_offset(consumer, relative_offset):
     imported_module.consumer_seek_relative_offset(consumer, relative_offset)
     
 
-class KafkaConsumer:
+class Consumer:
     """Wrapper for Kafka consumer.    
 
     Args:
@@ -51,7 +63,7 @@ class KafkaConsumer:
         return self.instance.__iter__()
     
 
-class KafkaProducer:
+class Producer:
     """Wrapper for Kafka producer.
 
     Args:
@@ -88,7 +100,7 @@ class KafkaProducer:
 
 if __name__ == '__main__':
     bootstrap_servers = 'localhost:9092'
-    consumer = KafkaConsumer('test_topic', bootstrap_servers=bootstrap_servers, use_nqkafka=True)
+    consumer = Consumer('test_topic', bootstrap_servers=bootstrap_servers, use_nqkafka=True)
 
     for msg in consumer:
         print(msg.value)

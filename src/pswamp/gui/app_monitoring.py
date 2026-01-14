@@ -1,8 +1,7 @@
 from PySide6 import QtWidgets, QtCore, QtGui
 import threading
-from pswamp.streaming.kafka_extras import KafkaConsumer, KafkaProducer
+from pswamp.streaming import Consumer, Producer
 from pswamp.utils.load_config import load_config
-import pickle
 import time
 import datetime
 
@@ -10,15 +9,15 @@ import datetime
 class AppStatusMonitoring:
     def __init__(
         self,
-        kafka_kwargs,
+        io_kwargs,
         input_topic='application.status',
     ):
 
         self.input_topic = input_topic
-        self.kafka_kwargs = kafka_kwargs
+        self.io_kwargs = io_kwargs
 
-        self.input_stream = KafkaConsumer(
-            input_topic, value_deserializer=pickle.loads, **kafka_kwargs
+        self.input_stream = Consumer(
+            input_topic, **io_kwargs
         )
 
         self.app_status = dict()
@@ -44,7 +43,7 @@ class AppStatusMonitoringWidget(QtWidgets.QWidget):
 
         self.status_mon = AppStatusMonitoring(
             input_topic=config['topics']['application.status'],
-            kafka_kwargs=config['kafka'],
+            io_kwargs=config["streaming"],
         )
 
         super().__init__()
@@ -101,7 +100,7 @@ class AppStatusMonitoringWidget(QtWidgets.QWidget):
         row_idx = self.tableWidget.selectedItems()[0].row()
         uuid, app_data = list(self.status_mon.app_status.items())[row_idx]
         
-        producer = KafkaProducer(**self.config['kafka'])
+        producer = Producer(**self.config["streaming"])
         producer.send(
             self.config['topics']['application.commands'],
             {'target_uuid': uuid, 'command': command})
@@ -170,7 +169,7 @@ def run_app_monitoring(*config_args):
 if __name__ == '__main__':
     from pswamp import load_config
     config = load_config()
-    config['kafka']['consumers_seek_to_beginning'] = True
+    config["streaming"]['consumers_seek_to_beginning'] = True
 
     run_online = True
     if not run_online:
@@ -186,11 +185,11 @@ if __name__ == '__main__':
             'time_stamp': 1,
         } for k in range(5)]
         
-        from pswamp.streaming.kafka_extras import KafkaProducer
-        producer = KafkaProducer(**config['kafka'])
+        from pswamp.streaming import Producer
+        producer = Producer(**config["streaming"])
         [producer.send('application.status', msg) for msg in msgs]
 
-        # consumer = KafkaConsumer(**config['kafka'], topic='application.status')
+        # consumer = KafkaConsumer(**config["streaming"], topic='application.status')
         # msg = next(iter(consumer))
         # print(msg)
 

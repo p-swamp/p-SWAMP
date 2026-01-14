@@ -1,7 +1,7 @@
 from PySide6 import QtWidgets
 from pswamp.gui.components.channel_select import ChannelSelect
 import multiprocessing as mp
-from pswamp.streaming.kafka_extras import get_last_message_from_topic
+from pswamp.streaming import get_last_message_from_topic
 from pswamp.utils.pmu_time_window import PMUTimeWindow
 import time
 
@@ -24,10 +24,10 @@ class RunApp(QtWidgets.QWidget):
 
         while True:
             pmu_data_frame = get_last_message_from_topic(
-                kafka_kwargs=config['kafka'],
-                topic=config['topics']['pmudata'],
+                topic=config["topics"]["pmudata"],
+                **config["streaming"],
             )
-            if not pmu_data_frame is None:
+            if pmu_data_frame is not None:
                 break
             else:
                 time.sleep(1)

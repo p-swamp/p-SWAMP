@@ -21,7 +21,7 @@ class Frequency3DLayer:
         self.parent = parent
         self.z_scale = 3
 
-        pmu_tw = PMUTimeWindowOnline(n_samples=1, kafka_topic=config['topics']['pmudata'], kafka_kwargs=config['kafka'])
+        pmu_tw = PMUTimeWindowOnline(n_samples=1, kafka_topic=config['topics']['pmudata'], io_kwargs=config["streaming"])
         pmu_tw.initialize()
         self.pmu_tw = pmu_tw
         self.col_idx = self.get_col_idx()

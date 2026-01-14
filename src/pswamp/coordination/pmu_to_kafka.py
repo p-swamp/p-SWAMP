@@ -1,8 +1,6 @@
 from synchrophasor.pdc import Pdc
 from synchrophasor.frame import DataFrame
-from pswamp.streaming.kafka_extras import KafkaProducer
-import pickle
-import time
+from pswamp.streaming import Producer
 
 
 class PMUToKafka:
@@ -13,7 +11,7 @@ class PMUToKafka:
         pdc_id,
         pmu_ip,
         pmu_port,
-        kafka_kwargs,
+        io_kwargs,
         kafka_topic="pmudata",
     ):
         """Constructor for PMU receiver. Specify id, ip and port of the PDC.
@@ -31,9 +29,7 @@ class PMUToKafka:
         self._stopped = False
 
         self.kafka_topic = kafka_topic
-        self.kafka_producer = KafkaProducer(
-            **kafka_kwargs, value_serializer=pickle.dumps
-        )
+        self.kafka_producer = Producer(**io_kwargs)
 
     def connect_to_pmu(self):
         """Connect to the PDC, and receive header- and configuration frames. Does not start stream of data.
@@ -53,7 +49,7 @@ class PMUToKafka:
         while not self._stopped:
 
             data = self.pdc.get()  # Keep receiving recorded_pmu_data_raw
-            if type(data) == DataFrame:
+            if isinstance(data, DataFrame):
                 self.kafka_producer.send(self.kafka_topic, data)
                 self.kafka_producer.flush()
 

@@ -7,7 +7,7 @@ import numpy as np
 from pswamp.visualization.time_window_plot import TimeSeriesPlot
 import threading
 import datetime
-from pswamp.streaming.kafka_extras import consumer_seek_relative_offset
+from pswamp.streaming import consumer_seek_relative_offset
 import time
 from pswamp.visualization.voltage_phasor_plot import VoltagePhasorPlot
 from pswamp.visualization.components.phasor_plot import PhasorPlotFast, PhasorPlotFastFancy, PhasorBasePlot, xy_from_phasors
@@ -55,7 +55,7 @@ class VoltageStabilityAlarmView(InteractiveAlarmView):
         super().__init__(config, *args, define_layout=False, **kwargs)
         
         self.app_results = AppResultKeeper(
-            kafka_kwargs=config['kafka'],
+            io_kwargs=config["streaming"],
             input_topic=config['topics']['voltage.stability.index'],
             t_start=self.time_stamp_start,
             t_end=self.t_end_seconds,
@@ -288,9 +288,9 @@ if __name__ == '__main__':
 
     run_online = True
     if run_online:
-        config['kafka']['consumers_seek_to_beginning'] = True
-        config['kafka']['bootstrap_servers'] = 'localhost:40001'
-        # config['kafka']['bootstrap_servers'] = 'localhost:45001'
+        config["streaming"]['consumers_seek_to_beginning'] = True
+        config["streaming"]['bootstrap_servers'] = 'localhost:40001'
+        # config["streaming"]['bootstrap_servers'] = 'localhost:45001'
         config['app_parameters'] = {'voltage_stability_viz': {'dSdZ_curve_data': dict(
             Zl_range=[0.01, 0.15, 0.001],
             ang_Zl= [0.54, 0.54, 0.54, 0.54],
@@ -303,7 +303,7 @@ if __name__ == '__main__':
         )}}
 
         alarm_monitor = AlarmMonitor(
-            kafka_kwargs=config['kafka'],
+            io_kwargs=config["streaming"],
             alarm_topic=config['topics']['alarms'],
         )
         alarm_monitor.start()
@@ -317,7 +317,7 @@ if __name__ == '__main__':
                 time.sleep(1)
                 pass
 
-        config['kafka']['consumers_seek_to_beginning'] = False
+        config["streaming"]['consumers_seek_to_beginning'] = False
         app = QtWidgets.QApplication()
 
         grid_view = GridViewContainer(config, True)
@@ -339,7 +339,7 @@ if __name__ == '__main__':
 
         # from pswamp.test_utils.mock_case import run_mock_case, stop_mock_case, KafkaProducer
         from pswamp.test_utils.sample_datasets.n44_mock_case import run_mock_case, stop_mock_case
-        config['kafka']['bootstrap_servers'] = 'localhost:50000'
+        config["streaming"]['bootstrap_servers'] = 'localhost:50000'
 
         app_data_frames = [{
             'parameters': {'eval_freq': 1, 'measured_phasors': [('5610', 'V'), ('5610', 'I[L5603-5610]')]},
@@ -375,7 +375,7 @@ if __name__ == '__main__':
             config, alarm_uuid=alarm_uuid, alarm_data=alarm_data, grid_view=grid_view)
         alarm_view.show()
 
-        # producer = KafkaProducer(**config['kafka'])
+        # producer = KafkaProducer(**config["streaming"])
         # [producer.send('islanding', df) for df in islanding_data_frames]       
         
         app.exec()

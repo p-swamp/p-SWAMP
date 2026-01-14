@@ -29,7 +29,7 @@ class AlarmLayer:
         self.y = bus_coords_3d[:, 1]
 
         self.alarm_monitor = AlarmMonitor(
-            kafka_kwargs=config['kafka'],
+            io_kwargs=config["streaming"],
             alarm_topic=config['topics']['alarms'],
         )
         self.alarm_monitor.start()

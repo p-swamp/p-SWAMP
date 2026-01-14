@@ -1,7 +1,4 @@
-from ensurepip import bootstrap
-from nqkafka import NQKafkaServer
 from pswamp.streaming.base import Consumer, Producer
-from nqkafka.utils import create_topic, stop_server
 import threading
 import sys
 import time
@@ -15,7 +12,7 @@ def run_consumer(streaming_kwargs, n_msgs):
     msg_gen = iter(kafka_consumer)
     while k < n_msgs:
         msg = next(msg_gen)
-        t_send, k_prod, payload = msg
+        t_send, k_prod, payload = msg.value
         if not k == k_prod:
             print('Wrong message received!')
         else:

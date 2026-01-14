@@ -1,9 +1,10 @@
 import threading
-from pswamp.streaming.kafka_extras import KafkaProducer, KafkaConsumer
+from pswamp.streaming import Producer, Consumer
 import pickle
 import datetime
 import uuid
 from collections import OrderedDict
+from pswamp.streaming.kafka_io import encoder, decoder
 
 
 class AlarmSender:
@@ -13,7 +14,7 @@ class AlarmSender:
     """
     def __init__(
         self,
-        kafka_kwargs,
+        io_kwargs,
         input_topic='application.status',
         alarm_topic='alarms',
         alarm_time_threshold=15,
@@ -21,14 +22,13 @@ class AlarmSender:
 
         self.input_topic = input_topic
         self.alarm_topic = alarm_topic
-        self.kafka_kwargs = kafka_kwargs
+        self.io_kwargs = io_kwargs
 
-        self.input_stream = KafkaConsumer(
-            input_topic, value_deserializer=pickle.loads, **kafka_kwargs
+        self.input_stream = Consumer(
+            input_topic, **io_kwargs
         )
 
-        self.output_stream = KafkaProducer(
-            value_serializer=pickle.dumps, **kafka_kwargs
+        self.output_stream = Producer(**io_kwargs
         )
 
         self.app_status = dict()
@@ -56,7 +56,7 @@ class AlarmSender:
             time_stamp_now = datetime.datetime.fromtimestamp(time_stamp, datetime.UTC)  # datetime.datetime.now()
             time_stamp_now_str = time_stamp_now.strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]
             
-            messaging_app_is_new = not app_uuid in self.app_status
+            messaging_app_is_new = app_uuid not in self.app_status
             if messaging_app_is_new:
                 self.app_status[app_uuid] = {
                     'time_of_last_alarm': None,  # datetime.datetime(1970, 1, 1, tzinfo=datetime.UTC),
@@ -135,12 +135,12 @@ class AlarmSender:
 class AlarmMonitor:
     def __init__(
         self,
-        kafka_kwargs,
+        io_kwargs,
         alarm_topic='alarms',
     ):
         
-        self.input_stream = KafkaConsumer(
-            alarm_topic, value_deserializer=pickle.loads, **kafka_kwargs
+        self.input_stream = Consumer(
+            alarm_topic, **io_kwargs
         )
 
         self.alarm_data = OrderedDict()
@@ -162,7 +162,7 @@ class AlarmMonitor:
             # 'message: '...'
             # 'location': ...
             # 'identifiers': {freq=0.5Hz} etc.
-            if not alarm_event['uuid'] in self.alarm_data:
+            if alarm_event["uuid"] not in self.alarm_data:
                 self.alarm_data[alarm_event['uuid']] = {
                     'app_name': alarm_event['app_name'],
                     'time_stamp': alarm_event['time_stamp'],
@@ -197,10 +197,10 @@ if __name__ == '__main__':
 
     from pswamp import load_config
     config = load_config()
-    config['kafka']['consumers_seek_to_beginning'] = True
+    config["streaming"]['consumers_seek_to_beginning'] = True
     # run_app_monitoring(config)
     alarm_sender = AlarmSender(
-        kafka_kwargs=config['kafka'],
+        io_kwargs=config["streaming"],
         input_topic=config['topics']['application.status'],
         alarm_topic=config['topics']['alarms'],
     )
@@ -208,7 +208,7 @@ if __name__ == '__main__':
     # input('Press a key')
 
     alarm_monitor = AlarmMonitor(
-        kafka_kwargs=config['kafka'],
+        io_kwargs=config["streaming"],
         alarm_topic=config['topics']['alarms'],
     )
     alarm_monitor.start()

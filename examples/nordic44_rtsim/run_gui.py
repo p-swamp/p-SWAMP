@@ -11,7 +11,7 @@ import pswamp.test_utils.runners as runners
 if __name__ == '__main__':
     config = load_config('config.toml')
     
-    if config['kafka']['use_nqkafka']:
+    if config["streaming"]['use_nqkafka']:
         runners.run_nqkafka_server(config)
         print('Started NQKafka Server')
     
@@ -30,5 +30,5 @@ if __name__ == '__main__':
     
     run_main_window(config)
 
-    if config['kafka']['use_nqkafka']:
-        stop_nqkafka_server(config['kafka']['bootstrap_servers'])
+    if config["streaming"]['use_nqkafka']:
+        stop_nqkafka_server(config["streaming"]['bootstrap_servers'])

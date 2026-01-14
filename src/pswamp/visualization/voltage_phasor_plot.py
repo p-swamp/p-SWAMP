@@ -17,13 +17,13 @@ import sys
 class VoltagePhasorPlot:
     def __init__(
         self,
-        kafka_kwargs,
+        io_kwargs,
         kafka_topic="pmudata",
         **kwargs
     ):
 
         pmu_tw = PMUTimeWindowOnline(
-            kafka_kwargs=kafka_kwargs,
+            io_kwargs=io_kwargs,
             n_samples=1,
             kafka_topic=kafka_topic,
             # phasor_selection=phasor_selection,
@@ -74,7 +74,7 @@ def run_voltage_phasor_plot(*config_args, update_freq=25, **kwargs):
 
     config = load_config(*config_args)
     voltage_phasor_plot = VoltagePhasorPlot(
-        kafka_kwargs=config['kafka'],
+        io_kwargs=config["streaming"],
         kafka_topic=config['topics']['pmudata'],
         **kwargs
     )
@@ -90,21 +90,21 @@ if __name__ == '__main__':
     if run_online:
         run_voltage_phasor_plot(config)
     else:
-        config['kafka']['bootstrap_servers'] = 'localhost:50000'
+        config["streaming"]['bootstrap_servers'] = 'localhost:50000'
 
         from nqkafka import NQKafkaServer
         from nqkafka.utils import stop_server
         from pswamp.test_utils import runners
-        from pswamp.streaming.kafka_extras import KafkaProducer
+        from pswamp.streaming import Producer
         from pswamp.test_utils.csv_playback.data_frame_generator import DataFrameGenerator
 
-        server = NQKafkaServer(config['kafka']['bootstrap_servers'], run_in_process=False)
+        server = NQKafkaServer(config["streaming"]['bootstrap_servers'], run_in_process=False)
         server.start()
         runners.create_topics(config)
 
         cfg = DataFrameGenerator.generate_cfg(['PMU1', 'PMU2'], [['V'], ['V']])
         
-        producer = KafkaProducer(**config['kafka'])
+        producer = Producer(**config["streaming"])
         import time
         def generate_data_frames():
             while True:
@@ -118,5 +118,5 @@ if __name__ == '__main__':
 
         run_voltage_phasor_plot(config)
 
-        stop_server(config['kafka']['bootstrap_servers'])
+        stop_server(config["streaming"]['bootstrap_servers'])
     

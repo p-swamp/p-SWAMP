@@ -130,7 +130,7 @@ class AnglePlot(TimeWindowPlot):
 
 
 def plot_time_window(
-    kafka_kwargs,
+    io_kwargs,
     # kafka_topic="pmudata",
     update_freq=25,
     # phasor_selection=None,
@@ -144,7 +144,7 @@ def plot_time_window(
 
     # pmu_tw = PMUTimeWindowOnline(
     #     *args,
-    #     kafka_kwargs,
+    #     io_kwargs,
     #     kafka_topic=kafka_topic,
     #     # phasor_selection=phasor_selection,
     #     auto_adjust_offset=auto_adjust_offset,
@@ -155,7 +155,7 @@ def plot_time_window(
     # )
     # pmu_tw.initialize()
     tw_app = TimeWindowApp(
-        kafka_kwargs=kafka_kwargs,  # config['kafka'],
+        io_kwargs=io_kwargs,  # config["streaming"],
         **kwargs,
     )
         # t_end=70,
@@ -182,7 +182,7 @@ def run_time_window_plot(*config_args, update_freq=25, channel_selection_idx=Non
     config = load_config(*config_args)
     plot_time_window(
         input_topic=config['topics']['pmudata'],
-        kafka_kwargs=config['kafka'],
+        io_kwargs=config["streaming"],
         update_freq=update_freq,
         channel_selection_idx=channel_selection_idx,
         # time_window_type=TimeWindowLabeled,
@@ -197,7 +197,7 @@ if __name__ == "__main__":
         run_time_window_plot(config)
     # else:
     #     from pswamp.test_utils.sample_datasets.mock_case import run_mock_case, stop_mock_case
-    #     # config['kafka']['bootstrap_servers'] = 'localhost:50000'
+    #     # config["streaming"]['bootstrap_servers'] = 'localhost:50000'
     #     mock_case = run_mock_case(config)
     #     run_time_window_plot(config)
     #     stop_mock_case(config)
@@ -205,7 +205,7 @@ if __name__ == "__main__":
         from pswamp.test_utils.sample_datasets.n44.n44_rtsim_offline import\
             run_n44_rtsim_offline, stop_case
         
-        config['kafka']['consumers_seek_to_beginning'] = True
+        config["streaming"]['consumers_seek_to_beginning'] = True
 
         events = [
             (1, ('line', 'L3244-6500', 'disconnect')),

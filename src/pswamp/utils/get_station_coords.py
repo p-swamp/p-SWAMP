@@ -1,4 +1,4 @@
-from pswamp.streaming.kafka_extras import get_last_message_from_topic
+from pswamp.streaming import get_last_message_from_topic
 import numpy as np
 import time
 from pswamp.utils.misc import lookup_strings
@@ -8,7 +8,7 @@ def load_bus_coords_for_current_stations(config, return_3d=False, geo=True):
     """Get coordinates for stations in PMU data frame"""
     while True:
         sample_pmu_data_frame = get_last_message_from_topic(
-            config['kafka'], config['topics']['pmudata']
+            config["topics"]["pmudata"], **config["streaming"]
         )
         if not sample_pmu_data_frame is None:
             break
@@ -34,7 +34,7 @@ def load_bus_coords_for_stations(config, wanted_stations, return_3d=False, geo=T
 def load_bus_coords(config, return_3d=False, geo=True):
     """Get bus coordinates for all buses from pmu.coords topic"""
     bus_names, bus_coords = get_last_message_from_topic(
-        config['kafka'], config['topics']['pmu.coords']
+        config["topics"]["pmu.coords"], **config["streaming"]
     )
 
     bus_coords = bus_coords[:, 0:2] if geo else bus_coords[:, 2:4]

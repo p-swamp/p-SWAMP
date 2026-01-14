@@ -1,4 +1,4 @@
-from pswamp.streaming.kafka_extras import get_last_message_from_topic
+from pswamp.streaming import get_last_message_from_topic
 import numpy as np
 import pandas as pd
 import pandas as pd
@@ -17,7 +17,7 @@ def replace_data_lists_with_dataframes(d):
 
 def get_model_data(config):
     model_data = get_last_message_from_topic(
-        config['kafka'], config['topics']['model.data']
+        config["topics"]["model.data"], **config["streaming"]
     )
     replace_data_lists_with_dataframes(model_data)
     return model_data

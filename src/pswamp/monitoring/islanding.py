@@ -52,11 +52,10 @@ def detect_islands(t, data, mean_threshold=0.05):
 
 
 class IslandingApp(TimeWindowApp):
-    def __init__(self, *args, eval_freq=1, window_length=10, **kwargs):
+    def __init__(self, mean_threshold=None, eval_freq=1, window_length=10, **kwargs):
 
         TimeWindowApp.__init__(
             self,
-            *args,
             window_length=window_length,
             eval_freq=eval_freq,
             decoder_kwargs={
@@ -65,12 +64,13 @@ class IslandingApp(TimeWindowApp):
             report_status=True,
             **kwargs)
         
-        self.init(*args)
+        self.init(mean_threshold=mean_threshold)
         self.alarm_handler = AlarmHandler(self)
         self.update_callbacks.append(self.alarm_handler.update)
         
-    def init(self, mean_threshold=0.05):
-        self.mean_threshold = mean_threshold
+    def init(self, mean_threshold=None):
+        self.mean_threshold = mean_threshold if \
+            mean_threshold is not None else 0.05
         self.col_idx = self.tw.get_col_idx()
         # self.pca = PCA(6)
 
@@ -95,7 +95,7 @@ class IslandingApp(TimeWindowApp):
             },
             'result': {
                 'time_stamp': t_assess,
-                'islands': islands,
+                'islands': islands,  # {i: list(isl) for i, isl in enumerate(islands)},
             },
         }
         self.set_status(return_value)
@@ -120,7 +120,7 @@ def run_islanding_application(config, **kwargs):
         input_topic=config['topics']['pmudata'],
         output_topic=config['topics']['islanding'],
         status_topic=config['topics']['application.status'],
-        kafka_kwargs=config['kafka'],
+        io_kwargs=config["streaming"],
         # eval_freq=1,
         **kwargs
     )
@@ -131,5 +131,5 @@ def run_islanding_application(config, **kwargs):
 
 if __name__ == '__main__':
     config = load_config()
-    config['kafka']['bootstrap_servers'] = 'localhost:40000'
+    config["streaming"]['bootstrap_servers'] = 'localhost:40000'
     run_islanding_application(config)

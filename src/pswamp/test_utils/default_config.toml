@@ -15,8 +15,8 @@ model_data_path='sample_datasets/n44/model_data.json'
 "application.commands"="application.commands"
 
 
-[kafka]
-use_nqkafka=true
+[streaming]
+type="nqkafka"
 bootstrap_servers="localhost:40000"
 
 

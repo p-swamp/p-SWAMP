@@ -29,6 +29,7 @@ import threading
 
 
 class SomeRTApp(TimeWindowRTApp):
+    # TODO: Change TimeWindowRTApp with TimeWindowApp
     def run_analysis(self, t, phasors):
         sys.stdout.write("\rTime window {:.2f}% complete".format(100 * (1 - (sum(np.isnan(t))) / len(t))))
 
@@ -54,7 +55,7 @@ def test():
     test_app = SomeRTApp(
         time_window_length=2,
         input_topic=config['topics']['pmudata'],
-        kafka_kwargs=config['kafka'],
+        io_kwargs=config["streaming"],
     )
 
     app_thread = threading.Thread(target=test_app.run)

@@ -1,15 +1,15 @@
 import time
 from synchrophasor.timeSeriesPlayback import PMUTimeSeriesPublisher
-from pswamp.streaming.kafka_extras import KafkaProducer
+from pswamp.streaming import Producer
 import numpy as np
-import pickle
+from pswamp.streaming.utils import encoder
 from queue import Queue
 
 
 class CSVtoKafka(PMUTimeSeriesPublisher):
     def __init__(
             self,
-            kafka_kwargs,
+            io_kwargs,
             *args,
             topic='pmudata',
             freq_data=None,
@@ -24,7 +24,7 @@ class CSVtoKafka(PMUTimeSeriesPublisher):
         self.pmu.client_buffers = [Queue()]
 
         self.topic = topic
-        self.kafka_producer = KafkaProducer(**kafka_kwargs, value_serializer=pickle.dumps)
+        self.kafka_producer = Producer(**io_kwargs, value_serializer=encoder)
         self.freq_data = np.nan_to_num(np.array(freq_data).T) if freq_data is not None else None
         self.dfreq_data = np.nan_to_num(np.array(dfreq_data).T) if dfreq_data is not None else None
 

@@ -1,16 +1,14 @@
 from pswamp.test_utils.csv_playback.pmu_streamer import PMUDataStreamer
-import numpy as np
-import pickle
-from nqkafka import KafkaProducer
+from pswamp.streaming import Producer
+from pswamp.streaming.utils import encoder
 import threading
-from pathlib import Path
 
 
 class PMUDataStreamerKafka(PMUDataStreamer):
-    def init_publisher(self, topic, **kafka_kwargs):
+    def init_publisher(self, topic, **io_kwargs):
         self.topic = topic
-        self.kafka_producer = KafkaProducer(
-            **kafka_kwargs, value_serializer=pickle.dumps)
+        self.kafka_producer = Producer(
+            **io_kwargs, value_serializer=encoder)
         self.pause_cv = threading.Condition()
         self.paused = False
 

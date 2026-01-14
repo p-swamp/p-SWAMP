@@ -1,7 +1,4 @@
-from ensurepip import bootstrap
-from nqkafka import NQKafkaServer
-from pswamp.streaming.base import Consumer, Producer
-from nqkafka.utils import create_topic, stop_server
+from pswamp.streaming import Consumer, Producer
 import threading
 import sys
 import time
@@ -15,7 +12,7 @@ def run_consumer(streaming_kwargs, n_msgs):
     msg_gen = iter(kafka_consumer)
     while k < n_msgs:
         msg = next(msg_gen)
-        t_send, k_prod, payload = msg
+        t_send, k_prod, payload = msg.value
         if not k == k_prod:
             print('Wrong message received!')
         else:
@@ -26,7 +23,7 @@ def run_consumer(streaming_kwargs, n_msgs):
 
 
 def run_producer(streaming_kwargs, n_msgs):
-    kafka_producer = Producer(**streaming_kwargs)  # 'localhost:9092')
+    kafka_producer = Producer(**streaming_kwargs)  # 'localhost:9094')
 
     k = 0
     while k < n_msgs:
@@ -44,7 +41,7 @@ def test():
     config = {
         "streaming": {
             "type": "kafka",
-            "bootstrap_servers": "localhost:9092"
+            "bootstrap_servers": "localhost:9094"
         }
     }
 
@@ -67,7 +64,7 @@ if __name__ == '__main__':
     try:
         kafka_consumer = Consumer("time",
             type="kafka",
-            bootstrap_servers="localhost:9092")
+            bootstrap_servers="localhost:9094")
         
         test()
     except NoBrokersAvailable:

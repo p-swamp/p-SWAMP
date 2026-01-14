@@ -1,6 +1,6 @@
 import threading
 from pswamp.utils.pmu_time_window import PMUTimeWindowOnline
-from pswamp.streaming.kafka_extras import KafkaProducer
+from pswamp.streaming.kafka_extras import Producer
 import pickle
 from pswamp.streaming.kafka_extras import send_to_kafka_topic
 import uuid
@@ -17,7 +17,7 @@ class TimeWindowRTApp:
     """
     def __init__(
         self,
-        kafka_kwargs,
+        io_kwargs,
         time_window_length=None,
         n_samples_window=None,
         input_topic="pmudata",
@@ -44,7 +44,7 @@ class TimeWindowRTApp:
             n_samples=n_samples_window,
             window_length=time_window_length,
             kafka_topic=input_topic,
-            kafka_kwargs=kafka_kwargs,
+            io_kwargs=io_kwargs,
             # phasor_selection=phasor_selection,
             channel_selection=channel_selection,
             channel_selection_idx=channel_selection_idx,
@@ -53,7 +53,7 @@ class TimeWindowRTApp:
         self.pmu_tw.initialize()
         # self.pmu_tw_thread = threading.Thread(target=self.pmu_tw.run, daemon=True)
 
-        self.kafka_server = kafka_kwargs['bootstrap_servers']
+        self.kafka_server = io_kwargs['bootstrap_servers']
 
         # If output topic is specified, the results returned by "run_analysis" will be forwarded to this topic.
         self.output_topic = output_topic
@@ -62,8 +62,8 @@ class TimeWindowRTApp:
         # for instance information about the number of channels, parameters, etc. If output_meta_topic is specified,
         # then whatever returned by the "output_metadata" method will be forwarded to this topic.
         if self.output_topic is not None:
-            self.kafka_producer = KafkaProducer(
-                **kafka_kwargs, value_serializer=pickle.dumps
+            self.kafka_producer = Producer(
+                **io_kwargs, value_serializer=pickle.dumps
             )
         else:
             self.kafka_producer = None
@@ -78,7 +78,7 @@ class TimeWindowRTApp:
         # Sends whatever returned by the output_metadata to the Kafka topic self.output_meta_topic.
         if (self.output_topic is not None) and (self.output_meta_topic is not None):
             send_to_kafka_topic(
-                self.kafka_kwargs, self.output_meta_topic, self.output_metadata()
+                self.io_kwargs, self.output_meta_topic, self.output_metadata()
             )
 
     def stop(self):
@@ -150,9 +150,9 @@ class TimeWindowRTApp:
 
 
 class StatusCom:
-    def __init__(self, kafka_kwargs, status_topic='application.status'):
+    def __init__(self, io_kwargs, status_topic='application.status'):
         self.status_topic = status_topic
-        self.producer = KafkaProducer(**kafka_kwargs, value_serializer=pickle.dumps)
+        self.producer = Producer(**io_kwargs, value_serializer=pickle.dumps)
         self.uuid = uuid.uuid4()
         self.app_name = self.__class__.__name__
 

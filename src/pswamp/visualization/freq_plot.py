@@ -14,12 +14,12 @@ class FreqPlot(QWidget):
         # self.col_idx_freq = self.tw_app.pmu_tw.tw.get_col_idx(measurement='f')
 
         self.tw_app = TimeWindowApp(
-            kafka_kwargs=config['kafka'],
             input_topic=config['topics']['pmudata'],
             decoder_kwargs={"channel_selection": {'measurement': 'f'}},
             window_length=30,
             n_samples=None,
             auto_adjust_offset=True,
+            io_kwargs=config["streaming"],
             # eval_freq=update_freq,
             # store_dataframes=False,
         )

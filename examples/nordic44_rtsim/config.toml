@@ -29,11 +29,15 @@ id=1
 "grid.events"="grid.events"
 "model.data"="model.data"
 
-[kafka]
-use_nqkafka=true
-bootstrap_servers="localhost:60000"
-# bootstrap_servers="127.0.0.1:40000"
+[streaming]
+# type="kafka"
+# bootstrap_servers="localhost:9094"
+type="nqkafka"
+bootstrap_servers="localhost:40000"
 
+# [database]
+# type="file"
+# file_path='data/model_data.json'
 
 [geo_data]
 countries=["Norway", "Sweden", "Denmark", "Finland"]

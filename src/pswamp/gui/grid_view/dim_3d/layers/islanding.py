@@ -8,7 +8,7 @@ from pswamp.visualization.countries_geo_data.read_geo_data import read_geo_data
 import uuid
 from pswamp.utils.get_station_coords import load_bus_coords_for_current_stations, load_bus_coords_for_stations
 import pyqtgraph.opengl as gl
-from pswamp.streaming.kafka_extras import KafkaConsumer
+from pswamp.streaming.kafka_extras import Consumer
 from pswamp.styles import colors as global_colors
 from pswamp.utils.gl import set_gl_options
 
@@ -83,8 +83,8 @@ class IslandingOnline(Islanding):
         self.config = config
         bus_names, bus_coords_3d = load_bus_coords_for_current_stations(config, geo=geo, return_3d=True)
 
-        self.consumer = KafkaConsumer(
-            config['topics']['islanding'], **config['kafka'])
+        self.consumer = Consumer(
+            config['topics']['islanding'], **config["streaming"])
 
         def get_islanding_messages():
             for message in self.consumer:

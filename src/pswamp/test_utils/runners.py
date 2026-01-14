@@ -1,8 +1,6 @@
 import threading
 from nqkafka.server import NQKafkaServer
-from nqkafka import NQKafkaServer
-from pswamp.streaming.kafka_extras import KafkaProducer
-import pickle
+from pswamp.streaming import Producer
 from synchrophasor.timeSeriesPlayback import PMUTimeSeriesPublisher
 from pswamp.coordination.pmu_to_kafka import PMUToKafka
 from pswamp.test_utils.pmu_csv_to_kafka import CSVtoKafka
@@ -11,6 +9,8 @@ from pswamp.utils.load_config import load_config
 from pswamp.test_utils.csv_playback.kafka_streamer import PMUDataStreamerKafka
 import json
 from pswamp.models.reader import replace_data_lists_with_dataframes
+from pswamp.streaming.utils import encoder
+
 import sqlite3
 import pandas as pd
 
@@ -18,7 +18,7 @@ import pandas as pd
 def run_nqkafka_server(*config_args, run_in_process=True):
     config = load_config(*config_args)
     # Start NQKafka Server
-    server = NQKafkaServer(config['kafka']['bootstrap_servers'],
+    server = NQKafkaServer(config["streaming"]['bootstrap_servers'],
                            run_in_process=run_in_process)
     server.start()
 
@@ -27,23 +27,21 @@ def create_topics(*config_args, n_samples=6000):
     config = load_config(*config_args)
     # Create topics:
     for topic in config['topics']:
-        create_topic(name=topic, kafka_kwargs=config['kafka'], n_samples=n_samples)
+        create_topic(name=topic, io_kwargs=config["streaming"], n_samples=n_samples)
 
 
 def publish_geo_data(config, data, kafka_topic='pmu.coords'):
-    kafka_kwargs = config['kafka']
+    io_kwargs = config["streaming"]
     
     bus_names, bus_coords = data
 
-    kafka_producer = KafkaProducer(
-        **kafka_kwargs, value_serializer=pickle.dumps
-    )
+    kafka_producer = Producer(**io_kwargs)
     kafka_producer.send(kafka_topic, [bus_names, bus_coords])
     kafka_producer.flush()
 
 
 def publish_model_data(config, kafka_topic='model.data'):
-    kafka_kwargs = config['kafka']
+    io_kwargs = config["streaming"]
 
     data = {}
     if 'model_data_path' in config:
@@ -54,9 +52,7 @@ def publish_model_data(config, kafka_topic='model.data'):
         with open(config['sld_data']['line_data_path']) as file:
             data['schematics'] = file.read()
 
-    kafka_producer = KafkaProducer(
-        **kafka_kwargs, value_serializer=pickle.dumps
-    )
+    kafka_producer = Producer(**io_kwargs)
     kafka_producer.send(kafka_topic, data)
     kafka_producer.flush()
 
@@ -92,7 +88,7 @@ def c37118_to_kafka(config, ip=None, port=50000, pdc_id=1410, kafka_topic='pmuda
         pdc_id=pdc_id,
         pmu_ip=ip,
         pmu_port=port,
-        kafka_kwargs=config['kafka'],
+        io_kwargs=config["streaming"],
         kafka_topic=config['topics']['pmudata'],
         # kafka_topic_meta=config['topics']["pmudata.meta"],
     )
@@ -104,7 +100,7 @@ def c37118_to_kafka(config, ip=None, port=50000, pdc_id=1410, kafka_topic='pmuda
 def csv_to_kafka(config, data, speed=1, t_end=None, show_playback_control=False):
 
     pmu_publisher = CSVtoKafka(
-        kafka_kwargs=config['kafka'],
+        io_kwargs=config["streaming"],
         topic=config['topics']['pmudata'],
         time=data['time'],
         # publish_frequency=10,  # is determined automatically if not specified
@@ -129,7 +125,7 @@ def csv_to_kafka(config, data, speed=1, t_end=None, show_playback_control=False)
 def csv_to_kafka_2(config, data_path, speed=1, n_samples=None, streamer_class=PMUDataStreamerKafka, show_playback_control=False, **kwargs):
 
     pmu_publisher = streamer_class(
-        publisher_kwargs={'topic': config['topics']['pmudata'], **config['kafka']},
+        publisher_kwargs={'topic': config['topics']['pmudata'], **config["streaming"]},
         pmu_data_folder=data_path,
         speed=speed,
         n_samples=n_samples,

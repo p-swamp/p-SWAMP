@@ -25,7 +25,7 @@ class AlarmOverview(QtWidgets.QWidget):
     ):
         
         self.config = config
-        self.kafka_kwargs = config['kafka']
+        self.io_kwargs = config["streaming"]
         self.kafka_topics = config['topics']
         self.alarm_topic = self.kafka_topics['alarms']
         self.alarm_keeper = alarm_keeper
@@ -140,14 +140,14 @@ class AlarmOverview(QtWidgets.QWidget):
 def run_alarm_handling(config):
 
     alarm_sender = AlarmSender(
-        kafka_kwargs=config['kafka'],
+        io_kwargs=config["streaming"],
         input_topic=config['topics']['application.status'],
         alarm_topic=config['topics']['alarms'],
     )
     alarm_sender.start()
 
     alarm_monitor = AlarmMonitor(
-        kafka_kwargs=config['kafka'],
+        io_kwargs=config["streaming"],
         alarm_topic=config['topics']['alarms'],
     )
     alarm_monitor.start()
@@ -156,7 +156,7 @@ def run_alarm_handling(config):
         alarm_monitors_other_tsos = []
         for config_ in config['other_tso']:
             alarm_monitor_other_tso = AlarmMonitor(
-                kafka_kwargs=config_['kafka'],
+                io_kwargs=config_['kafka'],
                 alarm_topic=config_['topics']['alarms'],
             )
             alarm_monitor_other_tso.start()
@@ -172,5 +172,5 @@ def run_alarm_handling(config):
 
 if __name__ == '__main__':
     config = load_config()
-    config['kafka']['consumers_seek_to_beginning'] = True
+    config["streaming"]['consumers_seek_to_beginning'] = True
     run_alarm_handling(config)

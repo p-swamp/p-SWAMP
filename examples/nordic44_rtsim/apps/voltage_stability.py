@@ -9,7 +9,7 @@ if __name__ == '__main__':
     
     config = load_config('..')
     vs_mon = VoltageStabilityApp(
-        kafka_kwargs=config['kafka'],
+        io_kwargs=config["streaming"],
         input_topic=config['topics']['pmudata'],
         output_topic=config['topics']['voltage.stability.index'],
         status_topic='application.status',

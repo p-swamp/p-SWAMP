@@ -1,13 +1,10 @@
 import numpy as np
 from .time_window_labeled import TimeWindowLabeled
-from pswamp.streaming.kafka_extras import KafkaConsumer
-from pswamp.streaming.kafka_extras import get_last_message_from_topic
-import pickle
+from pswamp.streaming import get_last_message_from_topic
 import time
-from pswamp.streaming.kafka_extras import consumer_seek_relative_offset
-from pswamp.streaming.kafka_extras import KafkaConsumer
-import numpy as np
-from pswamp.utils.time_window_labeled import TimeWindowLabeled, GrowingTimeWindowLabeled
+from pswamp.streaming import consumer_seek_relative_offset
+from pswamp.streaming import Consumer
+from pswamp.utils.time_window_labeled import GrowingTimeWindowLabeled
 from pswamp.utils.time_window_labeled import Indexer
 
 
@@ -139,24 +136,25 @@ class PMUTimeWindow:
 
 
 class PMUTimeWindowOnline(PMUTimeWindow):
+    # TODO: To be removed
     """This class is intended for consuming PMU data from a specified Kafka topic and storing the last samples (n_samples) in a
     TimeWindow object."""
 
     def __init__(
         self,
-        kafka_kwargs={},
+        io_kwargs={},
         kafka_topic="pmudata",
         auto_adjust_offset=False,
         **kwargs,
     ):
         # self.data_dtype = float
 
-        # self.kafka_server = kafka_kwargs['bootstrap_servers']
+        # self.kafka_server = io_kwargs['bootstrap_servers']
         self.kafka_topic = kafka_topic
-        self.kafka_kwargs = kafka_kwargs
+        self.io_kwargs = io_kwargs
         self.auto_adjust_offset = auto_adjust_offset
-        self.pmu_stream = KafkaConsumer(
-            self.kafka_topic, value_deserializer=pickle.loads, **kafka_kwargs
+        self.pmu_stream = Consumer(
+            self.kafka_topic, **io_kwargs
         )
         super().__init__(**kwargs)
 
@@ -166,7 +164,7 @@ class PMUTimeWindowOnline(PMUTimeWindow):
         msg = None
         while True:
             msg = get_last_message_from_topic(
-                self.kafka_kwargs, self.kafka_topic)
+                self.kafka_topic, **self.io_kwargs)
             if not msg is None:
                 break
             else:

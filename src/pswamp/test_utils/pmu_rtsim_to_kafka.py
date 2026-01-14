@@ -1,14 +1,13 @@
 from topsrt.pmu_v2 import PMUPublisherV2 as PMUPublisher
 from queue import Queue
-from pswamp.streaming.kafka_extras import KafkaProducer
-import pickle
+from pswamp.streaming import Producer
 
 
 class PMUToKafkaPublisher(PMUPublisher):
-    def __init__(self, kafka_kwargs, *args, topic='pmudata', **kwargs):
+    def __init__(self, io_kwargs, *args, topic='pmudata', **kwargs):
         super().__init__(*args, ip='', port=0, **kwargs)
         self.topic = topic
-        self.kafka_producer = KafkaProducer(**kafka_kwargs, value_serializer=pickle.dumps)
+        self.kafka_producer = Producer(**io_kwargs)
 
     def initialize(self, *args, **kwargs):
         super().initialize(*args, **kwargs)

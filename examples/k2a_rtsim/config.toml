@@ -1,0 +1,52 @@
+# # include=['model_measurement_map.toml']
+# include=['startup_apps.toml']
+model_data_path='data/model_data.json'
+
+
+[pmus]
+ip='localhost'
+port=51010
+
+[pdc]
+ip='localhost'
+port=51010
+id=1
+
+
+# ['graphics']
+# background_color=[255, 255, 255]
+# gl_mode='translucent'
+
+[topics]
+"application.status"="application.status"
+"application.commands"="application.commands"
+"pmudata"="pmudata"
+"pmu.coords"="pmu.coords"
+"modeestimation"="modeestimation"
+"voltage.stability.index"="voltage.stability.index"
+"alarms"="alarms"
+"islanding"="islanding"
+"grid.events"="grid.events"
+"model.data"="model.data"
+
+[database]
+type="sqlite"
+file_path="data/grid_database.db"
+
+[streaming]
+type="nqkafka"
+bootstrap_servers="localhost:52000"
+# bootstrap_servers="127.0.0.1:40000"
+
+
+[geo_data]
+# countries=["Norway", "Sweden", "Denmark", "Finland"]
+line_data_path='data/sld.dxf'
+
+# [sld_data]
+# line_data_path='data/sld.dxf'
+
+
+[single_line_diagrams]
+[single_line_diagrams.1]
+data_path='data/sld.dxf'

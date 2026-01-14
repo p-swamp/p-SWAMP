@@ -6,5 +6,5 @@ if __name__ == '__main__':
     fft_viz(
         fft_window=5,
         kafka_topic=config['topics']['pmudata'],
-        kafka_kwargs=config['kafka'],
+        io_kwargs=config["streaming"],
     )
