@@ -5,7 +5,7 @@ from pswamp.visualization.time_window_plot import TimeWindowPlot
 from PySide6 import QtWidgets
 import sys
 from pswamp import load_config
-from pswamp.streaming.mqtt_io import MQTT_IO
+from pswamp.streaming import BaseIO
 
 
 def plot_time_window(
@@ -14,7 +14,7 @@ def plot_time_window(
     **kwargs
 ):
 
-    io = MQTT_IO(io_kwargs=io_kwargs)
+    io = BaseIO(io_kwargs=io_kwargs)
     tw_app = TimeWindowApp(
         io=io,
         **kwargs,
@@ -39,7 +39,7 @@ def run_time_window_plot(*config_args, update_freq=25, channel_selection_idx=Non
     config = load_config(*config_args)
     plot_time_window(
         input_topic=config['topics']['pmudata'],
-        io_kwargs=config['mqtt'],
+        io_kwargs=config['streaming'],
         update_freq=update_freq,
         channel_selection_idx=channel_selection_idx,
         # time_window_type=TimeWindowLabeled,
@@ -55,4 +55,4 @@ def run_time_window_plot(*config_args, update_freq=25, channel_selection_idx=Non
 
 
 if __name__ == '__main__':
-    run_time_window_plot('../config_mqtt.toml', channel_selection={"measurement": "f"}, window_length=10)
+    run_time_window_plot('../config.toml', channel_selection={"measurement": "f"}, window_length=10)

@@ -51,8 +51,6 @@ class Bus:
 if __name__ == '__main__':
 
     from pswamp import load_config
-    import json
-    import pandas as pd
     config = load_config()
 
     line_data = read_model_data(config, 'line')

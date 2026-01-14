@@ -101,8 +101,10 @@ class MQTT_IO:
         Returns:
             _type_: Data frame
         """
-        msg = subscribe.simple(self.input_topic, **self.io_kwargs)
-        return decoder(msg.payload)
+        # msg = subscribe.simple(self.input_topic, **self.io_kwargs)
+        cons = MQTTConsumer(topic="pmudata", **self.io_kwargs)
+        msg = next(iter(cons))
+        return msg.value
 
     
     def get_config_frame(self):
@@ -119,7 +121,7 @@ class MQTT_IO:
         Returns:
             _type_: Data frame
         """
-        return self.input_stream.get_next()
+        return self.input_stream.get_next().value
     
     def get_next_command(self):
         """Get command frame

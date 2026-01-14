@@ -34,10 +34,18 @@ id=1
 # bootstrap_servers="localhost:9094"
 type="nqkafka"
 bootstrap_servers="localhost:40000"
+# type="mqtt"
+# hostname="localhost"
+# port=1883
+
+
 
 # [database]
 # type="file"
 # file_path='data/model_data.json'
+[database]
+type="sqlite"
+file_path="data/grid_database.db"
 
 [geo_data]
 countries=["Norway", "Sweden", "Denmark", "Finland"]

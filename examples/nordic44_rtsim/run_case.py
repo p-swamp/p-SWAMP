@@ -21,7 +21,9 @@ if __name__ == '__main__':
         # Wait for a while, to make sure the server has started before continuing
         time.sleep(2)
 
-    runners.create_topics(config)
+    if config["streaming"]['type'] in ["kafka", "nqkafka"]:
+        runners.create_topics(config)
+    
     runners.publish_geo_data(config, load_coordinates())
     runners.publish_model_data(config)
 
@@ -37,5 +39,5 @@ if __name__ == '__main__':
     # time.sleep(2)
     input("Press a key to quit")
 
-    if config["streaming"]['use_nqkafka']:
+    if config["streaming"]["type"] == "nqkafka":
         stop_nqkafka_server(config["streaming"]['bootstrap_servers'])

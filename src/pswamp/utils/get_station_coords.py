@@ -50,9 +50,9 @@ def load_bus_coords(config, return_3d=False, geo=True):
 
 if __name__ == '__main__':
     config = {
-        'kafka': {
+        'streaming': {
             'bootstrap_servers': 'localhost:40000',
-            'use_nqkafka': True},
+            'type': "nqkafka"},
         'topics': {
             'pmudata': 'pmudata',
             'pmu.coords': 'pmu.coords'
