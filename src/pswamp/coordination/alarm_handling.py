@@ -1,10 +1,8 @@
 import threading
 from pswamp.streaming import Producer, Consumer
-import pickle
 import datetime
 import uuid
 from collections import OrderedDict
-from pswamp.streaming.kafka_io import encoder, decoder
 
 
 class AlarmSender:
