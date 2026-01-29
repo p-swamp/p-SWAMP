@@ -6,6 +6,9 @@
 # C extensions
 *.so
 
+# Documentation
+public/
+
 # Distribution / packaging
 .Python
 build/
