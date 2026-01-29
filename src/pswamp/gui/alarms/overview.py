@@ -168,6 +168,32 @@ def run_alarm_handling(config):
     alarm_display.show()
 
     app.exec()
+
+
+def run_alarm_monitor(config):
+
+    alarm_monitor = AlarmMonitor(
+        io_kwargs=config["streaming"],
+        alarm_topic=config['topics']['alarms'],
+    )
+    alarm_monitor.start()
+
+    if 'other_tso' in config.keys():
+        alarm_monitors_other_tsos = []
+        for config_ in config['other_tso']:
+            alarm_monitor_other_tso = AlarmMonitor(
+                io_kwargs=config_['kafka'],
+                alarm_topic=config_['topics']['alarms'],
+            )
+            alarm_monitor_other_tso.start()
+            alarm_monitors_other_tsos.append(alarm_monitor_other_tso)
+
+    app = QtWidgets.QApplication()
+
+    alarm_display = AlarmOverview(config, alarm_monitor)
+    alarm_display.show()
+
+    app.exec()
     
 
 if __name__ == '__main__':

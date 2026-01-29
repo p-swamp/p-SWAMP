@@ -1,4 +1,3 @@
-import numpy as np
 import tops.dynamic as dps
 from pathlib import Path
 import json
@@ -63,3 +62,5 @@ def create_sim():
 
 if __name__ == '__main__':
     ps = create_sim()
+    ps.init_dyn_sim()
+    print(max(abs(ps.ode_fun(0, ps.x0))))

@@ -1,4 +1,5 @@
 import pickle
+import numpy as np
 from pswamp.streaming.utils import encoder, decoder
 
 try:
@@ -23,7 +24,7 @@ else:
     _has_mqtt = True
 
 class Producer:
-    def __init__(self, *args, type="kafka", **kwargs):
+    def __init__(self, *args, type="kafka", consumers_seek_to_beginning=False, **kwargs):
         match type:
             case "kafka":
                 self.base_object = kafka_io.KafkaProducer(*args, value_serializer=encoder, **kwargs)
@@ -37,13 +38,17 @@ class Producer:
 
 
 class Consumer:
-    def __init__(self, *args, type="kafka", **kwargs):
+    def __init__(self, *args, type="kafka", consumers_seek_to_beginning=False, **kwargs):
         match type:
             case "kafka":
                 self.base_object = kafka_io.KafkaConsumer(
                     *args, value_deserializer=decoder, **kwargs)
+                if consumers_seek_to_beginning:
+                    kafka_io.consumer_seek_relative_offset(self.base_object, -np.inf)
             case "nqkafka":
                 self.base_object = nqkafka_io.KafkaConsumer(*args, **kwargs)
+                nqkafka_io.nqkafka_utils.consumer_seek_relative_offset(
+                    self.base_object, -np.inf)
             case "mqtt":
                 self.base_object = mqtt_io.MQTTConsumer(*args, **kwargs)
 
