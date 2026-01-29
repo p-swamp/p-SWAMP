@@ -30,10 +30,10 @@ id=1
 "model.data"="model.data"
 
 [streaming]
-# type="kafka"
-# bootstrap_servers="localhost:9094"
-type="nqkafka"
-bootstrap_servers="localhost:40000"
+type="kafka"
+bootstrap_servers="localhost:9094"
+# type="nqkafka"
+# bootstrap_servers="localhost:40000"
 # type="mqtt"
 # hostname="localhost"
 # port=1883
