@@ -1,22 +1,19 @@
 import numpy as np
 from pswamp.utils.misc import lookup_strings
 from pswamp.utils.pypmu import PMUPhasorExtractor, PMUFreqExtractor
-from pswamp.models.bus import read_model_data
-import pandas as pd
-
+from pswamp.database import get_from_database
 
 
 def find_strings_containing_substring(strings_to_search, string_to_find):
     return np.flatnonzero(np.core.defchararray.find(strings_to_search, string_to_find) != -1)[0]
 
 
-
 class Load:
-    def __init__(self, config, meas_data, units=None):
+    def __init__(self, db_kwargs, meas_data, units=None):
 
-        self.load_data = load_data = read_model_data(config, 'load')
-        # trafo_data = read_model_data(model_data, 'transformers')
-        self.bus_data = read_model_data(config, 'bus')
+        self.data = load_data = get_from_database(db_kwargs, 'load')
+        # trafo_data = get_from_database(model_data, 'transformers')
+        self.bus_data = get_from_database(db_kwargs, 'bus')
         
         units = load_data['name'] if units is None else units
             
@@ -24,23 +21,18 @@ class Load:
 
         self.bus_idx = lookup_strings(load_data['bus'][load_subset_idx], self.bus_data['name'])
 
-        phasor_extractor_kwargs = dict(
-            stations=meas_data.get_station_name(),
-            channels=meas_data.get_channel_names()
-        )
-
         # self.freq_extractor = PMUFreqExtractor(
         #     wanted_stations=bus_data['name'][self.bus_idx].to_list(),
         #     stations=meas_data.get_station_name())
 
         self.current_phasor_extractor = PMUPhasorExtractor(
             wanted_stations=self.bus_data['name'][self.bus_idx].to_list(),
-            wanted_channels=[[f'I[{unit}]'] for unit in units], **phasor_extractor_kwargs
+            wanted_channels=[[f'I[{unit}]'] for unit in units], dataframe=meas_data
 
         )
         self.v_phasor_extractor = PMUPhasorExtractor(
             wanted_stations=self.bus_data['name'][self.bus_idx].to_list(),
-            wanted_channels=[['V']]*len(units),  **phasor_extractor_kwargs
+            wanted_channels=[['V']]*len(units),  dataframe=meas_data
         )
 
         # self.line_out_threshold = 1e-3
@@ -80,11 +72,11 @@ if __name__ == '__main__':
     # with open(config['model_data_path']) as file:
         # model_data = json.load(file)
 
-    line_data = read_model_data(config, 'line')
-    trafo_data = read_model_data(config, 'trafo')
-    load_data = read_model_data(config, 'load')
-    gen_data = read_model_data(config, 'gen:GEN')
-    bus_data = read_model_data(config, 'bus')
+    line_data = get_from_database(config["database"], 'line')
+    trafo_data = get_from_database(config["database"], 'trafo')
+    load_data = get_from_database(config["database"], 'load')
+    gen_data = get_from_database(config["database"], 'gen:GEN')
+    bus_data = get_from_database(config["database"], 'bus')
     data = {
         'lines': {'Line': line_data},
         'trafos': {'Trafo': trafo_data},
