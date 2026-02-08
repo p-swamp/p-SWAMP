@@ -44,11 +44,13 @@ class Consumer:
                 self.base_object = kafka_io.KafkaConsumer(
                     *args, value_deserializer=decoder, **kwargs)
                 if consumers_seek_to_beginning:
-                    kafka_io.consumer_seek_relative_offset(self.base_object, -np.inf)
+                    kafka_io.consumer_seek_relative_offset(
+                        self.base_object, -np.inf)
             case "nqkafka":
                 self.base_object = nqkafka_io.KafkaConsumer(*args, **kwargs)
-                nqkafka_io.nqkafka_utils.consumer_seek_relative_offset(
-                    self.base_object, -np.inf)
+                if consumers_seek_to_beginning:
+                    nqkafka_io.nqkafka_utils.consumer_seek_relative_offset(
+                        self.base_object, -np.inf)
             case "mqtt":
                 self.base_object = mqtt_io.MQTTConsumer(*args, **kwargs)
 

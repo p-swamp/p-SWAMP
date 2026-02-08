@@ -37,7 +37,7 @@ class PhasorPlotFastLayer(PhasorPlotLayer):
     phasor_plot_class = PhasorPlot3DFast
 
     def remove_layer(self):
-        self.pmu_tw.stop()
+        self.pmu_input.stop()
         self.plotWidget.removeItem(self.phasor_plot.phasor_plot)
 
         del self.parent.update_funs[self.uuid]

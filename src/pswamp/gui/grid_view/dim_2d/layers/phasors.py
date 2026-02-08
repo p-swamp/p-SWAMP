@@ -1,3 +1,6 @@
+from io import StringIO
+import ezdxf
+from pswamp.visualization.components import single_line_diagram as sld
 import numpy as np
 import threading
 from pswamp.utils.pmu_time_window import PMUTimeWindowOnline
@@ -12,82 +15,76 @@ from pswamp.utils.get_station_coords import (
 )
 from pswamp.utils.single_line_diagram import load_dxf
 from pswamp.app_templates.snapshot_app import SnapshotApp
+import pswamp.models as model_lib
+from pswamp.database import get_from_database
 
 
 class PhasorPlotLayer:
-    def __init__(self, parent, config, geo=True) -> None:
+    def __init__(self, parent, config, sld_id=None, geo=True) -> None:
         self.config = config
         self.k = 2 if geo else 1
         self.uuid = uuid.uuid4()
         self.parent = parent
+        self.sld_id = "sld1"
+
+        self.read_sld_data(config["database"])
 
         pmu_input = SnapshotApp(
-            n_samples=1,
-            kafka_topic=config["topics"]["pmudata"],
+            # n_samples=1,
+            input_topic=config["topics"]["pmudata"],
             io_kwargs=config["streaming"],
         )
-        pmu_input.initialize()
-        self.pmu_tw = pmu_input
+        # pmu_input.initialize()
+        self.pmu_input = pmu_input
 
-        stations_to_plot = []
+        self.bus_mdl = model_lib.bus.Bus(
+            config["database"],
+            pmu_input.get_sample_data_frame())
 
-        self.col_idx_mag = []
-        self.col_idx_ang = []
-        for station_name in np.unique(pmu_input.header["station"]):
-            idx_mag_ = pmu_input.tw.get_col_idx(
-                station=station_name.strip(), measurement="v_Magnitude"
-            )
-            idx_ang_ = pmu_input.tw.get_col_idx(
-                station=station_name.strip(), measurement="v_Angle"
-            )
-            if len(idx_mag_ > 0) and len(idx_mag_) == len(idx_ang_):
-                # col_idx.append((idx_mag[0], idx_ang[0]))
-                self.col_idx_mag.append(idx_mag_[0])
-                self.col_idx_ang.append(idx_ang_[0])
-                stations_to_plot.append(station_name.strip())
-
+        
         # col_idx = [pmu_tw.tw.get_col_idx(station=station_name.strip(), measurement='v')[0] for station_name in pmu_tw.station_names]
-        bus_coords = load_bus_coords_for_stations(config, stations_to_plot, geo=geo)
-        bus_names_all, bus_coords_all = load_bus_coords_for_current_stations(
-            config, geo=geo
-        )
-        bus_coords[:, 1] *= self.k
+        # bus_coords = load_bus_coords_for_stations(config, stations_to_plot, geo=geo)
+        # bus_names_all, bus_coords_all = load_bus_coords_for_current_stations(
+        #     config, geo=geo
+        # )
+        # bus_coords[:, 1] *= self.k
 
         pmu_tw_thread = threading.Thread(target=pmu_input.run, daemon=True)
         pmu_tw_thread.start()
 
         self.plotWidget = parent.plotWidget
-        self.phasor_plot = self.add_phasor_plot(bus_coords)
-
-        # for station_name in pmu_tw.station_names:
-        #     if len(pmu_tw.tw.get_col_idx(station=station_name.strip(), measurement='v')) == 0:
-        #         break
-
-        # # DEBUG
-        # pmu_tw.tw.header['station'][0] == pmu_tw.station_names[0].strip()
-        # pmu_tw.tw.header['measurement'][0] == 'v'
-        # ix = pmu_tw.tw.get_col_idx(station=station_name.strip())
-        # pmu_tw.header[ix]
-        # DEBUG
-        # col_idx = [pmu_tw.tw.get_col_idx(station=station_name.strip(), measurement='v')[0] for station_name in pmu_tw.station_names]
-        # pmu_tw.tw.get_col_idx(
-        #     station=pmu_tw.station_names[0].strip(), measurement='v')
+        self.phasor_plot = self.add_phasor_plot(self.bus_coords)
 
         def phasor_fun():
             # Get the first voltage measurement at each station
-            mag = pmu_input.tw.get_col(self.col_idx_mag).flatten()
-            ang = pmu_input.tw.get_col(self.col_idx_ang).flatten()
-            phasors = mag * np.exp(1j * ang)
-            return phasors
+            # mag = pmu_input.tw.get_col(self.col_idx_mag).flatten()
+            # ang = pmu_input.tw.get_col(self.col_idx_ang).flatten()
+            # phasors = mag * np.exp(1j * ang)
+            df = self.pmu_input.most_recent_data_frame
+            if df is None:
+                return
+            self.bus_mdl.V(df)
+            return self.bus_mdl.V(df)
 
         def update_phasors():
             phasors = phasor_fun()
-            if np.all(np.isnan(phasors)):
+            if phasors is None or np.all(np.isnan(phasors)):
                 return
             self.phasor_plot.update(phasors)
 
         parent.update_funs[self.uuid] = update_phasors
 
+    def read_sld_data(self, db_kwargs):
+        sld_data = get_from_database(db_kwargs, "single_line_diagrams")
+        dxf_data = sld_data[sld_data["name"] == self.sld_id]["data"].values[-1]
+        dxf_file_stream = StringIO(dxf_data)
+        
+        doc = ezdxf.read(dxf_file_stream)
+        self.bus_data = get_from_database(db_kwargs, "bus")
+        self.bus_names, self.bus_coords = sld.get_buses(
+            doc, self.bus_data["name"].to_numpy()
+        )
+        
     def add_phasor_plot(self, bus_coords):
         return PhasorPlot(
             self.plotWidget,
@@ -97,7 +94,7 @@ class PhasorPlotLayer:
         )
 
     def remove_layer(self):
-        self.pmu_tw.stop()
+        self.pmu_input.stop()
         for single_phasor_plot in self.phasor_plot.phasor_plots:
             self.plotWidget.removeItem(single_phasor_plot)
 

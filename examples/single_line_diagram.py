@@ -95,51 +95,6 @@ if __name__ == "__main__":
     plt.show()
     # %%
     import numpy as np
-    class BusesLayer:
-        def __init__(self, parent, config, geo=True) -> None:
-            self.config = config
-            self.plotWidget = parent.plotWidget
-            self.k = 2 if geo else 1
-
-            bus_data = db.get_from_database(config["database"], "bus")
-            bus_names, bus_coords = sld.get_buses(doc, bus_data["name"])
-            
-            bus_coords[:, 1] *= self.k
-
-            self.x = bus_coords[:, 0]
-            self.y = bus_coords[:, 1]
-            # self.z = bus_coords[:, 2]
-
-            self.colors = lambda i: pg.intColor(
-                i,
-                hues=9,
-                values=1,
-                maxValue=255,
-                minValue=150,
-                maxHue=360,
-                minHue=0,
-                sat=255,
-                alpha=255,
-            )
-
-            use_colors = False
-            color = np.ones((len(bus_coords), 4))
-            color[:, -1] = 0.5
-            if use_colors:
-                color = (
-                    np.array([self.colors(i).getRgb() for i in range(len(bus_coords))])
-                    / 255
-                )
-            self.bus_scatter = self.add_scatter_plot(bus_coords)
-            self.plotWidget.addItem(self.bus_scatter)
-
-        def add_scatter_plot(self, bus_coords):
-            return pg.ScatterPlotItem(
-                x=bus_coords[:, 0], y=bus_coords[:, 1], brush=pg.mkBrush(('white')))  # pen=pg.mkPen('w'), )
-
-        def remove_layer(self):
-            self.plotWidget.removeItem(self.bus_scatter)
-    
 
     # %%
     from pswamp.gui.grid_view.dim_2d.base_plot import GridBasePlot2D
@@ -170,4 +125,82 @@ if __name__ == "__main__":
 
     # %%
 
+    config["streaming"] = {
+        "type": "nqkafka",
+        "bootstrap_servers": "localhost: 50000",
+        "consumers_seek_to_beginning": True
+    }
     config["streaming"]
+    # from nqkafka import NQKafkaServer
+    # nqkafka_server = NQKafkaServer(config["streaming"]["bootstrap_servers"], run_in_process=False)
+    # nqkafka_server.start_server()
+    from pswamp.test_utils import runners
+    from pswamp.streaming.base import Consumer, Producer
+
+    runners.run_nqkafka_server(config, run_in_process=False)
+    runners.create_topic("pmudata", config["streaming"])
+    
+    # %%
+    consumer = Consumer(**config["streaming"], topic="pmudata")
+    producer = Producer(**config["streaming"])
+    
+    from synchrophasor.simplePMU import SimplePMU
+    pmu = SimplePMU(
+        "",
+        0,
+        station_names=["B1", "B2", "B3"],
+        channel_names=[
+            ["V", "I[L1-2]", "I[L1-3]"],
+            ["V", "I[L1-2]", "I[L2-3]"],
+            ["V", "I[L1-3]", "I[L2-3]"],
+        ],
+    )
+    
+
+    # %%
+    import time
+
+    def produce_msgs():
+        i_msg = 0
+        n_msgs = 10
+        while True:
+            if i_msg > n_msgs:
+                print("Done publishing messages.")
+                break
+            i_msg += 1
+
+            dataframe = pmu.generate_dataframe()
+            producer.send(topic="pmudata", msg=dataframe)
+            time.sleep(0.1)
+
+    import threading
+    producer_thread = threading.Thread(target=produce_msgs)
+    producer_thread.start()
+
+    msg = next(iter(consumer))
+    msg.value.get_freq()
+
+    # %%
+    dataframe = pmu.generate_dataframe()
+
+    import  pswamp.models as model_lib
+    bus_mdl = model_lib.bus.Bus(
+        config["database"], dataframe)
+
+    # %%
+    importlib.reload(layers)
+
+    config["topics"] = {"pmudata": "pmudata"}
+
+    app = pg.mkQApp()
+    grid_plot = GridBasePlot2D()
+    grid_plot.window.show()
+    # buses_layer = BusesLayer(grid_plot, config, geo=False)
+    line_layer = layers.LineLayer(grid_plot, config, sld_id="sld1")
+    bus_layer = layers.BusesLayer(grid_plot, config, sld_id="sld1")
+    bus_names_layer = layers.BusNamesLayer(grid_plot, config, sld_id="sld1")
+    phasors_layer = layers.PhasorPlotLayer(grid_plot, config, sld_id="sld1")
+    # countries_layer = bl.BusesLayer(grid_plot, config, sld_id="sld1")
+    
+
+    app.exec()
