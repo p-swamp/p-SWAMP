@@ -100,23 +100,23 @@ if __name__ == "__main__":
     from pswamp.gui.grid_view.dim_2d.base_plot import GridBasePlot2D
     # import pswamp.gui.grid_view.dim_2d.layers.lines_2 as ll
     # import pswamp.gui.grid_view.dim_2d.layers.buses as bl
-    import pswamp.gui.grid_view.dim_2d.layers as layers
+    import pswamp.gui.grid_view.dim_2d.layers as lrs
     import importlib
     # importlib.reload(ll)
     # importlib.reload(bl)
     importlib.reload(db)
-    importlib.reload(layers)
+    importlib.reload(lrs)
 
-    dir(layers)
+    dir(lrs)
     
     import pyqtgraph as pg
     app = pg.mkQApp()
     grid_plot = GridBasePlot2D()
     grid_plot.window.show()
     # buses_layer = BusesLayer(grid_plot, config, geo=False)
-    line_layer = layers.LineLayer(grid_plot, config, sld_id="sld1")
-    bus_layer = layers.BusesLayer(grid_plot, config, sld_id="sld1")
-    bus_layer = layers.BusNamesLayer(grid_plot, config, sld_id="sld1")
+    line_layer = lrs.LineLayer(grid_plot, config, sld_id="sld1")
+    bus_layer = lrs.BusesLayer(grid_plot, config, sld_id="sld1")
+    bus_layer = lrs.BusNamesLayer(grid_plot, config, sld_id="sld1")
     # countries_layer = bl.BusesLayer(grid_plot, config, sld_id="sld1")
 
     tables = ["bus", "line", "trafo"]
@@ -188,7 +188,7 @@ if __name__ == "__main__":
         config["database"], dataframe)
 
     # %%
-    importlib.reload(layers)
+    importlib.reload(lrs)
 
     config["topics"] = {"pmudata": "pmudata"}
 
@@ -196,10 +196,10 @@ if __name__ == "__main__":
     grid_plot = GridBasePlot2D()
     grid_plot.window.show()
     # buses_layer = BusesLayer(grid_plot, config, geo=False)
-    line_layer = layers.LineLayer(grid_plot, config, sld_id="sld1")
-    bus_layer = layers.BusesLayer(grid_plot, config, sld_id="sld1")
-    bus_names_layer = layers.BusNamesLayer(grid_plot, config, sld_id="sld1")
-    phasors_layer = layers.PhasorPlotLayer(grid_plot, config, sld_id="sld1")
+    line_layer = lrs.LineLayer(grid_plot, config, sld_id="sld1")
+    bus_layer = lrs.BusesLayer(grid_plot, config, sld_id="sld1")
+    bus_names_layer = lrs.BusNamesLayer(grid_plot, config, sld_id="sld1")
+    phasors_layer = lrs.PhasorPlotLayer(grid_plot, config, sld_id="sld1")
     # countries_layer = bl.BusesLayer(grid_plot, config, sld_id="sld1")
     
 

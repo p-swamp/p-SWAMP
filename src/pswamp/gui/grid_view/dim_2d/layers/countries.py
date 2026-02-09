@@ -4,7 +4,7 @@ from pswamp.visualization.countries_geo_data.read_geo_data import read_geo_data
 
 
 class CountriesLayer:
-    def __init__(self, parent, config, geo=True):
+    def __init__(self, parent, config, sld_id=None):
         self.config = config
         self.k = 2 if geo else 1
         self.plotWidget = parent.plotWidget

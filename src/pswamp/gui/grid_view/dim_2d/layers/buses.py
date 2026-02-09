@@ -14,7 +14,7 @@ import pswamp.visualization.components.single_line_diagram as sld
 
 
 class BusesLayer:
-    def __init__(self, parent, config, sld_id=None) -> None:
+    def __init__(self, parent, config, sld_id=None) -> None:        
         self.config = config
         self.plotWidget = parent.plotWidget
         self.k = 1. # 2 if geo else 1
@@ -123,6 +123,7 @@ if __name__ == '__main__':
     )
     grid_plot.window.show()
 
+    layer_instance = BusesLayer(grid_plot, config, sld_id="")
     # layer_instance = LineLayer(grid_plot, config, geo=False)
     # layer_settings = CountriesLayerSettings(layer_instance)
     # layer_settings.show()

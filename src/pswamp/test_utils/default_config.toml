@@ -36,6 +36,7 @@ file_path="sample_datasets/n44/grid_database.db"
 countries=["Norway", "Sweden", "Denmark", "Finland"]
 aspect_ratio=2
 data_path='sample_datasets/n44/sld_geo.dxf'
+geographic=true
 
 [single_line_diagrams.other]
 data_path='sample_datasets/n44/sld.dxf'

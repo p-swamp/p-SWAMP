@@ -1,7 +1,7 @@
 from PySide6 import QtWidgets
 import sys
 from pswamp.gui.grid_view.dim_2d.base_plot import GridBasePlot2D
-from pswamp.gui.grid_view.dim_2d.layers import *
+import pswamp.gui.grid_view.dim_2d.layers as lrs
 from pswamp.gui.grid_view.layer_settings import LayerSettings
 from pswamp.utils.load_config import load_config
 
@@ -26,21 +26,27 @@ class GridBasePlot2DLayers(GridBasePlot2D):
         available_layers = {
             'Base layers': {
                 # 'Countries': (CountriesLayer, CountriesLayerSettings),
-                'Static line data': (StaticLineDataLayer, StaticLineDataLayerSettings),
-                'Static line data (oim)': (StaticLineDataLayer_v0, StaticLineDataLayerSettings),
-                'Station names': (StationNamesLayer, None),
-                'Buses': (BusesLayer, None),
-                'PMUs': (PMULayer, None),
+                # 'Static line data': (lrs.StaticLineDataLayer, lrs.StaticLineDataLayerSettings),
+                # 'Static line data (oim)': (lrs.StaticLineDataLayer_v0, lrs.StaticLineDataLayerSettings),
+                'Bus names': (lrs.BusNamesLayer, None),
+                'Buses': (lrs.BusesLayer, None),
+                # 'PMUs': (lrs.PMULayer, None),
             },
             'Other layers': {
-                'Frequency heat map': (FrequencyHeatMap, None),
-                'Voltage phasors': (PhasorPlotLayer, None),
+                'Frequency heat map': (lrs.FrequencyHeatMap, None),
+                'Voltage phasors': (lrs.PhasorPlotLayer, None),
             }
         }
-        default_layers = ['Static line data', 'Static line data (oim)', 'Station names', 'Buses']
+        # default_layers = ['Static line data', 'Static line data (oim)', 'Station names', 'Buses']
+        default_layers = [
+            # "Static line data",
+            # "Static line data (oim)",
+            "Bus names",
+            "Buses",
+        ]
         if self.geo:
             available_layers['Base layers'].update(
-                {'Countries': (CountriesLayer, CountriesLayerSettings)}
+                {'Countries': (lrs.CountriesLayer, lrs.CountriesLayerSettings)}
             )
             default_layers.append('Countries')
             
@@ -75,7 +81,7 @@ class GridBasePlot2DLayers(GridBasePlot2D):
 
 def main():
     config=load_config()
-    config["kafka"]["bootstrap_servers"] = "localhost:40011"
+    config["streaming"]["bootstrap_servers"] = "localhost:40011"
     config['graphics'] = {
         'background_color': [255, 255, 255],
         'gl_mode': 'translucent'}

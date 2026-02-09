@@ -52,6 +52,7 @@ line_data_path='data/sld.dxf'
 countries=["Norway", "Sweden", "Denmark", "Finland"]
 aspect_ratio=2
 data_path='data/sld_geo.dxf'
+geographic=true
 
 [single_line_diagrams.other]
 data_path='data/sld.dxf'
