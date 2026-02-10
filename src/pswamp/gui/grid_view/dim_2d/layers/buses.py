@@ -14,7 +14,7 @@ import pswamp.visualization.components.single_line_diagram as sld
 
 
 class BusesLayer:
-    def __init__(self, parent, config, sld_id=None) -> None:        
+    def __init__(self, parent, config, sld_id=None) -> None:
         self.config = config
         self.plotWidget = parent.plotWidget
         self.k = 1. # 2 if geo else 1
