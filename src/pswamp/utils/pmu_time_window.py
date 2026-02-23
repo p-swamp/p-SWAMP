@@ -164,7 +164,7 @@ class PMUTimeWindowOnline(PMUTimeWindow):
         msg = None
         while True:
             msg = get_last_message_from_topic(
-                self.kafka_topic, **self.io_kwargs)
+                topic=self.kafka_topic, **self.io_kwargs)
             if not msg is None:
                 break
             else:
