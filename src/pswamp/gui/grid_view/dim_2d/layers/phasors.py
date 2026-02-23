@@ -25,7 +25,7 @@ class PhasorPlotLayer:
         self.k = 2 if geo else 1
         self.uuid = uuid.uuid4()
         self.parent = parent
-        self.sld_id = "sld1"
+        self.sld_id = sld_id
 
         self.read_sld_data(config["database"])
 
@@ -33,6 +33,7 @@ class PhasorPlotLayer:
             # n_samples=1,
             input_topic=config["topics"]["pmudata"],
             io_kwargs=config["streaming"],
+            command_topic=None,
         )
         # pmu_input.initialize()
         self.pmu_input = pmu_input
@@ -63,8 +64,7 @@ class PhasorPlotLayer:
             df = self.pmu_input.most_recent_data_frame
             if df is None:
                 return
-            self.bus_mdl.V(df)
-            return self.bus_mdl.V(df)
+            return self.bus_mdl.v(df)
 
         def update_phasors():
             phasors = phasor_fun()

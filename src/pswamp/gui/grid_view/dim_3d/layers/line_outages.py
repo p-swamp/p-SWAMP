@@ -27,7 +27,7 @@ class LineOutages(LineLayer):
         # self.update_trafo_colors()
         
         # self.threshold = 0.01
-        parent.update_funs[self.uuid] = self.update_colors
+        parent.update_funs[self.uuid] = self.update_line_outage_colors
         # self.set_trafo_colors(np.zeros((len(self.trafos_data), 4)))
 
     # def get_col_idx(self):
@@ -53,7 +53,7 @@ class LineOutages(LineLayer):
         # z = self.z_0 + self.z_scale*(freq - 50)
         # self.set_node_z(z)
         
-    def update_colors(self):
+    def update_line_outage_colors(self):
         data_frame = self.snapshot_app.most_recent_data_frame
         if data_frame is None:
             return
@@ -84,7 +84,7 @@ class LineOutages(LineLayer):
 if __name__ == "__main__":
     from pswamp.test_utils.sample_datasets.minimal_case import create_minimal_test_case
     from pswamp.gui.grid_view.dim_3d.base_plot import GridBasePlot3D
-    from pswamp.gui.grid_view.dim_3d.layers.countries import CountriesLayer
+    # from pswamp.gui.grid_view.dim_3d.layers.countries import CountriesLayer
     import pswamp.gui.grid_view.dim_3d.layers as lrs
     from nqkafka.utils import stop_server
 
@@ -103,10 +103,21 @@ if __name__ == "__main__":
     bus_names = lrs.BusesLayer(grid_plot, config, sld_id="sld1")
     bus_names_layer = lrs.BusNamesLayer(grid_plot, config, sld_id="sld1")
     # countries_layer = CountriesLayer(grid_plot, config, sld_id="sld1")
-    # lines_layer = LineLayer(grid_plot, config, sld_id="sld1")
-    layer_instance = LineOutages(grid_plot, config, sld_id="sld1")
+    lines_layer = LineLayer(grid_plot, config, sld_id="sld1")
+    line_outages = LineOutages(grid_plot, config, sld_id="sld1")
 
     # layer_instance.remove_layer()
+
+    from pswamp.streaming import Producer
+    dataframe = pmu.generate_dataframe(
+        phasor_data=[
+            [(1, 0), (0, 0), (1, 0)],
+            [(1, 0), (0, 0), (1, 0)],
+            [(1, 0), (1, 0), (1, 0)],
+        ]
+    )
+    producer = Producer(**config["streaming"])
+    producer.send(topic="pmudata", msg=dataframe)
 
     app.exec()
     stop_server(config["streaming"]["bootstrap_servers"])

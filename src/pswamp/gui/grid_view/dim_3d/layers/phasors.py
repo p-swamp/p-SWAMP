@@ -1,12 +1,12 @@
-from PySide6 import QtGui
+# from PySide6 import QtGui
 import numpy as np
 from pswamp.visualization.components.phasor_plot_3d import PhasorPlot3D
 from pswamp.visualization.components.phasor_plot_3d_fast import PhasorPlot3D as PhasorPlot3DFast
-from pswamp.visualization.countries_geo_data.read_geo_data import read_geo_data
-from pswamp.visualization.components.channel_tree import ChannelTree
-import pyqtgraph.opengl as gl
+# from pswamp.visualization.countries_geo_data.read_geo_data import read_geo_data
+# from pswamp.visualization.components.channel_tree import ChannelTree
+# import pyqtgraph.opengl as gl
 import pswamp.gui.grid_view.dim_2d.layers as layers_2d
-from pswamp.utils.gl import set_gl_options
+# from pswamp.utils.gl import set_gl_options
 
 
 # class StationNamesLayer(layers_2d.StationNamesLayer):
@@ -42,6 +42,54 @@ class PhasorPlotFastLayer(PhasorPlotLayer):
 
         del self.parent.update_funs[self.uuid]
         del self.phasor_plot
+
+
+if __name__ == "__main__":
+    from pswamp.test_utils.sample_datasets.minimal_case import create_minimal_test_case
+    from pswamp.gui.grid_view.dim_3d.base_plot import GridBasePlot3D
+    from PySide6 import QtWidgets
+
+    # from pswamp.gui.grid_view.dim_3d.layers.countries import CountriesLayer
+    import pswamp.gui.grid_view.dim_3d.layers as lrs
+    from nqkafka.utils import stop_server
+
+    config, con, pmu = create_minimal_test_case()
+    # print(config)
+    # config["streaming"]["consumers_seek_to_beginning"] = True
+
+    app = QtWidgets.QApplication()
+    grid_plot = GridBasePlot3D(
+        # config,
+        # sld_id="sld1"
+        # geo=False,
+    )
+    grid_plot.window.show()
+
+    bus_names = lrs.BusesLayer(grid_plot, config, sld_id="sld1")
+    bus_names_layer = lrs.BusNamesLayer(grid_plot, config, sld_id="sld1")
+    # countries_layer = CountriesLayer(grid_plot, config, sld_id="sld1")
+    lines_layer = lrs.LineLayer(grid_plot, config, sld_id="sld1")
+    # line_outages = LineOutages(grid_plot, config, sld_id="sld1")
+
+    phasor_layer = PhasorPlotLayer(grid_plot, config, sld_id="sld1")
+    # phasor_layer_fast = PhasorPlotFastLayer(grid_plot, config, sld_id="sld1")
+
+    # layer_instance.remove_layer()
+
+    from pswamp.streaming import Producer
+
+    dataframe = pmu.generate_dataframe(
+        phasor_data=[
+            [(1, 0), (0, 0), (1, 0)],
+            [(1, 0.2), (0, 0), (1, 0)],
+            [(1, 0.5), (1, 0), (1, 0)],
+        ]
+    )
+    producer = Producer(**config["streaming"])
+    producer.send(topic="pmudata", msg=dataframe)
+
+    app.exec()
+    stop_server(config["streaming"]["bootstrap_servers"])
 
 # class StaticLineDataLayer(layers_2d.StaticLineDataLayer):
 #     def add_line_plots(self, pos, line_width, color):
