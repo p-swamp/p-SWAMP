@@ -1,5 +1,5 @@
-from watools.gui.grid_view.grid_view_container import GridViewContainer
-from watools.utils.load_config import load_config
+from pswamp.gui.grid_view.grid_view_container import GridViewContainer
+from pswamp.utils.load_config import load_config
 from PySide6 import QtWidgets
 
 

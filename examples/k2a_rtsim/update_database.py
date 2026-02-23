@@ -1,5 +1,5 @@
-from watools.test_utils.runners import create_database
-from watools import load_config
+from pswamp.test_utils.runners import create_database
+from pswamp import load_config
 
 
 if __name__ == '__main__':

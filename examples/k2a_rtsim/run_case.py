@@ -1,13 +1,13 @@
-from watools.utils.load_config import load_config
+from pswamp.utils.load_config import load_config
 from nqkafka.utils import stop_server as stop_nqkafka_server
 
 import multiprocessing as mp
 import time
-from watools.gui.main_window import run_main_window
+from pswamp.gui.main_window import run_main_window
 import multiprocessing as mp
 # from data.coords import load as load_coordinates
-import watools.test_utils.runners as runners
-from watools.test_utils.pmu_rtsim_to_kafka import PMUToKafkaPublisher
+import pswamp.test_utils.runners as runners
+from pswamp.test_utils.pmu_rtsim_to_kafka import PMUToKafkaPublisher
 
 from run_sim import run_rtsim
 import pyqtgraph
@@ -15,9 +15,9 @@ import pyqtgraph
 
 if __name__ == '__main__':
     config = load_config()
-    print(config["kafka"])
+    # print(config["streaming"])
 
-    if config["streaming"]['use_nqkafka']:
+    if config["streaming"]["type"] == "nqkafka":
         runners.run_nqkafka_server(config)
         print('Started NQKafka Server')
     
@@ -40,5 +40,5 @@ if __name__ == '__main__':
     # time.sleep(2)
     input("Press a key to quit")
 
-    if config["streaming"]['use_nqkafka']:
+    if config["streaming"]['type'] == "nqkafka":
         stop_nqkafka_server(config["streaming"]['bootstrap_servers'])
