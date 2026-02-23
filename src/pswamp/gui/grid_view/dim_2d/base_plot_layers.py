@@ -23,22 +23,27 @@ class GridBasePlot2DLayers(GridBasePlot2D):
         # proxy.setWidget(layers_edit_btn)
         # self.window.addItem(proxy)
         self.sld_id = sld_id
-        self.geo = config["single_line_diagrams"][sld_id]["geo"]\
-            if sld_id is not None else False
+        sld_spec = config["single_line_diagrams"]
+        self.geo = (
+            sld_spec[sld_id]["geo"]
+            if sld_id is not None and "geo" in sld_spec[sld_id]
+            else False
+        )
 
         available_layers = {
-            'Base layers': {
+            "Base layers": {
                 # 'Countries': (CountriesLayer, CountriesLayerSettings),
                 # 'Static line data': (lrs.StaticLineDataLayer, lrs.StaticLineDataLayerSettings),
                 # 'Static line data (oim)': (lrs.StaticLineDataLayer_v0, lrs.StaticLineDataLayerSettings),
-                'Bus names': (lrs.BusNamesLayer, None),
-                'Buses': (lrs.BusesLayer, None),
+                "Bus names": (lrs.BusNamesLayer, None),
+                "Buses": (lrs.BusesLayer, None),
+                "Lines": (lrs.LineLayer, None),
                 # 'PMUs': (lrs.PMULayer, None),
             },
-            'Other layers': {
-                'Frequency heat map': (lrs.FrequencyHeatMap, None),
-                'Voltage phasors': (lrs.PhasorPlotLayer, None),
-            }
+            "Other layers": {
+                "Frequency heat map": (lrs.FrequencyHeatMap, None),
+                "Voltage phasors": (lrs.PhasorPlotLayer, None),
+            },
         }
         # default_layers = ['Static line data', 'Static line data (oim)', 'Station names', 'Buses']
         default_layers = [

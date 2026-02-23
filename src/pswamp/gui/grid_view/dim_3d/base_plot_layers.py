@@ -24,8 +24,12 @@ class GridBasePlot3DLayers(GridBasePlot3D):
         # proxy.setWidget(layers_edit_btn)
         # self.window.addItem(proxy)
         self.sld_id = sld_id
-        self.geo = config["single_line_diagrams"][sld_id]["geo"]\
-                    if sld_id is not None else False        
+        sld_spec = config["single_line_diagrams"]
+        self.geo = (
+            sld_spec[sld_id]["geo"]
+            if sld_id is not None and "geo" in sld_spec[sld_id]
+            else False
+        )        
 
         available_layers = {
             "Base layers": {
@@ -33,7 +37,9 @@ class GridBasePlot3DLayers(GridBasePlot3D):
                 # 'Static line data': (StaticLineDataLayer, StaticLineDataLayerSettings),
                 # 'Static line data (oim)': (StaticLineDataLayer_v0, StaticLineDataLayerSettings),
                 # 'Station names': (StationNamesLayer, None),
+                "Bus names": (lrs.BusNamesLayer, None),
                 "Buses": (lrs.BusesLayer, None),
+                "Lines": (lrs.LineLayer, None),
             },
             "Other layers": {
                 "Voltage phasors": (lrs.PhasorPlotLayer, None),

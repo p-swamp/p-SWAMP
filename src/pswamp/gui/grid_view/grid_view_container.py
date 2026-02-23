@@ -170,7 +170,7 @@ class GridViewContainer(QTabWidgetPlus):
 
     def new_tab(self):
         """Add new tab, store which widget the tab points to."""
-        sld_data = config["single_line_diagrams"]
+        sld_data = self.config["single_line_diagrams"]
         sld_list = sld_data.keys()
         new_view_dialog = self.new_tab_dialog_type(sld_list=sld_list)
         new_view_dialog.exec()
