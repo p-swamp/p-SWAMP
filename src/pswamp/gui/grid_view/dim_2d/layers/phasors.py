@@ -100,3 +100,26 @@ class PhasorPlotLayer:
 
         del self.parent.update_funs[self.uuid]
         del self.phasor_plot
+
+if __name__ == "__main__":
+    from pswamp.test_utils.sample_datasets.minimal_case import create_minimal_test_case
+    from pswamp.gui.grid_view.dim_2d.base_plot import GridBasePlot2D
+    from nqkafka.utils import stop_server
+    from pswamp.gui.grid_view.dim_2d import layers as lrs
+
+    config, con, pmu = create_minimal_test_case()
+
+    app = pg.mkQApp()
+    grid_plot = GridBasePlot2D()
+    grid_plot.window.show()
+    # buses_layer = BusesLayer(grid_plot, config, geo=False)
+    line_layer = lrs.LineLayer(grid_plot, config, sld_id="sld1")
+    bus_layer = lrs.BusesLayer(grid_plot, config, sld_id="sld1")
+    bus_names_layer = lrs.BusNamesLayer(grid_plot, config, sld_id="sld1")
+    phasors_layer = lrs.PhasorPlotLayer(grid_plot, config, sld_id="sld1")
+    layer_instance = lrs.FrequencyHeatMap(grid_plot, config, sld_id="sld1")
+    # countries_layer = bl.BusesLayer(grid_plot, config, sld_id="sld1")
+
+    app.exec()
+
+    stop_server(config["streaming"]["bootstrap_servers"])

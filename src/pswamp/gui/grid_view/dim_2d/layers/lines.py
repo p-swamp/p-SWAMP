@@ -68,6 +68,7 @@ class LineLayer:
 
         model_data = {table: get_from_database(db_kwargs, table) for table in tables}
         model_data["bus"]
+        self.model_data = model_data
         # model_data = {key: val for key, val in model_data.items() if val is not None}
 
         # self.bus_data = pd.DataFrame(columns=model_data['buses'][0], data=model_data['buses'][1:])
@@ -154,25 +155,60 @@ class LineLayer:
 
 
 if __name__ == "__main__":
-    from pswamp.gui.grid_view.dim_2d.base_plot_layers import GridBasePlot2D
-    from pswamp import load_config
-    import pswamp
-    from pathlib import Path
-    # sample_dataset_path = Path(pswamp.__file__).parent/'test_utils/sample_datasets/n44'
+    from pswamp.test_utils.sample_datasets.minimal_case import create_minimal_test_case
+    from pswamp.gui.grid_view.dim_2d.base_plot import GridBasePlot2D
+    import pswamp.gui.grid_view.dim_2d.layers as lrs
+    from nqkafka.utils import stop_server
 
-    config = load_config()
-    # config['sld_data'] = {'line_data_path': sample_dataset_path/'sld.dxf'}
-    # config['model_data_path'] = sample_dataset_path/'model_data.json'
+    config, con, pmu = create_minimal_test_case()
+    # print(config)
+    # config["streaming"]["consumers_seek_to_beginning"] = True
 
     app = QtWidgets.QApplication()
     grid_plot = GridBasePlot2D(
-        geo=True,
+        # geo=False,
     )
     grid_plot.window.show()
 
-    layer_instance = LineLayer(grid_plot, config, geo=True)
+    layer_instance = lrs.BusesLayer(grid_plot, config, sld_id="sld1")
+    bus_names = lrs.BusNamesLayer(grid_plot, config, sld_id="sld1")
+    countries_layer = lrs.CountriesLayer(grid_plot, config, sld_id="sld1")
+    line_layer = LineLayer(grid_plot, config, sld_id="sld1")
+
+    # layer_instance = LineLayer(grid_plot, config, geo=False)
     # layer_settings = CountriesLayerSettings(layer_instance)
     # layer_settings.show()
     # layer_instance.remove_layer()
 
+    # from pswamp.streaming import Producer
+    # dataframe = pmu.generate_dataframe(freq_data=[49, 51, 50])
+    # producer = Producer(**config["streaming"])
+    # producer.send(topic="pmudata", msg=dataframe)
+
     app.exec()
+    stop_server(config["streaming"]["bootstrap_servers"])
+
+
+# if __name__ == "__main__":
+#     from pswamp.gui.grid_view.dim_2d.base_plot_layers import GridBasePlot2D
+#     from pswamp import load_config
+#     import pswamp
+#     from pathlib import Path
+#     # sample_dataset_path = Path(pswamp.__file__).parent/'test_utils/sample_datasets/n44'
+
+#     config = load_config()
+#     # config['sld_data'] = {'line_data_path': sample_dataset_path/'sld.dxf'}
+#     # config['model_data_path'] = sample_dataset_path/'model_data.json'
+
+#     app = QtWidgets.QApplication()
+#     grid_plot = GridBasePlot2D(
+#         geo=True,
+#     )
+#     grid_plot.window.show()
+
+#     layer_instance = LineLayer(grid_plot, config, geo=True)
+#     # layer_settings = CountriesLayerSettings(layer_instance)
+#     # layer_settings.show()
+#     # layer_instance.remove_layer()
+
+#     app.exec()

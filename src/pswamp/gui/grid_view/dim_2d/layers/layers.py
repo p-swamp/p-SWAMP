@@ -1,18 +1,13 @@
 import numpy as np
 import threading
 from pswamp.utils.pmu_time_window import PMUTimeWindowOnline
-from PySide6 import QtCore, QtGui, QtWidgets
+from PySide6 import QtCore, QtWidgets
 import pyqtgraph as pg
 from pswamp.visualization.components.phasor_plot import PhasorPlot
-from pswamp.visualization.countries_geo_data.read_geo_data import read_geo_data
 import uuid
 from pswamp.utils.get_station_coords import load_bus_coords_for_current_stations, load_bus_coords_for_stations
 from pswamp.utils.single_line_diagram import load_dxf
-
-
-class LayerFailedException(Exception):
-    "Raised when layer fails."
-    pass
+from pswamp.gui.grid_view.exceptions import LayerFailedException
 
 class PhasorPlotLayer:
     def __init__(self, parent, config, geo=True) -> None:

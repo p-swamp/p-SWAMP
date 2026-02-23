@@ -1,13 +1,13 @@
 from PySide6 import QtWidgets
 import sys
 from pswamp.gui.grid_view.dim_3d.base_plot import GridBasePlot3D
-from pswamp.gui.grid_view.dim_3d.layers import *
+import pswamp.gui.grid_view.dim_3d.layers as lrs
 from pswamp.gui.grid_view.layer_settings import LayerSettings
 from pswamp.utils.load_config import load_config
 
 
 class GridBasePlot3DLayers(GridBasePlot3D):
-    def __init__(self, config, activate_default_layers=True, geo=True, *args, **kwargs):
+    def __init__(self, config, activate_default_layers=True, sld_id=None, *args, **kwargs):
 
         try:
             background_color = config['graphics']['background_color']
@@ -23,32 +23,34 @@ class GridBasePlot3DLayers(GridBasePlot3D):
         # proxy = QtWidgets.QGraphicsProxyWidget()
         # proxy.setWidget(layers_edit_btn)
         # self.window.addItem(proxy)
-        self.geo = geo
+        self.sld_id = sld_id
+        self.geo = config["single_line_diagrams"][sld_id]["geo"]\
+                    if sld_id is not None else False        
 
         available_layers = {
-            'Base layers': {
+            "Base layers": {
                 # 'Countries': (CountriesLayer, CountriesLayerSettings),
-                'Static line data': (StaticLineDataLayer, StaticLineDataLayerSettings),
-                'Static line data (oim)': (StaticLineDataLayer_v0, StaticLineDataLayerSettings),
-                'Station names': (StationNamesLayer, None),
-                'Buses': (BusesLayer, None),
+                # 'Static line data': (StaticLineDataLayer, StaticLineDataLayerSettings),
+                # 'Static line data (oim)': (StaticLineDataLayer_v0, StaticLineDataLayerSettings),
+                # 'Station names': (StationNamesLayer, None),
+                "Buses": (lrs.BusesLayer, None),
             },
-            'Other layers':{
-                'Voltage phasors': (PhasorPlotLayer, None),
-                'Voltage phasors (fast)': (PhasorPlotFastLayer, None),
-                'Bus frequency': (Frequency3DLayer, Frequency3DLayerSettings),
-                'Bus voltage': (Voltage3DLayer, Voltage3DLayerSettings),
-                'Voltage Stability': (VoltageStability, None),
-                'Islanding': (IslandingOnline, None),
-                'Grid events': (GridEvents, None),
-                'Dynamic lines, frequency': (LinesFreq, LinesFreqSettings),
-                'Line outages': (LineOutages, None),
-            }
+            "Other layers": {
+                "Voltage phasors": (lrs.PhasorPlotLayer, None),
+                "Voltage phasors (fast)": (lrs.PhasorPlotFastLayer, None),
+                "Bus frequency": (lrs.Frequency3DLayer, lrs.Frequency3DLayerSettings),
+                "Bus voltage": (lrs.Voltage3DLayer, lrs.Voltage3DLayerSettings),
+                "Voltage Stability": (lrs.VoltageStability, None),
+                "Islanding": (lrs.IslandingOnline, None),
+                "Grid events": (lrs.GridEvents, None),
+                "Dynamic lines, frequency": (lrs.LinesFreq, lrs.LinesFreqSettings),
+                "Line outages": (lrs.LineOutages, None),
+            },
         }
         default_layers = ['Static line data', 'Static line data (oim)', 'Station names', 'Buses']
         if self.geo:
-            available_layers['Base layers'].update(
-                {'Countries': (CountriesLayer, CountriesLayerSettings)}
+            available_layers["Base layers"].update(
+                {"Countries": (lrs.CountriesLayer, lrs.CountriesLayerSettings)}
             )
             default_layers.append('Countries')
 
@@ -61,7 +63,7 @@ class GridBasePlot3DLayers(GridBasePlot3D):
                     self.layer_settings.layer_select.show_layer('Base layers', child_layer) 
         # self.layer_select.hide()
         
-            self.center_camera_position(config)
+            # self.center_camera_position(config)
 
         
     def set_non_base_layers_visibility(self, show=False):
@@ -85,27 +87,27 @@ class GridBasePlot3DLayers(GridBasePlot3D):
 
             
     
-    def center_camera_position(self, config):
-        try:
-            _, bus_coords = load_bus_coords_for_current_stations(config, geo=self.geo)
-        except ConnectionRefusedError:
-            print('None')
-            return
+    # def center_camera_position(self, config):
+    #     try:
+    #         _, bus_coords = load_bus_coords_for_current_stations(config, geo=self.geo)
+    #     except ConnectionRefusedError:
+    #         print('None')
+    #         return
         
-        k = 2 if self.geo else 1
-        bus_coords[:, 1] *= k
+    #     k = 2 if self.geo else 1
+    #     bus_coords[:, 1] *= k
 
-        x_center = np.mean([np.nanmin(bus_coords[:, 0]), np.nanmax(bus_coords[:, 0])])
-        y_center = np.mean([np.nanmin(bus_coords[:, 1]), np.nanmax(bus_coords[:, 1])])
+    #     x_center = np.mean([np.nanmin(bus_coords[:, 0]), np.nanmax(bus_coords[:, 0])])
+    #     y_center = np.mean([np.nanmin(bus_coords[:, 1]), np.nanmax(bus_coords[:, 1])])
 
-        self.plotWidget.setCameraPosition(
-            pos=QtGui.QVector3D(
-                x_center, y_center, 0
-            ),
-            distance=40,
-            elevation=25,
-            azimuth=-90,
-        )
+    #     self.plotWidget.setCameraPosition(
+    #         pos=QtGui.QVector3D(
+    #             x_center, y_center, 0
+    #         ),
+    #         distance=40,
+    #         elevation=25,
+    #         azimuth=-90,
+    #     )
 
     # def onLayersEditClicked(self):
         # self.layer_select.show()
@@ -121,7 +123,7 @@ def main():
     
     from pathlib import Path
     import pswamp
-    sample_dataset_path = Path(pswamp.__file__).parent/'test_utils/sample_datasets/n44'
+    # sample_dataset_path = Path(pswamp.__file__).parent/'test_utils/sample_datasets/n44'
     # config['sld_data'] = {'line_data_path': sample_dataset_path/'sld.dxf'}
     # config['geo_data'] = {'countries': ['Norway', 'Sweden', 'Denmark', 'Finland'], 'line_data_path': sample_dataset_path/'sld_geo.dxf'}
     # config['model_data_path'] = sample_dataset_path/'model_data.json'
@@ -129,7 +131,7 @@ def main():
     grid_plot = GridBasePlot3DLayers(
         config=config,
         # update_freq=25,
-        geo=True,
+        # geo=True,
         activate_default_layers=False
     )
     grid_plot.window.show()    

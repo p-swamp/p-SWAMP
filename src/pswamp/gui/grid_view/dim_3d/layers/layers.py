@@ -9,15 +9,15 @@ import pswamp.gui.grid_view.dim_2d.layers as layers_2d
 from pswamp.utils.gl import set_gl_options
 
 
-class StationNamesLayer(layers_2d.StationNamesLayer):
-    def add_text(self, coord, text):
-        font = QtGui.QFont()
-        font.setPixelSize(12)
-        text_item = gl.GLTextItem(
-            pos=coord, text="{}".format(text), font=font
-        )
-        set_gl_options(self.config, text_item)
-        return text_item
+# class StationNamesLayer(layers_2d.StationNamesLayer):
+#     def add_text(self, coord, text):
+#         font = QtGui.QFont()
+#         font.setPixelSize(12)
+#         text_item = gl.GLTextItem(
+#             pos=coord, text="{}".format(text), font=font
+#         )
+#         set_gl_options(self.config, text_item)
+#         return text_item
 
 class PhasorPlotLayer(layers_2d.PhasorPlotLayer):
     phasor_plot_class = PhasorPlot3D
@@ -43,35 +43,35 @@ class PhasorPlotFastLayer(PhasorPlotLayer):
         del self.parent.update_funs[self.uuid]
         del self.phasor_plot
 
-class StaticLineDataLayer(layers_2d.StaticLineDataLayer):
-    def add_line_plots(self, pos, line_width, color):
-        pl = gl.GLLinePlotItem(
-            pos=pos, width=line_width, color=color, antialias=False
-        )
-        set_gl_options(self.config, pl)
-        return pl
+# class StaticLineDataLayer(layers_2d.StaticLineDataLayer):
+#     def add_line_plots(self, pos, line_width, color):
+#         pl = gl.GLLinePlotItem(
+#             pos=pos, width=line_width, color=color, antialias=False
+#         )
+#         set_gl_options(self.config, pl)
+#         return pl
 
 
-    def remove_layer(self):
-        for key in ["lines_lv", "lines_mv", "lines_hv"]:
-            self.parent.plotWidget.removeItem(self.power_lines_pl[key])
-        # del self.geo_lines
+#     def remove_layer(self):
+#         for key in ["lines_lv", "lines_mv", "lines_hv"]:
+#             self.parent.plotWidget.removeItem(self.power_lines_pl[key])
+#         # del self.geo_lines
 
-    def update_line_plots(self, key, **style_kwargs):
-        self.power_lines_pl[key].setData(**style_kwargs)
+#     def update_line_plots(self, key, **style_kwargs):
+#         self.power_lines_pl[key].setData(**style_kwargs)
 
-    def hide(self):        
-        [self.power_lines_pl[key].hide() for key in ["lines_lv", "lines_mv", "lines_hv"]]
+#     def hide(self):        
+#         [self.power_lines_pl[key].hide() for key in ["lines_lv", "lines_mv", "lines_hv"]]
 
-    def show(self):
-        [self.power_lines_pl[key].show() for key in ["lines_lv", "lines_mv", "lines_hv"]]
-
-
-class StaticLineDataLayer_v0(StaticLineDataLayer):
-    def __init__(self, *args, **kwargs):
-        super().__init__(data_subkey='static_line_data_path', *args, **kwargs)
+#     def show(self):
+#         [self.power_lines_pl[key].show() for key in ["lines_lv", "lines_mv", "lines_hv"]]
 
 
+# class StaticLineDataLayer_v0(StaticLineDataLayer):
+#     def __init__(self, *args, **kwargs):
+#         super().__init__(data_subkey='static_line_data_path', *args, **kwargs)
 
-class StaticLineDataLayerSettings(layers_2d.StaticLineDataLayerSettings):
-    pass
+
+
+# class StaticLineDataLayerSettings(layers_2d.StaticLineDataLayerSettings):
+#     pass

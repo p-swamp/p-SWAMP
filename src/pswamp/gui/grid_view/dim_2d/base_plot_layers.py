@@ -7,7 +7,7 @@ from pswamp.utils.load_config import load_config
 
 
 class GridBasePlot2DLayers(GridBasePlot2D):
-    def __init__(self, config, activate_default_layers=True, *args, **kwargs):
+    def __init__(self, config, activate_default_layers=True, sld_id=None, *args, **kwargs):
         try:
             background_color = config['graphics']['background_color']
         except KeyError:
@@ -22,6 +22,9 @@ class GridBasePlot2DLayers(GridBasePlot2D):
         # proxy = QtWidgets.QGraphicsProxyWidget()
         # proxy.setWidget(layers_edit_btn)
         # self.window.addItem(proxy)
+        self.sld_id = sld_id
+        self.geo = config["single_line_diagrams"][sld_id]["geo"]\
+            if sld_id is not None else False
 
         available_layers = {
             'Base layers': {

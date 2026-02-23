@@ -24,14 +24,12 @@ class GridBasePlot2D(QtWidgets.QWidget):
     def __init__(
         self,
         # k=1,
-        geo=True,
         live_plot=True,
         background_color=None,
         *args,
-        **kwargs
+        **kwargs,
     ):
         super().__init__(*args, **kwargs)
-        self.geo = geo
 
         self.window = pg.GraphicsLayoutWidget(show=True, title="GeoPlot2D")
         self.plotWidget = self.window.addPlot()
@@ -65,7 +63,6 @@ def main():
 
     grid_plot = GridBasePlot2D(
         # update_freq=25,
-        geo=True,
     )
     grid_plot.window.show()
 
