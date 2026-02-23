@@ -15,7 +15,7 @@ dependencies = [
     "synchrophasor @ git+https://github.com/hallvar-h/pypmu",
     "pydantic>=2.12.5",
 ]
-requires-python = "<3.13,>=3.11"
+requires-python = ">=3.11"
 readme = "README.md"
 license = {text = "MIT"}
 
