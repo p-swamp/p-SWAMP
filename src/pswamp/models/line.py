@@ -65,9 +65,9 @@ class Line:
         self.V_n = (
             ld["V_n"].to_numpy(float)
             if "V_n" in ld.columns
-            else np.nan * np.ones(len(ld))
+            else 0*np.ones(len(ld))
         )
-        self.V_n[self.V_n==0] = bd['V_n'][self.from_bus_idx]
+        self.V_n[self.V_n == 0] = bd["V_n"][self.from_bus_idx][self.V_n == 0]
         
         self.I_n = self.S_n/(np.sqrt(3)*self.V_n)
 
