@@ -9,7 +9,7 @@ import json
 from pathlib import Path
 
 def create_sim():
-
+    
     with open(str(Path(__file__).parent/'data/model_data.json')) as f:
         data = f.read()
     model = json.loads(data)
@@ -23,6 +23,7 @@ def create_sim():
         if len(spl) <= 1:
             continue
         model[spl[0]] = {spl[1]: model.pop(key)}    
+        
 
     # model = model_data.load()
     rows = []
@@ -35,6 +36,24 @@ def create_sim():
         ['name',    'T_pll',    'T_i',  'bus',  'P_K_p',    'P_K_i',    'Q_K_p',    'Q_K_i',    'P_setp',   'Q_setp'],
         *rows
     ]}
+
+    model['gov'] = {'TGOV1':
+        [['name', 'gen', 'R', 'D_t', 'V_min', 'V_max', 'T_1', 'T_2', 'T_3']] +
+        [['GOV' + str(i), row[0], 0.05, 0, 0, 1, 0.2, 1, 2] for i, row in
+            enumerate(model['gen']['GEN'][1:])]
+    }
+
+    model['avr'] = {'SEXS':
+        [['name', 'gen', 'K', 'T_a', 'T_b', 'T_e', 'E_min', 'E_max']] +
+        [['AVR' + str(i), row[0], 100, 2.0, 10.0, 0.5, -3, 3] for i, row in
+        enumerate(model['gen']['GEN'][1:])]
+    }
+
+    model['pss'] = {'STAB1':
+        [['name', 'gen', 'K', 'T', 'T_1', 'T_2', 'T_3', 'T_4', 'H_lim']] +
+        [['PSS' + str(i), row[0], 50, 10.0, 0.5, 0.5, 0.05, 0.05, 0.03] for i, row in
+        enumerate(model['gen']['GEN'][1:])]
+    }
 
     ps = dps.PowerSystemModel(model=model)
 
