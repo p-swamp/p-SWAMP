@@ -1,4 +1,5 @@
-import numpy as np
+from pathlib import Path
+import json
 import tops.dynamic as dps
 
 
@@ -19,8 +20,22 @@ def create_sim():
     #     ['name',    'T_pll',    'T_i',  'bus',  'P_K_p',    'P_K_i',    'Q_K_p',    'Q_K_i',    'P_setp',   'Q_setp'],
     #     *rows
     # ]}
+    
+    with open(str(Path(__file__).parent/'data/model_data.json')) as f:
+        data = f.read()
+    model = json.loads(data)
+    model["buses"] = model.pop("bus")
+    model["lines"] = model.pop("line")
+    model["trafos"] = model.pop("trafo")
+    model["loads"] = model.pop("load")
+    keys = list(model.keys())
+    for key in keys:
+        spl = key.split(":")
+        if len(spl) <= 1:
+            continue
+        model[spl[0]] = {spl[1]: model.pop(key)}    
 
-    ps = dps.PowerSystemModel(model="examples/k2a_rtsim/data/model_data.json")
+    ps = dps.PowerSystemModel(model=model)  # "examples/k2a_rtsim/data/model_data.json")
 
     ps.add_model_data({"loads": {
         "DynamicLoadFiltered": [

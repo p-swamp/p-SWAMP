@@ -21,8 +21,8 @@ class BusesLayer(layers_2d.BusesLayer):
     
     def add_scatter_plot(self, bus_coords_3d):
 
-        bus_lines_x = np.vstack([self.x] * 2 + [np.nan * np.ones(len(self.x))]).T
-        bus_lines_y = np.vstack([self.y] * 2 + [np.nan * np.ones(len(self.x))]).T
+        bus_lines_x = np.vstack([self.x]*2 + [np.nan * np.ones(len(self.x))]).T
+        bus_lines_y = np.vstack([self.y]*2 + [np.nan * np.ones(len(self.x))]).T
         bus_lines_z = np.vstack([self.z, self.z * 0, np.nan * np.ones(len(self.x))]).T
 
         edge_pos = np.vstack(
@@ -35,3 +35,46 @@ class BusesLayer(layers_2d.BusesLayer):
         set_gl_options(self.config, bus_lines)
 
         return bus_lines
+
+
+class BusNamesLayer(layers_2d.BusNamesLayer):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def add_text(self, coord, text):
+        font = QtGui.QFont()
+        font.setPixelSize(12)
+        np.concatenate([coord, [self.z0]])
+        text_item = gl.GLTextItem(
+            pos=coord, text="{}".format(text), font=font
+        )
+        set_gl_options(self.config, text_item)
+        return text_item
+
+
+if __name__ == "__main__":
+    from pswamp.test_utils.sample_datasets.minimal_case import create_minimal_test_case
+    from pswamp.gui.grid_view.dim_3d.base_plot import GridBasePlot3D
+    from pswamp.gui.grid_view.dim_3d.layers.countries import CountriesLayer
+    from nqkafka.utils import stop_server
+
+    config, con, pmu = create_minimal_test_case()
+    # print(config)
+    # config["streaming"]["consumers_seek_to_beginning"] = True
+
+    app = QtWidgets.QApplication()
+    grid_plot = GridBasePlot3D(
+        # config,
+        # sld_id="sld1"
+        # geo=False,
+    )
+    grid_plot.window.show()
+
+    bus_names = BusesLayer(grid_plot, config, sld_id="sld1")
+    bus_names_layer = BusNamesLayer(grid_plot, config, sld_id="sld1")
+    countries_layer = CountriesLayer(grid_plot, config, sld_id="sld1")
+    
+    # layer_instance.remove_layer()
+
+    app.exec()
+    stop_server(config["streaming"]["bootstrap_servers"])

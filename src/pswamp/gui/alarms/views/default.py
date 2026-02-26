@@ -155,7 +155,7 @@ class DefaultAlarmView(BaseAlarmView):
 if __name__ == '__main__':
     config = load_config()
 
-    run_online = True
+    run_online = False
     if run_online:
         config["streaming"]['consumers_seek_to_beginning'] = True
         config["streaming"]['bootstrap_servers'] = 'localhost:40000'

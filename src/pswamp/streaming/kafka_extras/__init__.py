@@ -20,8 +20,12 @@ def create_topic(name, io_kwargs, **kwargs):
     else:
         io_kwargs_tmp = io_kwargs.copy()
         kwargs_tmp = kwargs.copy()
-        delete_keys = ["use_nqkafka", "auto_offset_reset",
-            "consumers_start_from_beginning"]
+        delete_keys = [
+            "use_nqkafka",
+            "auto_offset_reset",
+            "consumers_start_from_beginning",
+            "consumers_seek_to_beginning",
+        ]
         [io_kwargs_tmp.pop(k) for k in delete_keys if k in io_kwargs_tmp.keys()]
         if 'n_samples' in kwargs_tmp:
             kwargs_tmp.pop('n_samples')

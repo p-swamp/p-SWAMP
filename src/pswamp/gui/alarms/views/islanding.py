@@ -236,7 +236,7 @@ if __name__ == '__main__':
     from pswamp.gui.grid_view.grid_view_container import GridViewContainer
     config = load_config()
 
-    run_online = True
+    run_online = False
     if run_online:
         config["streaming"]['consumers_seek_to_beginning'] = True
         config["streaming"]['bootstrap_servers'] = 'localhost:40000'
@@ -301,11 +301,36 @@ if __name__ == '__main__':
 
         run_n44_rtsim_offline(config, events, t_end=50)
         from pswamp.monitoring.islanding import run_islanding_application
-        run_islanding_application(config, t_end=50)
+        import threading
+        thr = threading.Thread(target=run_islanding_application, args=(config,), kwargs=dict(t_start=0, t_end=50))
+        thr.start()
 
-        # from pswamp.streaming import KafkaProducer
-        # producer = KafkaProducer(**config["streaming"])
-
+        # from pswamp.streaming import Consumer
+        # # producer = KafkaProducer(**config["streaming"])
+        # consumer = Consumer(**config["streaming"], topic="pmudata")
+        # def consume():
+        #     while True:
+        #         msg = next(iter(consumer))
+        #         print(msg.value.get_time_stamp())
+        # import threading
+        # thr = threading.Thread(target=consume)
+        # thr.start()
+        # from pswamp.monitoring.islanding import IslandingApp
+        # app = IslandingApp(
+        #     # window_length=10,
+        #     input_topic=config["topics"]["pmudata"],
+        #     output_topic=config["topics"]["islanding"],
+        #     status_topic=config["topics"]["application.status"],
+        #     io_kwargs=config["streaming"],
+        #     t_end = 50,
+        #     t_start = 0,
+        #     # eval_freq=1,
+        #     # **kwargs,
+        # )
+        # app.update_callbacks.append(lambda: print(app.most_recent_time_stamp))
+        # app.run()
+        # thr = threading.Thread(target=app.run)
+        # thr.start()
 
         # topic_data={'islanding': islanding_data_frames}
         # for topic, data in topic_data.items():

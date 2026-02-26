@@ -1,28 +1,29 @@
 import numpy as np
 from pswamp.utils.misc import lookup_strings
 from pswamp.utils.pypmu import PMUPhasorExtractor, PMUFreqExtractor
-from pswamp.models.reader import read_model_data
+# from pswamp.models.reader import get_from_database
+from pswamp.database import get_from_database
         
 class Bus:
-    def __init__(self, config, meas_data, units=None):
+    def __init__(self, db_kwargs, meas_data, units=None):
 
-        self.bus_data = read_model_data(config, 'bus')
-        self.units = units = self.bus_data['name'] if units is None else units
+        self.data = get_from_database(db_kwargs, 'bus')
+        self.units = units = self.data['name'] if units is None else units
 
 
-        self.bus_subset_idx = lookup_strings(units, self.bus_data['name'])
+        self.bus_subset_idx = lookup_strings(units, self.data['name'])
         self.freq_extractor = PMUFreqExtractor(
-            self.bus_data['name'][self.bus_subset_idx].to_numpy(),
-            meas_data.get_station_name())
+            self.data['name'][self.bus_subset_idx].to_numpy(),
+            meas_data.cfg.get_station_name())
         
         self.v_phasor_extractor = PMUPhasorExtractor(
-            wanted_stations=self.bus_data['name'][self.bus_subset_idx].to_list(),
+            wanted_stations=self.data['name'][self.bus_subset_idx].to_list(),
             wanted_channels=[['V']]*len(units),
-            stations=meas_data.get_station_name(),
-            channels=meas_data.get_channel_names())
+            dataframe=meas_data)
         
-        self.v_max = self.bus_data["v_max"] if "v_max" in self.bus_data else 1.1
-        self.v_min = self.bus_data["v_min"] if "v_min" in self.bus_data else 0.9
+        self.v_max = self.data["v_max"].to_numpy() if "v_max" in self.data else 1.1
+        self.v_min = self.data["v_min"].to_numpy() if "v_min" in self.data else 0.9
+        self.V_n = self.data["V_n"].to_numpy()
 
     def V(self, meas):
         # Voltage [V]
@@ -31,7 +32,7 @@ class Bus:
     
     def v(self, meas):
         # Voltage [p.u.]
-        return self.V(meas)/self.bus_data['V_n'].to_numpy()[self.bus_subset_idx]
+        return self.V(meas)/self.V_n[self.bus_subset_idx]
     
     def overvoltage(self, meas):
         return abs(self.v(meas)) > self.v_max
@@ -53,16 +54,16 @@ if __name__ == '__main__':
     from pswamp import load_config
     config = load_config()
 
-    line_data = read_model_data(config, 'line')
-    trafo_data = read_model_data(config, 'trafo')
+    line_data = get_from_database(config, 'line')
+    trafo_data = get_from_database(config, 'trafo')
     
     # copy_bus = model_data['buses'][-1].copy()
     # copy_bus[0] = '8701'
     # model_data['buses'].append(copy_bus)
-    bus_data = read_model_data(config, 'bus')
+    bus_data = get_from_database(config, 'bus')
     # len(bus_data)
     # popped_bus = model_data['buses'].pop()
-    # bus_data_mod = read_model_data(model_data, 'buses')
+    # bus_data_mod = get_from_database(model_data, 'buses')
     # len(bus_data_mod)
     # model_data['buses'].append(popped_bus)
 

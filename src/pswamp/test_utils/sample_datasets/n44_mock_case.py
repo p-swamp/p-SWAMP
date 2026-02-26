@@ -2,7 +2,7 @@ import time
 from nqkafka import NQKafkaServer
 from nqkafka.utils import stop_server
 from pswamp.test_utils import runners
-from pswamp.streaming.kafka_extras import Producer
+from pswamp.streaming import Producer
 from pswamp.test_utils.csv_playback.data_frame_generator import DataFrameGenerator
 import numpy as np
 from topsrt.pmu_currents_freq import PMUPublisherCurrentsFreq
@@ -11,14 +11,15 @@ from pswamp import load_config
 import json
 # from pswamp.utils.misc import lookup_strings
 # from pswamp.utils.pypmu import PMUPhasorExtractor, PMUFreqExtractor
-from pswamp.models.bus import read_model_data
+from pswamp.database import get_from_database
+
 # import pandas as pd
 
 
-def generate_pmu_cfg_from_model(config):
-    line_data = read_model_data(config, 'lines')
-    trafo_data = read_model_data(config, 'transformers')
-    bus_data = read_model_data(config, 'buses')
+def generate_pmu_cfg_from_model(db_kwargs):
+    line_data = get_from_database(db_kwargs, 'lines')
+    trafo_data = get_from_database(db_kwargs, 'transformers')
+    bus_data = get_from_database(db_kwargs, 'buses')
 
     obj = type('', (), {'stations': None, 'ip': '', 'port': 0, 'pdc_id': 1, 'fs': 50})()
     PMUPublisherCurrentsFreq.initialize(obj, [bus_data, line_data, trafo_data])
@@ -32,7 +33,7 @@ def run_mock_case(config, topic_data={}, publish_frequency=50, t_end=10):
     runners.create_topics(config)
     # Load N44 model data and generate PMU config frame
 
-    cfg = generate_pmu_cfg_from_model(config)
+    cfg = generate_pmu_cfg_from_model(config["database"])
 
     data_frame = DataFrameGenerator.generate_data_frame(cfg)
     data_frame.cfg.get_ph_units()
@@ -94,7 +95,7 @@ if __name__ == '__main__':
     time.sleep(1)
     stop_mock_case(config)
 
-    cfg = generate_pmu_cfg_from_model(config)
+    cfg = generate_pmu_cfg_from_model(config["database"])
 
     data_frame = DataFrameGenerator.generate_data_frame(cfg)
     len(np.concatenate(data_frame.get_phasors()))

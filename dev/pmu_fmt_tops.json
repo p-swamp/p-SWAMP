@@ -1,0 +1,30 @@
+{
+    "line": {
+        "I_from": {
+            "type": "phasor",
+            "station": "{from_bus}",
+            "channel": "I[{name}]"
+        },
+        "I_to": {
+            "station": "{to_bus}",
+            "channel": "I[{name}]"
+        }
+    },
+    "bus": {
+        "V": {
+            "type": "phasor",
+            "station": "{name}",
+            "channel": "V"
+        },
+        "freq": {
+            "type": "freq",
+            "station": "{name}"
+        }
+    },
+    "load": {
+        "I": {
+            "station": "{from_bus}",
+            "channel": "I[{unit}"
+        }
+    }
+}

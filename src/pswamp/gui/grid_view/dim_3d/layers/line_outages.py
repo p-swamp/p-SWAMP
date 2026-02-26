@@ -14,7 +14,7 @@ class LineOutages(LineLayer):
         super().__init__(parent, config, *args, **kwargs)
         
         self.snapshot_app = SnapshotApp(io_kwargs=config["streaming"])
-        self.line_model = Line(self.config, self.snapshot_app.get_config_frame())
+        self.line_model = Line(self.config["database"], self.snapshot_app.get_sample_data_frame())
         # n_samples = 2
         # self.pmu_tw = PMUTimeWindowOnline(n_samples=n_samples, kafka_topic=config['topics']['pmudata'], io_kwargs=config["streaming"])
         # self.pmu_tw.initialize()
@@ -23,11 +23,11 @@ class LineOutages(LineLayer):
         app_thread.start()
 
         
-        self.set_trafo_colors(np.zeros(4))
-        self.update_trafo_colors()
+        # self.set_colors(np.zeros(4), "trafo")
+        # self.update_trafo_colors()
         
         # self.threshold = 0.01
-        parent.update_funs[self.uuid] = self.update_colors
+        parent.update_funs[self.uuid] = self.update_line_outage_colors
         # self.set_trafo_colors(np.zeros((len(self.trafos_data), 4)))
 
     # def get_col_idx(self):
@@ -53,14 +53,14 @@ class LineOutages(LineLayer):
         # z = self.z_0 + self.z_scale*(freq - 50)
         # self.set_node_z(z)
         
-    def update_colors(self):
+    def update_line_outage_colors(self):
         data_frame = self.snapshot_app.most_recent_data_frame
         if data_frame is None:
             return
         
         disconnected = self.line_model.disconnected(data_frame)
         # self.line_outage_state = np.ones(len(self.col_idx), dtype=bool)
-        colors = np.zeros((len(self.lines_data), 4))
+        colors = np.zeros((len(self.model_data["line"]), 4))
         colors[disconnected] = [0.8, 0.2, 0.2, 1]
 
         # current_data = self.pmu_tw.tw.get_col(self.col_idx)
@@ -68,8 +68,8 @@ class LineOutages(LineLayer):
         # colors_for_currents_in_measurements = colors[self.currents_in_measurements]
         # colors_for_currents_in_measurements[is_disconnected] = [0.8, 0.2, 0.2, 1]
         # colors[self.currents_in_measurements] = colors_for_currents_in_measurements
-        self.set_line_colors(colors)
-        self.update_line_colors()
+        self.set_colors(colors, "line")
+        self.update_colors()
 
     def add_line_plots(self, pos, line_width=7, color='gray'):
         return super().add_line_plots(pos, line_width, color)
@@ -81,25 +81,61 @@ class LineOutages(LineLayer):
     # def slider_change(self, val):
     #     self.target_layer.z_scale = val/2
 
+if __name__ == "__main__":
+    from pswamp.test_utils.sample_datasets.minimal_case import create_minimal_test_case
+    from pswamp.gui.grid_view.dim_3d.base_plot import GridBasePlot3D
+    # from pswamp.gui.grid_view.dim_3d.layers.countries import CountriesLayer
+    import pswamp.gui.grid_view.dim_3d.layers as lrs
+    from nqkafka.utils import stop_server
 
-if __name__ == '__main__':
-    from pswamp.gui.grid_view.dim_3d.base_plot_layers import GridBasePlot3D
-    from pswamp import load_config
-    import pswamp
-    from pathlib import Path
-
-    config = load_config()
+    config, con, pmu = create_minimal_test_case()
+    # print(config)
+    # config["streaming"]["consumers_seek_to_beginning"] = True
 
     app = QtWidgets.QApplication()
     grid_plot = GridBasePlot3D(
-        geo=False,
+        # config,
+        # sld_id="sld1"
+        # geo=False,
     )
     grid_plot.window.show()
 
-    layer_instance = LineOutages(grid_plot, config, geo=False)
-    n_lines = layer_instance.n_lines
+    bus_names = lrs.BusesLayer(grid_plot, config, sld_id="sld1")
+    bus_names_layer = lrs.BusNamesLayer(grid_plot, config, sld_id="sld1")
+    # countries_layer = CountriesLayer(grid_plot, config, sld_id="sld1")
+    lines_layer = LineLayer(grid_plot, config, sld_id="sld1")
+    line_outages = LineOutages(grid_plot, config, sld_id="sld1")
 
-    # layer_settings = LinesFreqSettings(layer_instance)
-    # layer_settings.show()
+    # layer_instance.remove_layer()
+
+    from pswamp.streaming import Producer
+    dataframe = pmu.generate_dataframe(
+        phasor_data=[
+            [(1, 0), (0, 0), (1, 0)],
+            [(1, 0), (0, 0), (1, 0)],
+            [(1, 0), (1, 0), (1, 0)],
+        ]
+    )
+    producer = Producer(**config["streaming"])
+    producer.send(topic="pmudata", msg=dataframe)
 
     app.exec()
+    stop_server(config["streaming"]["bootstrap_servers"])
+    
+# if __name__ == '__main__':
+#     from pswamp.gui.grid_view.dim_3d.base_plot_layers import GridBasePlot3D
+#     from pswamp import load_config
+
+#     config = load_config()
+
+#     app = QtWidgets.QApplication()
+#     grid_plot = GridBasePlot3D()
+#     grid_plot.window.show()
+
+#     layer_instance = LineOutages(grid_plot, config, geo=False)
+#     n_lines = layer_instance.n_lines
+
+#     # layer_settings = LinesFreqSettings(layer_instance)
+#     # layer_settings.show()
+
+#     app.exec()

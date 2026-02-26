@@ -1,7 +1,7 @@
 from PySide6 import QtWidgets
 import sys
 import pyqtgraph as pg
-from pyqtgraph.Qt import QtGui, QtCore
+from pyqtgraph.Qt import QtCore
 import pyqtgraph.opengl as gl
 
 
@@ -9,14 +9,12 @@ class GridBasePlot3D(QtWidgets.QWidget):
     station_was_clicked = QtCore.Signal(str)
     def __init__(
         self,
-        geo=True,
         live_plot=True,
         background_color=None,
         *args,
         **kwargs
     ):
         super().__init__(*args, **kwargs)
-        self.geo = geo
 
         # self.window = pg.GraphicsLayoutWidget(show=True, title="GeoPlot2D")
             # self.plotWidget = self.window.addPlot()
@@ -58,7 +56,6 @@ def main():
 
     grid_plot = GridBasePlot3D(
         # update_freq=25,
-        geo=True,
     )
     grid_plot.window.show()
 

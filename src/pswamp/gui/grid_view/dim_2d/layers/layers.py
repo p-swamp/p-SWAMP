@@ -1,45 +1,13 @@
 import numpy as np
 import threading
 from pswamp.utils.pmu_time_window import PMUTimeWindowOnline
-from PySide6 import QtCore, QtGui, QtWidgets
+from PySide6 import QtCore, QtWidgets
 import pyqtgraph as pg
 from pswamp.visualization.components.phasor_plot import PhasorPlot
-from pswamp.visualization.countries_geo_data.read_geo_data import read_geo_data
 import uuid
 from pswamp.utils.get_station_coords import load_bus_coords_for_current_stations, load_bus_coords_for_stations
 from pswamp.utils.single_line_diagram import load_dxf
-
-
-class LayerFailedException(Exception):
-    "Raised when layer fails."
-    pass
-
-
-class StationNamesLayer:
-    def __init__(self, parent, config, geo=True):
-        self.config = config
-        self.plotWidget = parent.plotWidget
-        self.k = 2 if geo else 1
-
-        bus_names, bus_coords = load_bus_coords_for_current_stations(config, return_3d=True, geo=geo)
-        bus_coords[:, 1] *= self.k
-        # bus_coords_3d = np.hstack([bus_coords, np.ones((len(bus_coords), 1))])
-        # bus_coords_3d[:, 1] *= self.k
-
-        self.bus_name_text = []
-        for coord, bus_name in zip(bus_coords, bus_names):
-            txtitem1= self.add_text(coord, bus_name)
-            self.bus_name_text.append(txtitem1)
-            self.plotWidget.addItem(txtitem1)
-    
-    def add_text(self, coord, text):
-            text_item = pg.TextItem(anchor=(0, 0), text="{}".format(text), color=(127, 127, 127))
-            text_item.setPos(coord[0], coord[1])
-            return text_item
-
-    def remove_layer(self):
-        for txt in self.bus_name_text:
-            self.plotWidget.removeItem(txt)
+from pswamp.gui.grid_view.exceptions import LayerFailedException
 
 class PhasorPlotLayer:
     def __init__(self, parent, config, geo=True) -> None:

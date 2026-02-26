@@ -15,12 +15,21 @@ from pswamp.utils.gl import set_gl_options
 
 class LineLayer(LineLayer2D):       
     def __init__(self, *args, **kwargs):
+        self.z0 = 1
         super().__init__(*args, **kwargs)
-        self.lines_z_map = self.build_z_map(self.lines_data, self.line_paths)
-        self.trafos_z_map = self.build_z_map(self.trafos_data, self.trafo_paths)
+        # self.lines_z_map = self.build_z_map(self.lines_data, self.line_paths)
+        # self.trafos_z_map = self.build_z_map(self.trafos_data, self.trafo_paths)
+        # self.line_colors = 0.5*np.ones((self.n_lines, 4))
+        # self.trafo_colors = 0.5*np.ones((self.n_trafos, 4))
 
-        self.line_colors = 0.5*np.ones((self.n_lines, 4))
-        self.trafo_colors = 0.5*np.ones((self.n_trafos, 4))
+        self.branch_z_map = {}
+        self.branch_colors = {}
+        for key in self.branch_data:
+            paths = self.branch_data[key]["paths"]
+            data = self.model_data[key]
+        
+            self.branch_z_map[key] = self.build_z_map(data, paths)
+            self.branch_colors[key] = 0.5*np.ones((len(data), 4))
 
     def build_z_map(self, data, paths):
         
@@ -48,116 +57,215 @@ class LineLayer(LineLayer2D):
         # line_points = line_z_mat.dot(frequency)
         return line_z_mat
 
-    def update_line_z_coords(self, node_z):
-        new_z = self.lines_z_map.dot(node_z)
-        pos = np.hstack([self.line_paths_flat, new_z[:, None]])
-        self.lines_plot.setData(pos=pos)
+    def update_branch_z_coords(self, node_z, keys=None):
+        if isinstance(keys, str):
+            keys = [keys]
 
-    def update_trafo_z_coords(self, node_z):
-        new_z = self.trafos_z_map.dot(node_z)
-        pos = np.hstack([self.trafo_paths_flat, new_z[:, None]])
-        self.trafos_plot.setData(pos=pos)
+        if keys is None:
+            keys = self.branch_data.keys()
+            
+        for key in keys:
+            new_z = self.branch_z_map[key].dot(node_z)
+            pos = np.hstack([self.branch_data[key]["paths_flat"], new_z[:, None]])
+            self.branch_plots[key].setData(pos=pos)
     
-    def set_node_z(self, z):
-        self.update_line_z_coords(z)
-        self.update_trafo_z_coords(z)
+    # def update_line_z_coords(self, node_z):
+    #     new_z = self.lines_z_map.dot(node_z)
+    #     pos = np.hstack([self.line_paths_flat, new_z[:, None]])
+    #     self.lines_plot.setData(pos=pos)
+
+    # def update_trafo_z_coords(self, node_z):
+    #     new_z = self.trafos_z_map.dot(node_z)
+    #     pos = np.hstack([self.trafo_paths_flat, new_z[:, None]])
+    #     self.trafos_plot.setData(pos=pos)
+    
+    def set_node_z(self, z, keys=None):
+        self.update_branch_z_coords(z, keys)
+        # self.update_line_z_coords(z)
+        # self.update_trafo_z_coords(z)
 
     def add_line_plots(self, pos, line_width=2, color='gray'):
+        pos = np.hstack([pos, self.z0*np.ones((len(pos), 1))])
         pl = gl.GLLinePlotItem(
             pos=pos, width=line_width, color=color, antialias=False
         )
         set_gl_options(self.config, pl)
         return pl
-        
-    def reset_line_colors(self):
-        self.line_colors = 0.5*np.ones((self.n_lines, 4))
 
-    def reset_trafo_colors(self):
-        self.trafo_colors = 0.5*np.ones((self.n_trafos, 4))
+    def reset_colors(self, keys=None):
+        if isinstance(keys, str):
+            keys = [keys]
+
+        if keys is None:
+            keys = self.branch_data.keys()
+
+        for key in keys:
+            self.branch_colors[key] = 0.5*np.ones((len(self.model_data[key]), 4))
+        self.line_colors = 0.5 * np.ones((self.n_lines, 4))
     
-    def set_line_colors(self, colors, idx=slice(None)):
-        self.line_colors[idx, :] = colors
+    def set_colors(self, colors, key, idx=slice(None)):
+        self.branch_colors[key][idx, :] = colors
+    
+    def update_colors(self, keys=None):
+        if isinstance(keys, str):
+            keys = [keys]
 
-    def update_line_colors(self):
-        line_colors_agg = np.repeat(self.line_colors, self.line_segment_lengths + 1, axis=0)
-        self.lines_plot.setData(color=line_colors_agg)
+        if keys is None:
+            keys = self.branch_data.keys()
+        for key in keys:
+            colors_agg = np.repeat(
+                self.branch_colors[key],
+                self.branch_data[key]["segment_lengths"] + 1, axis=0
+            )
+            self.branch_plots[key].setData(color=colors_agg)
 
-    def set_trafo_colors(self, colors, idx=slice(None)):
-        self.trafo_colors[idx, :] = colors
+    # def reset_line_colors(self):
+    #     self.line_colors = 0.5*np.ones((self.n_lines, 4))
 
-    def update_trafo_colors(self):
-        colors_agg = np.repeat(self.trafo_colors, self.trafo_segment_lengths + 1, axis=0)
-        self.trafos_plot.setData(color=colors_agg)
+    # def reset_trafo_colors(self):
+    #     self.trafo_colors = 0.5*np.ones((self.n_trafos, 4))
+
+    # def set_line_colors(self, colors, idx=slice(None)):
+    #     self.line_colors[idx, :] = colors
+
+    # def update_line_colors(self):
+    #     line_colors_agg = np.repeat(self.line_colors, self.line_segment_lengths + 1, axis=0)
+    #     self.lines_plot.setData(color=line_colors_agg)
+
+    # def set_trafo_colors(self, colors, idx=slice(None)):
+    #     self.trafo_colors[idx, :] = colors
+
+    # def update_trafo_colors(self):
+    #     colors_agg = np.repeat(self.trafo_colors, self.trafo_segment_lengths + 1, axis=0)
+    #     self.trafos_plot.setData(color=colors_agg)
 
 
+if __name__ == "__main__":
+    from pswamp.test_utils.sample_datasets.minimal_case import create_minimal_test_case
+    from pswamp.gui.grid_view.dim_3d.base_plot import GridBasePlot3D
+    from pswamp.gui.grid_view.dim_3d.layers.countries import CountriesLayer
+    import pswamp.gui.grid_view.dim_3d.layers as lrs
+    from nqkafka.utils import stop_server
 
-
-if __name__ == '__main__':
-    from pswamp.gui.grid_view.dim_3d.base_plot_layers import GridBasePlot3D
-    from pswamp import load_config
-    import pswamp
-    from pathlib import Path
-    sample_dataset_path = Path(pswamp.__file__).parent/'test_utils/sample_datasets/n44'
-
-    config = load_config()
-    # config['sld_data'] = {'line_data_path': sample_dataset_path/'sld.dxf'}
-    # config['sld_data'] = {'line_data_path': sample_dataset_path/'sld.dxf'}
-    # config['model_data_path'] = sample_dataset_path/'model_data.json'
+    config, con, pmu = create_minimal_test_case()
+    # print(config)
+    # config["streaming"]["consumers_seek_to_beginning"] = True
 
     app = QtWidgets.QApplication()
     grid_plot = GridBasePlot3D(
-        geo=True,
-        # background_color=(255, 255, 255)
+        # config,
+        # sld_id="sld1"
+        # geo=False,
     )
     grid_plot.window.show()
 
-
-    layer_instance = LineLayer(grid_plot, config, geo=True)
-    n_lines = layer_instance.n_lines
-    line_V_n = layer_instance.bus_data['V_n'][lookup_strings(layer_instance.lines_data['from_bus'], layer_instance.bus_data['name'])]
-    # lookup_strings(layer_instance.lines_data['from_bus'], layer_instance.bus_data['name'])
-
-
-    amp = np.random.randn(44)*0.2
-    freq = np.random.randn(44)*0.5
-    phas = np.random.randn(44)*0.1
-    
-    import time
-    def update_colors():
-        while True:
-            # line_colors = np.hstack([np.random.randn(n_lines, 3), np.ones((n_lines, 1))])
-            # line_colors = np.hstack([np.repeat([[0.5, 0.5, 0.5]], n_lines, axis=0), np.ones((n_lines, 1))])
-            # line_colors[:20, :] = [0.1, 0.1, 0.9, 1]
-            # line_colors = np.ones((n_lines, 4))*line_V_n.to_numpy()[:, None]/np.max(line_V_n)
-            # line_colors[:, -1] = 0.2
-            # layer_instance.set_line_colors(colors=line_colors)
-            bus_idx = lookup_strings('6700', layer_instance.bus_names)
-            line_idx, trafo_idx = layer_instance.get_branches_from_buses([bus_idx])
-            
-            # line_colors[line_idx] = [0.2, 1, 0.2, 1]
-            layer_instance.set_line_colors(colors=[0.2, 1, 0.2, 1], idx=line_idx)
-            layer_instance.set_trafo_colors(
-                colors=[0.2, 1, 0.2, 1], idx=trafo_idx)
-
-            # line_idx, trafo_idx = layer_instance.get_branches_from_buses([10, 11, 12, 13, 14, 15])
-            # layer_instance.set_line_colors(colors=[1, 0.2, 0.2, 1], idx=line_idx)
-
-            layer_instance.update_line_colors()
-            layer_instance.update_trafo_colors()
-
-
-            z = amp*np.sin(time.time()*freq + phas)
-            layer_instance.set_node_z(z)
-
-            
-            time.sleep(0.02)
-
-    import threading
-    thread = threading.Thread(target=update_colors)
-    thread.start()
-    # layer_settings = CountriesLayerSettings(layer_instance)
-    # layer_settings.show()
+    bus_names = lrs.BusesLayer(grid_plot, config, sld_id="sld1")
+    bus_names_layer = lrs.BusNamesLayer(grid_plot, config, sld_id="sld1")
+    countries_layer = CountriesLayer(grid_plot, config, sld_id="sld1")
+    lines_layer = LineLayer(grid_plot, config, sld_id="sld1")
 
     # layer_instance.remove_layer()
 
     app.exec()
+    stop_server(config["streaming"]["bootstrap_servers"])
+
+# if __name__ == "__main__":
+#     from pswamp.test_utils.sample_datasets.minimal_case import create_minimal_test_case
+#     from pswamp.gui.grid_view.dim_3d.base_plot import GridBasePlot3D
+#     from pswamp.gui.grid_view.dim_3d.layers.countries import CountriesLayer
+#     from nqkafka.utils import stop_server
+
+#     config, con, pmu = create_minimal_test_case()
+#     # print(config)
+#     # config["streaming"]["consumers_seek_to_beginning"] = True
+
+#     app = QtWidgets.QApplication()
+#     grid_plot = GridBasePlot3D(
+#         # geo=False,
+#     )
+#     grid_plot.window.show()
+
+#     layer_instance = LineLayer(grid_plot, config, sld_id="sld1")
+#     countries_layer = CountriesLayer(grid_plot, config, sld_id="sld1")
+#     # layer_instance = LineLayer(grid_plot, config, geo=False)
+#     # layer_settings = CountriesLayerSettings(layer_instance)
+#     # layer_settings.show()
+#     # layer_instance.remove_layer()
+#     from pswamp.streaming import Producer
+
+#     dataframe = pmu.generate_dataframe(freq_data=[49, 51, 50])
+#     producer = Producer(**config["streaming"])
+#     producer.send(topic="pmudata", msg=dataframe)
+
+#     app.exec()
+#     stop_server(config["streaming"]["bootstrap_servers"])
+
+# # if __name__ == '__main__':
+# #     from pswamp.gui.grid_view.dim_3d.base_plot_layers import GridBasePlot3D
+# #     from pswamp import load_config
+# #     import pswamp
+# #     from pathlib import Path
+# #     sample_dataset_path = Path(pswamp.__file__).parent/'test_utils/sample_datasets/n44'
+
+# #     config = load_config()
+# #     # config['sld_data'] = {'line_data_path': sample_dataset_path/'sld.dxf'}
+# #     # config['sld_data'] = {'line_data_path': sample_dataset_path/'sld.dxf'}
+# #     # config['model_data_path'] = sample_dataset_path/'model_data.json'
+
+# #     app = QtWidgets.QApplication()
+# #     grid_plot = GridBasePlot3D(
+# #         geo=True,
+# #         # background_color=(255, 255, 255)
+# #     )
+# #     grid_plot.window.show()
+
+
+# #     layer_instance = LineLayer(grid_plot, config, geo=True)
+# #     n_lines = layer_instance.n_lines
+# #     line_V_n = layer_instance.bus_data['V_n'][lookup_strings(layer_instance.lines_data['from_bus'], layer_instance.bus_data['name'])]
+# #     # lookup_strings(layer_instance.lines_data['from_bus'], layer_instance.bus_data['name'])
+
+
+# #     amp = np.random.randn(44)*0.2
+# #     freq = np.random.randn(44)*0.5
+# #     phas = np.random.randn(44)*0.1
+    
+# #     import time
+# #     def update_colors():
+# #         while True:
+# #             # line_colors = np.hstack([np.random.randn(n_lines, 3), np.ones((n_lines, 1))])
+# #             # line_colors = np.hstack([np.repeat([[0.5, 0.5, 0.5]], n_lines, axis=0), np.ones((n_lines, 1))])
+# #             # line_colors[:20, :] = [0.1, 0.1, 0.9, 1]
+# #             # line_colors = np.ones((n_lines, 4))*line_V_n.to_numpy()[:, None]/np.max(line_V_n)
+# #             # line_colors[:, -1] = 0.2
+# #             # layer_instance.set_line_colors(colors=line_colors)
+# #             bus_idx = lookup_strings('6700', layer_instance.bus_names)
+# #             line_idx, trafo_idx = layer_instance.get_branches_from_buses([bus_idx])
+            
+# #             # line_colors[line_idx] = [0.2, 1, 0.2, 1]
+# #             layer_instance.set_line_colors(colors=[0.2, 1, 0.2, 1], idx=line_idx)
+# #             layer_instance.set_trafo_colors(
+# #                 colors=[0.2, 1, 0.2, 1], idx=trafo_idx)
+
+# #             # line_idx, trafo_idx = layer_instance.get_branches_from_buses([10, 11, 12, 13, 14, 15])
+# #             # layer_instance.set_line_colors(colors=[1, 0.2, 0.2, 1], idx=line_idx)
+
+# #             layer_instance.update_line_colors()
+# #             layer_instance.update_trafo_colors()
+
+
+# #             z = amp*np.sin(time.time()*freq + phas)
+# #             layer_instance.set_node_z(z)
+
+            
+# #             time.sleep(0.02)
+
+# #     import threading
+# #     thread = threading.Thread(target=update_colors)
+# #     thread.start()
+# #     # layer_settings = CountriesLayerSettings(layer_instance)
+# #     # layer_settings.show()
+
+# #     # layer_instance.remove_layer()
+
+# #     app.exec()

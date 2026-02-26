@@ -23,11 +23,12 @@ def get_model_data(config):
     return model_data
 
 
-def read_model_data(config, key=None, format='pandas'):
+def read_model_data(db_kwargs, key=None, format="pandas"):
     # Alternative way of reading model data (directly from a file, not from a
     # Kafka topic). Should be merged with get_model_data in the future.
-    with open(config['model_data_path']) as file:
-        model_data = json.load(file)
+    if db_kwargs["type"] == "file":
+        with open(db_kwargs["file_path"]) as file:
+            model_data = json.load(file)
 
     if key is not None:
         return pd.DataFrame(columns=model_data[key][0], data=model_data[key][1:])

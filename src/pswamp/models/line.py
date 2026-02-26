@@ -1,8 +1,8 @@
 import numpy as np
 from pswamp.utils.misc import lookup_strings
 from pswamp.utils.pypmu import PMUPhasorExtractor, PMUFreqExtractor
-from pswamp.models.bus import read_model_data
-import pandas as pd
+# from pswamp.models.bus import read_model_data
+from pswamp.database import get_from_database
 
 
 
@@ -12,11 +12,11 @@ def find_strings_containing_substring(strings_to_search, string_to_find):
 
 
 class Line:
-    def __init__(self, config, meas_data, units=None):
+    def __init__(self, db_kwargs, meas_data, units=None):
 
-        line_data = read_model_data(config, 'line')
-        # trafo_data = read_model_data(model_data, 'transformers')
-        bus_data = read_model_data(config, 'bus')
+        self.data = line_data = get_from_database(db_kwargs, 'line')
+        # trafo_data = get_from_database(model_data, 'transformers')
+        bus_data = get_from_database(db_kwargs, 'bus')
         
         self.units = units = line_data['name'] if units is None else units
             
@@ -25,34 +25,29 @@ class Line:
         self.from_bus_idx = lookup_strings(line_data['from_bus'][line_subset_idx], bus_data['name'])
         self.to_bus_idx = lookup_strings(line_data['to_bus'][line_subset_idx], bus_data['name'])
 
-        phasor_extractor_kwargs = dict(
-            stations=meas_data.get_station_name(),
-            channels=meas_data.get_channel_names()
-        )
-
         self.freq_from_extractor = PMUFreqExtractor(
             wanted_stations=bus_data['name'][self.from_bus_idx].to_list(),
-            stations=meas_data.get_station_name())
+            dataframe=meas_data)
         
         self.freq_to_extractor = PMUFreqExtractor(
             wanted_stations=bus_data['name'][self.to_bus_idx].to_list(),
-            stations=meas_data.get_station_name())
+            dataframe=meas_data)
 
         self.current_phasor_extractor_from = PMUPhasorExtractor(
             wanted_stations=bus_data['name'][self.from_bus_idx].to_list(),
-            wanted_channels=[[f'I[{unit}]'] for unit in units], **phasor_extractor_kwargs
+            wanted_channels=[[f'I[{unit}]'] for unit in units], dataframe=meas_data
         )
         self.current_phasor_extractor_to = PMUPhasorExtractor(
             wanted_stations=bus_data['name'][self.to_bus_idx].to_list(),
-            wanted_channels=[[f'I[{unit}]'] for unit in units], **phasor_extractor_kwargs
+            wanted_channels=[[f'I[{unit}]'] for unit in units], dataframe=meas_data
         )
         self.v_from_phasor_extractor = PMUPhasorExtractor(
             wanted_stations=bus_data['name'][self.from_bus_idx].to_list(),
-            wanted_channels=[['V']]*len(units),  **phasor_extractor_kwargs
+            wanted_channels=[['V']]*len(units),  dataframe=meas_data
         )
         self.v_to_phasor_extractor = PMUPhasorExtractor(
             wanted_stations=bus_data['name'][self.to_bus_idx].to_list(),
-            wanted_channels=[['V']]*len(units), **phasor_extractor_kwargs
+            wanted_channels=[['V']]*len(units), dataframe=meas_data
         )
 
         self.line_out_threshold = 1e-3
@@ -60,11 +55,19 @@ class Line:
         ld = line_data.iloc[line_subset_idx]
         bd = bus_data
         
-        self.S_n = ld['S_n'].to_numpy(float) if 'S_n' in ld.columns else np.inf
+        self.S_n = (
+            ld["S_n"].to_numpy(float)
+            if "S_n" in ld.columns
+            else np.inf * np.ones(len(ld))
+        )
         self.S_n[self.S_n==0] = np.inf
         
-        self.V_n = ld['V_n'].to_numpy(float) if 'V_n' in ld.columns else np.nan
-        self.V_n[self.V_n==0] = bd['V_n'][self.from_bus_idx]
+        self.V_n = (
+            ld["V_n"].to_numpy(float)
+            if "V_n" in ld.columns
+            else 0*np.ones(len(ld))
+        )
+        self.V_n[self.V_n == 0] = bd["V_n"][self.from_bus_idx][self.V_n == 0]
         
         self.I_n = self.S_n/(np.sqrt(3)*self.V_n)
 
@@ -129,9 +132,9 @@ if __name__ == '__main__':
     # with open(config['model_data_path']) as file:
         # model_data = json.load(file)
 
-    line_data = read_model_data(config, 'line')
-    trafo_data = read_model_data(config, 'trafo')
-    bus_data = read_model_data(config, 'bus')
+    line_data = get_from_database(config, 'line')
+    trafo_data = get_from_database(config, 'trafo')
+    bus_data = get_from_database(config, 'bus')
 
     from topsrt.pmu_currents_freq import PMUPublisherCurrentsFreq
     obj = type('', (), {'stations': None, 'ip': '', 'port': 0, 'pdc_id': 1, 'fs': 50})()

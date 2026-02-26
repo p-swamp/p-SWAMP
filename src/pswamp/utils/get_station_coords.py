@@ -34,7 +34,7 @@ def load_bus_coords_for_stations(config, wanted_stations, return_3d=False, geo=T
 def load_bus_coords(config, return_3d=False, geo=True):
     """Get bus coordinates for all buses from pmu.coords topic"""
     bus_names, bus_coords = get_last_message_from_topic(
-        config["topics"]["pmu.coords"], **config["streaming"]
+        topic=config["topics"]["pmu.coords"], **config["streaming"]
     )
 
     bus_coords = bus_coords[:, 0:2] if geo else bus_coords[:, 2:4]

@@ -1,23 +1,23 @@
 
 import numpy as np
 import threading
-from watools.utils.pmu_time_window import PMUTimeWindow
+from pswamp.utils.pmu_time_window import PMUTimeWindow
 from PySide6 import QtCore, QtGui, QtWidgets
 import pyqtgraph as pg
-from watools.visualization.components.phasor_plot import PhasorPlot
-from watools.visualization.countries_geo_data.read_geo_data import read_geo_data
+from pswamp.visualization.components.phasor_plot import PhasorPlot
+from pswamp.visualization.countries_geo_data.read_geo_data import read_geo_data
 import uuid
-from watools.utils.get_station_coords import load_bus_coords_for_current_stations
-from watools.database import get_from_database
-from watools.gui.grid_view.dim_2d.layers.pmus import PMULayer
+from pswamp.utils.get_station_coords import load_bus_coords_for_current_stations
+from pswamp.database import get_from_database
+from pswamp.gui.grid_view.dim_2d.layers.pmus import PMULayer
 
 
 if __name__ == '__main__':
-    from watools.gui.grid_view.dim_2d.base_plot_layers import GridBasePlot2D
-    from watools import load_config
-    import watools
+    from pswamp.gui.grid_view.dim_2d.base_plot_layers import GridBasePlot2D
+    from pswamp import load_config
+    import pswamp
     from pathlib import Path
-    # sample_dataset_path = Path(watools.__file__).parent/'test_utils/sample_datasets/n44'
+    # sample_dataset_path = Path(pswamp.__file__).parent/'test_utils/sample_datasets/n44'
 
     config = load_config("..")
     # config = load_config("examples/nordic44_rtsim/config_mqtt.toml")

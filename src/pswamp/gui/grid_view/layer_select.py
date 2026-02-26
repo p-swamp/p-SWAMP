@@ -1,5 +1,7 @@
 from PySide6 import QtCore, QtWidgets
-from pswamp.gui.grid_view.dim_2d.layers.layers import LayerFailedException
+from pswamp.gui.grid_view.exceptions import LayerFailedException
+
+
 
 
 """Obtained from https://stackoverflow.com/questions/23074025/how-to-check-state-of-qtreewidget-item"""
@@ -93,14 +95,14 @@ class LayerSelectTree(QtWidgets.QTreeWidget):
         parent_layer = parent.text(col)
         # print(parent_layer, child_layer)
 
-        if not parent_layer in self.active_layer_instances:
+        if parent_layer not in self.active_layer_instances:
             self.active_layer_instances[parent_layer] = {}
 
         if it.checkState(col).value == 2:  # Box was checked
             # self.show_layer(parent_layer, child_layer)
             layer_class, layer_settings_dialogue_class = self.layers_data[parent_layer][child_layer]          
             try:
-                new_layer_instance = layer_class(self.parent_widget, self.config, geo=self.parent_widget.geo)
+                new_layer_instance = layer_class(self.parent_widget, self.config, sld_id=self.parent_widget.sld_id)
                 self.active_layer_instances[parent_layer][child_layer] = new_layer_instance
             except LayerFailedException:
                 print(f'Could not instantiate layer: {parent_layer}, {child_layer}')
@@ -133,8 +135,8 @@ class LayerSelectTree(QtWidgets.QTreeWidget):
 
 def main():
     from pswamp.gui.grid_view.dim_2d.layers import CountriesLayer,\
-        CountriesLayerSettings, StaticLineDataLayer, PhasorPlotLayer,\
-        StationNamesLayer
+        CountriesLayerSettings, PhasorPlotLayer#,\
+        # StationNamesLayer, StaticLineDataLayer
     
     config = {}
     app = QtWidgets.QApplication()
@@ -143,9 +145,9 @@ def main():
     available_layers = {
         'Base layers': {
             'Countries': (CountriesLayer, CountriesLayerSettings),
-            'Static line data': (StaticLineDataLayer, None),
+            # 'Static line data': (StaticLineDataLayer, None),
             'Voltage phasors': (PhasorPlotLayer, None),
-            'Station names': (StationNamesLayer, None),
+            # 'Station names': (StationNamesLayer, None),
         }
     }
 

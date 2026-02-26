@@ -1,9 +1,14 @@
-import sys
+
 from PySide6.QtWidgets import QDialog, QGridLayout, QLineEdit, QLabel, QTabBar,\
-    QRadioButton, QButtonGroup, QPushButton, QWidget, QToolButton, QApplication
+    QRadioButton, QButtonGroup, QPushButton, QWidget, QToolButton, QComboBox
 from pswamp.gui.grid_view.tab_widget import QTabWidgetPlus
 from pswamp.gui.grid_view.dim_2d.base_plot_layers import GridBasePlot2DLayers
 from pswamp.gui.grid_view.dim_3d.base_plot_layers import GridBasePlot3DLayers
+
+
+from pswamp.test_utils.sample_datasets.minimal_case import create_minimal_test_case
+import pyqtgraph as pg
+from nqkafka.utils import stop_server
 
 
 class NewViewOpts(QDialog):
@@ -20,7 +25,7 @@ class NewViewOpts(QDialog):
     Args:
         show_sld (bool): Determines whether buttons for SLD view are shown.
     """
-    def __init__(self, show_sld=False):
+    def __init__(self, sld_list=[]):
         super().__init__()
         layout = QGridLayout()
 
@@ -30,7 +35,7 @@ class NewViewOpts(QDialog):
         layout.addWidget(self.text_input, 1, 0, 1, 2)
 
         button_group_1 = QButtonGroup(self)
-        button_group_2= QButtonGroup(self)
+        button_group_2 = QButtonGroup(self)
 
         text_label = QLabel('Settings')
         layout.addWidget(text_label, 2, 0, 1, 2)
@@ -49,25 +54,28 @@ class NewViewOpts(QDialog):
         button_group_1.addButton(select_2d)
         button_group_1.addButton(select_3d)
 
-        select_geo = QRadioButton('Geo')
-        select_geo.dimension = "Geo"
-        # select_geo.toggled.connect(self.onClicked)
-        layout.addWidget(select_geo, 3, 1)
+        # select_geo = QRadioButton('Geo')
+        # select_geo.dimension = "Geo"
+        # # select_geo.toggled.connect(self.onClicked)
+        # layout.addWidget(select_geo, 3, 1)
 
         
-        select_sld = QRadioButton("SLD")
-        select_sld.setChecked(True)
-        select_sld.dimension = "SLD"
-        # select_sld.toggled.connect(self.onClicked)
-        layout.addWidget(select_sld, 4, 1)
+        # select_sld = QRadioButton("SLD")
+        # select_sld.setChecked(True)
+        # select_sld.dimension = "SLD"
+        # # select_sld.toggled.connect(self.onClicked)
+        # layout.addWidget(select_sld, 4, 1)
 
-        button_group_2.addButton(select_geo)
-        button_group_2.addButton(select_sld)
+        # button_group_2.addButton(select_geo)
+        # button_group_2.addButton(select_sld)
+        select_sld = QComboBox()
+        [select_sld.addItems([item]) for item in sld_list]
+        layout.addWidget(select_sld, 3, 1)
 
-        if not show_sld:
-            select_sld.hide()
-            select_sld.setChecked(False)
-            select_geo.setChecked(True)
+        # if not show_sld:
+        #     select_sld.hide()
+        #     select_sld.setChecked(False)
+        #     select_geo.setChecked(True)
 
         self.done_button = QPushButton('Done')
         self.done_button.clicked.connect(self.submitclose)
@@ -75,8 +83,9 @@ class NewViewOpts(QDialog):
 
         self.select_2d = select_2d
         self.select_3d = select_3d
-        self.select_geo = select_geo
         self.select_sld = select_sld
+        # self.select_geo = select_geo
+        # self.select_sld = select_sld
 
         self.data = {}
         self.canceled = True
@@ -88,9 +97,9 @@ class NewViewOpts(QDialog):
         # do whatever you need with self.roiGroups
         self.canceled = False
         self.data = {
-            'view_name': self.text_input.text(),
-            '3D': self.select_3d.isChecked(),
-            'SLD': self.select_sld.isChecked(),
+            "view_name": self.text_input.text(),
+            "3D": self.select_3d.isChecked(),
+            "SLD": self.select_sld.currentText(),
         }
         self.accept()
 
@@ -142,11 +151,12 @@ class GridViewContainer(QTabWidgetPlus):
     def _build_tabs(self):
         """Defines how new tabs are created."""
         first_tab_name = "View 1"
-        first_plot_is_geo = not ('sld_data' in self.config and not 'geo_data' in self.config)
+        first_sld_id = next(iter(self.config["single_line_diagrams"].keys()))
+        # first_plot_is_geo = first_sld_data["geo"] if "geo" in first_sld_data else False
         first_tab_widget = GridBasePlot3DLayers(
             self.config,
             activate_default_layers=self.activate_default_layers,
-            geo=first_plot_is_geo
+            sld_id=first_sld_id,
         )
         first_tab_widget.layer_settings.hide()
         self.insertTab(0, first_tab_widget.window, first_tab_name)
@@ -160,7 +170,9 @@ class GridViewContainer(QTabWidgetPlus):
 
     def new_tab(self):
         """Add new tab, store which widget the tab points to."""
-        new_view_dialog = self.new_tab_dialog_type(show_sld='sld_data' in self.config)
+        sld_data = self.config["single_line_diagrams"]
+        sld_list = sld_data.keys()
+        new_view_dialog = self.new_tab_dialog_type(sld_list=sld_list)
         new_view_dialog.exec()
         new_view_spec = new_view_dialog.data
 
@@ -172,7 +184,7 @@ class GridViewContainer(QTabWidgetPlus):
             # k = 1 if new_view_spec['SLD'] else 2
             # if not new_view_spec['3D']:
             new_widget = grid_base_plot_class(
-                self.config, activate_default_layers=self.activate_default_layers, geo=not new_view_spec['SLD'])
+                self.config, activate_default_layers=self.activate_default_layers, sld_id=new_view_spec['SLD'])
             # else:
                 # new_widget = GridBasePlot3DLayers(self.config, activate_default_layers=self.activate_default_layers)
             
@@ -183,16 +195,34 @@ class GridViewContainer(QTabWidgetPlus):
             self.setCurrentIndex(index)
 
 
-if __name__ == '__main__':
+# if __name__ == '__main__':
 
-    app = QApplication(sys.argv)
+#     app = QApplication(sys.argv)
 
-    # new_view_opts = NewViewOpts()
-    # new_view_opts.exec()
-    # print(new_view_opts.data)
-    from pswamp.utils.load_config import load_config
-    config = load_config()
+#     # new_view_opts = NewViewOpts()
+#     # new_view_opts.exec()
+#     # print(new_view_opts.data)
+#     from pswamp.utils.load_config import load_config
+#     config = load_config()
+#     config["single_line_diagrams"] = {"sld1": {"geo": True}, "sld2": {}}
+#     tabs = GridViewContainer(config, False)
+#     tabs.show()
+
+#     app.exec()
+
+
+
+
+if __name__ == "__main__":
+
+    config, con, pmu = create_minimal_test_case()
+    print(config)
+    config["streaming"]["consumers_seek_to_beginning"] = True
+    
+    app = pg.mkQApp()
     tabs = GridViewContainer(config, False)
     tabs.show()
+    
 
     app.exec()
+    stop_server(config["streaming"]["bootstrap_servers"])

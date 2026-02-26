@@ -9,6 +9,7 @@ import PySide6.QtCore as QtCore
 import PySide6.QtWidgets as QtWidgets
 import pyqtgraph as pg
 import sys
+from pswamp.app_templates.snapshot_app import SnapshotApp
 
 # importlib.reload(pmu_recv)
 
@@ -18,18 +19,29 @@ class VoltagePhasorPlot:
     def __init__(
         self,
         io_kwargs,
-        kafka_topic="pmudata",
+        input_topic="pmudata",
         **kwargs
     ):
 
-        pmu_tw = PMUTimeWindowOnline(
+        # pmu_tw = PMUTimeWindowOnline(
+        #     io_kwargs=io_kwargs,
+        #     n_samples=1,
+        #     kafka_topic=kafka_topic,
+        #     # phasor_selection=phasor_selection,
+        #     **kwargs
+        # )
+        # pmu_tw.initialize()
+        self.pmu_input = SnapshotApp(
+            # n_samples=1,
+            input_topic=input_topic,
             io_kwargs=io_kwargs,
-            n_samples=1,
-            kafka_topic=kafka_topic,
-            # phasor_selection=phasor_selection,
-            **kwargs
+            command_topic=None,
         )
-        pmu_tw.initialize()
+        # pmu_input.initialize()
+        pmu_tw_thread = threading.Thread(target=self.pmu_input.run, daemon=True)
+        pmu_tw_thread.start()
+        
+        pmu_tw = self.pmu_input
 
         max_phasors = 1000
         # pmu_tw.is_initialized = True
@@ -41,7 +53,7 @@ class VoltagePhasorPlot:
         col_idx_mag = []
         col_idx_ang = []
         stations_to_plot = []
-        for station_name in np.unique(pmu_tw.header['station']):
+        for station_name in np.unique(pmu_tw.tw.header['station']):
             idx_mag_ = pmu_tw.tw.get_col_idx(station=station_name.strip(), measurement='v_Magnitude')
             idx_ang_ = pmu_tw.tw.get_col_idx(station=station_name.strip(), measurement='v_Angle')
             if len(idx_mag_ > 0) and len(idx_mag_) == len(idx_ang_):
@@ -75,7 +87,7 @@ def run_voltage_phasor_plot(*config_args, update_freq=25, **kwargs):
     config = load_config(*config_args)
     voltage_phasor_plot = VoltagePhasorPlot(
         io_kwargs=config["streaming"],
-        kafka_topic=config['topics']['pmudata'],
+        input_topic=config['topics']['pmudata'],
         **kwargs
     )
 

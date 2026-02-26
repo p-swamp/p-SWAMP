@@ -169,8 +169,8 @@ def create_database(*config_args):
             
 
     if config["database"]["type"] == "sqlite":
-        print(f"{config["database"]["file_path"]}")
-        con = sqlite3.connect(f"{config["database"]["file_path"]}")
+        print(f"{config['database']['file_path']}")
+        con = sqlite3.connect(f"{config['database']['file_path']}")
         for key, val in data["model"].items():
             if isinstance(val, pd.DataFrame):
                 try:
@@ -182,7 +182,7 @@ def create_database(*config_args):
 
         cursor = con.cursor()        
         try:
-            cursor.execute(f"""CREATE TABLE "single_line_diagrams" ("name" TEXT, "data"	BLOB);""")
+            cursor.execute("""CREATE TABLE "single_line_diagrams" ("name" TEXT, "data"	BLOB);""")
         except sqlite3.OperationalError:
             pass
 

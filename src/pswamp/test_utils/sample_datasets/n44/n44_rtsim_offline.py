@@ -33,7 +33,7 @@ class Events:
 
 def run_n44_rtsim_offline(config, events_spec=None, t_end=10):
 
-    if config["streaming"]['use_nqkafka']:
+    if config["streaming"]['type'] == "nqkafka":
         runners.run_nqkafka_server(config, run_in_process=False)
         print('Started NQKafka Server')
     

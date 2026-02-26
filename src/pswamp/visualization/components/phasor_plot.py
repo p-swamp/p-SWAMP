@@ -127,7 +127,8 @@ class PhasorPlot(QtWidgets.QWidget):
 
     def update_plot(self):
         draw_phasors = self.phasors.copy()
-        if np.all(np.isnan(draw_phasors)): return
+        if np.all(np.isnan(draw_phasors)):
+            return
         
         if self.normalize_length:
             max_idx = np.nanargmax(abs(draw_phasors))

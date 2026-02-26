@@ -4,113 +4,211 @@ import pyqtgraph as pg
 from pswamp.visualization.countries_geo_data.read_geo_data import read_geo_data
 from pswamp.utils.single_line_diagram import load_dxf
 import ezdxf
-from pswamp.visualization.components.single_line_diagram import get_buses, get_branches_xy_by_matching_buses
+from pswamp.visualization.components.single_line_diagram import (
+    get_buses,
+    get_branches_xy_by_matching_buses,
+)
 from pswamp.utils.misc import flatten_list_insert_nan
 import numpy as np
 import json
 import pandas as pd
 from pswamp.utils.misc import lookup_strings
+from pswamp.database import get_from_database
 
 
 class LineLayer:
-    def __init__(self, parent, config, geo=True) -> None:
+    def __init__(self, parent, config, sld_id=None) -> None:
         self.config = config
-        self.k = 2 if geo else 1
+
+        self.sld_id = sld_id
+
+        try:
+            self.k = (
+                1  # config["single_line_diagrams"][self.sld_data_key]["aspect_ratio"]
+            )
+        except KeyError:
+            self.k = 1
+
         self.parent = parent
         plotWidget = parent.plotWidget
 
-        self.read_sld_data(config, geo)
+        self.branch_types = ["line", "trafo"]
 
-        self.lines_plot = self.add_line_plots(self.line_paths_flat)
-        self.trafos_plot = self.add_line_plots(self.trafo_paths_flat)
-        
-        plotWidget.addItem(self.lines_plot)
-        plotWidget.addItem(self.trafos_plot)
+        self.read_sld_data(config["database"])
 
-    def read_sld_data(self, config, geo):
-        data_key = 'geo_data' if geo else 'sld_data'
-        if not (data_key in config and 'line_data_path' in config[data_key]):
-            raise Exception(
-                'Line data path not found, layer could not be shown.')
+        self.branch_plots = {
+            key: self.add_line_plots(val["paths_flat"])
+            for key, val in self.branch_data.items()
+        }
+        # self.lines_plot = self.add_line_plots(self.line_paths_flat)
+        # self.trafos_plot = self.add_line_plots(self.trafo_paths_flat)
 
-        line_data_path = config[data_key]['line_data_path']
-        if line_data_path.suffix == '.npz':
-            raise Exception('Line data must be a dxf-file to show LineLayer.')
-        assert line_data_path.suffix == '.dxf'
+        for plot in self.branch_plots.values():
+            plotWidget.addItem(plot)
+        # plotWidget.addItem(self.trafos_plot)
 
-        with open(line_data_path) as file:
-            dxf_file = file.read()
+    def read_sld_data(self, db_kwargs):
+        # sld_data = db_kwargs["single_line_diagrams"]
+        # if not (self.sld_data_key in sld_data and 'data_path' in sld_data[self.sld_data_key]):
+        #     raise Exception(
+        #         'SLD data path not found, layer could not be shown.')
 
-        with open(config['model_data_path']) as file:
-            model_data = json.load(file)
+        # sld_data_path = sld_data[self.sld_data_key]['data_path']
+        # assert sld_data_path.suffix == '.dxf'
 
-        self.bus_data = pd.DataFrame(columns=model_data['bus'][0], data=model_data['bus'][1:])
-        self.lines_data = pd.DataFrame(columns=model_data['line'][0], data=model_data['line'][1:])
+        # with open(sld_data_path) as file:
+        #     dxf_file = file.read()
 
-        self.trafos_data = pd.DataFrame(columns=model_data['trafo'][0], data=model_data['trafo'][1:])
-
-        dxf_file
-        dxf_file_stream = StringIO(dxf_file)
+        sld_data = get_from_database(db_kwargs, "single_line_diagrams")
+        dxf_data = sld_data[sld_data["name"] == self.sld_id]["data"].values[-1]
+        dxf_file_stream = StringIO(dxf_data)
         doc = ezdxf.read(dxf_file_stream)
-        self.bus_names, self.bus_coords = get_buses(doc, self.bus_data['name'].to_numpy())
 
-        self.line_paths, self.line_midpoints = get_branches_xy_by_matching_buses(doc, self.lines_data)
-        self.line_segment_lengths = np.array([len(xy_) for xy_ in self.line_paths])
-        self.n_lines = len(self.line_paths)
+        tables = ["bus"] + self.branch_types
 
-        self.trafo_paths, self.trafo_midpoints = get_branches_xy_by_matching_buses(doc, self.trafos_data)
-        self.trafo_segment_lengths = np.array([len(xy_) for xy_ in self.trafo_paths])
-        self.n_trafos = len(self.trafo_paths)
+        model_data = {table: get_from_database(db_kwargs, table) for table in tables}
+        model_data["bus"]
+        self.model_data = model_data
+        # model_data = {key: val for key, val in model_data.items() if val is not None}
 
-        self.line_paths_flat = flatten_list_insert_nan(self.line_paths)
-        self.trafo_paths_flat = flatten_list_insert_nan(self.trafo_paths)
+        # self.bus_data = pd.DataFrame(columns=model_data['buses'][0], data=model_data['buses'][1:])
+        # self.lines_data = pd.DataFrame(columns=model_data['lines'][0], data=model_data['lines'][1:])
 
-        self.lines_from_bus_idx = lookup_strings(self.lines_data['from_bus'], self.bus_names)
-        self.lines_to_bus_idx = lookup_strings(self.lines_data['to_bus'], self.bus_names)
+        # self.trafos_data = pd.DataFrame(columns=model_data['transformers'][0], data=model_data['transformers'][1:])
 
-        self.trafos_from_bus_idx = lookup_strings(self.trafos_data['from_bus'], self.bus_names)
-        self.trafos_to_bus_idx = lookup_strings(self.trafos_data['to_bus'], self.bus_names)
-            
-    def add_line_plots(self, pos, line_width=1, color='white'):
+        self.bus_data = model_data["bus"]
+        # self.lines_data = model_data["line"]
+        # self.trafos_data = model_data["trafo"]
+        self.branch_data = {}
+
+        self.bus_names, self.bus_coords = get_buses(
+            doc, self.bus_data["name"].to_numpy()
+        )
+
+        for key in self.branch_types:
+            if key not in model_data or model_data[key] is None:
+                continue
+            branch_data = {}
+            branch_data["paths"], branch_data["midpoints"] = (
+                get_branches_xy_by_matching_buses(doc, model_data[key])
+            )
+            branch_data["segment_lengths"] = np.array(
+                [len(xy_) for xy_ in branch_data["paths"]]
+            )
+            branch_data["n"] = len(branch_data["paths"])
+            branch_data["paths_flat"] = flatten_list_insert_nan(branch_data["paths"])
+
+            branch_data["from_bus_idx"] = lookup_strings(
+                model_data[key]["from_bus"], self.bus_names
+            )
+            branch_data["to_bus_idx"] = lookup_strings(
+                model_data[key]["to_bus"], self.bus_names
+            )
+
+            self.branch_data[key] = branch_data
+        # self.line_paths, self.line_midpoints = get_branches_xy_by_matching_buses(doc, self.lines_data)
+        # self.line_segment_lengths = np.array([len(xy_) for xy_ in self.line_paths])
+        # self.n_lines = len(self.line_paths)
+
+        # self.trafo_paths, self.trafo_midpoints = get_branches_xy_by_matching_buses(doc, self.trafos_data)
+        # self.trafo_segment_lengths = np.array([len(xy_) for xy_ in self.trafo_paths])
+        # self.n_trafos = len(self.trafo_paths)
+
+        # self.line_paths_flat = flatten_list_insert_nan(self.line_paths)
+        # self.trafo_paths_flat = flatten_list_insert_nan(self.trafo_paths)
+
+        # self.lines_from_bus_idx = lookup_strings(self.lines_data['from_bus'], self.bus_names)
+        # self.lines_to_bus_idx = lookup_strings(self.lines_data['to_bus'], self.bus_names)
+
+        # self.trafos_from_bus_idx = lookup_strings(self.trafos_data['from_bus'], self.bus_names)
+        # self.trafos_to_bus_idx = lookup_strings(self.trafos_data['to_bus'], self.bus_names)
+
+    def add_line_plots(self, pos, line_width=1, color="white"):
         return pg.PlotCurveItem(
-            pos[:, 0], pos[:, 1], connect='finite', pen=pg.mkPen(color=color, width=line_width))  # QtGui.QColor(color))
+            pos[:, 0],
+            pos[:, 1],
+            connect="finite",
+            pen=pg.mkPen(color=color, width=line_width),
+        )  # QtGui.QColor(color))
 
     def remove_layer(self):
-        self.parent.plotWidget.removeItem(self.lines_plot)
-        self.parent.plotWidget.removeItem(self.trafos_plot)
+        for plot in self.branch_plots.values():
+            self.parent.plotWidget.removeItem(plot)
+        # self.parent.plotWidget.removeItem(self.lines_plot)
+        # self.parent.plotWidget.removeItem(self.trafos_plot)
 
     def get_branches_from_buses(self, bus_idx):
-        line_idx = np.isin(self.lines_from_bus_idx, bus_idx) + \
-            np.isin(self.lines_to_bus_idx, bus_idx)
-        trafo_idx = np.isin(self.trafos_from_bus_idx, bus_idx) + \
-            np.isin(self.trafos_to_bus_idx, bus_idx)
+        line_idx = np.isin(self.lines_from_bus_idx, bus_idx) + np.isin(
+            self.lines_to_bus_idx, bus_idx
+        )
+        trafo_idx = np.isin(self.trafos_from_bus_idx, bus_idx) + np.isin(
+            self.trafos_to_bus_idx, bus_idx
+        )
 
         return np.where(line_idx)[0], np.where(trafo_idx)[0]
 
     def __del__(self):
-        self.remove_layer()
+        try:
+            self.remove_layer()
+        except RuntimeError:
+            pass
 
 
-if __name__ == '__main__':
-    from pswamp.gui.grid_view.dim_2d.base_plot_layers import GridBasePlot2D
-    from pswamp import load_config
-    import pswamp
-    from pathlib import Path
-    sample_dataset_path = Path(pswamp.__file__).parent/'test_utils/sample_datasets/n44'
+if __name__ == "__main__":
+    from pswamp.test_utils.sample_datasets.minimal_case import create_minimal_test_case
+    from pswamp.gui.grid_view.dim_2d.base_plot import GridBasePlot2D
+    import pswamp.gui.grid_view.dim_2d.layers as lrs
+    from nqkafka.utils import stop_server
 
-    config = load_config()
-    config['sld_data'] = {'line_data_path': sample_dataset_path/'sld.dxf'}
-    config['model_data_path'] = sample_dataset_path/'model_data.json'
+    config, con, pmu = create_minimal_test_case()
+    # print(config)
+    # config["streaming"]["consumers_seek_to_beginning"] = True
 
     app = QtWidgets.QApplication()
     grid_plot = GridBasePlot2D(
-        geo=False,
+        # geo=False,
     )
     grid_plot.window.show()
 
-    layer_instance = LineLayer(grid_plot, config, geo=False)
+    layer_instance = lrs.BusesLayer(grid_plot, config, sld_id="sld1")
+    bus_names = lrs.BusNamesLayer(grid_plot, config, sld_id="sld1")
+    countries_layer = lrs.CountriesLayer(grid_plot, config, sld_id="sld1")
+    line_layer = LineLayer(grid_plot, config, sld_id="sld1")
+
+    # layer_instance = LineLayer(grid_plot, config, geo=False)
     # layer_settings = CountriesLayerSettings(layer_instance)
     # layer_settings.show()
     # layer_instance.remove_layer()
 
+    # from pswamp.streaming import Producer
+    # dataframe = pmu.generate_dataframe(freq_data=[49, 51, 50])
+    # producer = Producer(**config["streaming"])
+    # producer.send(topic="pmudata", msg=dataframe)
+
     app.exec()
+    stop_server(config["streaming"]["bootstrap_servers"])
+
+
+# if __name__ == "__main__":
+#     from pswamp.gui.grid_view.dim_2d.base_plot_layers import GridBasePlot2D
+#     from pswamp import load_config
+#     import pswamp
+#     from pathlib import Path
+#     # sample_dataset_path = Path(pswamp.__file__).parent/'test_utils/sample_datasets/n44'
+
+#     config = load_config()
+#     # config['sld_data'] = {'line_data_path': sample_dataset_path/'sld.dxf'}
+#     # config['model_data_path'] = sample_dataset_path/'model_data.json'
+
+#     app = QtWidgets.QApplication()
+#     grid_plot = GridBasePlot2D(
+#         geo=True,
+#     )
+#     grid_plot.window.show()
+
+#     layer_instance = LineLayer(grid_plot, config, geo=True)
+#     # layer_settings = CountriesLayerSettings(layer_instance)
+#     # layer_settings.show()
+#     # layer_instance.remove_layer()
+
+#     app.exec()
