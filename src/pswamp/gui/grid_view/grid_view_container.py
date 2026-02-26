@@ -217,6 +217,7 @@ if __name__ == "__main__":
 
     config, con, pmu = create_minimal_test_case()
     print(config)
+    config["streaming"]["consumers_seek_to_beginning"] = True
     
     app = pg.mkQApp()
     tabs = GridViewContainer(config, False)
