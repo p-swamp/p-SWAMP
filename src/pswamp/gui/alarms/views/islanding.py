@@ -1,26 +1,22 @@
-import pyqtgraph as pg
-from PySide6 import QtWidgets, QtCore, QtGui
-from pswamp import load_config
-from pswamp.coordination.alarm_handling import AlarmMonitor
-from pswamp.app_templates.time_window_app import TimeWindowApp
-import numpy as np
-from pswamp.visualization.time_window_plot import TimeSeriesPlot
 import threading
-import datetime
-from pswamp.streaming import consumer_seek_relative_offset
 import time
-from pswamp.visualization.voltage_phasor_plot import VoltagePhasorPlot
-from pswamp.visualization.components.phasor_plot import PhasorPlotFast, PhasorPlotFastFancy, PhasorBasePlot, xy_from_phasors
-from pswamp.utils.misc import convert_time_stamp_to_seconds, flatten_array_insert_nan
+
+import numpy as np
+from PySide6 import QtWidgets
+
+from pswamp import load_config
 from pswamp.app_templates.snapshot_app import SnapshotApp
-from pswamp.styles import colors
-from pswamp.gui.grid_view.dim_3d.layers import Islanding
-from pswamp.gui.grid_view.dim_3d.base_plot_layers import GridBasePlot3DLayers
-from pswamp.utils.get_station_coords import load_bus_coords_for_current_stations
-from pswamp.gui.grid_view.dim_3d.layers.lines import LineLayer
-from pswamp.styles.colors import gl_color
-from pswamp.models.line import Line
+from pswamp.coordination.alarm_handling import AlarmMonitor
 from pswamp.gui.alarms.views.interactive import InteractiveAlarmView
+from pswamp.gui.grid_view.dim_3d.base_plot_layers import GridBasePlot3DLayers
+from pswamp.gui.grid_view.dim_3d.layers import Islanding
+from pswamp.gui.grid_view.dim_3d.layers.lines import LineLayer
+from pswamp.models.line import Line
+from pswamp.styles import colors
+from pswamp.styles.colors import gl_color
+from pswamp.utils.get_station_coords import load_bus_coords_for_current_stations
+from pswamp.utils.misc import flatten_array_insert_nan
+from pswamp.visualization.components.phasor_plot import PhasorBasePlot, xy_from_phasors
 
 
 class IslandingResultKeeper(SnapshotApp):
@@ -94,8 +90,8 @@ class IslandingAlarmView(InteractiveAlarmView):
                 if not isinstance(view, GridBasePlot3DLayers):
                     continue
                 try:
-                    self.line_calculator = Line(config, self.tw_app.get_config_frame())
-                    self.grid_view_islanding_line_layers[view_name] = LineLayer(view, config, view.geo)
+                    self.line_calculator = Line(config["database"], self.tw_app.get_sample_data_frame())
+                    self.grid_view_islanding_line_layers[view_name] = LineLayer(view, config, view.sld_id)
                     
                     view.set_non_base_layers_visibility(False)
                     view.set_layer_visibility('Base layers', 'Static line data', False)
@@ -193,9 +189,17 @@ class IslandingAlarmView(InteractiveAlarmView):
                 pass
 
             for line_layer in self.grid_view_islanding_line_layers.values():
-                line_idx, trafo_idx = line_layer.get_branches_from_buses(current_island_idx) if len(islanding_idx) > 0 else (slice(None), slice(None))
-                line_layer.set_line_colors(colors=gl_color(colors.islanding[i_island]), idx=line_idx)
-                line_layer.set_trafo_colors(colors=gl_color(colors.islanding[i_island]), idx=trafo_idx)
+                if len(islanding_idx) > 0:
+                    branch_idx = line_layer.get_branches_from_buses(current_island_idx)
+                else:
+                    branch_idx = {key: slice(None) for key in line_layer.branch_data.keys()}
+                for key, val in branch_idx.items():
+                    line_layer.set_colors(
+                        colors=gl_color(colors.islanding[i_island]),
+                        idx=val,
+                        key=key)
+                # line_layer.set_colors(colors=gl_color(colors.islanding[i_island]), idx=line_idx, key="line")
+                # line_layer.set_colors(colors=gl_color(colors.islanding[i_island]), idx=trafo_idx, key="trafo")
                 
                 # line_layer.update_trafo_colors()
 
@@ -208,10 +212,10 @@ class IslandingAlarmView(InteractiveAlarmView):
             disconnected_lines = np.where(self.line_calculator.disconnected(self.tw_app.data_frame_storage[value]))[0]
             connectable_lines = np.where((self.line_calculator.connectable(self.tw_app.data_frame_storage[value])))[0]
             for line_layer in self.grid_view_islanding_line_layers.values():
-                line_layer.set_line_colors(colors=[1, 0, 0, 1], idx=disconnected_lines)
-                line_layer.set_line_colors(colors=[0, 1, 0, 1], idx=connectable_lines)
-                line_layer.update_line_colors()
-                line_layer.update_trafo_colors()
+                line_layer.set_colors(colors=[1, 0, 0, 1], idx=disconnected_lines, key="line")
+                line_layer.set_colors(colors=[0, 1, 0, 1], idx=connectable_lines, key="line")
+                line_layer.update_colors()
+                # line_layer.update_trafo_colors()
 
     def close_view(self):
         
@@ -236,7 +240,7 @@ if __name__ == '__main__':
     from pswamp.gui.grid_view.grid_view_container import GridViewContainer
     config = load_config()
 
-    run_online = False
+    run_online = True
     if run_online:
         config["streaming"]['consumers_seek_to_beginning'] = True
         config["streaming"]['bootstrap_servers'] = 'localhost:40000'
@@ -270,8 +274,14 @@ if __name__ == '__main__':
     else:
         config = load_config()
         # from pswamp.test_utils.mock_case import run_mock_case, stop_mock_case, KafkaProducer
-        from pswamp.test_utils.sample_datasets.n44_mock_case import run_mock_case, stop_mock_case
-        from pswamp.test_utils.sample_datasets.n44.n44_rtsim_offline import run_n44_rtsim_offline, stop_case
+        from pswamp.test_utils.sample_datasets.n44.n44_rtsim_offline import (
+            run_n44_rtsim_offline,
+            stop_case,
+        )
+        from pswamp.test_utils.sample_datasets.n44_mock_case import (
+            run_mock_case,
+            stop_mock_case,
+        )
         config["streaming"]['bootstrap_servers'] = 'localhost:50000'
 
 
@@ -300,8 +310,9 @@ if __name__ == '__main__':
         ]
 
         run_n44_rtsim_offline(config, events, t_end=50)
-        from pswamp.monitoring.islanding import run_islanding_application
         import threading
+
+        from pswamp.monitoring.islanding import run_islanding_application
         thr = threading.Thread(target=run_islanding_application, args=(config,), kwargs=dict(t_start=0, t_end=50))
         thr.start()
 

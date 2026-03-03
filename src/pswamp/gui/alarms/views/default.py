@@ -7,7 +7,6 @@ from pswamp.visualization.time_window_plot import TimeSeriesPlot
 from pswamp.utils.misc import convert_datetime_to_seconds, flatten_array_insert_nan, convert_seconds_to_datetime
 import threading
 import datetime
-from pswamp.streaming import consumer_seek_relative_offset
 import time
 from pswamp.visualization.components.timeline import add_timeline_entry
 
@@ -155,7 +154,7 @@ class DefaultAlarmView(BaseAlarmView):
 if __name__ == '__main__':
     config = load_config()
 
-    run_online = False
+    run_online = True
     if run_online:
         config["streaming"]['consumers_seek_to_beginning'] = True
         config["streaming"]['bootstrap_servers'] = 'localhost:40000'

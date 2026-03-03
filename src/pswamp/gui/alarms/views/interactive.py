@@ -107,7 +107,7 @@ if __name__ == '__main__':
     from pswamp.gui.grid_view.grid_view_container import GridViewContainer
     config = load_config()
 
-    run_online = False
+    run_online = True
     if run_online:
         config["streaming"]['consumers_seek_to_beginning'] = True
         config["streaming"]['bootstrap_servers'] = 'localhost:40000'
