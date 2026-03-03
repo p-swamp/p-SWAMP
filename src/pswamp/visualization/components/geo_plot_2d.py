@@ -1,4 +1,3 @@
-# from pswamp_viz.utils.pmu_time_window import PMUTimeWindow
 # from pswamp_viz.utils.pmu_receiver import PMUReceiver
 # from pswamp_viz.utils.definitions import pswamp_PATH
 # from pswamp_viz.visualizations.components.phasor_plot_3d import PhasorPlot3D
