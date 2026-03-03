@@ -2,9 +2,8 @@ import time
 from nqkafka import NQKafkaServer
 from nqkafka.utils import stop_server
 from pswamp.test_utils import runners
-from pswamp.streaming.kafka_extras import Producer
+from pswamp.streaming import Producer
 from pswamp.test_utils.csv_playback.data_frame_generator import DataFrameGenerator
-import threading
 import numpy as np
 
 
