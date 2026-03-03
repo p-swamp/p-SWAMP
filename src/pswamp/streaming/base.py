@@ -1,9 +1,9 @@
-import pickle
 import numpy as np
 from pswamp.streaming.utils import encoder, decoder
 
 try:
     import pswamp.streaming.nqkafka_io as nqkafka_io
+    import nqkafka.utils as nqkafka_utils
 except ImportError:
     _has_nqkafka = False
 else:
@@ -22,6 +22,32 @@ except ImportError:
     _has_mqtt = False
 else:
     _has_mqtt = True
+
+
+
+def create_topic(name, io_kwargs, **kwargs):
+
+    if io_kwargs["type"] == "nqkafka":
+        n_samples = kwargs["n_samples"] if "n_samples" in kwargs else 600
+        nqkafka_utils.create_topic(
+            name,
+            bootstrap_servers=io_kwargs["bootstrap_servers"],
+            n_samples=max(6000, n_samples) if name == "pmudata" else n_samples,
+        )
+    elif io_kwargs["type"] == "kafka":
+        io_kwargs_tmp = io_kwargs.copy()
+        kwargs_tmp = kwargs.copy()
+        delete_keys = [
+            "use_nqkafka",
+            "auto_offset_reset",
+            "consumers_start_from_beginning",
+            "consumers_seek_to_beginning",
+        ]
+        [io_kwargs_tmp.pop(k) for k in delete_keys if k in io_kwargs_tmp.keys()]
+        if "n_samples" in kwargs_tmp:
+            kwargs_tmp.pop("n_samples")
+        kafka_io.create_topic(name=name, io_kwargs=io_kwargs_tmp, **kwargs_tmp)
+
 
 class Producer:
     def __init__(self, *args, type="kafka", consumers_seek_to_beginning=False, **kwargs):

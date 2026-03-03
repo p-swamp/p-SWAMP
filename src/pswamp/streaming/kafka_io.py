@@ -2,6 +2,8 @@ import time
 from kafka import KafkaConsumer, KafkaProducer
 from kafka.structs import TopicPartition
 from pswamp.streaming.utils import encoder, decoder
+from kafka.admin import KafkaAdminClient, NewTopic
+from kafka.errors import TopicAlreadyExistsError, UnknownTopicOrPartitionError
 
 
 
@@ -34,6 +36,47 @@ def get_last_message_from_topic(topic, **io_kwargs):
     consumer.seek(partition, end_offset)
 
     return next(iter(consumer)).value
+
+
+def create_topic(
+    io_kwargs, name, num_partitions=1, replication_factor=1, **topic_kwargs
+):
+    admin_client = KafkaAdminClient(
+        **{k: io_kwargs[k] for k in io_kwargs if k != "type"}
+    )
+    new_topic = NewTopic(
+        name=name,
+        num_partitions=num_partitions,
+        replication_factor=replication_factor,
+        **topic_kwargs,
+    )
+
+    try:
+        admin_client.create_topics(new_topics=[new_topic], validate_only=False)
+        print("Topic Created Successfully")
+    except TopicAlreadyExistsError as e:
+        print("Topic Already Exist")
+    except Exception as e:
+        print(e)
+
+
+def delete_topics(io_kwargs, topic_names):
+    # This has not been tested.
+    # Deleting topics might cause error when running Kafka on Windows (something with log files)
+    io_kwargs = io_kwargs.copy()
+    delete_keys = ["use_nqkafka", "auto_offset_reset", "consumers_start_from_beginning"]
+    [io_kwargs.pop(k) for k in delete_keys if k in io_kwargs.keys()]
+
+    admin_client = KafkaAdminClient(**io_kwargs)
+
+    try:
+        for topic_name in topic_names:
+            admin_client.delete_topics(topics=[topic_name])
+            print("Topic Deleted Successfully")
+    except UnknownTopicOrPartitionError as e:
+        print("Topic Doesn't Exist")
+    except Exception as e:
+        print(e)
 
 
 class KafkaIO:
