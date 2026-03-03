@@ -37,7 +37,7 @@ class FrequencyHeatMap:
         self.config = config
         self.uuid = uuid.uuid4()
         self.plotWidget = parent.plotWidget
-        self.k = 2 if geo else 1
+        self.k = 1  # 2 if geo else 1
         self.sld_id = sld_id
         
         # bus_names, bus_coords_3d = load_bus_coords_for_current_stations(config, return_3d=True, geo=geo)
