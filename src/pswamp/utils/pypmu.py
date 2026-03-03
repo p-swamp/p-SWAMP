@@ -1,5 +1,90 @@
 import numpy as np
 from pswamp.utils.misc import lookup_strings
+from pswamp.utils.time_window_labeled import Indexer
+
+
+class PMUDecoder:
+    def __init__(
+        self,
+        channel_selection=None,
+        channel_selection_idx=None,
+        substitute_zero_freq_with_nan=True,
+    ):
+
+        self.channel_selection = channel_selection
+        if channel_selection_idx is not None:
+            self.channel_selection = None
+        self.channel_selection_idx = (
+            np.array(channel_selection_idx)
+            if channel_selection_idx is not None
+            else slice(None)
+        )
+
+        self.substitute_zero_freq_with_nan = substitute_zero_freq_with_nan
+        self.data_dtype = float
+
+    def get_time_stamp(self, data_frame):
+        return data_frame.get_time_stamp()
+
+    def get_data_rate(self, sample_data_frame):
+        return sample_data_frame.cfg.get_data_rate()
+
+    def generate_header(self, sample_data_frame=None, config_frame=None):
+        if config_frame is None:
+            config_frame = sample_data_frame.cfg
+        station_names = config_frame.get_station_name()
+        phasor_channel_names = config_frame.get_channel_names()
+        phasor_ph_units = config_frame.get_ph_units()
+
+        n_stations = len(station_names)
+
+        header_station_names = [st.strip() for st in station_names] * 2
+        header_channel_names = ["Frequency"] * n_stations + ["Dfrequency"] * n_stations
+        header_types = ["f"] * n_stations + ["Df"] * n_stations
+        for st, ch, ph_type in zip(
+            header_station_names, phasor_channel_names, phasor_ph_units
+        ):
+            for c, t in zip(ch, ph_type):
+                [header_station_names.append(st.strip()) for _ in range(2)]
+                header_channel_names.append(c.strip() + "_Magnitude")
+                header_channel_names.append(c.strip() + "_Angle")
+                header_types.append(f"{t[1]}_Magnitude")
+                header_types.append(f"{t[1]}_Angle")
+
+        if self.channel_selection is not None:
+            channel_indexer = Indexer(
+                header=dict(
+                    station=header_station_names,
+                    channel=header_channel_names,
+                    measurement=header_types,
+                )
+            )
+            self.channel_selection_idx = channel_indexer.get_col_idx(
+                **self.channel_selection
+            )
+
+        if self.channel_selection_idx is None:
+            self.channel_selection_idx = slice(None)
+
+        return dict(
+            station=np.array(header_station_names)[self.channel_selection_idx],
+            channel=np.array(header_channel_names)[self.channel_selection_idx],
+            measurement=np.array(header_types)[self.channel_selection_idx],
+        )
+
+    def data_frame_to_row(self, pmu_data_frame):
+        t = pmu_data_frame.get_time_stamp()
+        freq = np.array(pmu_data_frame.get_freq())
+        dfreq = np.array(pmu_data_frame.get_dfreq())
+        if self.substitute_zero_freq_with_nan:
+            freq[freq == 0] = np.nan
+            dfreq[dfreq == 0] = np.nan
+
+        phasors = np.concatenate(
+            pmu_data_frame.get_phasors(convert2polar=False)
+        ).flatten()
+
+        return t, np.concatenate([freq, dfreq, phasors])[self.channel_selection_idx]
 
 
 class PMUFreqExtractor:
