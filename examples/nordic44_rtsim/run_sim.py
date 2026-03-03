@@ -6,15 +6,13 @@ from PySide6 import QtWidgets, QtCore
 from topsrt.rtsim_plot import SyncPlot
 import sys
 from topsrt.rtsim_plot import RTSimPlot
-import tops.dynamic as dps
 from topsrt.sim import RealTimeSimulatorThread
 from topsrt.gui import LineOutageWidget, SimulationControl, ConsoleWidget, VSCControlWidget
 from topsrt.pmu_currents_freq import PMUPublisherCurrentsFreq as PMUPublisher
 from multiprocessing.managers import dispatch,listener_client
 
 import time
-import multiprocessing as mp
-from topsrt_random_load_variations import RandomLoadVariations, remove_model_data
+from topsrt_random_load_variations import RandomLoadVariations
 import socket
 local_ip = socket.gethostbyname(socket.gethostname())
 
