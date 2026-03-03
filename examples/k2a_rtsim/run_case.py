@@ -1,17 +1,13 @@
-from pswamp.utils.load_config import load_config
-from nqkafka.utils import stop_server as stop_nqkafka_server
-
 import multiprocessing as mp
 import time
-from pswamp.gui.main_window import run_main_window
-import multiprocessing as mp
-# from data.coords import load as load_coordinates
-import pswamp.test_utils.runners as runners
-from pswamp.test_utils.pmu_rtsim_to_kafka import PMUToKafkaPublisher
 
+from nqkafka.utils import stop_server as stop_nqkafka_server
 from run_sim import run_rtsim
-import pyqtgraph
 
+import pswamp.test_utils.runners as runners
+from pswamp.gui.main_window import run_main_window
+from pswamp.test_utils.pmu_rtsim_to_kafka import PMUToKafkaPublisher
+from pswamp.utils.load_config import load_config
 
 if __name__ == '__main__':
     config = load_config()
@@ -30,15 +26,15 @@ if __name__ == '__main__':
 
     run_rtsim(pmu_publisher_type=PMUToKafkaPublisher, pmu_kwargs={'topic': 'pmudata', 'io_kwargs': config["streaming"]})
 
-    # p_3 = mp.Process(target=run_main_window, args=(config,))
-    # p_3.start()
+    p_3 = mp.Process(target=run_main_window, args=(config,))
+    p_3.start()
 
     # p_1.join()
     # p_2.join()
-    # p_3.join()
+    p_3.join()
     # p_server.join()
     # time.sleep(2)
-    input("Press a key to quit")
+    # input("Press a key to quit")
 
     if config["streaming"]['type'] == "nqkafka":
         stop_nqkafka_server(config["streaming"]['bootstrap_servers'])
