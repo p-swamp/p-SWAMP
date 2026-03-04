@@ -1,0 +1,90 @@
+pswamp.gui.grid_view.layer_select
+=================================
+
+.. py:module:: pswamp.gui.grid_view.layer_select
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   pswamp.gui.grid_view.layer_select.TreeWidgetItem
+   pswamp.gui.grid_view.layer_select.LayerSelectTree
+
+
+Functions
+---------
+
+.. autoapisummary::
+
+   pswamp.gui.grid_view.layer_select.handle
+   pswamp.gui.grid_view.layer_select.main
+
+
+Module Contents
+---------------
+
+.. py:function:: handle(self, item, column)
+
+   Not sure if this is used.
+
+
+.. py:class:: TreeWidgetItem
+
+   Bases: :py:obj:`PySide6.QtWidgets.QTreeWidgetItem`
+
+
+   Modified QTreeWidgetItem, to be able to see which items are checked
+
+
+
+   .. py:method:: setData(column, role, value)
+
+
+.. py:class:: LayerSelectTree(config, parent_widget, layers_data, *args)
+
+   Bases: :py:obj:`PySide6.QtWidgets.QTreeWidget`
+
+
+   Tree with layers that can be selected.
+
+   Layers are organized in categories. Doubleclicking a layer causes a pop-up
+   with settings for that layer (if available).
+
+   TODO: Remove *args from argument list (not used).
+
+   :param config: pswamp configuration
+   :type config: dict
+   :param parent_widget:
+
+
+   .. py:attribute:: itemChecked
+
+
+   .. py:attribute:: config
+
+
+   .. py:attribute:: parent_widget
+
+
+   .. py:attribute:: layers_data
+
+
+   .. py:attribute:: active_layer_instances
+
+
+   .. py:attribute:: layer_to_idx
+
+
+   .. py:method:: show_layer(parent_layer, child_layer)
+
+
+   .. py:method:: onItemChecked(it, col)
+
+
+   .. py:method:: onItemDoubleClicked(it, col)
+
+
+.. py:function:: main()
+

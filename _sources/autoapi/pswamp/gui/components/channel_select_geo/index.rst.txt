@@ -1,0 +1,38 @@
+pswamp.gui.components.channel_select_geo
+========================================
+
+.. py:module:: pswamp.gui.components.channel_select_geo
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   pswamp.gui.components.channel_select_geo.ChannelSelectMap
+
+
+Functions
+---------
+
+.. autoapisummary::
+
+   pswamp.gui.components.channel_select_geo.main
+
+
+Module Contents
+---------------
+
+.. py:class:: ChannelSelectMap(channels, bus_names, bus_coords, countries=[])
+
+   Bases: :py:obj:`PySide6.QtWidgets.QWidget`
+
+
+   .. py:attribute:: channel_select
+
+
+   .. py:attribute:: grid_plot
+
+
+.. py:function:: main()
+

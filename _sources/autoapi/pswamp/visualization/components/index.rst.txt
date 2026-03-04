@@ -1,0 +1,27 @@
+pswamp.visualization.components
+===============================
+
+.. py:module:: pswamp.visualization.components
+
+
+Submodules
+----------
+
+.. toctree::
+   :maxdepth: 1
+
+   /autoapi/pswamp/visualization/components/channel_select/index
+   /autoapi/pswamp/visualization/components/channel_tree/index
+   /autoapi/pswamp/visualization/components/date_time_axis/index
+   /autoapi/pswamp/visualization/components/geo_plot_2d/index
+   /autoapi/pswamp/visualization/components/heatmap/index
+   /autoapi/pswamp/visualization/components/label_widget/index
+   /autoapi/pswamp/visualization/components/phasor_plot/index
+   /autoapi/pswamp/visualization/components/phasor_plot_3d/index
+   /autoapi/pswamp/visualization/components/phasor_plot_3d_fast/index
+   /autoapi/pswamp/visualization/components/single_line_diagram/index
+   /autoapi/pswamp/visualization/components/surface_plot/index
+   /autoapi/pswamp/visualization/components/threshold_adjust/index
+   /autoapi/pswamp/visualization/components/timeline/index
+
+

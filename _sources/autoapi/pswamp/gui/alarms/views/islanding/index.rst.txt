@@ -1,0 +1,131 @@
+pswamp.gui.alarms.views.islanding
+=================================
+
+.. py:module:: pswamp.gui.alarms.views.islanding
+
+
+Attributes
+----------
+
+.. autoapisummary::
+
+   pswamp.gui.alarms.views.islanding.config
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   pswamp.gui.alarms.views.islanding.IslandingResultKeeper
+   pswamp.gui.alarms.views.islanding.IslandingAlarmView
+
+
+Module Contents
+---------------
+
+.. py:class:: IslandingResultKeeper(*args, **kwargs)
+
+   Bases: :py:obj:`pswamp.app_templates.snapshot_app.SnapshotApp`
+
+
+   General application template.
+
+   New applications could be defined by inheriting from this template, and
+   defining the "run_analysis" method.
+
+   :param io: Input/output object (normally connects to Kafka)
+   :param eval_freq: How often the evaluation of the application should be run
+                     (e.g., the part in "run_analysis")
+   :param t_end: The application will stop running when this time is reached
+                 (but can be restarted)
+   :param t_start: The application will ask the io object (first argument) to
+                   search for t_start when initializing.
+   :param app_name: Name for the application.
+   :param input_decoder: This determines how the input is read/decoded (if no
+                         decoder is specified, a decoder for PMU data frames will be used.)
+   :param decoder_kwargs: Kwargs for initalizing the "input_decoder".
+   :param report_status: If enabled, status messages will be emitted.
+   :param io_kwargs: Any other kwargs will be forwarded to the io object.
+
+
+   .. py:attribute:: storage
+      :value: []
+
+
+
+   .. py:method:: get_input_data_rate()
+
+
+   .. py:method:: get_time_stamp_from_frame(data_frame)
+
+
+   .. py:method:: run_analysis(data_frame)
+
+
+   .. py:method:: get_result(next_data_frame)
+
+
+.. py:class:: IslandingAlarmView(config, *args, **kwargs)
+
+   Bases: :py:obj:`pswamp.gui.alarms.views.interactive.InteractiveAlarmView`
+
+
+   .. py:attribute:: initialized
+      :value: False
+
+
+
+   .. py:attribute:: simplified_alarm_views
+
+
+   .. py:attribute:: islanding_results
+
+
+   .. py:attribute:: islanding_data_rate
+
+
+   .. py:attribute:: pmu_data_rate
+
+
+   .. py:attribute:: col_idx_freq
+
+
+   .. py:attribute:: col_idx_mag
+      :value: []
+
+
+
+   .. py:attribute:: col_idx_ang
+      :value: []
+
+
+
+   .. py:attribute:: islanding_res_thread
+
+
+   .. py:attribute:: phasor_ax
+
+
+   .. py:attribute:: voltage_phasor_plots
+      :value: []
+
+
+
+   .. py:attribute:: grid_view_islanding_layers
+
+
+   .. py:attribute:: grid_view_islanding_line_layers
+
+
+   .. py:method:: define_layout()
+
+
+   .. py:method:: update_plots(value)
+
+
+   .. py:method:: close_view()
+
+
+.. py:data:: config
+

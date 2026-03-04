@@ -1,0 +1,19 @@
+pswamp.test_utils.sample_datasets
+=================================
+
+.. py:module:: pswamp.test_utils.sample_datasets
+
+
+Submodules
+----------
+
+.. toctree::
+   :maxdepth: 1
+
+   /autoapi/pswamp/test_utils/sample_datasets/create_database/index
+   /autoapi/pswamp/test_utils/sample_datasets/mock_case/index
+   /autoapi/pswamp/test_utils/sample_datasets/n44/index
+   /autoapi/pswamp/test_utils/sample_datasets/n44_mock_case/index
+   /autoapi/pswamp/test_utils/sample_datasets/read_database/index
+
+

@@ -1,0 +1,41 @@
+pswamp.test_utils.csv_playback.data_frame_generator
+===================================================
+
+.. py:module:: pswamp.test_utils.csv_playback.data_frame_generator
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   pswamp.test_utils.csv_playback.data_frame_generator.DataFrameGenerator
+
+
+Module Contents
+---------------
+
+.. py:class:: DataFrameGenerator(pmu_data_folder, case_name_hint='', pdc_id=1, publish_frequency=50, *args, **kwargs)
+
+   Bases: :py:obj:`pswamp.test_utils.csv_playback.data_reader.DataReader`
+
+
+   .. py:attribute:: cfg2
+
+
+   .. py:method:: generate_cfg(station_names, channel_names, pdc_id=1, channel_types=None, id_codes=None, publish_frequency=50)
+      :staticmethod:
+
+
+
+   .. py:method:: get_config_frame()
+
+
+   .. py:method:: get_next_data_frame()
+
+
+   .. py:method:: generate_data_frame(cfg2, stat=None, time_stamp=None, phasors=None, freq=None, dfreq=None, analog=None, digital=None)
+      :staticmethod:
+
+
+

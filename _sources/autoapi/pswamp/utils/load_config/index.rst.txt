@@ -1,0 +1,45 @@
+pswamp.utils.load_config
+========================
+
+.. py:module:: pswamp.utils.load_config
+
+
+Functions
+---------
+
+.. autoapisummary::
+
+   pswamp.utils.load_config.get_calling_file_path
+   pswamp.utils.load_config.load_config
+
+
+Module Contents
+---------------
+
+.. py:function:: get_calling_file_path()
+
+.. py:function:: load_config(arg=None)
+
+   Load pswamp configuration file, usually named config.toml.
+
+   Input argument determines where to look for the configuartion file.
+
+   If no arguments are specified: First, try to look for a file named
+   "config.toml" in the same folder as the running script. If this is not
+   found, load the default config (which is located in
+   pswamp/test_utils/default_config.toml).
+
+   TODO: Describe what happens if arguments are specified. In general, the
+   input argument is a path, e.g., load_config('..') means "try to find
+   config.toml in the folder one level up from the script". The argument can
+   also be the full (absolute) path to a config.toml file.
+
+   Once the file has been loaded, it will resolve any paths in the file, so
+   that files can be loaded.
+
+   If there is an "include" field in the config.toml, files specified here will
+   be merged with the main configuration file.
+
+   :param arg: Specifies where to look for configuration file.
+
+

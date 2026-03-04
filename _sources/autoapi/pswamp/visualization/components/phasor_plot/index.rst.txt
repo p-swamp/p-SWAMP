@@ -1,0 +1,141 @@
+pswamp.visualization.components.phasor_plot
+===========================================
+
+.. py:module:: pswamp.visualization.components.phasor_plot
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   pswamp.visualization.components.phasor_plot.PhasorBasePlot
+   pswamp.visualization.components.phasor_plot.PhasorPlot
+   pswamp.visualization.components.phasor_plot.PhasorPlotFast
+   pswamp.visualization.components.phasor_plot.PhasorPlotFancy
+   pswamp.visualization.components.phasor_plot.PhasorPlotFastFancy
+
+
+Functions
+---------
+
+.. autoapisummary::
+
+   pswamp.visualization.components.phasor_plot.xy_from_phasors
+   pswamp.visualization.components.phasor_plot.main_2
+   pswamp.visualization.components.phasor_plot.main
+
+
+Module Contents
+---------------
+
+.. py:function:: xy_from_phasors(phasors)
+
+.. py:class:: PhasorBasePlot(title='', background_color=(30, 63, 64), draw_grid=True)
+
+   Bases: :py:obj:`pyqtgraph.GraphicsLayoutWidget`
+
+
+   .. py:attribute:: plotWidget
+
+
+   .. py:attribute:: plots
+      :value: []
+
+
+
+   .. py:method:: add_plot(color='lightgray', width=2, **kwargs)
+
+
+.. py:class:: PhasorPlot(n_phasors=None, pos0=None, normalize_length=True, normalize_angle=False, update_freq=None, plot_widget=None, background_color=(30, 63, 64), *args, **kwargs)
+
+   Bases: :py:obj:`PySide6.QtWidgets.QWidget`
+
+
+   .. py:attribute:: request_plot_update
+
+
+   .. py:attribute:: pos0
+      :value: None
+
+
+
+   .. py:attribute:: approx_zero_value
+      :value: 1e-06
+
+
+
+   .. py:attribute:: normalize_length
+      :value: True
+
+
+
+   .. py:attribute:: normalize_angle
+      :value: False
+
+
+
+   .. py:attribute:: update_freq
+      :value: None
+
+
+
+   .. py:attribute:: angles_prev
+
+
+   .. py:attribute:: phasors
+
+
+   .. py:attribute:: phasor_0
+
+
+   .. py:attribute:: colors
+
+
+   .. py:method:: create_plot_items()
+
+
+   .. py:method:: update(phasors)
+
+
+   .. py:method:: update_plot()
+
+
+   .. py:method:: update_plot_items(draw_phasors)
+
+
+.. py:class:: PhasorPlotFast(*args, color='w', **kwargs)
+
+   Bases: :py:obj:`PhasorPlot`
+
+
+   .. py:attribute:: color
+      :value: 'w'
+
+
+
+   .. py:method:: create_plot_items()
+
+
+   .. py:method:: update_plot_items(phasors)
+
+
+.. py:class:: PhasorPlotFancy(*args, **kwargs)
+
+   Bases: :py:obj:`PhasorPlot`
+
+
+.. py:class:: PhasorPlotFastFancy(*args, color='w', **kwargs)
+
+   Bases: :py:obj:`PhasorPlotFast`, :py:obj:`PhasorPlotFancy`
+
+
+   .. py:attribute:: color
+      :value: 'w'
+
+
+
+.. py:function:: main_2()
+
+.. py:function:: main()
+

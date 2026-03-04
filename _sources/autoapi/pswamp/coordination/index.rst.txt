@@ -1,0 +1,16 @@
+pswamp.coordination
+===================
+
+.. py:module:: pswamp.coordination
+
+
+Submodules
+----------
+
+.. toctree::
+   :maxdepth: 1
+
+   /autoapi/pswamp/coordination/alarm_handling/index
+   /autoapi/pswamp/coordination/pmu_to_kafka/index
+
+

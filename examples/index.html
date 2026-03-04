@@ -1,0 +1,165 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Examples &mdash; p-SWAMP  documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+      <link rel="stylesheet" type="text/css" href="../_static/graphviz.css?v=4ae1632d" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=5929fcd5"></script>
+      <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Streaming, microservices, Kafka" href="../kafka.html" />
+    <link rel="prev" title="p-SWAMP (Power Stability Wide area Monitoring and Protection)" href="../p-swamp.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            p-SWAMP
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../p-swamp.html">p-SWAMP (Power Stability Wide area Monitoring and Protection)</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Examples</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#running-the-examples">Running the examples</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#configuration">Configuration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#running-apps">Running apps</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#data">Data</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#the-examples">The examples</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#nordic-44-real-time-simulation"><span class="xref std std-doc">Nordic 44 Real-Time Simulation</span></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../kafka.html">Streaming, microservices, Kafka</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../testing.html">Test environments</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../templates.html">Real-Time Application Templates</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../models.html">Component models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../autoapi/index.html">API Reference</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">p-SWAMP</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Examples</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/examples/index.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="examples">
+<h1>Examples<a class="headerlink" href="#examples" title="Link to this heading"></a></h1>
+<p>Each of the examples are structured approximately as follows:</p>
+<p>In short: the <strong>readme.md</strong> describes the example in detail, <strong>config.toml</strong> holds the configuration of the example, and the script <strong>run_case.py</strong> runs the example. The <strong>apps</strong> folder holds scripts to runn apps, and <strong>data</strong> holds various data files. These are described in detail in the following paragraphs.</p>
+<p>Depending on the example, additional files might be present. These should be described in the readme of the example.</p>
+<section id="running-the-examples">
+<h2>Running the examples<a class="headerlink" href="#running-the-examples" title="Link to this heading"></a></h2>
+<p>The <strong>run_case.py</strong> script starts a number of processes (executed in parallel for improved performance), which do the following (among others):</p>
+<ul class="simple">
+<li><p>If NQKafka is used: A server is started, and the required topics (specified in <strong>config.toml</strong>) are created,</p></li>
+<li><p>PMU data is continuously sent to the PMU data topic of the Kafka server (depending on the example, the PMU data source can be a real-time simulation, which is also started by the script, or CSV-files with PMU data measurements),</p></li>
+<li><p>The main window of the GUI is shown.</p></li>
+</ul>
+</section>
+<section id="configuration">
+<h2>Configuration<a class="headerlink" href="#configuration" title="Link to this heading"></a></h2>
+<p>The configuration is specified in <strong>config.toml</strong>. This file specifies the following (among others):</p>
+<ul class="simple">
+<li><p>Whether to use Kafka or NQKafka for handling data streams,</p></li>
+<li><p>The IP and port to the Kafka (or NQKafka) server,</p></li>
+<li><p>The topics in the Kafka server,</p></li>
+<li><p>Paths to data files that are not accessed through Kafka.</p></li>
+</ul>
+<p>Depending on the example, additional content might be specified.</p>
+</section>
+<section id="running-apps">
+<h2>Running apps<a class="headerlink" href="#running-apps" title="Link to this heading"></a></h2>
+<p>Using the scripts in the <strong>apps</strong> folder, individual applications can be run (after <strong>run_case.py</strong> was run). Note that most (if not all) applications can be launched from the GUI. However, if some application is to be run with special input parameters, or if we want to debug a particular application, the scripts in the <strong>apps</strong> folder are useful. For efficient debugging, the <strong>run_case.py</strong> script can be run first, then a debug session can be started from one of the scripts in <strong>apps</strong>. In this way, the particular application can be started and stopped multiple times without having to restart the full example.</p>
+</section>
+<section id="data">
+<h2>Data<a class="headerlink" href="#data" title="Link to this heading"></a></h2>
+<p>The file <strong>data/model_data.json</strong> holds component parameters (e.g., nominal bus voltage levels, line capacities, etc.). The <strong>data/sld.dxf</strong> and <strong>data/sld_geo.dxf</strong> files are the single-line diagrams which are shown in the GUI. The dxf-format is a CAD format which can be edited using any compatible CAD program, for instance LibreCAD. In the dxf-files, the bus names are inserted (MText-entities), and lines are drawn between buses. Based on this and information in <strong>data/model_data.json</strong> (if supplied), the bus coordinates and branch path coordinates are automatically determined.</p>
+<p>Note that the data files can be structured in other ways, as long as the paths in <strong>config.toml</strong> are updated accordingly.</p>
+</section>
+<section id="the-examples">
+<h2>The examples<a class="headerlink" href="#the-examples" title="Link to this heading"></a></h2>
+<p>The examples in the repository are described below. There are other examples as well, but these are currently not described in detail. The links in the headers redirect to the readme files of each example.</p>
+<section id="nordic-44-real-time-simulation">
+<h3><a class="reference internal" href="example_n44.html"><span class="doc">Nordic 44 Real-Time Simulation</span></a><a class="headerlink" href="#nordic-44-real-time-simulation" title="Link to this heading"></a></h3>
+<p>In this example, a real-time simulation is run, producing PMU data which is streamed to the platform. Can be used for demonstrating oscillation monitoring, islanding detection or voltage stability monitoring.</p>
+</section>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="../p-swamp.html" class="btn btn-neutral float-left" title="p-SWAMP (Power Stability Wide area Monitoring and Protection)" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="../kafka.html" class="btn btn-neutral float-right" title="Streaming, microservices, Kafka" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright .</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

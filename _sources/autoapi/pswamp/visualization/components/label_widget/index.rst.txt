@@ -1,0 +1,47 @@
+pswamp.visualization.components.label_widget
+============================================
+
+.. py:module:: pswamp.visualization.components.label_widget
+
+
+Attributes
+----------
+
+.. autoapisummary::
+
+   pswamp.visualization.components.label_widget.app
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   pswamp.visualization.components.label_widget.Label
+   pswamp.visualization.components.label_widget.LabelWidget
+
+
+Module Contents
+---------------
+
+.. py:class:: Label(parent=None)
+
+   Bases: :py:obj:`PySide6.QtWidgets.QWidget`
+
+
+   .. py:attribute:: p
+
+
+   .. py:method:: setPixmap(p)
+
+
+   .. py:method:: paintEvent(event)
+
+
+.. py:class:: LabelWidget(img_path, parent=None)
+
+   Bases: :py:obj:`PySide6.QtWidgets.QWidget`
+
+
+.. py:data:: app
+

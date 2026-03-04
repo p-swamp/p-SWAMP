@@ -1,0 +1,76 @@
+pswamp.gui.grid_view.dim_2d.layers.countries
+============================================
+
+.. py:module:: pswamp.gui.grid_view.dim_2d.layers.countries
+
+
+Attributes
+----------
+
+.. autoapisummary::
+
+   pswamp.gui.grid_view.dim_2d.layers.countries.config
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   pswamp.gui.grid_view.dim_2d.layers.countries.CountriesLayer
+   pswamp.gui.grid_view.dim_2d.layers.countries.CountriesLayerSettings
+
+
+Module Contents
+---------------
+
+.. py:class:: CountriesLayer(parent, config, geo=True)
+
+   .. py:attribute:: config
+
+
+   .. py:attribute:: k
+      :value: 2
+
+
+
+   .. py:attribute:: plotWidget
+
+
+   .. py:attribute:: geo_data
+
+
+   .. py:attribute:: geo_lines
+
+
+   .. py:method:: add_geo_lines(geo_data)
+
+
+   .. py:method:: update_countries(countries=['Norway'])
+
+
+   .. py:method:: remove_layer()
+
+
+.. py:class:: CountriesLayerSettings(target_layer, *args, **kwargs)
+
+   Bases: :py:obj:`PySide6.QtWidgets.QWidget`
+
+
+   .. py:attribute:: target_layer
+
+
+   .. py:attribute:: item_list
+
+
+   .. py:attribute:: done_button
+
+
+   .. py:method:: done_button_click()
+
+
+   .. py:method:: onItemClicked(item)
+
+
+.. py:data:: config
+

@@ -1,0 +1,77 @@
+pswamp.gui.grid_view.dim_3d.layers.lines_2
+==========================================
+
+.. py:module:: pswamp.gui.grid_view.dim_3d.layers.lines_2
+
+
+Attributes
+----------
+
+.. autoapisummary::
+
+   pswamp.gui.grid_view.dim_3d.layers.lines_2.sample_dataset_path
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   pswamp.gui.grid_view.dim_3d.layers.lines_2.LineLayer
+
+
+Module Contents
+---------------
+
+.. py:class:: LineLayer(*args, **kwargs)
+
+   Bases: :py:obj:`pswamp.gui.grid_view.dim_2d.layers.lines_2.LineLayer`
+
+
+   .. py:attribute:: lines_z_map
+
+
+   .. py:attribute:: trafos_z_map
+
+
+   .. py:attribute:: line_colors
+
+
+   .. py:attribute:: trafo_colors
+
+
+   .. py:method:: build_z_map(data, paths)
+
+
+   .. py:method:: update_line_z_coords(node_z)
+
+
+   .. py:method:: update_trafo_z_coords(node_z)
+
+
+   .. py:method:: set_node_z(z)
+
+
+   .. py:method:: add_line_plots(pos, line_width=2, color='gray')
+
+
+   .. py:method:: reset_line_colors()
+
+
+   .. py:method:: reset_trafo_colors()
+
+
+   .. py:method:: set_line_colors(colors, idx=slice(None))
+
+
+   .. py:method:: update_line_colors()
+
+
+   .. py:method:: set_trafo_colors(colors, idx=slice(None))
+
+
+   .. py:method:: update_trafo_colors()
+
+
+.. py:data:: sample_dataset_path
+

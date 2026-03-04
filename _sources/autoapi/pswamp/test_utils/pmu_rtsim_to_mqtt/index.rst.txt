@@ -1,0 +1,36 @@
+pswamp.test_utils.pmu_rtsim_to_mqtt
+===================================
+
+.. py:module:: pswamp.test_utils.pmu_rtsim_to_mqtt
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   pswamp.test_utils.pmu_rtsim_to_mqtt.PMUToMQTTPublisher
+
+
+Module Contents
+---------------
+
+.. py:class:: PMUToMQTTPublisher(mqtt_kwargs, *args, topic='pmudata', **kwargs)
+
+   Bases: :py:obj:`topsrt.pmu_v2.PMUPublisherV2`
+
+
+   .. py:attribute:: topic
+      :value: 'pmudata'
+
+
+
+   .. py:attribute:: producer
+
+
+   .. py:method:: initialize(*args, **kwargs)
+
+
+   .. py:method:: update(input_signal)
+
+

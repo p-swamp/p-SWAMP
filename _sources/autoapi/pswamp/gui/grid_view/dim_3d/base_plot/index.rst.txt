@@ -1,0 +1,58 @@
+pswamp.gui.grid_view.dim_3d.base_plot
+=====================================
+
+.. py:module:: pswamp.gui.grid_view.dim_3d.base_plot
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   pswamp.gui.grid_view.dim_3d.base_plot.GridBasePlot3D
+
+
+Functions
+---------
+
+.. autoapisummary::
+
+   pswamp.gui.grid_view.dim_3d.base_plot.main
+
+
+Module Contents
+---------------
+
+.. py:class:: GridBasePlot3D(geo=True, live_plot=True, background_color=None, *args, **kwargs)
+
+   Bases: :py:obj:`PySide6.QtWidgets.QWidget`
+
+
+   .. py:attribute:: station_was_clicked
+
+
+   .. py:attribute:: geo
+      :value: True
+
+
+
+   .. py:attribute:: window
+
+
+   .. py:attribute:: plotWidget
+
+
+   .. py:attribute:: update_funs
+
+
+   .. py:method:: start_plot_update_timer(update_freq=50)
+
+
+   .. py:method:: update()
+
+
+   .. py:method:: change_background_color(color)
+
+
+.. py:function:: main()
+

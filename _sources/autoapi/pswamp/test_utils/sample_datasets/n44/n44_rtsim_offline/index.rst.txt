@@ -1,0 +1,58 @@
+pswamp.test_utils.sample_datasets.n44.n44_rtsim_offline
+=======================================================
+
+.. py:module:: pswamp.test_utils.sample_datasets.n44.n44_rtsim_offline
+
+
+Attributes
+----------
+
+.. autoapisummary::
+
+   pswamp.test_utils.sample_datasets.n44.n44_rtsim_offline.config
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   pswamp.test_utils.sample_datasets.n44.n44_rtsim_offline.Events
+
+
+Functions
+---------
+
+.. autoapisummary::
+
+   pswamp.test_utils.sample_datasets.n44.n44_rtsim_offline.run_n44_rtsim_offline
+   pswamp.test_utils.sample_datasets.n44.n44_rtsim_offline.stop_case
+
+
+Module Contents
+---------------
+
+.. py:class:: Events(data)
+
+   .. py:attribute:: data
+
+
+   .. py:attribute:: next_event_time
+      :value: None
+
+
+
+   .. py:attribute:: next_event_data
+      :value: None
+
+
+
+   .. py:method:: update(sim)
+
+
+.. py:function:: run_n44_rtsim_offline(config, events_spec=None, t_end=10)
+
+.. py:function:: stop_case(config)
+
+.. py:data:: config
+

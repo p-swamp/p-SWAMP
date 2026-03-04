@@ -1,0 +1,49 @@
+pswamp.streaming.base
+=====================
+
+.. py:module:: pswamp.streaming.base
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   pswamp.streaming.base.Producer
+   pswamp.streaming.base.Consumer
+   pswamp.streaming.base.BaseIO
+
+
+Module Contents
+---------------
+
+.. py:class:: Producer(*args, type='kafka', **kwargs)
+
+   .. py:attribute:: base_object
+
+
+   .. py:method:: __getattr__(name)
+
+
+.. py:class:: Consumer(*args, type='kafka', **kwargs)
+
+   .. py:attribute:: base_object
+
+
+   .. py:method:: __getattr__(name)
+
+
+   .. py:method:: __iter__()
+
+
+   .. py:method:: __next__()
+
+
+.. py:class:: BaseIO(*args, type='kafka', **kwargs)
+
+   .. py:attribute:: base_object
+
+
+   .. py:method:: __getattr__(name)
+
+

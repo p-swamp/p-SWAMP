@@ -1,0 +1,47 @@
+pswamp.styles.colors
+====================
+
+.. py:module:: pswamp.styles.colors
+
+
+Attributes
+----------
+
+.. autoapisummary::
+
+   pswamp.styles.colors.background
+   pswamp.styles.colors.islanding
+   pswamp.styles.colors.oscillations
+   pswamp.styles.colors.app
+
+
+Functions
+---------
+
+.. autoapisummary::
+
+   pswamp.styles.colors.gl_color
+   pswamp.styles.colors.hex2rgba
+
+
+Module Contents
+---------------
+
+.. py:function:: gl_color(color)
+
+.. py:function:: hex2rgba(color_hex, base=1)
+
+.. py:data:: background
+   :value: '#1e3f40'
+
+
+.. py:data:: islanding
+   :value: ['#bababa', '#4876ff', '#089200', '#42E3D6', '#ff5050', '#4876ff', '#caff70', '#ff83fa', '#65CCFF']
+
+
+.. py:data:: oscillations
+   :value: ['#ff5050', '#4876ff', '#caff70', '#ff83fa', '#ffae5a', '#089200', '#0bdb7d', '#42E3D6',...
+
+
+.. py:data:: app
+

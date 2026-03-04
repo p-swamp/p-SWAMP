@@ -1,0 +1,82 @@
+pswamp.gui.grid_view.dim_3d.layers.layers
+=========================================
+
+.. py:module:: pswamp.gui.grid_view.dim_3d.layers.layers
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   pswamp.gui.grid_view.dim_3d.layers.layers.StationNamesLayer
+   pswamp.gui.grid_view.dim_3d.layers.layers.PhasorPlotLayer
+   pswamp.gui.grid_view.dim_3d.layers.layers.PhasorPlotFastLayer
+   pswamp.gui.grid_view.dim_3d.layers.layers.StaticLineDataLayer
+   pswamp.gui.grid_view.dim_3d.layers.layers.StaticLineDataLayer_v0
+   pswamp.gui.grid_view.dim_3d.layers.layers.StaticLineDataLayerSettings
+
+
+Module Contents
+---------------
+
+.. py:class:: StationNamesLayer(parent, config, geo=True)
+
+   Bases: :py:obj:`pswamp.gui.grid_view.dim_2d.layers.StationNamesLayer`
+
+
+   .. py:method:: add_text(coord, text)
+
+
+.. py:class:: PhasorPlotLayer(parent, config, geo=True)
+
+   Bases: :py:obj:`pswamp.gui.grid_view.dim_2d.layers.PhasorPlotLayer`
+
+
+   .. py:attribute:: phasor_plot_class
+
+
+   .. py:method:: add_phasor_plot(bus_coords)
+
+
+.. py:class:: PhasorPlotFastLayer(parent, config, geo=True)
+
+   Bases: :py:obj:`PhasorPlotLayer`
+
+
+   .. py:attribute:: phasor_plot_class
+
+
+   .. py:method:: remove_layer()
+
+
+.. py:class:: StaticLineDataLayer(parent, config, geo=True, data_subkey='line_data_path')
+
+   Bases: :py:obj:`pswamp.gui.grid_view.dim_2d.layers.StaticLineDataLayer`
+
+
+   .. py:method:: add_line_plots(pos, line_width, color)
+
+
+   .. py:method:: remove_layer()
+
+
+   .. py:method:: update_line_plots(key, **style_kwargs)
+
+
+   .. py:method:: hide()
+
+
+   .. py:method:: show()
+
+
+.. py:class:: StaticLineDataLayer_v0(*args, **kwargs)
+
+   Bases: :py:obj:`StaticLineDataLayer`
+
+
+.. py:class:: StaticLineDataLayerSettings(target_layer)
+
+   Bases: :py:obj:`pswamp.gui.grid_view.dim_2d.layers.StaticLineDataLayerSettings`
+
+

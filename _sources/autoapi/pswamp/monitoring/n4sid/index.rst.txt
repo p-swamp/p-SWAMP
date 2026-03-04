@@ -1,0 +1,110 @@
+pswamp.monitoring.n4sid
+=======================
+
+.. py:module:: pswamp.monitoring.n4sid
+
+
+Attributes
+----------
+
+.. autoapisummary::
+
+   pswamp.monitoring.n4sid.config
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   pswamp.monitoring.n4sid.N4SID
+   pswamp.monitoring.n4sid.N4SIDApp
+
+
+Functions
+---------
+
+.. autoapisummary::
+
+   pswamp.monitoring.n4sid.run_n4sid
+
+
+Module Contents
+---------------
+
+.. py:class:: N4SID(dt, n_measurements, sys_order=10, num_block_rows=10)
+
+   Class for running system identification using the NFourSID package.
+
+
+   .. py:attribute:: n_measurements
+
+
+   .. py:attribute:: sys_order
+      :value: 10
+
+
+
+   .. py:attribute:: num_block_rows
+      :value: 10
+
+
+
+   .. py:attribute:: dt
+
+
+   .. py:attribute:: eigs
+
+
+   .. py:attribute:: damping
+
+
+   .. py:attribute:: freq
+
+
+   .. py:attribute:: em_idx
+
+
+   .. py:attribute:: rev
+
+
+   .. py:attribute:: a_c
+
+
+   .. py:attribute:: c
+
+
+   .. py:attribute:: mode_shapes
+
+
+   .. py:method:: run_sid(y)
+
+      Run system identification (N4SID) and calculate eigenvalues and observability mode shapes.
+      :param y:
+
+      Returns:
+
+
+
+
+.. py:class:: N4SIDApp(eval_freq=1, channel_selection={'measurement': 'f'}, sys_order=10, num_block_rows=10, **kwargs)
+
+   Bases: :py:obj:`N4SID`, :py:obj:`pswamp.app_templates.time_window_app.TimeWindowApp`
+
+
+   An online implementation of the N4SID system identification class.
+
+
+   .. py:attribute:: alarm_handler
+
+
+   .. py:method:: init(sys_order=10, num_block_rows=10)
+
+
+   .. py:method:: run_analysis(t, phasors)
+
+
+.. py:function:: run_n4sid(config, window_length=45, sys_order=10, channel_selection_idx=None)
+
+.. py:data:: config
+

@@ -1,0 +1,49 @@
+pswamp.visualization.components.single_line_diagram
+===================================================
+
+.. py:module:: pswamp.visualization.components.single_line_diagram
+
+
+Attributes
+----------
+
+.. autoapisummary::
+
+   pswamp.visualization.components.single_line_diagram.SCALING_FACTOR
+
+
+Functions
+---------
+
+.. autoapisummary::
+
+   pswamp.visualization.components.single_line_diagram.get_buses
+   pswamp.visualization.components.single_line_diagram.get_line_segments
+   pswamp.visualization.components.single_line_diagram.draw_line_from_to
+   pswamp.visualization.components.single_line_diagram.connected
+   pswamp.visualization.components.single_line_diagram.recursive_search
+   pswamp.visualization.components.single_line_diagram.get_lines
+   pswamp.visualization.components.single_line_diagram.get_branches_xy_by_matching_buses
+
+
+Module Contents
+---------------
+
+.. py:data:: SCALING_FACTOR
+   :value: 0.06666666666666667
+
+
+.. py:function:: get_buses(doc, bus_names_model=None)
+
+.. py:function:: get_line_segments(doc)
+
+.. py:function:: draw_line_from_to(line_start, line_end)
+
+.. py:function:: connected(point, points, covered=None, threshold=0.001)
+
+.. py:function:: recursive_search(point, line_starts, line_ends, covered, stoppers, first_call=False, threshold=0.001)
+
+.. py:function:: get_lines(doc)
+
+.. py:function:: get_branches_xy_by_matching_buses(doc, model_data)
+

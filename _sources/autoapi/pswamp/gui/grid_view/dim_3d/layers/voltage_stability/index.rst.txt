@@ -1,0 +1,73 @@
+pswamp.gui.grid_view.dim_3d.layers.voltage_stability
+====================================================
+
+.. py:module:: pswamp.gui.grid_view.dim_3d.layers.voltage_stability
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   pswamp.gui.grid_view.dim_3d.layers.voltage_stability.VoltageStability
+
+
+Module Contents
+---------------
+
+.. py:class:: VoltageStability(parent, config, geo=True)
+
+   .. py:attribute:: config
+
+
+   .. py:attribute:: input_stream
+
+
+   .. py:attribute:: is_stopped
+      :value: False
+
+
+
+   .. py:attribute:: plotWidget
+
+
+   .. py:attribute:: k
+      :value: 2
+
+
+
+   .. py:attribute:: uuid
+
+
+   .. py:attribute:: parent
+
+
+   .. py:attribute:: z_scale
+      :value: 3
+
+
+
+   .. py:attribute:: x
+
+
+   .. py:attribute:: y
+
+
+   .. py:attribute:: z
+
+
+   .. py:attribute:: text_item
+
+
+   .. py:method:: run_consumer()
+
+
+   .. py:method:: stop()
+
+
+   .. py:method:: update_text()
+
+
+   .. py:method:: remove_layer()
+
+

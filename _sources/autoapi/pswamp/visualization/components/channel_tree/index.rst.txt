@@ -1,0 +1,47 @@
+pswamp.visualization.components.channel_tree
+============================================
+
+.. py:module:: pswamp.visualization.components.channel_tree
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   pswamp.visualization.components.channel_tree.ChannelTree
+
+
+Functions
+---------
+
+.. autoapisummary::
+
+   pswamp.visualization.components.channel_tree.main
+
+
+Module Contents
+---------------
+
+.. py:class:: ChannelTree(station_names, channel_names, *args)
+
+   Bases: :py:obj:`QTreeWidget`
+
+
+   For showing a tree representing Stations and PMUs
+
+
+   .. py:attribute:: station_names
+
+
+   .. py:attribute:: channel_names
+
+
+   .. py:attribute:: station_idx
+
+
+   .. py:method:: onItemClicked(it, col)
+
+
+.. py:function:: main()
+

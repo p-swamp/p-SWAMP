@@ -1,0 +1,59 @@
+pswamp.visualization.components.threshold_adjust
+================================================
+
+.. py:module:: pswamp.visualization.components.threshold_adjust
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   pswamp.visualization.components.threshold_adjust.QSliderReadOnly
+   pswamp.visualization.components.threshold_adjust.ThresholdAdjustment
+
+
+Functions
+---------
+
+.. autoapisummary::
+
+   pswamp.visualization.components.threshold_adjust.main
+
+
+Module Contents
+---------------
+
+.. py:class:: QSliderReadOnly
+
+   Bases: :py:obj:`PySide6.QtWidgets.QSlider`
+
+
+   .. py:method:: mousePressEvent(ev)
+
+
+   .. py:method:: mouseReleaseEvent(ev)
+
+
+   .. py:method:: mouseMoveEvent(ev)
+
+
+   .. py:method:: keyPressEvent(ev)
+
+
+   .. py:method:: keyReleaseEvent(ev)
+
+
+.. py:class:: ThresholdAdjustment(*args, **kwargs)
+
+   Bases: :py:obj:`PySide6.QtWidgets.QWidget`
+
+
+   .. py:attribute:: range_slider
+
+
+   .. py:attribute:: indicator_slider
+
+
+.. py:function:: main()
+

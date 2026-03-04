@@ -1,0 +1,57 @@
+pswamp.test_utils.csv_playback.offline_testing_adapter
+======================================================
+
+.. py:module:: pswamp.test_utils.csv_playback.offline_testing_adapter
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   pswamp.test_utils.csv_playback.offline_testing_adapter.OfflineTestingAdapter
+
+
+Module Contents
+---------------
+
+.. py:class:: OfflineTestingAdapter(*args, **kwargs)
+
+   Bases: :py:obj:`pswamp.test_utils.csv_playback.data_frame_generator.DataFrameGenerator`
+
+
+   .. py:attribute:: new_frame_already_obtained
+      :value: False
+
+
+
+   .. py:attribute:: latest_frame
+      :value: None
+
+
+
+   .. py:attribute:: results
+      :value: []
+
+
+
+   .. py:attribute:: statuses
+      :value: []
+
+
+
+   .. py:method:: get_next_data_frame()
+
+
+   .. py:method:: get_sample_data_frame()
+
+
+   .. py:method:: handle_result(result)
+
+
+   .. py:method:: handle_status(status)
+
+
+   .. py:method:: seek_relative_input_offset()
+
+

@@ -1,0 +1,81 @@
+pswamp.visualization.components.date_time_axis
+==============================================
+
+.. py:module:: pswamp.visualization.components.date_time_axis
+
+.. autoapi-nested-parse::
+
+   This module provides date-time aware axis
+
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   pswamp.visualization.components.date_time_axis.DateAxisItem
+
+
+Module Contents
+---------------
+
+.. py:class:: DateAxisItem(*args, **kwargs)
+
+   Bases: :py:obj:`pyqtgraph.AxisItem`
+
+
+   A tool that provides a date-time aware axis. It is implemented as an
+   AxisItem that interpretes positions as unix timestamps (i.e. seconds
+   since 1970).
+   The labels and the tick positions are dynamically adjusted depending
+   on the range.
+   It provides a  :meth:`attachToPlotItem` method to add it to a given
+   PlotItem
+
+
+   .. py:attribute:: _pxLabelWidth
+      :value: 80
+
+
+
+   .. py:attribute:: _oldAxis
+      :value: None
+
+
+
+   .. py:method:: date_from_timestamp(timestamp)
+      :staticmethod:
+
+
+
+   .. py:method:: tickValues(minVal, maxVal, size)
+
+      Reimplemented from PlotItem to adjust to the range and to force
+      the ticks at "round" positions in the context of time units instead of
+      rounding in a decimal base
+
+
+
+   .. py:method:: tickStrings(values, scale, spacing)
+
+      Reimplemented from PlotItem to adjust to the range
+
+
+
+   .. py:method:: attachToPlotItem(plotItem)
+
+      Add this axis to the given PlotItem
+      :param plotItem: (PlotItem)
+
+
+
+   .. py:method:: detachFromPlotItem()
+      :abstractmethod:
+
+
+      Remove this axis from its attached PlotItem
+      (not yet implemented)
+
+
+

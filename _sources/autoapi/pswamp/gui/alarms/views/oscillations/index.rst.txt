@@ -1,0 +1,92 @@
+pswamp.gui.alarms.views.oscillations
+====================================
+
+.. py:module:: pswamp.gui.alarms.views.oscillations
+
+
+Attributes
+----------
+
+.. autoapisummary::
+
+   pswamp.gui.alarms.views.oscillations.config
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   pswamp.gui.alarms.views.oscillations.OscillationAlarmView
+
+
+Module Contents
+---------------
+
+.. py:class:: OscillationAlarmView(config, *args, **kwargs)
+
+   Bases: :py:obj:`pswamp.gui.alarms.views.interactive.InteractiveAlarmView`
+
+
+   .. py:attribute:: initialized
+      :value: False
+
+
+
+   .. py:attribute:: simplified_alarm_views
+
+
+   .. py:attribute:: islanding_results
+
+
+   .. py:attribute:: islanding_data_rate
+
+
+   .. py:attribute:: pmu_data_rate
+
+
+   .. py:attribute:: col_idx_freq
+
+
+   .. py:attribute:: col_idx_mag
+      :value: []
+
+
+
+   .. py:attribute:: col_idx_ang
+      :value: []
+
+
+
+   .. py:attribute:: islanding_res_thread
+
+
+   .. py:attribute:: stations
+
+
+   .. py:attribute:: station_idx
+
+
+   .. py:attribute:: phasor_ax
+
+
+   .. py:attribute:: eigenvalue_plot
+
+
+   .. py:attribute:: grid_view_islanding_layers
+
+
+   .. py:attribute:: grid_view_islanding_line_layers
+
+
+   .. py:method:: define_layout()
+
+
+   .. py:method:: update_plots(value)
+
+
+   .. py:method:: close_view()
+
+
+.. py:data:: config
+

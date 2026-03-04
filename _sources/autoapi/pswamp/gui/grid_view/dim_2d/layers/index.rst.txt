@@ -1,0 +1,929 @@
+pswamp.gui.grid_view.dim_2d.layers
+==================================
+
+.. py:module:: pswamp.gui.grid_view.dim_2d.layers
+
+
+Submodules
+----------
+
+.. toctree::
+   :maxdepth: 1
+
+   /autoapi/pswamp/gui/grid_view/dim_2d/layers/buses/index
+   /autoapi/pswamp/gui/grid_view/dim_2d/layers/countries/index
+   /autoapi/pswamp/gui/grid_view/dim_2d/layers/heatmap/index
+   /autoapi/pswamp/gui/grid_view/dim_2d/layers/layers/index
+   /autoapi/pswamp/gui/grid_view/dim_2d/layers/lines/index
+   /autoapi/pswamp/gui/grid_view/dim_2d/layers/lines_2/index
+   /autoapi/pswamp/gui/grid_view/dim_2d/layers/pmus/index
+
+
+Attributes
+----------
+
+.. autoapisummary::
+
+   pswamp.gui.grid_view.dim_2d.layers.sample_dataset_path
+   pswamp.gui.grid_view.dim_2d.layers.config
+   pswamp.gui.grid_view.dim_2d.layers.sample_dataset_path
+
+
+Exceptions
+----------
+
+.. autoapisummary::
+
+   pswamp.gui.grid_view.dim_2d.layers.LayerFailedException
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   pswamp.gui.grid_view.dim_2d.layers.PMUTimeWindowOnline
+   pswamp.gui.grid_view.dim_2d.layers.PhasorPlot
+   pswamp.gui.grid_view.dim_2d.layers.StationNamesLayer
+   pswamp.gui.grid_view.dim_2d.layers.PhasorPlotLayer
+   pswamp.gui.grid_view.dim_2d.layers.StaticLineDataLayer
+   pswamp.gui.grid_view.dim_2d.layers.StaticLineDataLayer_v0
+   pswamp.gui.grid_view.dim_2d.layers.StaticLineDataLayerSettings
+   pswamp.gui.grid_view.dim_2d.layers.PMUTimeWindow
+   pswamp.gui.grid_view.dim_2d.layers.PhasorPlot
+   pswamp.gui.grid_view.dim_2d.layers.BusesLayer
+   pswamp.gui.grid_view.dim_2d.layers.PMUTimeWindow
+   pswamp.gui.grid_view.dim_2d.layers.PhasorPlot
+   pswamp.gui.grid_view.dim_2d.layers.HeatMapBasePlot
+   pswamp.gui.grid_view.dim_2d.layers.PMUTimeWindowOnline
+   pswamp.gui.grid_view.dim_2d.layers.FrequencyHeatMap
+   pswamp.gui.grid_view.dim_2d.layers.CountriesLayer
+   pswamp.gui.grid_view.dim_2d.layers.CountriesLayerSettings
+   pswamp.gui.grid_view.dim_2d.layers.PMUTimeWindow
+   pswamp.gui.grid_view.dim_2d.layers.PhasorPlot
+   pswamp.gui.grid_view.dim_2d.layers.PMULayer
+
+
+Functions
+---------
+
+.. autoapisummary::
+
+   pswamp.gui.grid_view.dim_2d.layers.read_geo_data
+   pswamp.gui.grid_view.dim_2d.layers.load_bus_coords_for_current_stations
+   pswamp.gui.grid_view.dim_2d.layers.load_bus_coords_for_stations
+   pswamp.gui.grid_view.dim_2d.layers.load_dxf
+   pswamp.gui.grid_view.dim_2d.layers.read_geo_data
+   pswamp.gui.grid_view.dim_2d.layers.load_bus_coords_for_current_stations
+   pswamp.gui.grid_view.dim_2d.layers.read_geo_data
+   pswamp.gui.grid_view.dim_2d.layers.load_bus_coords_for_current_stations
+   pswamp.gui.grid_view.dim_2d.layers.read_geo_data
+   pswamp.gui.grid_view.dim_2d.layers.read_geo_data
+   pswamp.gui.grid_view.dim_2d.layers.load_bus_coords_for_current_stations
+   pswamp.gui.grid_view.dim_2d.layers.get_from_database
+
+
+Package Contents
+----------------
+
+.. py:class:: PMUTimeWindowOnline(kafka_kwargs={}, kafka_topic='pmudata', auto_adjust_offset=False, **kwargs)
+
+   Bases: :py:obj:`PMUTimeWindow`
+
+
+   This class is intended for consuming PMU data from a specified Kafka topic and storing the last samples (n_samples) in a
+   TimeWindow object.
+
+
+   .. py:attribute:: kafka_topic
+      :value: 'pmudata'
+
+
+
+   .. py:attribute:: kafka_kwargs
+
+
+   .. py:attribute:: auto_adjust_offset
+      :value: False
+
+
+
+   .. py:attribute:: pmu_stream
+
+
+   .. py:attribute:: _is_stopped
+      :value: False
+
+
+
+   .. py:method:: initialize()
+
+
+   .. py:method:: run()
+
+
+   .. py:method:: stop()
+
+
+.. py:class:: PhasorPlot(n_phasors=None, pos0=None, normalize_length=True, normalize_angle=False, update_freq=None, plot_widget=None, background_color=(30, 63, 64), *args, **kwargs)
+
+   Bases: :py:obj:`PySide6.QtWidgets.QWidget`
+
+
+   .. py:attribute:: request_plot_update
+
+
+   .. py:attribute:: pos0
+      :value: None
+
+
+
+   .. py:attribute:: approx_zero_value
+      :value: 1e-06
+
+
+
+   .. py:attribute:: normalize_length
+      :value: True
+
+
+
+   .. py:attribute:: normalize_angle
+      :value: False
+
+
+
+   .. py:attribute:: update_freq
+      :value: None
+
+
+
+   .. py:attribute:: angles_prev
+
+
+   .. py:attribute:: phasors
+
+
+   .. py:attribute:: phasor_0
+
+
+   .. py:attribute:: colors
+
+
+   .. py:method:: create_plot_items()
+
+
+   .. py:method:: update(phasors)
+
+
+   .. py:method:: update_plot()
+
+
+   .. py:method:: update_plot_items(draw_phasors)
+
+
+.. py:function:: read_geo_data(countries='All')
+
+.. py:function:: load_bus_coords_for_current_stations(config, return_3d=False, geo=True)
+
+   Get coordinates for stations in PMU data frame
+
+
+.. py:function:: load_bus_coords_for_stations(config, wanted_stations, return_3d=False, geo=True)
+
+   Get coordinates for a subset of stations
+
+
+.. py:function:: load_dxf(path)
+
+.. py:exception:: LayerFailedException
+
+   Bases: :py:obj:`Exception`
+
+
+   Raised when layer fails.
+
+
+.. py:class:: StationNamesLayer(parent, config, geo=True)
+
+   .. py:attribute:: config
+
+
+   .. py:attribute:: plotWidget
+
+
+   .. py:attribute:: k
+      :value: 2
+
+
+
+   .. py:attribute:: bus_name_text
+      :value: []
+
+
+
+   .. py:method:: add_text(coord, text)
+
+
+   .. py:method:: remove_layer()
+
+
+.. py:class:: PhasorPlotLayer(parent, config, geo=True)
+
+   .. py:attribute:: config
+
+
+   .. py:attribute:: k
+      :value: 2
+
+
+
+   .. py:attribute:: uuid
+
+
+   .. py:attribute:: parent
+
+
+   .. py:attribute:: pmu_tw
+
+
+   .. py:attribute:: col_idx_mag
+      :value: []
+
+
+
+   .. py:attribute:: col_idx_ang
+      :value: []
+
+
+
+   .. py:attribute:: plotWidget
+
+
+   .. py:attribute:: phasor_plot
+
+
+   .. py:method:: add_phasor_plot(bus_coords)
+
+
+   .. py:method:: remove_layer()
+
+
+.. py:class:: StaticLineDataLayer(parent, config, geo=True, data_subkey='line_data_path')
+
+   .. py:attribute:: config
+
+
+   .. py:attribute:: k
+      :value: 2
+
+
+
+   .. py:attribute:: parent
+
+
+   .. py:attribute:: line_style
+
+
+   .. py:attribute:: ps_geo_data
+
+
+   .. py:attribute:: power_lines_pl
+
+
+   .. py:method:: add_line_plots(pos, line_width, color)
+
+
+   .. py:method:: remove_layer()
+
+
+   .. py:method:: show_lines(key)
+
+
+   .. py:method:: hide_lines(key)
+
+
+   .. py:method:: set_power_lines_color(key, color)
+
+
+   .. py:method:: set_line_width(key, line_width)
+
+
+   .. py:method:: update_line_plots(key, **style_kwargs)
+
+
+.. py:class:: StaticLineDataLayer_v0(*args, **kwargs)
+
+   Bases: :py:obj:`StaticLineDataLayer`
+
+
+.. py:class:: StaticLineDataLayerSettings(target_layer)
+
+   Bases: :py:obj:`PySide6.QtWidgets.QWidget`
+
+
+   .. py:attribute:: target_layer
+
+
+   .. py:attribute:: btn_name_to_key
+
+
+   .. py:method:: update_grid_plots(state)
+
+
+.. py:class:: PMUTimeWindow(n_samples=None, window_length=None, time_window_type=TimeWindowLabeled, substitute_zero_freq_with_nan=True, channel_selection=None, channel_selection_idx=None)
+
+   .. py:attribute:: time_window_type
+
+
+   .. py:attribute:: tw
+      :value: None
+
+
+
+   .. py:attribute:: header
+      :value: None
+
+
+
+   .. py:attribute:: n_samples
+      :value: None
+
+
+
+   .. py:attribute:: window_length
+      :value: None
+
+
+
+   .. py:attribute:: is_initialized
+      :value: False
+
+
+
+   .. py:attribute:: n_channels
+      :value: None
+
+
+
+   .. py:attribute:: dt
+
+
+   .. py:attribute:: fs
+
+
+   .. py:attribute:: pmu_decoder
+
+
+   .. py:method:: initialize_from_config_frame(config_frame)
+
+
+   .. py:method:: update_window(pmu_data_frame)
+
+
+.. py:class:: PhasorPlot(n_phasors=None, pos0=None, normalize_length=True, normalize_angle=False, update_freq=None, plot_widget=None, background_color=(30, 63, 64), *args, **kwargs)
+
+   Bases: :py:obj:`PySide6.QtWidgets.QWidget`
+
+
+   .. py:attribute:: request_plot_update
+
+
+   .. py:attribute:: pos0
+      :value: None
+
+
+
+   .. py:attribute:: approx_zero_value
+      :value: 1e-06
+
+
+
+   .. py:attribute:: normalize_length
+      :value: True
+
+
+
+   .. py:attribute:: normalize_angle
+      :value: False
+
+
+
+   .. py:attribute:: update_freq
+      :value: None
+
+
+
+   .. py:attribute:: angles_prev
+
+
+   .. py:attribute:: phasors
+
+
+   .. py:attribute:: phasor_0
+
+
+   .. py:attribute:: colors
+
+
+   .. py:method:: create_plot_items()
+
+
+   .. py:method:: update(phasors)
+
+
+   .. py:method:: update_plot()
+
+
+   .. py:method:: update_plot_items(draw_phasors)
+
+
+.. py:function:: read_geo_data(countries='All')
+
+.. py:function:: load_bus_coords_for_current_stations(config, return_3d=False, geo=True)
+
+   Get coordinates for stations in PMU data frame
+
+
+.. py:class:: BusesLayer(parent, config, geo=True)
+
+   .. py:attribute:: config
+
+
+   .. py:attribute:: plotWidget
+
+
+   .. py:attribute:: k
+      :value: 2
+
+
+
+   .. py:attribute:: x
+
+
+   .. py:attribute:: y
+
+
+   .. py:attribute:: z
+
+
+   .. py:attribute:: colors
+
+
+   .. py:attribute:: bus_scatter
+
+
+   .. py:method:: add_scatter_plot(bus_coords_3d)
+
+
+   .. py:method:: remove_layer()
+
+
+.. py:data:: sample_dataset_path
+
+.. py:class:: PMUTimeWindow(n_samples=None, window_length=None, time_window_type=TimeWindowLabeled, substitute_zero_freq_with_nan=True, channel_selection=None, channel_selection_idx=None)
+
+   .. py:attribute:: time_window_type
+
+
+   .. py:attribute:: tw
+      :value: None
+
+
+
+   .. py:attribute:: header
+      :value: None
+
+
+
+   .. py:attribute:: n_samples
+      :value: None
+
+
+
+   .. py:attribute:: window_length
+      :value: None
+
+
+
+   .. py:attribute:: is_initialized
+      :value: False
+
+
+
+   .. py:attribute:: n_channels
+      :value: None
+
+
+
+   .. py:attribute:: dt
+
+
+   .. py:attribute:: fs
+
+
+   .. py:attribute:: pmu_decoder
+
+
+   .. py:method:: initialize_from_config_frame(config_frame)
+
+
+   .. py:method:: update_window(pmu_data_frame)
+
+
+.. py:class:: PhasorPlot(n_phasors=None, pos0=None, normalize_length=True, normalize_angle=False, update_freq=None, plot_widget=None, background_color=(30, 63, 64), *args, **kwargs)
+
+   Bases: :py:obj:`PySide6.QtWidgets.QWidget`
+
+
+   .. py:attribute:: request_plot_update
+
+
+   .. py:attribute:: pos0
+      :value: None
+
+
+
+   .. py:attribute:: approx_zero_value
+      :value: 1e-06
+
+
+
+   .. py:attribute:: normalize_length
+      :value: True
+
+
+
+   .. py:attribute:: normalize_angle
+      :value: False
+
+
+
+   .. py:attribute:: update_freq
+      :value: None
+
+
+
+   .. py:attribute:: angles_prev
+
+
+   .. py:attribute:: phasors
+
+
+   .. py:attribute:: phasor_0
+
+
+   .. py:attribute:: colors
+
+
+   .. py:method:: create_plot_items()
+
+
+   .. py:method:: update(phasors)
+
+
+   .. py:method:: update_plot()
+
+
+   .. py:method:: update_plot_items(draw_phasors)
+
+
+.. py:function:: read_geo_data(countries='All')
+
+.. py:function:: load_bus_coords_for_current_stations(config, return_3d=False, geo=True)
+
+   Get coordinates for stations in PMU data frame
+
+
+.. py:class:: HeatMapBasePlot(coords, lims=[0.9, 1.1], y_scale=1, z_offset=1, background_color=(30, 63, 64), plot_window=None)
+
+   .. py:attribute:: z_offset
+      :value: 1
+
+
+
+   .. py:attribute:: y_scale
+      :value: 1
+
+
+
+   .. py:attribute:: not_nan_xy
+
+
+   .. py:attribute:: x
+
+
+   .. py:attribute:: y
+
+
+   .. py:attribute:: im_width
+
+
+   .. py:attribute:: im_height
+
+
+   .. py:attribute:: z_scale
+      :value: 1000.0
+
+
+
+   .. py:attribute:: cb
+
+
+   .. py:attribute:: im
+
+
+   .. py:attribute:: pl
+
+
+   .. py:attribute:: interp_method
+      :value: 'linear'
+
+
+
+   .. py:method:: update(new_z)
+
+
+.. py:class:: PMUTimeWindowOnline(kafka_kwargs={}, kafka_topic='pmudata', auto_adjust_offset=False, **kwargs)
+
+   Bases: :py:obj:`PMUTimeWindow`
+
+
+   This class is intended for consuming PMU data from a specified Kafka topic and storing the last samples (n_samples) in a
+   TimeWindow object.
+
+
+   .. py:attribute:: kafka_topic
+      :value: 'pmudata'
+
+
+
+   .. py:attribute:: kafka_kwargs
+
+
+   .. py:attribute:: auto_adjust_offset
+      :value: False
+
+
+
+   .. py:attribute:: pmu_stream
+
+
+   .. py:attribute:: _is_stopped
+      :value: False
+
+
+
+   .. py:method:: initialize()
+
+
+   .. py:method:: run()
+
+
+   .. py:method:: stop()
+
+
+.. py:class:: FrequencyHeatMap(parent, config, geo=True, heatmap_kwargs=dict(y_scale=1, lims=[-0.035, 0.035], z_offset=0))
+
+   .. py:attribute:: config
+
+
+   .. py:attribute:: uuid
+
+
+   .. py:attribute:: plotWidget
+
+
+   .. py:attribute:: k
+      :value: 2
+
+
+
+   .. py:attribute:: x
+
+
+   .. py:attribute:: y
+
+
+   .. py:attribute:: z
+
+
+   .. py:attribute:: heatmap
+
+
+   .. py:attribute:: pmu_tw
+
+
+   .. py:attribute:: freq_col_idx
+
+
+   .. py:method:: update_heatmap()
+
+
+   .. py:method:: remove_layer()
+
+
+.. py:function:: read_geo_data(countries='All')
+
+.. py:class:: CountriesLayer(parent, config, geo=True)
+
+   .. py:attribute:: config
+
+
+   .. py:attribute:: k
+      :value: 2
+
+
+
+   .. py:attribute:: plotWidget
+
+
+   .. py:attribute:: geo_data
+
+
+   .. py:attribute:: geo_lines
+
+
+   .. py:method:: add_geo_lines(geo_data)
+
+
+   .. py:method:: update_countries(countries=['Norway'])
+
+
+   .. py:method:: remove_layer()
+
+
+.. py:class:: CountriesLayerSettings(target_layer, *args, **kwargs)
+
+   Bases: :py:obj:`PySide6.QtWidgets.QWidget`
+
+
+   .. py:attribute:: target_layer
+
+
+   .. py:attribute:: item_list
+
+
+   .. py:attribute:: done_button
+
+
+   .. py:method:: done_button_click()
+
+
+   .. py:method:: onItemClicked(item)
+
+
+.. py:data:: config
+
+.. py:class:: PMUTimeWindow(n_samples=None, window_length=None, time_window_type=TimeWindowLabeled, substitute_zero_freq_with_nan=True, channel_selection=None, channel_selection_idx=None)
+
+   .. py:attribute:: time_window_type
+
+
+   .. py:attribute:: tw
+      :value: None
+
+
+
+   .. py:attribute:: header
+      :value: None
+
+
+
+   .. py:attribute:: n_samples
+      :value: None
+
+
+
+   .. py:attribute:: window_length
+      :value: None
+
+
+
+   .. py:attribute:: is_initialized
+      :value: False
+
+
+
+   .. py:attribute:: n_channels
+      :value: None
+
+
+
+   .. py:attribute:: dt
+
+
+   .. py:attribute:: fs
+
+
+   .. py:attribute:: pmu_decoder
+
+
+   .. py:method:: initialize_from_config_frame(config_frame)
+
+
+   .. py:method:: update_window(pmu_data_frame)
+
+
+.. py:class:: PhasorPlot(n_phasors=None, pos0=None, normalize_length=True, normalize_angle=False, update_freq=None, plot_widget=None, background_color=(30, 63, 64), *args, **kwargs)
+
+   Bases: :py:obj:`PySide6.QtWidgets.QWidget`
+
+
+   .. py:attribute:: request_plot_update
+
+
+   .. py:attribute:: pos0
+      :value: None
+
+
+
+   .. py:attribute:: approx_zero_value
+      :value: 1e-06
+
+
+
+   .. py:attribute:: normalize_length
+      :value: True
+
+
+
+   .. py:attribute:: normalize_angle
+      :value: False
+
+
+
+   .. py:attribute:: update_freq
+      :value: None
+
+
+
+   .. py:attribute:: angles_prev
+
+
+   .. py:attribute:: phasors
+
+
+   .. py:attribute:: phasor_0
+
+
+   .. py:attribute:: colors
+
+
+   .. py:method:: create_plot_items()
+
+
+   .. py:method:: update(phasors)
+
+
+   .. py:method:: update_plot()
+
+
+   .. py:method:: update_plot_items(draw_phasors)
+
+
+.. py:function:: read_geo_data(countries='All')
+
+.. py:function:: load_bus_coords_for_current_stations(config, return_3d=False, geo=True)
+
+   Get coordinates for stations in PMU data frame
+
+
+.. py:function:: get_from_database(config, field)
+
+.. py:class:: PMULayer(parent, config, geo=True)
+
+   .. py:attribute:: config
+
+
+   .. py:attribute:: plotWidget
+
+
+   .. py:attribute:: k
+      :value: 2
+
+
+
+   .. py:attribute:: x
+
+
+   .. py:attribute:: y
+
+
+   .. py:attribute:: z
+
+
+   .. py:attribute:: colors
+
+
+   .. py:attribute:: bus_scatter
+
+
+   .. py:method:: add_scatter_plot(bus_coords_3d)
+
+
+   .. py:method:: remove_layer()
+
+
+.. py:data:: sample_dataset_path
+

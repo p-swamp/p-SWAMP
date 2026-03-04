@@ -1,0 +1,143 @@
+pswamp.streaming.kafka_io
+=========================
+
+.. py:module:: pswamp.streaming.kafka_io
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   pswamp.streaming.kafka_io.KafkaIO
+
+
+Module Contents
+---------------
+
+.. py:class:: KafkaIO(kafka_kwargs, input_topic='pmudata', output_topic=None, status_topic='application.status', t_start=None, command_topic='application.commands')
+
+   Online input/output object to be used by applications.
+
+   TODO: Remove t_start from arguments.
+
+   :param kafka_kwargs: Kwargs that will be used in kafka consumers and producers.
+   :param input_topic: Kafka topic for input data stream.
+   :param output_topic: Kafka topic for output data stream.
+   :param status_topic: Kafka topic for status messages.
+   :param t_start: Not used anymore.
+   :param command_topic: Kafka topic for application commands.
+
+
+   .. py:attribute:: input_topic
+      :value: 'pmudata'
+
+
+
+   .. py:attribute:: kafka_kwargs
+
+
+   .. py:attribute:: kafka_server
+
+
+   .. py:attribute:: command_topic
+      :value: 'application.commands'
+
+
+
+   .. py:attribute:: input_stream
+
+
+   .. py:attribute:: output_topic
+      :value: None
+
+
+
+   .. py:attribute:: status_topic
+      :value: 'application.status'
+
+
+
+   .. py:attribute:: status_producer
+
+
+   .. py:attribute:: command_consumer
+
+
+   .. py:method:: get_sample_data_frame()
+
+      Get sample data frame from input (without affecting input stream)
+
+      :returns: Data frame
+      :rtype: _type_
+
+
+
+   .. py:method:: get_sample_pmu_data_frame()
+
+      Included for backwards compatibility
+
+      :returns: Data frame
+      :rtype: _type_
+
+
+
+   .. py:method:: get_config_frame()
+
+      Get config frame
+
+      :returns: Config frame
+      :rtype: _type_
+
+
+
+   .. py:method:: get_next_data_frame()
+
+      Get next dataframe
+
+      :returns: Data frame
+      :rtype: _type_
+
+
+
+   .. py:method:: get_next_command()
+
+      Get command frame
+
+      :returns: Command frame
+      :rtype: _type_
+
+
+
+   .. py:method:: handle_result(result)
+
+      Handle result once analysis completes. If result is not None, the
+      result will be sent to the output topic.
+
+      :param result: Result
+      :type result: _type_
+
+
+
+   .. py:method:: handle_output(topic, output)
+
+
+   .. py:method:: handle_status(message)
+
+      Sends the satus message to the status topic.
+
+      :param message: Status message
+      :type message: _type_
+
+
+
+   .. py:method:: seek_relative_input_offset(n_samples)
+
+      Changes the offset of the input data consumer according to the
+      specified number of samples.
+
+      :param n_samples: Number of samples to shift
+      :type n_samples: int
+
+
+

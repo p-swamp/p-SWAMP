@@ -1,0 +1,22 @@
+pswamp.utils.single_line_diagram
+================================
+
+.. py:module:: pswamp.utils.single_line_diagram
+
+
+Functions
+---------
+
+.. autoapisummary::
+
+   pswamp.utils.single_line_diagram.flatten_list_insert_nan
+   pswamp.utils.single_line_diagram.load_dxf
+
+
+Module Contents
+---------------
+
+.. py:function:: flatten_list_insert_nan(listlist)
+
+.. py:function:: load_dxf(path)
+

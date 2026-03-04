@@ -1,0 +1,74 @@
+pswamp.gui.alarms.views.interactive
+===================================
+
+.. py:module:: pswamp.gui.alarms.views.interactive
+
+
+Attributes
+----------
+
+.. autoapisummary::
+
+   pswamp.gui.alarms.views.interactive.config
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   pswamp.gui.alarms.views.interactive.InteractiveAlarmView
+
+
+Module Contents
+---------------
+
+.. py:class:: InteractiveAlarmView(*args, define_layout=True, **kwargs)
+
+   Bases: :py:obj:`pswamp.gui.alarms.views.default.DefaultAlarmView`
+
+
+   .. py:attribute:: col_idx_freq
+
+
+   .. py:attribute:: freq_ax
+
+
+   .. py:attribute:: pmu_data_rate
+
+
+   .. py:attribute:: freq_ax_inf_line
+
+
+   .. py:attribute:: online
+      :value: True
+
+
+
+   .. py:attribute:: last_slider_value
+      :value: 0
+
+
+
+   .. py:attribute:: slider_max_range
+      :value: 1
+
+
+
+   .. py:method:: update_slider_range(tw_app)
+
+
+   .. py:method:: define_layout()
+
+
+   .. py:method:: update_from_slider()
+
+
+   .. py:method:: update_function()
+
+
+   .. py:method:: update_plots(value)
+
+
+.. py:data:: config
+

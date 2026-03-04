@@ -1,0 +1,66 @@
+pswamp.gui.grid_view.dim_3d.layers.lines_freq
+=============================================
+
+.. py:module:: pswamp.gui.grid_view.dim_3d.layers.lines_freq
+
+
+Attributes
+----------
+
+.. autoapisummary::
+
+   pswamp.gui.grid_view.dim_3d.layers.lines_freq.sample_dataset_path
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   pswamp.gui.grid_view.dim_3d.layers.lines_freq.LinesFreq
+   pswamp.gui.grid_view.dim_3d.layers.lines_freq.LinesFreqSettings
+
+
+Module Contents
+---------------
+
+.. py:class:: LinesFreq(parent, config, *args, **kwargs)
+
+   Bases: :py:obj:`pswamp.gui.grid_view.dim_3d.layers.lines.LineLayer`
+
+
+   .. py:attribute:: config
+
+
+   .. py:attribute:: uuid
+
+
+   .. py:attribute:: pmu_tw
+
+
+   .. py:attribute:: col_idx
+
+
+   .. py:attribute:: z_0
+      :value: 1
+
+
+
+   .. py:attribute:: z_scale
+      :value: 3
+
+
+
+   .. py:method:: get_col_idx()
+
+
+   .. py:method:: update_z()
+
+
+.. py:class:: LinesFreqSettings(target_layer)
+
+   Bases: :py:obj:`pswamp.gui.grid_view.dim_3d.layers.frequency.Frequency3DLayerSettings`
+
+
+.. py:data:: sample_dataset_path
+

@@ -1,0 +1,25 @@
+pswamp.gui.grid_view.dim_3d.layers.buses
+========================================
+
+.. py:module:: pswamp.gui.grid_view.dim_3d.layers.buses
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   pswamp.gui.grid_view.dim_3d.layers.buses.BusesLayer
+
+
+Module Contents
+---------------
+
+.. py:class:: BusesLayer(parent, config, geo=True)
+
+   Bases: :py:obj:`pswamp.gui.grid_view.dim_2d.layers.BusesLayer`
+
+
+   .. py:method:: add_scatter_plot(bus_coords_3d)
+
+

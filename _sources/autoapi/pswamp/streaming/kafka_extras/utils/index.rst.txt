@@ -1,0 +1,28 @@
+pswamp.streaming.kafka_extras.utils
+===================================
+
+.. py:module:: pswamp.streaming.kafka_extras.utils
+
+
+Functions
+---------
+
+.. autoapisummary::
+
+   pswamp.streaming.kafka_extras.utils.create_topic
+   pswamp.streaming.kafka_extras.utils.delete_topics
+   pswamp.streaming.kafka_extras.utils.get_last_message_from_topic
+   pswamp.streaming.kafka_extras.utils.consumer_seek_relative_offset
+
+
+Module Contents
+---------------
+
+.. py:function:: create_topic(kafka_kwargs, name, num_partitions=1, replication_factor=1, **topic_kwargs)
+
+.. py:function:: delete_topics(kafka_kwargs, topic_names)
+
+.. py:function:: get_last_message_from_topic(kafka_kwargs, topic)
+
+.. py:function:: consumer_seek_relative_offset(consumer, relative_offset)
+

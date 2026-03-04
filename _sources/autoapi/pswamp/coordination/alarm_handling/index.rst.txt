@@ -1,0 +1,99 @@
+pswamp.coordination.alarm_handling
+==================================
+
+.. py:module:: pswamp.coordination.alarm_handling
+
+
+Attributes
+----------
+
+.. autoapisummary::
+
+   pswamp.coordination.alarm_handling.config
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   pswamp.coordination.alarm_handling.AlarmSender
+   pswamp.coordination.alarm_handling.AlarmMonitor
+
+
+Module Contents
+---------------
+
+.. py:class:: AlarmSender(kafka_kwargs, input_topic='application.status', alarm_topic='alarms', alarm_time_threshold=15)
+
+   Application for sending alarms, based on status of running WAMPAC apps
+
+   Consumes messages from the
+
+
+   .. py:attribute:: input_topic
+      :value: 'application.status'
+
+
+
+   .. py:attribute:: alarm_topic
+      :value: 'alarms'
+
+
+
+   .. py:attribute:: kafka_kwargs
+
+
+   .. py:attribute:: input_stream
+
+
+   .. py:attribute:: output_stream
+
+
+   .. py:attribute:: app_status
+
+
+   .. py:attribute:: alarm_time_threshold
+      :value: 15
+
+
+
+   .. py:attribute:: t_1
+
+
+   .. py:attribute:: _is_stopped
+      :value: False
+
+
+
+   .. py:method:: start()
+
+
+   .. py:method:: stop()
+
+
+   .. py:method:: run()
+
+
+.. py:class:: AlarmMonitor(kafka_kwargs, alarm_topic='alarms')
+
+   .. py:attribute:: input_stream
+
+
+   .. py:attribute:: alarm_data
+
+
+   .. py:attribute:: alarm_events
+
+
+   .. py:attribute:: t_1
+
+
+   .. py:method:: start()
+
+
+   .. py:method:: run_alarm_consumer()
+
+
+.. py:data:: config
+

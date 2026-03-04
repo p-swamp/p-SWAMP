@@ -1,0 +1,123 @@
+pswamp.gui.alarms.overview
+==========================
+
+.. py:module:: pswamp.gui.alarms.overview
+
+
+Attributes
+----------
+
+.. autoapisummary::
+
+   pswamp.gui.alarms.overview.config
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   pswamp.gui.alarms.overview.AlarmOverview
+
+
+Functions
+---------
+
+.. autoapisummary::
+
+   pswamp.gui.alarms.overview.run_alarm_handling
+
+
+Module Contents
+---------------
+
+.. py:class:: AlarmOverview(config, alarm_keeper, measurement_data_available=True, alarm_details_dock=None, grid_view=None)
+
+   Bases: :py:obj:`PySide6.QtWidgets.QWidget`
+
+
+   Widget for showing overview of alarms
+
+   :param config: pswamp Configuration file.
+   :type config: dict
+   :param alarm_keeper: Object which stores alarm data.
+   :type alarm_keeper: AlarmMonitor
+   :param measurement_data_available: Determines if alarm views are shown.
+   :type measurement_data_available: bool
+   :param alarm_details_dock: Dock where to show alarm details.
+   :type alarm_details_dock: QDockWidget
+   :param grid_view: Allow content to be shown on the SLD.
+   :type grid_view: GridViewContainer
+
+
+   .. py:attribute:: config
+
+
+   .. py:attribute:: kafka_kwargs
+
+
+   .. py:attribute:: kafka_topics
+
+
+   .. py:attribute:: alarm_topic
+
+
+   .. py:attribute:: alarm_keeper
+
+
+   .. py:attribute:: measurement_data_available
+      :value: True
+
+
+
+   .. py:attribute:: alarm_details_dock
+      :value: None
+
+
+
+   .. py:attribute:: grid_view
+      :value: None
+
+
+
+   .. py:attribute:: tableWidget
+
+
+   .. py:attribute:: row_to_uuid
+
+
+   .. py:attribute:: alarm_handling_dialogues
+
+
+   .. py:attribute:: timer
+
+
+   .. py:method:: cell_was_clicked(row, column)
+
+      Show alarm details when cell is clicked.
+
+      Use row and col to determine which alarm was clicked, and run an alarm
+      handling dialogue targeting the selected alarm.
+
+      :param row: Row of the clicked cell.
+      :type row: int
+      :param column: Column of the clicked cell.
+      :type column: int
+
+
+
+   .. py:method:: update_display()
+
+      Update the alarm overview table
+
+      Update the table based on content stored in the AlarmMonitor
+      (self.alarm_keeper). The color of alarms is determined by the status,
+      e.g., unseen: red, acknowledged or not_critical: light red,
+      silenced: gray.
+
+
+
+.. py:function:: run_alarm_handling(config)
+
+.. py:data:: config
+

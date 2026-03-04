@@ -1,0 +1,81 @@
+pswamp.gui.grid_view.tab_widget
+===============================
+
+.. py:module:: pswamp.gui.grid_view.tab_widget
+
+
+Attributes
+----------
+
+.. autoapisummary::
+
+   pswamp.gui.grid_view.tab_widget.app
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   pswamp.gui.grid_view.tab_widget.NewViewOpts
+   pswamp.gui.grid_view.tab_widget.QTabWidgetPlus
+
+
+Module Contents
+---------------
+
+.. py:class:: NewViewOpts
+
+   Bases: :py:obj:`QDialog`
+
+
+   .. py:attribute:: text_input
+
+
+   .. py:attribute:: done_button
+
+
+   .. py:attribute:: data
+
+
+   .. py:attribute:: canceled
+      :value: True
+
+
+
+   .. py:method:: submitclose()
+
+
+   .. py:method:: submitcancel()
+
+
+.. py:class:: QTabWidgetPlus
+
+   Bases: :py:obj:`QTabWidget`
+
+
+   Tab widget where additional tabs can be created.
+
+
+   .. py:attribute:: new_tab_dialog_type
+
+
+   .. py:attribute:: n_tabs
+      :value: 1
+
+
+
+   .. py:method:: _build_tabs()
+
+      Defines how new tabs are created.
+
+
+
+   .. py:method:: new_tab()
+
+      Create new tab
+
+
+
+.. py:data:: app
+

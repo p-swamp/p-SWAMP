@@ -1,0 +1,252 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../../../../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>pswamp.visualization.components.heatmap &mdash; p-SWAMP  documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../../../../_static/css/theme.css?v=9edc463e" />
+      <link rel="stylesheet" type="text/css" href="../../../../../_static/graphviz.css?v=4ae1632d" />
+
+  
+      <script src="../../../../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../../../../_static/documentation_options.js?v=5929fcd5"></script>
+      <script src="../../../../../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../../../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../../../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../../search.html" />
+    <link rel="next" title="pswamp.visualization.components.label_widget" href="../label_widget/index.html" />
+    <link rel="prev" title="pswamp.visualization.components.geo_plot_2d" href="../geo_plot_2d/index.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../../../index.html" class="icon icon-home">
+            p-SWAMP
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../../../../../p-swamp.html">p-SWAMP (Power Stability Wide area Monitoring and Protection)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../examples/index.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../kafka.html">Streaming, microservices, Kafka</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../testing.html">Test environments</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../templates.html">Real-Time Application Templates</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../models.html">Component models</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../../../../index.html">API Reference</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="../../../index.html">pswamp</a><ul class="current">
+<li class="toctree-l3 current"><a class="reference internal" href="../../../index.html#submodules">Submodules</a><ul class="current">
+<li class="toctree-l4"><a class="reference internal" href="../../../app_templates/index.html">pswamp.app_templates</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../coordination/index.html">pswamp.coordination</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../database/index.html">pswamp.database</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../gui/index.html">pswamp.gui</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../models/index.html">pswamp.models</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../monitoring/index.html">pswamp.monitoring</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../streaming/index.html">pswamp.streaming</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../styles/index.html">pswamp.styles</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../test_utils/index.html">pswamp.test_utils</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../utils/index.html">pswamp.utils</a></li>
+<li class="toctree-l4 current"><a class="reference internal" href="../../index.html">pswamp.visualization</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../../../index.html#functions">Functions</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../index.html#package-contents">Package Contents</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../../../index.html">p-SWAMP</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../../../index.html">API Reference</a></li>
+          <li class="breadcrumb-item"><a href="../../../index.html">pswamp</a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">pswamp.visualization</a></li>
+          <li class="breadcrumb-item"><a href="../index.html">pswamp.visualization.components</a></li>
+      <li class="breadcrumb-item active">pswamp.visualization.components.heatmap</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../../../../../_sources/autoapi/pswamp/visualization/components/heatmap/index.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="module-pswamp.visualization.components.heatmap">
+<span id="pswamp-visualization-components-heatmap"></span><h1>pswamp.visualization.components.heatmap<a class="headerlink" href="#module-pswamp.visualization.components.heatmap" title="Link to this heading"></a></h1>
+<section id="classes">
+<h2>Classes<a class="headerlink" href="#classes" title="Link to this heading"></a></h2>
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#pswamp.visualization.components.heatmap.HeatMap" title="pswamp.visualization.components.heatmap.HeatMap"><code class="xref py py-obj docutils literal notranslate"><span class="pre">HeatMap</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#pswamp.visualization.components.heatmap.HeatMapGeo" title="pswamp.visualization.components.heatmap.HeatMapGeo"><code class="xref py py-obj docutils literal notranslate"><span class="pre">HeatMapGeo</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="functions">
+<h2>Functions<a class="headerlink" href="#functions" title="Link to this heading"></a></h2>
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#pswamp.visualization.components.heatmap.main" title="pswamp.visualization.components.heatmap.main"><code class="xref py py-obj docutils literal notranslate"><span class="pre">main</span></code></a>()</p></td>
+<td><p></p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="module-contents">
+<h2>Module Contents<a class="headerlink" href="#module-contents" title="Link to this heading"></a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="pswamp.visualization.components.heatmap.HeatMap">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">pswamp.visualization.components.heatmap.</span></span><span class="sig-name descname"><span class="pre">HeatMap</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">coords</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lims</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">[0.9,</span> <span class="pre">1.1]</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y_scale</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">z_offset</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">background_color</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">(30,</span> <span class="pre">63,</span> <span class="pre">64)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">plot_window</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pswamp.visualization.components.heatmap.HeatMap" title="Link to this definition"></a></dt>
+<dd><dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.visualization.components.heatmap.HeatMap.z_offset">
+<span class="sig-name descname"><span class="pre">z_offset</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">1</span></span><a class="headerlink" href="#pswamp.visualization.components.heatmap.HeatMap.z_offset" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.visualization.components.heatmap.HeatMap.y_scale">
+<span class="sig-name descname"><span class="pre">y_scale</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">1</span></span><a class="headerlink" href="#pswamp.visualization.components.heatmap.HeatMap.y_scale" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.visualization.components.heatmap.HeatMap.not_nan_xy">
+<span class="sig-name descname"><span class="pre">not_nan_xy</span></span><a class="headerlink" href="#pswamp.visualization.components.heatmap.HeatMap.not_nan_xy" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.visualization.components.heatmap.HeatMap.x">
+<span class="sig-name descname"><span class="pre">x</span></span><a class="headerlink" href="#pswamp.visualization.components.heatmap.HeatMap.x" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.visualization.components.heatmap.HeatMap.y">
+<span class="sig-name descname"><span class="pre">y</span></span><a class="headerlink" href="#pswamp.visualization.components.heatmap.HeatMap.y" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.visualization.components.heatmap.HeatMap.im_width">
+<span class="sig-name descname"><span class="pre">im_width</span></span><a class="headerlink" href="#pswamp.visualization.components.heatmap.HeatMap.im_width" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.visualization.components.heatmap.HeatMap.im_height">
+<span class="sig-name descname"><span class="pre">im_height</span></span><a class="headerlink" href="#pswamp.visualization.components.heatmap.HeatMap.im_height" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.visualization.components.heatmap.HeatMap.z_scale">
+<span class="sig-name descname"><span class="pre">z_scale</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">1000.0</span></span><a class="headerlink" href="#pswamp.visualization.components.heatmap.HeatMap.z_scale" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.visualization.components.heatmap.HeatMap.cb">
+<span class="sig-name descname"><span class="pre">cb</span></span><a class="headerlink" href="#pswamp.visualization.components.heatmap.HeatMap.cb" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.visualization.components.heatmap.HeatMap.im">
+<span class="sig-name descname"><span class="pre">im</span></span><a class="headerlink" href="#pswamp.visualization.components.heatmap.HeatMap.im" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.visualization.components.heatmap.HeatMap.pl">
+<span class="sig-name descname"><span class="pre">pl</span></span><a class="headerlink" href="#pswamp.visualization.components.heatmap.HeatMap.pl" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.visualization.components.heatmap.HeatMap.interp_method">
+<span class="sig-name descname"><span class="pre">interp_method</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'linear'</span></span><a class="headerlink" href="#pswamp.visualization.components.heatmap.HeatMap.interp_method" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pswamp.visualization.components.heatmap.HeatMap.update">
+<span class="sig-name descname"><span class="pre">update</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">new_z</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pswamp.visualization.components.heatmap.HeatMap.update" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="pswamp.visualization.components.heatmap.HeatMapGeo">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">pswamp.visualization.components.heatmap.</span></span><span class="sig-name descname"><span class="pre">HeatMapGeo</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">countries</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pswamp.visualization.components.heatmap.HeatMapGeo" title="Link to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="#pswamp.visualization.components.heatmap.HeatMap" title="pswamp.visualization.components.heatmap.HeatMap"><code class="xref py py-obj docutils literal notranslate"><span class="pre">HeatMap</span></code></a></p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.visualization.components.heatmap.HeatMapGeo.geo_lines">
+<span class="sig-name descname"><span class="pre">geo_lines</span></span><a class="headerlink" href="#pswamp.visualization.components.heatmap.HeatMapGeo.geo_lines" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="pswamp.visualization.components.heatmap.main">
+<span class="sig-prename descclassname"><span class="pre">pswamp.visualization.components.heatmap.</span></span><span class="sig-name descname"><span class="pre">main</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pswamp.visualization.components.heatmap.main" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="../geo_plot_2d/index.html" class="btn btn-neutral float-left" title="pswamp.visualization.components.geo_plot_2d" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="../label_widget/index.html" class="btn btn-neutral float-right" title="pswamp.visualization.components.label_widget" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright .</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

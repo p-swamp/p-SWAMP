@@ -1,0 +1,335 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>API Reference &mdash; p-SWAMP  documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+      <link rel="stylesheet" type="text/css" href="../_static/graphviz.css?v=4ae1632d" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=5929fcd5"></script>
+      <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="pswamp" href="pswamp/index.html" />
+    <link rel="prev" title="Component models" href="../models.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            p-SWAMP
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../p-swamp.html">p-SWAMP (Power Stability Wide area Monitoring and Protection)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../examples/index.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../kafka.html">Streaming, microservices, Kafka</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../testing.html">Test environments</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../templates.html">Real-Time Application Templates</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../models.html">Component models</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">API Reference</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="pswamp/index.html">pswamp</a></li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">p-SWAMP</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">API Reference</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/autoapi/index.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="api-reference">
+<h1>API Reference<a class="headerlink" href="#api-reference" title="Link to this heading"></a></h1>
+<p>This page contains auto-generated API reference documentation <a class="footnote-reference brackets" href="#f1" id="id1" role="doc-noteref"><span class="fn-bracket">[</span>1<span class="fn-bracket">]</span></a>.</p>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="pswamp/index.html">pswamp</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="pswamp/app_templates/index.html">pswamp.app_templates</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="pswamp/app_templates/snapshot_app/index.html">pswamp.app_templates.snapshot_app</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pswamp/app_templates/status_reporting/index.html">pswamp.app_templates.status_reporting</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pswamp/app_templates/time_window_app/index.html">pswamp.app_templates.time_window_app</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="pswamp/coordination/index.html">pswamp.coordination</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="pswamp/coordination/alarm_handling/index.html">pswamp.coordination.alarm_handling</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pswamp/coordination/pmu_to_kafka/index.html">pswamp.coordination.pmu_to_kafka</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="pswamp/database/index.html">pswamp.database</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="pswamp/database/base/index.html">pswamp.database.base</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="pswamp/gui/index.html">pswamp.gui</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="pswamp/gui/alarms/index.html">pswamp.gui.alarms</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="pswamp/gui/alarms/handling/index.html">pswamp.gui.alarms.handling</a></li>
+<li class="toctree-l4"><a class="reference internal" href="pswamp/gui/alarms/overview/index.html">pswamp.gui.alarms.overview</a></li>
+<li class="toctree-l4"><a class="reference internal" href="pswamp/gui/alarms/views/index.html">pswamp.gui.alarms.views</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="pswamp/gui/alarms/views/default/index.html">pswamp.gui.alarms.views.default</a></li>
+<li class="toctree-l5"><a class="reference internal" href="pswamp/gui/alarms/views/interactive/index.html">pswamp.gui.alarms.views.interactive</a></li>
+<li class="toctree-l5"><a class="reference internal" href="pswamp/gui/alarms/views/islanding/index.html">pswamp.gui.alarms.views.islanding</a></li>
+<li class="toctree-l5"><a class="reference internal" href="pswamp/gui/alarms/views/oscillations/index.html">pswamp.gui.alarms.views.oscillations</a></li>
+<li class="toctree-l5"><a class="reference internal" href="pswamp/gui/alarms/views/voltage_stability/index.html">pswamp.gui.alarms.views.voltage_stability</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="pswamp/gui/app_launcher/index.html">pswamp.gui.app_launcher</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pswamp/gui/app_monitoring/index.html">pswamp.gui.app_monitoring</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pswamp/gui/components/index.html">pswamp.gui.components</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="pswamp/gui/components/channel_select/index.html">pswamp.gui.components.channel_select</a></li>
+<li class="toctree-l4"><a class="reference internal" href="pswamp/gui/components/channel_select_geo/index.html">pswamp.gui.components.channel_select_geo</a></li>
+<li class="toctree-l4"><a class="reference internal" href="pswamp/gui/components/run_app_dialogue/index.html">pswamp.gui.components.run_app_dialogue</a></li>
+<li class="toctree-l4"><a class="reference internal" href="pswamp/gui/components/single_channel_select/index.html">pswamp.gui.components.single_channel_select</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="pswamp/gui/grid_view/index.html">pswamp.gui.grid_view</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="pswamp/gui/grid_view/dim_2d/index.html">pswamp.gui.grid_view.dim_2d</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="pswamp/gui/grid_view/dim_2d/base_plot/index.html">pswamp.gui.grid_view.dim_2d.base_plot</a></li>
+<li class="toctree-l5"><a class="reference internal" href="pswamp/gui/grid_view/dim_2d/base_plot_layers/index.html">pswamp.gui.grid_view.dim_2d.base_plot_layers</a></li>
+<li class="toctree-l5"><a class="reference internal" href="pswamp/gui/grid_view/dim_2d/layers/index.html">pswamp.gui.grid_view.dim_2d.layers</a><ul>
+<li class="toctree-l6"><a class="reference internal" href="pswamp/gui/grid_view/dim_2d/layers/buses/index.html">pswamp.gui.grid_view.dim_2d.layers.buses</a></li>
+<li class="toctree-l6"><a class="reference internal" href="pswamp/gui/grid_view/dim_2d/layers/countries/index.html">pswamp.gui.grid_view.dim_2d.layers.countries</a></li>
+<li class="toctree-l6"><a class="reference internal" href="pswamp/gui/grid_view/dim_2d/layers/heatmap/index.html">pswamp.gui.grid_view.dim_2d.layers.heatmap</a></li>
+<li class="toctree-l6"><a class="reference internal" href="pswamp/gui/grid_view/dim_2d/layers/layers/index.html">pswamp.gui.grid_view.dim_2d.layers.layers</a></li>
+<li class="toctree-l6"><a class="reference internal" href="pswamp/gui/grid_view/dim_2d/layers/lines/index.html">pswamp.gui.grid_view.dim_2d.layers.lines</a></li>
+<li class="toctree-l6"><a class="reference internal" href="pswamp/gui/grid_view/dim_2d/layers/lines_2/index.html">pswamp.gui.grid_view.dim_2d.layers.lines_2</a></li>
+<li class="toctree-l6"><a class="reference internal" href="pswamp/gui/grid_view/dim_2d/layers/pmus/index.html">pswamp.gui.grid_view.dim_2d.layers.pmus</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="pswamp/gui/grid_view/dim_3d/index.html">pswamp.gui.grid_view.dim_3d</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="pswamp/gui/grid_view/dim_3d/base_plot/index.html">pswamp.gui.grid_view.dim_3d.base_plot</a></li>
+<li class="toctree-l5"><a class="reference internal" href="pswamp/gui/grid_view/dim_3d/base_plot_layers/index.html">pswamp.gui.grid_view.dim_3d.base_plot_layers</a></li>
+<li class="toctree-l5"><a class="reference internal" href="pswamp/gui/grid_view/dim_3d/layers/index.html">pswamp.gui.grid_view.dim_3d.layers</a><ul>
+<li class="toctree-l6"><a class="reference internal" href="pswamp/gui/grid_view/dim_3d/layers/alarms/index.html">pswamp.gui.grid_view.dim_3d.layers.alarms</a></li>
+<li class="toctree-l6"><a class="reference internal" href="pswamp/gui/grid_view/dim_3d/layers/buses/index.html">pswamp.gui.grid_view.dim_3d.layers.buses</a></li>
+<li class="toctree-l6"><a class="reference internal" href="pswamp/gui/grid_view/dim_3d/layers/countries/index.html">pswamp.gui.grid_view.dim_3d.layers.countries</a></li>
+<li class="toctree-l6"><a class="reference internal" href="pswamp/gui/grid_view/dim_3d/layers/frequency/index.html">pswamp.gui.grid_view.dim_3d.layers.frequency</a></li>
+<li class="toctree-l6"><a class="reference internal" href="pswamp/gui/grid_view/dim_3d/layers/grid_events/index.html">pswamp.gui.grid_view.dim_3d.layers.grid_events</a></li>
+<li class="toctree-l6"><a class="reference internal" href="pswamp/gui/grid_view/dim_3d/layers/islanding/index.html">pswamp.gui.grid_view.dim_3d.layers.islanding</a></li>
+<li class="toctree-l6"><a class="reference internal" href="pswamp/gui/grid_view/dim_3d/layers/layers/index.html">pswamp.gui.grid_view.dim_3d.layers.layers</a></li>
+<li class="toctree-l6"><a class="reference internal" href="pswamp/gui/grid_view/dim_3d/layers/line_outages/index.html">pswamp.gui.grid_view.dim_3d.layers.line_outages</a></li>
+<li class="toctree-l6"><a class="reference internal" href="pswamp/gui/grid_view/dim_3d/layers/lines/index.html">pswamp.gui.grid_view.dim_3d.layers.lines</a></li>
+<li class="toctree-l6"><a class="reference internal" href="pswamp/gui/grid_view/dim_3d/layers/lines_2/index.html">pswamp.gui.grid_view.dim_3d.layers.lines_2</a></li>
+<li class="toctree-l6"><a class="reference internal" href="pswamp/gui/grid_view/dim_3d/layers/lines_freq/index.html">pswamp.gui.grid_view.dim_3d.layers.lines_freq</a></li>
+<li class="toctree-l6"><a class="reference internal" href="pswamp/gui/grid_view/dim_3d/layers/pmus/index.html">pswamp.gui.grid_view.dim_3d.layers.pmus</a></li>
+<li class="toctree-l6"><a class="reference internal" href="pswamp/gui/grid_view/dim_3d/layers/voltage/index.html">pswamp.gui.grid_view.dim_3d.layers.voltage</a></li>
+<li class="toctree-l6"><a class="reference internal" href="pswamp/gui/grid_view/dim_3d/layers/voltage_stability/index.html">pswamp.gui.grid_view.dim_3d.layers.voltage_stability</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="pswamp/gui/grid_view/grid_view_container/index.html">pswamp.gui.grid_view.grid_view_container</a></li>
+<li class="toctree-l4"><a class="reference internal" href="pswamp/gui/grid_view/layer_select/index.html">pswamp.gui.grid_view.layer_select</a></li>
+<li class="toctree-l4"><a class="reference internal" href="pswamp/gui/grid_view/layer_settings/index.html">pswamp.gui.grid_view.layer_settings</a></li>
+<li class="toctree-l4"><a class="reference internal" href="pswamp/gui/grid_view/tab_widget/index.html">pswamp.gui.grid_view.tab_widget</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="pswamp/gui/main_window/index.html">pswamp.gui.main_window</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="pswamp/models/index.html">pswamp.models</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="pswamp/models/bus/index.html">pswamp.models.bus</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pswamp/models/line/index.html">pswamp.models.line</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pswamp/models/load/index.html">pswamp.models.load</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pswamp/models/reader/index.html">pswamp.models.reader</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="pswamp/monitoring/index.html">pswamp.monitoring</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="pswamp/monitoring/fft/index.html">pswamp.monitoring.fft</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pswamp/monitoring/fft_v2/index.html">pswamp.monitoring.fft_v2</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pswamp/monitoring/islanding/index.html">pswamp.monitoring.islanding</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pswamp/monitoring/line_outage_detection/index.html">pswamp.monitoring.line_outage_detection</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pswamp/monitoring/n4sid/index.html">pswamp.monitoring.n4sid</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pswamp/monitoring/utils/index.html">pswamp.monitoring.utils</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="pswamp/streaming/index.html">pswamp.streaming</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="pswamp/streaming/base/index.html">pswamp.streaming.base</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pswamp/streaming/kafka_extras/index.html">pswamp.streaming.kafka_extras</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="pswamp/streaming/kafka_extras/consumer_producer/index.html">pswamp.streaming.kafka_extras.consumer_producer</a></li>
+<li class="toctree-l4"><a class="reference internal" href="pswamp/streaming/kafka_extras/utils/index.html">pswamp.streaming.kafka_extras.utils</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="pswamp/streaming/kafka_io/index.html">pswamp.streaming.kafka_io</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pswamp/streaming/mqtt_io/index.html">pswamp.streaming.mqtt_io</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pswamp/streaming/time_series_io/index.html">pswamp.streaming.time_series_io</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="pswamp/styles/index.html">pswamp.styles</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="pswamp/styles/colors/index.html">pswamp.styles.colors</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="pswamp/test_utils/index.html">pswamp.test_utils</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="pswamp/test_utils/csv_playback/index.html">pswamp.test_utils.csv_playback</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="pswamp/test_utils/csv_playback/data_frame_generator/index.html">pswamp.test_utils.csv_playback.data_frame_generator</a></li>
+<li class="toctree-l4"><a class="reference internal" href="pswamp/test_utils/csv_playback/data_reader/index.html">pswamp.test_utils.csv_playback.data_reader</a></li>
+<li class="toctree-l4"><a class="reference internal" href="pswamp/test_utils/csv_playback/kafka_streamer/index.html">pswamp.test_utils.csv_playback.kafka_streamer</a></li>
+<li class="toctree-l4"><a class="reference internal" href="pswamp/test_utils/csv_playback/offline_testing_adapter/index.html">pswamp.test_utils.csv_playback.offline_testing_adapter</a></li>
+<li class="toctree-l4"><a class="reference internal" href="pswamp/test_utils/csv_playback/playback_gui/index.html">pswamp.test_utils.csv_playback.playback_gui</a></li>
+<li class="toctree-l4"><a class="reference internal" href="pswamp/test_utils/csv_playback/pmu_streamer/index.html">pswamp.test_utils.csv_playback.pmu_streamer</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="pswamp/test_utils/generate_pmu_data/index.html">pswamp.test_utils.generate_pmu_data</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pswamp/test_utils/offline/index.html">pswamp.test_utils.offline</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="pswamp/test_utils/offline/csv_to_pmu/index.html">pswamp.test_utils.offline.csv_to_pmu</a></li>
+<li class="toctree-l4"><a class="reference internal" href="pswamp/test_utils/offline/rtsim_adapter/index.html">pswamp.test_utils.offline.rtsim_adapter</a></li>
+<li class="toctree-l4"><a class="reference internal" href="pswamp/test_utils/offline/sample_dataframe/index.html">pswamp.test_utils.offline.sample_dataframe</a></li>
+<li class="toctree-l4"><a class="reference internal" href="pswamp/test_utils/offline/topic_getter/index.html">pswamp.test_utils.offline.topic_getter</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="pswamp/test_utils/pmu_csv_to_kafka/index.html">pswamp.test_utils.pmu_csv_to_kafka</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pswamp/test_utils/pmu_rtsim_to_kafka/index.html">pswamp.test_utils.pmu_rtsim_to_kafka</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pswamp/test_utils/pmu_rtsim_to_mqtt/index.html">pswamp.test_utils.pmu_rtsim_to_mqtt</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pswamp/test_utils/runners/index.html">pswamp.test_utils.runners</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pswamp/test_utils/sample_datasets/index.html">pswamp.test_utils.sample_datasets</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="pswamp/test_utils/sample_datasets/create_database/index.html">pswamp.test_utils.sample_datasets.create_database</a></li>
+<li class="toctree-l4"><a class="reference internal" href="pswamp/test_utils/sample_datasets/mock_case/index.html">pswamp.test_utils.sample_datasets.mock_case</a></li>
+<li class="toctree-l4"><a class="reference internal" href="pswamp/test_utils/sample_datasets/n44/index.html">pswamp.test_utils.sample_datasets.n44</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="pswamp/test_utils/sample_datasets/n44/n44_rtsim_offline/index.html">pswamp.test_utils.sample_datasets.n44.n44_rtsim_offline</a></li>
+<li class="toctree-l5"><a class="reference internal" href="pswamp/test_utils/sample_datasets/n44/sim/index.html">pswamp.test_utils.sample_datasets.n44.sim</a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="pswamp/test_utils/sample_datasets/n44_mock_case/index.html">pswamp.test_utils.sample_datasets.n44_mock_case</a></li>
+<li class="toctree-l4"><a class="reference internal" href="pswamp/test_utils/sample_datasets/read_database/index.html">pswamp.test_utils.sample_datasets.read_database</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="pswamp/utils/index.html">pswamp.utils</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="pswamp/utils/get_station_coords/index.html">pswamp.utils.get_station_coords</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pswamp/utils/gl/index.html">pswamp.utils.gl</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pswamp/utils/load_config/index.html">pswamp.utils.load_config</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pswamp/utils/misc/index.html">pswamp.utils.misc</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pswamp/utils/pmu_time_window/index.html">pswamp.utils.pmu_time_window</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pswamp/utils/pypmu/index.html">pswamp.utils.pypmu</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pswamp/utils/single_line_diagram/index.html">pswamp.utils.single_line_diagram</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pswamp/utils/time_window/index.html">pswamp.utils.time_window</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pswamp/utils/time_window_labeled/index.html">pswamp.utils.time_window_labeled</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="pswamp/visualization/index.html">pswamp.visualization</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="pswamp/visualization/components/index.html">pswamp.visualization.components</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="pswamp/visualization/components/channel_select/index.html">pswamp.visualization.components.channel_select</a></li>
+<li class="toctree-l4"><a class="reference internal" href="pswamp/visualization/components/channel_tree/index.html">pswamp.visualization.components.channel_tree</a></li>
+<li class="toctree-l4"><a class="reference internal" href="pswamp/visualization/components/date_time_axis/index.html">pswamp.visualization.components.date_time_axis</a></li>
+<li class="toctree-l4"><a class="reference internal" href="pswamp/visualization/components/geo_plot_2d/index.html">pswamp.visualization.components.geo_plot_2d</a></li>
+<li class="toctree-l4"><a class="reference internal" href="pswamp/visualization/components/heatmap/index.html">pswamp.visualization.components.heatmap</a></li>
+<li class="toctree-l4"><a class="reference internal" href="pswamp/visualization/components/label_widget/index.html">pswamp.visualization.components.label_widget</a></li>
+<li class="toctree-l4"><a class="reference internal" href="pswamp/visualization/components/phasor_plot/index.html">pswamp.visualization.components.phasor_plot</a></li>
+<li class="toctree-l4"><a class="reference internal" href="pswamp/visualization/components/phasor_plot_3d/index.html">pswamp.visualization.components.phasor_plot_3d</a></li>
+<li class="toctree-l4"><a class="reference internal" href="pswamp/visualization/components/phasor_plot_3d_fast/index.html">pswamp.visualization.components.phasor_plot_3d_fast</a></li>
+<li class="toctree-l4"><a class="reference internal" href="pswamp/visualization/components/single_line_diagram/index.html">pswamp.visualization.components.single_line_diagram</a></li>
+<li class="toctree-l4"><a class="reference internal" href="pswamp/visualization/components/surface_plot/index.html">pswamp.visualization.components.surface_plot</a></li>
+<li class="toctree-l4"><a class="reference internal" href="pswamp/visualization/components/threshold_adjust/index.html">pswamp.visualization.components.threshold_adjust</a></li>
+<li class="toctree-l4"><a class="reference internal" href="pswamp/visualization/components/timeline/index.html">pswamp.visualization.components.timeline</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="pswamp/visualization/countries_geo_data/index.html">pswamp.visualization.countries_geo_data</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="pswamp/visualization/countries_geo_data/read_geo_data/index.html">pswamp.visualization.countries_geo_data.read_geo_data</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="pswamp/visualization/eigenvalue_plot/index.html">pswamp.visualization.eigenvalue_plot</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pswamp/visualization/fft_viz/index.html">pswamp.visualization.fft_viz</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pswamp/visualization/fft_viz_v2/index.html">pswamp.visualization.fft_viz_v2</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pswamp/visualization/freq_heatmap/index.html">pswamp.visualization.freq_heatmap</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pswamp/visualization/freq_plot/index.html">pswamp.visualization.freq_plot</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pswamp/visualization/n4sid_viz/index.html">pswamp.visualization.n4sid_viz</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pswamp/visualization/time_window_plot/index.html">pswamp.visualization.time_window_plot</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pswamp/visualization/time_window_plot_v15/index.html">pswamp.visualization.time_window_plot_v15</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pswamp/visualization/time_window_plot_v2/index.html">pswamp.visualization.time_window_plot_v2</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pswamp/visualization/voltage_heatmap/index.html">pswamp.visualization.voltage_heatmap</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pswamp/visualization/voltage_phasor_plot/index.html">pswamp.visualization.voltage_phasor_plot</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pswamp/visualization/voltage_stability_viz/index.html">pswamp.visualization.voltage_stability_viz</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="pswamp/visualization/voltage_stability_viz/dSdZ_plot/index.html">pswamp.visualization.voltage_stability_viz.dSdZ_plot</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</div>
+<aside class="footnote-list brackets">
+<aside class="footnote brackets" id="f1" role="doc-footnote">
+<span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#id1">1</a><span class="fn-bracket">]</span></span>
+<p>Created with <a class="reference external" href="https://github.com/readthedocs/sphinx-autoapi">sphinx-autoapi</a></p>
+</aside>
+</aside>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="../models.html" class="btn btn-neutral float-left" title="Component models" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="pswamp/index.html" class="btn btn-neutral float-right" title="pswamp" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright .</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

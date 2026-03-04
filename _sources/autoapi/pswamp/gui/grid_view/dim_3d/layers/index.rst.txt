@@ -1,0 +1,1940 @@
+pswamp.gui.grid_view.dim_3d.layers
+==================================
+
+.. py:module:: pswamp.gui.grid_view.dim_3d.layers
+
+
+Submodules
+----------
+
+.. toctree::
+   :maxdepth: 1
+
+   /autoapi/pswamp/gui/grid_view/dim_3d/layers/alarms/index
+   /autoapi/pswamp/gui/grid_view/dim_3d/layers/buses/index
+   /autoapi/pswamp/gui/grid_view/dim_3d/layers/countries/index
+   /autoapi/pswamp/gui/grid_view/dim_3d/layers/frequency/index
+   /autoapi/pswamp/gui/grid_view/dim_3d/layers/grid_events/index
+   /autoapi/pswamp/gui/grid_view/dim_3d/layers/islanding/index
+   /autoapi/pswamp/gui/grid_view/dim_3d/layers/layers/index
+   /autoapi/pswamp/gui/grid_view/dim_3d/layers/line_outages/index
+   /autoapi/pswamp/gui/grid_view/dim_3d/layers/lines/index
+   /autoapi/pswamp/gui/grid_view/dim_3d/layers/lines_2/index
+   /autoapi/pswamp/gui/grid_view/dim_3d/layers/lines_freq/index
+   /autoapi/pswamp/gui/grid_view/dim_3d/layers/pmus/index
+   /autoapi/pswamp/gui/grid_view/dim_3d/layers/voltage/index
+   /autoapi/pswamp/gui/grid_view/dim_3d/layers/voltage_stability/index
+
+
+Attributes
+----------
+
+.. autoapisummary::
+
+   pswamp.gui.grid_view.dim_3d.layers.config
+   pswamp.gui.grid_view.dim_3d.layers.sample_dataset_path
+   pswamp.gui.grid_view.dim_3d.layers.sample_dataset_path
+   pswamp.gui.grid_view.dim_3d.layers.config
+   pswamp.gui.grid_view.dim_3d.layers.config
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   pswamp.gui.grid_view.dim_3d.layers.PhasorPlot3D
+   pswamp.gui.grid_view.dim_3d.layers.PhasorPlot3DFast
+   pswamp.gui.grid_view.dim_3d.layers.ChannelTree
+   pswamp.gui.grid_view.dim_3d.layers.StationNamesLayer
+   pswamp.gui.grid_view.dim_3d.layers.PhasorPlotLayer
+   pswamp.gui.grid_view.dim_3d.layers.PhasorPlotFastLayer
+   pswamp.gui.grid_view.dim_3d.layers.StaticLineDataLayer
+   pswamp.gui.grid_view.dim_3d.layers.StaticLineDataLayer_v0
+   pswamp.gui.grid_view.dim_3d.layers.StaticLineDataLayerSettings
+   pswamp.gui.grid_view.dim_3d.layers.PMUTimeWindow
+   pswamp.gui.grid_view.dim_3d.layers.PhasorPlot
+   pswamp.gui.grid_view.dim_3d.layers.BusesLayer
+   pswamp.gui.grid_view.dim_3d.layers.PMUTimeWindowOnline
+   pswamp.gui.grid_view.dim_3d.layers.PhasorPlot
+   pswamp.gui.grid_view.dim_3d.layers.Frequency3DLayer
+   pswamp.gui.grid_view.dim_3d.layers.Frequency3DLayerSettings
+   pswamp.gui.grid_view.dim_3d.layers.KafkaConsumer
+   pswamp.gui.grid_view.dim_3d.layers.VoltageStability
+   pswamp.gui.grid_view.dim_3d.layers.PMUTimeWindowOnline
+   pswamp.gui.grid_view.dim_3d.layers.PhasorPlot
+   pswamp.gui.grid_view.dim_3d.layers.KafkaConsumer
+   pswamp.gui.grid_view.dim_3d.layers.Islanding
+   pswamp.gui.grid_view.dim_3d.layers.IslandingOnline
+   pswamp.gui.grid_view.dim_3d.layers.IslandingLayerSettings
+   pswamp.gui.grid_view.dim_3d.layers.KafkaConsumer
+   pswamp.gui.grid_view.dim_3d.layers.GridEvents
+   pswamp.gui.grid_view.dim_3d.layers.PMUTimeWindowOnline
+   pswamp.gui.grid_view.dim_3d.layers.PhasorPlot
+   pswamp.gui.grid_view.dim_3d.layers.Frequency3DLayer
+   pswamp.gui.grid_view.dim_3d.layers.Frequency3DLayerSettings
+   pswamp.gui.grid_view.dim_3d.layers.Voltage3DLayer
+   pswamp.gui.grid_view.dim_3d.layers.Voltage3DLayerSettings
+   pswamp.gui.grid_view.dim_3d.layers.LineLayer2D
+   pswamp.gui.grid_view.dim_3d.layers.LineLayer
+   pswamp.gui.grid_view.dim_3d.layers.LineLayer
+   pswamp.gui.grid_view.dim_3d.layers.LineLayer2D
+   pswamp.gui.grid_view.dim_3d.layers.PMUTimeWindowOnline
+   pswamp.gui.grid_view.dim_3d.layers.Frequency3DLayerSettings
+   pswamp.gui.grid_view.dim_3d.layers.LinesFreq
+   pswamp.gui.grid_view.dim_3d.layers.LinesFreqSettings
+   pswamp.gui.grid_view.dim_3d.layers.LineLayer
+   pswamp.gui.grid_view.dim_3d.layers.SnapshotApp
+   pswamp.gui.grid_view.dim_3d.layers.Line
+   pswamp.gui.grid_view.dim_3d.layers.LineOutages
+   pswamp.gui.grid_view.dim_3d.layers.CountriesLayer
+   pswamp.gui.grid_view.dim_3d.layers.CountriesLayerSettings
+
+
+Functions
+---------
+
+.. autoapisummary::
+
+   pswamp.gui.grid_view.dim_3d.layers.read_geo_data
+   pswamp.gui.grid_view.dim_3d.layers.set_gl_options
+   pswamp.gui.grid_view.dim_3d.layers.read_geo_data
+   pswamp.gui.grid_view.dim_3d.layers.load_bus_coords_for_current_stations
+   pswamp.gui.grid_view.dim_3d.layers.set_gl_options
+   pswamp.gui.grid_view.dim_3d.layers.read_geo_data
+   pswamp.gui.grid_view.dim_3d.layers.load_bus_coords_for_current_stations
+   pswamp.gui.grid_view.dim_3d.layers.load_bus_coords_for_stations
+   pswamp.gui.grid_view.dim_3d.layers.set_gl_options
+   pswamp.gui.grid_view.dim_3d.layers.load_bus_coords_for_stations
+   pswamp.gui.grid_view.dim_3d.layers.get_last_message_from_topic
+   pswamp.gui.grid_view.dim_3d.layers.set_gl_options
+   pswamp.gui.grid_view.dim_3d.layers.read_geo_data
+   pswamp.gui.grid_view.dim_3d.layers.load_bus_coords_for_current_stations
+   pswamp.gui.grid_view.dim_3d.layers.load_bus_coords_for_stations
+   pswamp.gui.grid_view.dim_3d.layers.set_gl_options
+   pswamp.gui.grid_view.dim_3d.layers.load_bus_coords_for_current_stations
+   pswamp.gui.grid_view.dim_3d.layers.lookup_strings
+   pswamp.gui.grid_view.dim_3d.layers.set_gl_options
+   pswamp.gui.grid_view.dim_3d.layers.read_geo_data
+   pswamp.gui.grid_view.dim_3d.layers.load_bus_coords_for_current_stations
+   pswamp.gui.grid_view.dim_3d.layers.load_bus_coords_for_stations
+   pswamp.gui.grid_view.dim_3d.layers.get_model_data
+   pswamp.gui.grid_view.dim_3d.layers.lookup_strings
+   pswamp.gui.grid_view.dim_3d.layers.read_geo_data
+   pswamp.gui.grid_view.dim_3d.layers.load_dxf
+   pswamp.gui.grid_view.dim_3d.layers.get_buses
+   pswamp.gui.grid_view.dim_3d.layers.flatten_list_insert_nan
+   pswamp.gui.grid_view.dim_3d.layers.lookup_strings
+   pswamp.gui.grid_view.dim_3d.layers.set_gl_options
+   pswamp.gui.grid_view.dim_3d.layers.read_geo_data
+   pswamp.gui.grid_view.dim_3d.layers.load_dxf
+   pswamp.gui.grid_view.dim_3d.layers.get_buses
+   pswamp.gui.grid_view.dim_3d.layers.flatten_list_insert_nan
+   pswamp.gui.grid_view.dim_3d.layers.lookup_strings
+   pswamp.gui.grid_view.dim_3d.layers.set_gl_options
+   pswamp.gui.grid_view.dim_3d.layers.read_geo_data
+
+
+Package Contents
+----------------
+
+.. py:class:: PhasorPlot3D(plot_window, pos0=None, n_phasors=None, normalize_length=True, normalize_angle=False, update_freq=None, *args, **kwargs)
+
+   This class inserts phasors in a 3D plot window at specific coordinates.
+
+
+   .. py:attribute:: normalize_length
+      :value: True
+
+
+
+   .. py:attribute:: normalize_angle
+      :value: False
+
+
+
+   .. py:attribute:: update_freq
+      :value: None
+
+
+
+   .. py:attribute:: angles_prev
+
+
+   .. py:attribute:: pos0
+      :value: None
+
+
+
+   .. py:attribute:: phasor_0
+
+
+   .. py:attribute:: colors
+
+
+   .. py:attribute:: phasor_plots
+      :value: []
+
+
+
+   .. py:method:: update(phasors, normalize=False)
+
+
+   .. py:method:: update_plot()
+
+
+.. py:class:: PhasorPlot3DFast(plot_window, pos0=None, n_phasors=None, normalize_length=True, normalize_angle=False, update_freq=None, *args, **kwargs)
+
+   This class inserts phasors in a 3D plot window at specific coordinates.
+
+
+   .. py:attribute:: normalize_length
+      :value: True
+
+
+
+   .. py:attribute:: normalize_angle
+      :value: False
+
+
+
+   .. py:attribute:: update_freq
+      :value: None
+
+
+
+   .. py:attribute:: angles_prev
+
+
+   .. py:attribute:: pos0
+      :value: None
+
+
+
+   .. py:attribute:: phasor_0
+
+
+   .. py:attribute:: colors
+
+
+   .. py:attribute:: phasor_plot
+
+
+   .. py:method:: update(phasors, normalize=False)
+
+
+   .. py:method:: update_plot()
+
+
+   .. py:method:: draw_phasors(phasors)
+
+
+.. py:function:: read_geo_data(countries='All')
+
+.. py:class:: ChannelTree(station_names, channel_names, *args)
+
+   Bases: :py:obj:`QTreeWidget`
+
+
+   For showing a tree representing Stations and PMUs
+
+
+   .. py:attribute:: station_names
+
+
+   .. py:attribute:: channel_names
+
+
+   .. py:attribute:: station_idx
+
+
+   .. py:method:: onItemClicked(it, col)
+
+
+.. py:function:: set_gl_options(config, pl)
+
+   Set graphics options from config.
+
+   :param config: pswamp Configuration file (from config.toml)
+   :type config: dict
+   :param pl: Plot item for which to set options.
+   :type pl: GLGraphicsItem
+
+
+.. py:class:: StationNamesLayer(parent, config, geo=True)
+
+   Bases: :py:obj:`pswamp.gui.grid_view.dim_2d.layers.StationNamesLayer`
+
+
+   .. py:method:: add_text(coord, text)
+
+
+.. py:class:: PhasorPlotLayer(parent, config, geo=True)
+
+   Bases: :py:obj:`pswamp.gui.grid_view.dim_2d.layers.PhasorPlotLayer`
+
+
+   .. py:attribute:: phasor_plot_class
+
+
+   .. py:method:: add_phasor_plot(bus_coords)
+
+
+.. py:class:: PhasorPlotFastLayer(parent, config, geo=True)
+
+   Bases: :py:obj:`PhasorPlotLayer`
+
+
+   .. py:attribute:: phasor_plot_class
+
+
+   .. py:method:: remove_layer()
+
+
+.. py:class:: StaticLineDataLayer(parent, config, geo=True, data_subkey='line_data_path')
+
+   Bases: :py:obj:`pswamp.gui.grid_view.dim_2d.layers.StaticLineDataLayer`
+
+
+   .. py:method:: add_line_plots(pos, line_width, color)
+
+
+   .. py:method:: remove_layer()
+
+
+   .. py:method:: update_line_plots(key, **style_kwargs)
+
+
+   .. py:method:: hide()
+
+
+   .. py:method:: show()
+
+
+.. py:class:: StaticLineDataLayer_v0(*args, **kwargs)
+
+   Bases: :py:obj:`StaticLineDataLayer`
+
+
+.. py:class:: StaticLineDataLayerSettings(target_layer)
+
+   Bases: :py:obj:`pswamp.gui.grid_view.dim_2d.layers.StaticLineDataLayerSettings`
+
+
+.. py:class:: PMUTimeWindow(n_samples=None, window_length=None, time_window_type=TimeWindowLabeled, substitute_zero_freq_with_nan=True, channel_selection=None, channel_selection_idx=None)
+
+   .. py:attribute:: time_window_type
+
+
+   .. py:attribute:: tw
+      :value: None
+
+
+
+   .. py:attribute:: header
+      :value: None
+
+
+
+   .. py:attribute:: n_samples
+      :value: None
+
+
+
+   .. py:attribute:: window_length
+      :value: None
+
+
+
+   .. py:attribute:: is_initialized
+      :value: False
+
+
+
+   .. py:attribute:: n_channels
+      :value: None
+
+
+
+   .. py:attribute:: dt
+
+
+   .. py:attribute:: fs
+
+
+   .. py:attribute:: pmu_decoder
+
+
+   .. py:method:: initialize_from_config_frame(config_frame)
+
+
+   .. py:method:: update_window(pmu_data_frame)
+
+
+.. py:class:: PhasorPlot(n_phasors=None, pos0=None, normalize_length=True, normalize_angle=False, update_freq=None, plot_widget=None, background_color=(30, 63, 64), *args, **kwargs)
+
+   Bases: :py:obj:`PySide6.QtWidgets.QWidget`
+
+
+   .. py:attribute:: request_plot_update
+
+
+   .. py:attribute:: pos0
+      :value: None
+
+
+
+   .. py:attribute:: approx_zero_value
+      :value: 1e-06
+
+
+
+   .. py:attribute:: normalize_length
+      :value: True
+
+
+
+   .. py:attribute:: normalize_angle
+      :value: False
+
+
+
+   .. py:attribute:: update_freq
+      :value: None
+
+
+
+   .. py:attribute:: angles_prev
+
+
+   .. py:attribute:: phasors
+
+
+   .. py:attribute:: phasor_0
+
+
+   .. py:attribute:: colors
+
+
+   .. py:method:: create_plot_items()
+
+
+   .. py:method:: update(phasors)
+
+
+   .. py:method:: update_plot()
+
+
+   .. py:method:: update_plot_items(draw_phasors)
+
+
+.. py:function:: read_geo_data(countries='All')
+
+.. py:function:: load_bus_coords_for_current_stations(config, return_3d=False, geo=True)
+
+   Get coordinates for stations in PMU data frame
+
+
+.. py:function:: set_gl_options(config, pl)
+
+   Set graphics options from config.
+
+   :param config: pswamp Configuration file (from config.toml)
+   :type config: dict
+   :param pl: Plot item for which to set options.
+   :type pl: GLGraphicsItem
+
+
+.. py:class:: BusesLayer(parent, config, geo=True)
+
+   Bases: :py:obj:`pswamp.gui.grid_view.dim_2d.layers.BusesLayer`
+
+
+   .. py:method:: add_scatter_plot(bus_coords_3d)
+
+
+.. py:class:: PMUTimeWindowOnline(kafka_kwargs={}, kafka_topic='pmudata', auto_adjust_offset=False, **kwargs)
+
+   Bases: :py:obj:`PMUTimeWindow`
+
+
+   This class is intended for consuming PMU data from a specified Kafka topic and storing the last samples (n_samples) in a
+   TimeWindow object.
+
+
+   .. py:attribute:: kafka_topic
+      :value: 'pmudata'
+
+
+
+   .. py:attribute:: kafka_kwargs
+
+
+   .. py:attribute:: auto_adjust_offset
+      :value: False
+
+
+
+   .. py:attribute:: pmu_stream
+
+
+   .. py:attribute:: _is_stopped
+      :value: False
+
+
+
+   .. py:method:: initialize()
+
+
+   .. py:method:: run()
+
+
+   .. py:method:: stop()
+
+
+.. py:class:: PhasorPlot(n_phasors=None, pos0=None, normalize_length=True, normalize_angle=False, update_freq=None, plot_widget=None, background_color=(30, 63, 64), *args, **kwargs)
+
+   Bases: :py:obj:`PySide6.QtWidgets.QWidget`
+
+
+   .. py:attribute:: request_plot_update
+
+
+   .. py:attribute:: pos0
+      :value: None
+
+
+
+   .. py:attribute:: approx_zero_value
+      :value: 1e-06
+
+
+
+   .. py:attribute:: normalize_length
+      :value: True
+
+
+
+   .. py:attribute:: normalize_angle
+      :value: False
+
+
+
+   .. py:attribute:: update_freq
+      :value: None
+
+
+
+   .. py:attribute:: angles_prev
+
+
+   .. py:attribute:: phasors
+
+
+   .. py:attribute:: phasor_0
+
+
+   .. py:attribute:: colors
+
+
+   .. py:method:: create_plot_items()
+
+
+   .. py:method:: update(phasors)
+
+
+   .. py:method:: update_plot()
+
+
+   .. py:method:: update_plot_items(draw_phasors)
+
+
+.. py:function:: read_geo_data(countries='All')
+
+.. py:function:: load_bus_coords_for_current_stations(config, return_3d=False, geo=True)
+
+   Get coordinates for stations in PMU data frame
+
+
+.. py:function:: load_bus_coords_for_stations(config, wanted_stations, return_3d=False, geo=True)
+
+   Get coordinates for a subset of stations
+
+
+.. py:function:: set_gl_options(config, pl)
+
+   Set graphics options from config.
+
+   :param config: pswamp Configuration file (from config.toml)
+   :type config: dict
+   :param pl: Plot item for which to set options.
+   :type pl: GLGraphicsItem
+
+
+.. py:class:: Frequency3DLayer(parent, config, geo=True)
+
+   .. py:attribute:: config
+
+
+   .. py:attribute:: plotWidget
+
+
+   .. py:attribute:: k
+      :value: 2
+
+
+
+   .. py:attribute:: uuid
+
+
+   .. py:attribute:: parent
+
+
+   .. py:attribute:: z_scale
+      :value: 3
+
+
+
+   .. py:attribute:: pmu_tw
+
+
+   .. py:attribute:: col_idx
+
+
+   .. py:attribute:: x
+
+
+   .. py:attribute:: y
+
+
+   .. py:attribute:: z_0
+
+
+   .. py:attribute:: z
+
+
+   .. py:attribute:: colors
+
+
+   .. py:method:: show()
+
+
+   .. py:method:: hide()
+
+
+   .. py:method:: get_col_idx()
+
+
+   .. py:method:: add_scatter_plot(bus_coords_3d)
+
+
+   .. py:method:: update_coords()
+
+
+   .. py:method:: update_scatter()
+
+
+   .. py:method:: generate_bus_lines()
+
+
+   .. py:method:: remove_layer()
+
+
+.. py:class:: Frequency3DLayerSettings(target_layer)
+
+   Bases: :py:obj:`PySide6.QtWidgets.QWidget`
+
+
+   .. py:attribute:: target_layer
+
+
+   .. py:method:: slider_change(val)
+
+
+.. py:function:: load_bus_coords_for_stations(config, wanted_stations, return_3d=False, geo=True)
+
+   Get coordinates for a subset of stations
+
+
+.. py:class:: KafkaConsumer(*args, use_nqkafka=False, **kwargs)
+
+   Wrapper for Kafka consumer.
+
+   :param use_nqkafka: Determines whether self.instance is a NQKafkaConsumer (from the nqkafka package, can be thought of as a "mock") or actual KafkaConsumer (from the kafka-python package), which connects to a Kafka server. Defaults to False.
+   :type use_nqkafka: bool, optional
+   :param \*args: Variable length argument list.
+   :param \*\*kwargs: Arbitrary keyword arguments.
+
+   .. attribute:: instance
+
+      Determined from input parameters.
+
+      :type: :obj:`nqkafka.NQKafkaConsumer` or :obj:`kafka.KafkaConsumer`
+
+
+   .. py:attribute:: instance
+
+
+   .. py:method:: __getattr__(name)
+
+      Inherits the same attributes as the instance.
+
+      :param name: Name of the attribute.
+      :type name: _type_
+
+      :returns: The attribute of the instance.
+
+
+
+   .. py:method:: __iter__()
+
+      The iterator is the same as the iterator of the instance.
+
+      :returns: The instance.
+
+
+
+.. py:function:: get_last_message_from_topic(kafka_kwargs, topic)
+
+.. py:function:: set_gl_options(config, pl)
+
+   Set graphics options from config.
+
+   :param config: pswamp Configuration file (from config.toml)
+   :type config: dict
+   :param pl: Plot item for which to set options.
+   :type pl: GLGraphicsItem
+
+
+.. py:class:: VoltageStability(parent, config, geo=True)
+
+   .. py:attribute:: config
+
+
+   .. py:attribute:: input_stream
+
+
+   .. py:attribute:: is_stopped
+      :value: False
+
+
+
+   .. py:attribute:: plotWidget
+
+
+   .. py:attribute:: k
+      :value: 2
+
+
+
+   .. py:attribute:: uuid
+
+
+   .. py:attribute:: parent
+
+
+   .. py:attribute:: z_scale
+      :value: 3
+
+
+
+   .. py:attribute:: x
+
+
+   .. py:attribute:: y
+
+
+   .. py:attribute:: z
+
+
+   .. py:attribute:: text_item
+
+
+   .. py:method:: run_consumer()
+
+
+   .. py:method:: stop()
+
+
+   .. py:method:: update_text()
+
+
+   .. py:method:: remove_layer()
+
+
+.. py:class:: PMUTimeWindowOnline(kafka_kwargs={}, kafka_topic='pmudata', auto_adjust_offset=False, **kwargs)
+
+   Bases: :py:obj:`PMUTimeWindow`
+
+
+   This class is intended for consuming PMU data from a specified Kafka topic and storing the last samples (n_samples) in a
+   TimeWindow object.
+
+
+   .. py:attribute:: kafka_topic
+      :value: 'pmudata'
+
+
+
+   .. py:attribute:: kafka_kwargs
+
+
+   .. py:attribute:: auto_adjust_offset
+      :value: False
+
+
+
+   .. py:attribute:: pmu_stream
+
+
+   .. py:attribute:: _is_stopped
+      :value: False
+
+
+
+   .. py:method:: initialize()
+
+
+   .. py:method:: run()
+
+
+   .. py:method:: stop()
+
+
+.. py:class:: PhasorPlot(n_phasors=None, pos0=None, normalize_length=True, normalize_angle=False, update_freq=None, plot_widget=None, background_color=(30, 63, 64), *args, **kwargs)
+
+   Bases: :py:obj:`PySide6.QtWidgets.QWidget`
+
+
+   .. py:attribute:: request_plot_update
+
+
+   .. py:attribute:: pos0
+      :value: None
+
+
+
+   .. py:attribute:: approx_zero_value
+      :value: 1e-06
+
+
+
+   .. py:attribute:: normalize_length
+      :value: True
+
+
+
+   .. py:attribute:: normalize_angle
+      :value: False
+
+
+
+   .. py:attribute:: update_freq
+      :value: None
+
+
+
+   .. py:attribute:: angles_prev
+
+
+   .. py:attribute:: phasors
+
+
+   .. py:attribute:: phasor_0
+
+
+   .. py:attribute:: colors
+
+
+   .. py:method:: create_plot_items()
+
+
+   .. py:method:: update(phasors)
+
+
+   .. py:method:: update_plot()
+
+
+   .. py:method:: update_plot_items(draw_phasors)
+
+
+.. py:function:: read_geo_data(countries='All')
+
+.. py:function:: load_bus_coords_for_current_stations(config, return_3d=False, geo=True)
+
+   Get coordinates for stations in PMU data frame
+
+
+.. py:function:: load_bus_coords_for_stations(config, wanted_stations, return_3d=False, geo=True)
+
+   Get coordinates for a subset of stations
+
+
+.. py:class:: KafkaConsumer(*args, use_nqkafka=False, **kwargs)
+
+   Wrapper for Kafka consumer.
+
+   :param use_nqkafka: Determines whether self.instance is a NQKafkaConsumer (from the nqkafka package, can be thought of as a "mock") or actual KafkaConsumer (from the kafka-python package), which connects to a Kafka server. Defaults to False.
+   :type use_nqkafka: bool, optional
+   :param \*args: Variable length argument list.
+   :param \*\*kwargs: Arbitrary keyword arguments.
+
+   .. attribute:: instance
+
+      Determined from input parameters.
+
+      :type: :obj:`nqkafka.NQKafkaConsumer` or :obj:`kafka.KafkaConsumer`
+
+
+   .. py:attribute:: instance
+
+
+   .. py:method:: __getattr__(name)
+
+      Inherits the same attributes as the instance.
+
+      :param name: Name of the attribute.
+      :type name: _type_
+
+      :returns: The attribute of the instance.
+
+
+
+   .. py:method:: __iter__()
+
+      The iterator is the same as the iterator of the instance.
+
+      :returns: The instance.
+
+
+
+.. py:function:: set_gl_options(config, pl)
+
+   Set graphics options from config.
+
+   :param config: pswamp Configuration file (from config.toml)
+   :type config: dict
+   :param pl: Plot item for which to set options.
+   :type pl: GLGraphicsItem
+
+
+.. py:class:: Islanding(parent, bus_coords_3d, geo=True, color_scheme='islanding', n_max_islands=8)
+
+   .. py:attribute:: plotWidget
+
+
+   .. py:attribute:: k
+      :value: 2
+
+
+
+   .. py:attribute:: uuid
+
+
+   .. py:attribute:: parent
+
+
+   .. py:attribute:: newest_message
+      :value: None
+
+
+
+   .. py:attribute:: stopped
+      :value: False
+
+
+
+   .. py:attribute:: x
+
+
+   .. py:attribute:: y
+
+
+   .. py:attribute:: z
+
+
+   .. py:attribute:: n_max_islands
+      :value: 8
+
+
+
+   .. py:attribute:: bus_scatters
+
+
+   .. py:method:: add_scatter_plot(color)
+
+
+   .. py:method:: hide()
+
+
+   .. py:method:: show()
+
+
+   .. py:method:: update_scatter(islands=None, z=None)
+
+
+   .. py:method:: remove_layer()
+
+
+.. py:class:: IslandingOnline(parent, config, geo=True)
+
+   Bases: :py:obj:`Islanding`
+
+
+   .. py:attribute:: config
+
+
+   .. py:attribute:: consumer
+
+
+   .. py:method:: add_scatter_plot(color)
+
+
+.. py:class:: IslandingLayerSettings(target_layer)
+
+   Bases: :py:obj:`PySide6.QtWidgets.QWidget`
+
+
+   .. py:attribute:: target_layer
+
+
+.. py:data:: config
+
+.. py:function:: load_bus_coords_for_current_stations(config, return_3d=False, geo=True)
+
+   Get coordinates for stations in PMU data frame
+
+
+.. py:class:: KafkaConsumer(*args, use_nqkafka=False, **kwargs)
+
+   Wrapper for Kafka consumer.
+
+   :param use_nqkafka: Determines whether self.instance is a NQKafkaConsumer (from the nqkafka package, can be thought of as a "mock") or actual KafkaConsumer (from the kafka-python package), which connects to a Kafka server. Defaults to False.
+   :type use_nqkafka: bool, optional
+   :param \*args: Variable length argument list.
+   :param \*\*kwargs: Arbitrary keyword arguments.
+
+   .. attribute:: instance
+
+      Determined from input parameters.
+
+      :type: :obj:`nqkafka.NQKafkaConsumer` or :obj:`kafka.KafkaConsumer`
+
+
+   .. py:attribute:: instance
+
+
+   .. py:method:: __getattr__(name)
+
+      Inherits the same attributes as the instance.
+
+      :param name: Name of the attribute.
+      :type name: _type_
+
+      :returns: The attribute of the instance.
+
+
+
+   .. py:method:: __iter__()
+
+      The iterator is the same as the iterator of the instance.
+
+      :returns: The instance.
+
+
+
+.. py:function:: lookup_strings(a, b, return_mask=False)
+
+.. py:function:: set_gl_options(config, pl)
+
+   Set graphics options from config.
+
+   :param config: pswamp Configuration file (from config.toml)
+   :type config: dict
+   :param pl: Plot item for which to set options.
+   :type pl: GLGraphicsItem
+
+
+.. py:class:: GridEvents(parent, config, geo=True)
+
+   .. py:attribute:: config
+
+
+   .. py:attribute:: plotWidget
+
+
+   .. py:attribute:: k
+      :value: 2
+
+
+
+   .. py:attribute:: uuid
+
+
+   .. py:attribute:: parent
+
+
+   .. py:attribute:: stations
+
+
+   .. py:attribute:: affected_stations
+
+
+   .. py:attribute:: consumer
+
+
+   .. py:attribute:: stopped
+      :value: False
+
+
+
+   .. py:attribute:: newest_message
+      :value: None
+
+
+
+   .. py:attribute:: x
+
+
+   .. py:attribute:: y
+
+
+   .. py:attribute:: z
+
+
+   .. py:attribute:: scatter_plot
+
+
+   .. py:method:: get_messages()
+
+
+   .. py:method:: add_scatter_plot(color='b')
+
+
+   .. py:method:: update_scatter()
+
+
+   .. py:method:: remove_layer()
+
+
+.. py:class:: PMUTimeWindowOnline(kafka_kwargs={}, kafka_topic='pmudata', auto_adjust_offset=False, **kwargs)
+
+   Bases: :py:obj:`PMUTimeWindow`
+
+
+   This class is intended for consuming PMU data from a specified Kafka topic and storing the last samples (n_samples) in a
+   TimeWindow object.
+
+
+   .. py:attribute:: kafka_topic
+      :value: 'pmudata'
+
+
+
+   .. py:attribute:: kafka_kwargs
+
+
+   .. py:attribute:: auto_adjust_offset
+      :value: False
+
+
+
+   .. py:attribute:: pmu_stream
+
+
+   .. py:attribute:: _is_stopped
+      :value: False
+
+
+
+   .. py:method:: initialize()
+
+
+   .. py:method:: run()
+
+
+   .. py:method:: stop()
+
+
+.. py:class:: PhasorPlot(n_phasors=None, pos0=None, normalize_length=True, normalize_angle=False, update_freq=None, plot_widget=None, background_color=(30, 63, 64), *args, **kwargs)
+
+   Bases: :py:obj:`PySide6.QtWidgets.QWidget`
+
+
+   .. py:attribute:: request_plot_update
+
+
+   .. py:attribute:: pos0
+      :value: None
+
+
+
+   .. py:attribute:: approx_zero_value
+      :value: 1e-06
+
+
+
+   .. py:attribute:: normalize_length
+      :value: True
+
+
+
+   .. py:attribute:: normalize_angle
+      :value: False
+
+
+
+   .. py:attribute:: update_freq
+      :value: None
+
+
+
+   .. py:attribute:: angles_prev
+
+
+   .. py:attribute:: phasors
+
+
+   .. py:attribute:: phasor_0
+
+
+   .. py:attribute:: colors
+
+
+   .. py:method:: create_plot_items()
+
+
+   .. py:method:: update(phasors)
+
+
+   .. py:method:: update_plot()
+
+
+   .. py:method:: update_plot_items(draw_phasors)
+
+
+.. py:function:: read_geo_data(countries='All')
+
+.. py:function:: load_bus_coords_for_current_stations(config, return_3d=False, geo=True)
+
+   Get coordinates for stations in PMU data frame
+
+
+.. py:function:: load_bus_coords_for_stations(config, wanted_stations, return_3d=False, geo=True)
+
+   Get coordinates for a subset of stations
+
+
+.. py:class:: Frequency3DLayer(parent, config, geo=True)
+
+   .. py:attribute:: config
+
+
+   .. py:attribute:: plotWidget
+
+
+   .. py:attribute:: k
+      :value: 2
+
+
+
+   .. py:attribute:: uuid
+
+
+   .. py:attribute:: parent
+
+
+   .. py:attribute:: z_scale
+      :value: 3
+
+
+
+   .. py:attribute:: pmu_tw
+
+
+   .. py:attribute:: col_idx
+
+
+   .. py:attribute:: x
+
+
+   .. py:attribute:: y
+
+
+   .. py:attribute:: z_0
+
+
+   .. py:attribute:: z
+
+
+   .. py:attribute:: colors
+
+
+   .. py:method:: show()
+
+
+   .. py:method:: hide()
+
+
+   .. py:method:: get_col_idx()
+
+
+   .. py:method:: add_scatter_plot(bus_coords_3d)
+
+
+   .. py:method:: update_coords()
+
+
+   .. py:method:: update_scatter()
+
+
+   .. py:method:: generate_bus_lines()
+
+
+   .. py:method:: remove_layer()
+
+
+.. py:class:: Frequency3DLayerSettings(target_layer)
+
+   Bases: :py:obj:`PySide6.QtWidgets.QWidget`
+
+
+   .. py:attribute:: target_layer
+
+
+   .. py:method:: slider_change(val)
+
+
+.. py:function:: get_model_data(config)
+
+.. py:function:: lookup_strings(a, b, return_mask=False)
+
+.. py:class:: Voltage3DLayer(parent, config, *args, **kwargs)
+
+   Bases: :py:obj:`pswamp.gui.grid_view.dim_3d.layers.frequency.Frequency3DLayer`
+
+
+   .. py:attribute:: station_V_n
+
+
+   .. py:method:: update_coords()
+
+
+   .. py:method:: get_col_idx()
+
+
+.. py:class:: Voltage3DLayerSettings(target_layer)
+
+   Bases: :py:obj:`pswamp.gui.grid_view.dim_3d.layers.frequency.Frequency3DLayerSettings`
+
+
+.. py:function:: read_geo_data(countries='All')
+
+.. py:function:: load_dxf(path)
+
+.. py:function:: get_buses(doc, bus_names_model=None)
+
+.. py:function:: flatten_list_insert_nan(listlist)
+
+.. py:class:: LineLayer2D(parent, config, geo=True)
+
+   .. py:attribute:: config
+
+
+   .. py:attribute:: k
+      :value: 2
+
+
+
+   .. py:attribute:: parent
+
+
+   .. py:attribute:: lines_plot
+
+
+   .. py:attribute:: trafos_plot
+
+
+   .. py:method:: read_sld_data(config, geo)
+
+
+   .. py:method:: add_line_plots(pos, line_width=1, color='white')
+
+
+   .. py:method:: remove_layer()
+
+
+   .. py:method:: get_branches_from_buses(bus_idx)
+
+
+   .. py:method:: __del__()
+
+
+.. py:function:: lookup_strings(a, b, return_mask=False)
+
+.. py:function:: set_gl_options(config, pl)
+
+   Set graphics options from config.
+
+   :param config: pswamp Configuration file (from config.toml)
+   :type config: dict
+   :param pl: Plot item for which to set options.
+   :type pl: GLGraphicsItem
+
+
+.. py:class:: LineLayer(*args, **kwargs)
+
+   Bases: :py:obj:`pswamp.gui.grid_view.dim_2d.layers.lines.LineLayer`
+
+
+   .. py:attribute:: lines_z_map
+
+
+   .. py:attribute:: trafos_z_map
+
+
+   .. py:attribute:: line_colors
+
+
+   .. py:attribute:: trafo_colors
+
+
+   .. py:method:: build_z_map(data, paths)
+
+
+   .. py:method:: update_line_z_coords(node_z)
+
+
+   .. py:method:: update_trafo_z_coords(node_z)
+
+
+   .. py:method:: set_node_z(z)
+
+
+   .. py:method:: add_line_plots(pos, line_width=2, color='gray')
+
+
+   .. py:method:: reset_line_colors()
+
+
+   .. py:method:: reset_trafo_colors()
+
+
+   .. py:method:: set_line_colors(colors, idx=slice(None))
+
+
+   .. py:method:: update_line_colors()
+
+
+   .. py:method:: set_trafo_colors(colors, idx=slice(None))
+
+
+   .. py:method:: update_trafo_colors()
+
+
+.. py:data:: sample_dataset_path
+
+.. py:class:: LineLayer(*args, **kwargs)
+
+   Bases: :py:obj:`pswamp.gui.grid_view.dim_2d.layers.lines.LineLayer`
+
+
+   .. py:attribute:: lines_z_map
+
+
+   .. py:attribute:: trafos_z_map
+
+
+   .. py:attribute:: line_colors
+
+
+   .. py:attribute:: trafo_colors
+
+
+   .. py:method:: build_z_map(data, paths)
+
+
+   .. py:method:: update_line_z_coords(node_z)
+
+
+   .. py:method:: update_trafo_z_coords(node_z)
+
+
+   .. py:method:: set_node_z(z)
+
+
+   .. py:method:: add_line_plots(pos, line_width=2, color='gray')
+
+
+   .. py:method:: reset_line_colors()
+
+
+   .. py:method:: reset_trafo_colors()
+
+
+   .. py:method:: set_line_colors(colors, idx=slice(None))
+
+
+   .. py:method:: update_line_colors()
+
+
+   .. py:method:: set_trafo_colors(colors, idx=slice(None))
+
+
+   .. py:method:: update_trafo_colors()
+
+
+.. py:function:: read_geo_data(countries='All')
+
+.. py:function:: load_dxf(path)
+
+.. py:function:: get_buses(doc, bus_names_model=None)
+
+.. py:function:: flatten_list_insert_nan(listlist)
+
+.. py:class:: LineLayer2D(parent, config, geo=True)
+
+   .. py:attribute:: config
+
+
+   .. py:attribute:: k
+      :value: 2
+
+
+
+   .. py:attribute:: parent
+
+
+   .. py:attribute:: lines_plot
+
+
+   .. py:attribute:: trafos_plot
+
+
+   .. py:method:: read_sld_data(config, geo)
+
+
+   .. py:method:: add_line_plots(pos, line_width=1, color='white')
+
+
+   .. py:method:: remove_layer()
+
+
+   .. py:method:: get_branches_from_buses(bus_idx)
+
+
+   .. py:method:: __del__()
+
+
+.. py:function:: lookup_strings(a, b, return_mask=False)
+
+.. py:class:: PMUTimeWindowOnline(kafka_kwargs={}, kafka_topic='pmudata', auto_adjust_offset=False, **kwargs)
+
+   Bases: :py:obj:`PMUTimeWindow`
+
+
+   This class is intended for consuming PMU data from a specified Kafka topic and storing the last samples (n_samples) in a
+   TimeWindow object.
+
+
+   .. py:attribute:: kafka_topic
+      :value: 'pmudata'
+
+
+
+   .. py:attribute:: kafka_kwargs
+
+
+   .. py:attribute:: auto_adjust_offset
+      :value: False
+
+
+
+   .. py:attribute:: pmu_stream
+
+
+   .. py:attribute:: _is_stopped
+      :value: False
+
+
+
+   .. py:method:: initialize()
+
+
+   .. py:method:: run()
+
+
+   .. py:method:: stop()
+
+
+.. py:class:: Frequency3DLayerSettings(target_layer)
+
+   Bases: :py:obj:`PySide6.QtWidgets.QWidget`
+
+
+   .. py:attribute:: target_layer
+
+
+   .. py:method:: slider_change(val)
+
+
+.. py:class:: LinesFreq(parent, config, *args, **kwargs)
+
+   Bases: :py:obj:`pswamp.gui.grid_view.dim_3d.layers.lines.LineLayer`
+
+
+   .. py:attribute:: config
+
+
+   .. py:attribute:: uuid
+
+
+   .. py:attribute:: pmu_tw
+
+
+   .. py:attribute:: col_idx
+
+
+   .. py:attribute:: z_0
+      :value: 1
+
+
+
+   .. py:attribute:: z_scale
+      :value: 3
+
+
+
+   .. py:method:: get_col_idx()
+
+
+   .. py:method:: update_z()
+
+
+.. py:class:: LinesFreqSettings(target_layer)
+
+   Bases: :py:obj:`pswamp.gui.grid_view.dim_3d.layers.frequency.Frequency3DLayerSettings`
+
+
+.. py:data:: sample_dataset_path
+
+.. py:class:: LineLayer(*args, **kwargs)
+
+   Bases: :py:obj:`pswamp.gui.grid_view.dim_2d.layers.lines.LineLayer`
+
+
+   .. py:attribute:: lines_z_map
+
+
+   .. py:attribute:: trafos_z_map
+
+
+   .. py:attribute:: line_colors
+
+
+   .. py:attribute:: trafo_colors
+
+
+   .. py:method:: build_z_map(data, paths)
+
+
+   .. py:method:: update_line_z_coords(node_z)
+
+
+   .. py:method:: update_trafo_z_coords(node_z)
+
+
+   .. py:method:: set_node_z(z)
+
+
+   .. py:method:: add_line_plots(pos, line_width=2, color='gray')
+
+
+   .. py:method:: reset_line_colors()
+
+
+   .. py:method:: reset_trafo_colors()
+
+
+   .. py:method:: set_line_colors(colors, idx=slice(None))
+
+
+   .. py:method:: update_line_colors()
+
+
+   .. py:method:: set_trafo_colors(colors, idx=slice(None))
+
+
+   .. py:method:: update_trafo_colors()
+
+
+.. py:class:: SnapshotApp(io=None, eval_freq=None, t_end=None, t_start=None, app_name=None, input_decoder=None, decoder_kwargs={}, report_status=False, **io_kwargs)
+
+   General application template.
+
+   New applications could be defined by inheriting from this template, and
+   defining the "run_analysis" method.
+
+   :param io: Input/output object (normally connects to Kafka)
+   :param eval_freq: How often the evaluation of the application should be run
+                     (e.g., the part in "run_analysis")
+   :param t_end: The application will stop running when this time is reached
+                 (but can be restarted)
+   :param t_start: The application will ask the io object (first argument) to
+                   search for t_start when initializing.
+   :param app_name: Name for the application.
+   :param input_decoder: This determines how the input is read/decoded (if no
+                         decoder is specified, a decoder for PMU data frames will be used.)
+   :param decoder_kwargs: Kwargs for initalizing the "input_decoder".
+   :param report_status: If enabled, status messages will be emitted.
+   :param io_kwargs: Any other kwargs will be forwarded to the io object.
+
+
+   .. py:attribute:: app_name
+
+
+   .. py:attribute:: uuid
+
+
+   .. py:attribute:: status
+      :value: 'Undefined'
+
+
+
+   .. py:attribute:: eval_freq
+      :value: None
+
+
+
+   .. py:attribute:: _stopped
+      :value: False
+
+
+
+   .. py:attribute:: most_recent_data_frame
+      :value: None
+
+
+
+   .. py:attribute:: most_recent_time_stamp
+      :value: None
+
+
+
+   .. py:attribute:: last_result
+      :value: None
+
+
+
+   .. py:attribute:: t_next_eval
+      :value: None
+
+
+
+   .. py:attribute:: update_callbacks
+      :value: []
+
+
+
+   .. py:attribute:: decoder
+
+
+   .. py:attribute:: time_stamp_at_init
+
+
+   .. py:attribute:: input_dt
+
+
+   .. py:attribute:: pmu_dt
+
+
+   .. py:attribute:: results
+      :value: []
+
+
+
+   .. py:attribute:: t_eval_target
+
+
+   .. py:method:: get_sample_data_frame()
+
+
+   .. py:method:: get_input_data_rate()
+
+
+   .. py:method:: get_time_stamp_from_frame(data_frame)
+
+
+   .. py:method:: stop()
+
+
+   .. py:method:: get_config_frame()
+
+
+   .. py:method:: get_next_data_frame()
+
+
+   .. py:method:: handle_result(result)
+
+
+   .. py:method:: run_analysis(time_stamp, measurements)
+
+
+   .. py:method:: run_in_thread()
+
+
+   .. py:method:: run()
+
+
+   .. py:method:: update()
+
+
+   .. py:method:: update_storage(next_data_frame)
+
+
+   .. py:method:: get_result(next_data_frame)
+
+
+   .. py:method:: start()
+
+
+   .. py:method:: console_popup()
+
+
+.. py:class:: Line(config, meas_data, units=None)
+
+   .. py:attribute:: from_bus_idx
+
+
+   .. py:attribute:: to_bus_idx
+
+
+   .. py:attribute:: freq_from_extractor
+
+
+   .. py:attribute:: freq_to_extractor
+
+
+   .. py:attribute:: current_phasor_extractor_from
+
+
+   .. py:attribute:: current_phasor_extractor_to
+
+
+   .. py:attribute:: v_from_phasor_extractor
+
+
+   .. py:attribute:: v_to_phasor_extractor
+
+
+   .. py:attribute:: line_out_threshold
+      :value: 0.001
+
+
+
+   .. py:attribute:: S_n
+
+
+   .. py:attribute:: V_n
+
+
+   .. py:attribute:: I_n
+
+
+   .. py:method:: V_from(meas)
+
+
+   .. py:method:: V_to(meas)
+
+
+   .. py:method:: freq_from(meas)
+
+
+   .. py:method:: freq_to(meas)
+
+
+   .. py:method:: I_from(meas)
+
+
+   .. py:method:: I_to(meas)
+
+
+   .. py:method:: S_from(meas)
+
+
+   .. py:method:: S_to(meas)
+
+
+   .. py:method:: P_from(meas)
+
+
+   .. py:method:: P_to(meas)
+
+
+   .. py:method:: Q_from(meas)
+
+
+   .. py:method:: Q_to(meas)
+
+
+   .. py:method:: disconnected(meas)
+
+
+   .. py:method:: connectable(meas)
+
+
+.. py:class:: LineOutages(parent, config, *args, **kwargs)
+
+   Bases: :py:obj:`pswamp.gui.grid_view.dim_3d.layers.lines.LineLayer`
+
+
+   .. py:attribute:: config
+
+
+   .. py:attribute:: uuid
+
+
+   .. py:attribute:: snapshot_app
+
+
+   .. py:attribute:: line_model
+
+
+   .. py:method:: update_colors()
+
+
+   .. py:method:: add_line_plots(pos, line_width=7, color='gray')
+
+
+.. py:data:: config
+
+.. py:function:: set_gl_options(config, pl)
+
+   Set graphics options from config.
+
+   :param config: pswamp Configuration file (from config.toml)
+   :type config: dict
+   :param pl: Plot item for which to set options.
+   :type pl: GLGraphicsItem
+
+
+.. py:function:: read_geo_data(countries='All')
+
+.. py:class:: CountriesLayer(*args, **kwargs)
+
+   Bases: :py:obj:`pswamp.gui.grid_view.dim_2d.layers.CountriesLayer`
+
+
+   .. py:method:: add_geo_lines(geo_data)
+
+
+   .. py:method:: update_countries(countries=['Norway'])
+
+
+.. py:class:: CountriesLayerSettings(target_layer, *args, **kwargs)
+
+   Bases: :py:obj:`pswamp.gui.grid_view.dim_2d.layers.CountriesLayerSettings`
+
+
+.. py:data:: config
+

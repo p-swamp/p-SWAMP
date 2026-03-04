@@ -1,0 +1,123 @@
+pswamp.streaming.kafka_extras
+=============================
+
+.. py:module:: pswamp.streaming.kafka_extras
+
+
+Submodules
+----------
+
+.. toctree::
+   :maxdepth: 1
+
+   /autoapi/pswamp/streaming/kafka_extras/consumer_producer/index
+   /autoapi/pswamp/streaming/kafka_extras/utils/index
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   pswamp.streaming.kafka_extras.KafkaConsumer
+   pswamp.streaming.kafka_extras.KafkaProducer
+
+
+Functions
+---------
+
+.. autoapisummary::
+
+   pswamp.streaming.kafka_extras.consumer_seek_relative_offset
+   pswamp.streaming.kafka_extras.create_topic
+   pswamp.streaming.kafka_extras.get_last_message_from_topic
+   pswamp.streaming.kafka_extras.send_to_kafka_topic
+
+
+Package Contents
+----------------
+
+.. py:class:: KafkaConsumer(*args, use_nqkafka=False, **kwargs)
+
+   Wrapper for Kafka consumer.
+
+   :param use_nqkafka: Determines whether self.instance is a NQKafkaConsumer (from the nqkafka package, can be thought of as a "mock") or actual KafkaConsumer (from the kafka-python package), which connects to a Kafka server. Defaults to False.
+   :type use_nqkafka: bool, optional
+   :param \*args: Variable length argument list.
+   :param \*\*kwargs: Arbitrary keyword arguments.
+
+   .. attribute:: instance
+
+      Determined from input parameters.
+
+      :type: :obj:`nqkafka.NQKafkaConsumer` or :obj:`kafka.KafkaConsumer`
+
+
+   .. py:attribute:: instance
+
+
+   .. py:method:: __getattr__(name)
+
+      Inherits the same attributes as the instance.
+
+      :param name: Name of the attribute.
+      :type name: _type_
+
+      :returns: The attribute of the instance.
+
+
+
+   .. py:method:: __iter__()
+
+      The iterator is the same as the iterator of the instance.
+
+      :returns: The instance.
+
+
+
+.. py:class:: KafkaProducer(*args, use_nqkafka=False, **kwargs)
+
+   Wrapper for Kafka producer.
+
+   :param use_nqkafka: Determines whether self.instance is a NQKafkaProducer (from the nqkafka package, can be thought of as a "mock") or actual KafkaProducer (from the kafka-python package), which connects to a Kafka server. Defaults to False.
+   :type use_nqkafka: bool, optional
+   :param \*args: Variable length argument list.
+   :param \*\*kwargs: Arbitrary keyword arguments.
+
+   .. attribute:: instance
+
+      Determined from input parameters.
+
+      :type: :obj:`nqkafka.NQKafkaProducer` or :obj:`kafka.KafkaProducer`
+
+
+   .. py:attribute:: instance
+
+
+   .. py:method:: __getattr__(name)
+
+      Inherits the same attributes as the instance.
+
+      :param name: Name of the attribute.
+      :type name: _type_
+
+      :returns: The attribute of the instance.
+
+
+
+   .. py:method:: __iter__()
+
+      The iterator is the same as the iterator of the instance.
+
+      :returns: The instance.
+
+
+
+.. py:function:: consumer_seek_relative_offset(consumer, relative_offset)
+
+.. py:function:: create_topic(name, kafka_kwargs, **kwargs)
+
+.. py:function:: get_last_message_from_topic(kafka_kwargs, topic)
+
+.. py:function:: send_to_kafka_topic(kafka_kwargs, topic, msg)
+

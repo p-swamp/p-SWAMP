@@ -1,0 +1,353 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../../../../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>pswamp.visualization.voltage_stability_viz.dSdZ_plot &mdash; p-SWAMP  documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../../../../_static/css/theme.css?v=9edc463e" />
+      <link rel="stylesheet" type="text/css" href="../../../../../_static/graphviz.css?v=4ae1632d" />
+
+  
+      <script src="../../../../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../../../../_static/documentation_options.js?v=5929fcd5"></script>
+      <script src="../../../../../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../../../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../../../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../../search.html" />
+    <link rel="prev" title="pswamp.visualization.voltage_stability_viz" href="../index.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../../../index.html" class="icon icon-home">
+            p-SWAMP
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../../../../../p-swamp.html">p-SWAMP (Power Stability Wide area Monitoring and Protection)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../examples/index.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../kafka.html">Streaming, microservices, Kafka</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../testing.html">Test environments</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../templates.html">Real-Time Application Templates</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../models.html">Component models</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../../../../index.html">API Reference</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="../../../index.html">pswamp</a><ul class="current">
+<li class="toctree-l3 current"><a class="reference internal" href="../../../index.html#submodules">Submodules</a><ul class="current">
+<li class="toctree-l4"><a class="reference internal" href="../../../app_templates/index.html">pswamp.app_templates</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../coordination/index.html">pswamp.coordination</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../database/index.html">pswamp.database</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../gui/index.html">pswamp.gui</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../models/index.html">pswamp.models</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../monitoring/index.html">pswamp.monitoring</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../streaming/index.html">pswamp.streaming</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../styles/index.html">pswamp.styles</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../test_utils/index.html">pswamp.test_utils</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../utils/index.html">pswamp.utils</a></li>
+<li class="toctree-l4 current"><a class="reference internal" href="../../index.html">pswamp.visualization</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../../../index.html#functions">Functions</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../index.html#package-contents">Package Contents</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../../../index.html">p-SWAMP</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../../../index.html">API Reference</a></li>
+          <li class="breadcrumb-item"><a href="../../../index.html">pswamp</a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">pswamp.visualization</a></li>
+          <li class="breadcrumb-item"><a href="../index.html">pswamp.visualization.voltage_stability_viz</a></li>
+      <li class="breadcrumb-item active">pswamp.visualization.voltage_stability_viz.dSdZ_plot</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../../../../../_sources/autoapi/pswamp/visualization/voltage_stability_viz/dSdZ_plot/index.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="module-pswamp.visualization.voltage_stability_viz.dSdZ_plot">
+<span id="pswamp-visualization-voltage-stability-viz-dsdz-plot"></span><h1>pswamp.visualization.voltage_stability_viz.dSdZ_plot<a class="headerlink" href="#module-pswamp.visualization.voltage_stability_viz.dSdZ_plot" title="Link to this heading"></a></h1>
+<section id="attributes">
+<h2>Attributes<a class="headerlink" href="#attributes" title="Link to this heading"></a></h2>
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#pswamp.visualization.voltage_stability_viz.dSdZ_plot.data" title="pswamp.visualization.voltage_stability_viz.dSdZ_plot.data"><code class="xref py py-obj docutils literal notranslate"><span class="pre">data</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="classes">
+<h2>Classes<a class="headerlink" href="#classes" title="Link to this heading"></a></h2>
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#pswamp.visualization.voltage_stability_viz.dSdZ_plot.dSdZPlot" title="pswamp.visualization.voltage_stability_viz.dSdZ_plot.dSdZPlot"><code class="xref py py-obj docutils literal notranslate"><span class="pre">dSdZPlot</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#pswamp.visualization.voltage_stability_viz.dSdZ_plot.dSdZPlotAuto" title="pswamp.visualization.voltage_stability_viz.dSdZ_plot.dSdZPlotAuto"><code class="xref py py-obj docutils literal notranslate"><span class="pre">dSdZPlotAuto</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#pswamp.visualization.voltage_stability_viz.dSdZ_plot.dSdZPlotAutoUI" title="pswamp.visualization.voltage_stability_viz.dSdZ_plot.dSdZPlotAutoUI"><code class="xref py py-obj docutils literal notranslate"><span class="pre">dSdZPlotAutoUI</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="functions">
+<h2>Functions<a class="headerlink" href="#functions" title="Link to this heading"></a></h2>
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#pswamp.visualization.voltage_stability_viz.dSdZ_plot.lpf" title="pswamp.visualization.voltage_stability_viz.dSdZ_plot.lpf"><code class="xref py py-obj docutils literal notranslate"><span class="pre">lpf</span></code></a>(v_prev, v_in, beta)</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#pswamp.visualization.voltage_stability_viz.dSdZ_plot.generate_dSdZ_curve" title="pswamp.visualization.voltage_stability_viz.dSdZ_plot.generate_dSdZ_curve"><code class="xref py py-obj docutils literal notranslate"><span class="pre">generate_dSdZ_curve</span></code></a>(E_th, Z_th, Z_l, ang_Z_l, ang_thev)</p></td>
+<td><p></p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="module-contents">
+<h2>Module Contents<a class="headerlink" href="#module-contents" title="Link to this heading"></a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="pswamp.visualization.voltage_stability_viz.dSdZ_plot.lpf">
+<span class="sig-prename descclassname"><span class="pre">pswamp.visualization.voltage_stability_viz.dSdZ_plot.</span></span><span class="sig-name descname"><span class="pre">lpf</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">v_prev</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">v_in</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">beta</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pswamp.visualization.voltage_stability_viz.dSdZ_plot.lpf" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="pswamp.visualization.voltage_stability_viz.dSdZ_plot.generate_dSdZ_curve">
+<span class="sig-prename descclassname"><span class="pre">pswamp.visualization.voltage_stability_viz.dSdZ_plot.</span></span><span class="sig-name descname"><span class="pre">generate_dSdZ_curve</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">E_th</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Z_th</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Z_l</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ang_Z_l</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ang_thev</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pswamp.visualization.voltage_stability_viz.dSdZ_plot.generate_dSdZ_curve" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="pswamp.visualization.voltage_stability_viz.dSdZ_plot.dSdZPlot">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">pswamp.visualization.voltage_stability_viz.dSdZ_plot.</span></span><span class="sig-name descname"><span class="pre">dSdZPlot</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">curve_data</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pswamp.visualization.voltage_stability_viz.dSdZ_plot.dSdZPlot" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-obj docutils literal notranslate"><span class="pre">pyqtgraph.GraphicsLayoutWidget</span></code></p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.visualization.voltage_stability_viz.dSdZ_plot.dSdZPlot.request_plot_update">
+<span class="sig-name descname"><span class="pre">request_plot_update</span></span><a class="headerlink" href="#pswamp.visualization.voltage_stability_viz.dSdZ_plot.dSdZPlot.request_plot_update" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.visualization.voltage_stability_viz.dSdZ_plot.dSdZPlot.plot_ax">
+<span class="sig-name descname"><span class="pre">plot_ax</span></span><a class="headerlink" href="#pswamp.visualization.voltage_stability_viz.dSdZ_plot.dSdZPlot.plot_ax" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.visualization.voltage_stability_viz.dSdZ_plot.dSdZPlot.colors">
+<span class="sig-name descname"><span class="pre">colors</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">['b',</span> <span class="pre">'lightblue',</span> <span class="pre">'m',</span> <span class="pre">'g']</span></span><a class="headerlink" href="#pswamp.visualization.voltage_stability_viz.dSdZ_plot.dSdZPlot.colors" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.visualization.voltage_stability_viz.dSdZ_plot.dSdZPlot.ang_thev">
+<span class="sig-name descname"><span class="pre">ang_thev</span></span><a class="headerlink" href="#pswamp.visualization.voltage_stability_viz.dSdZ_plot.dSdZPlot.ang_thev" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.visualization.voltage_stability_viz.dSdZ_plot.dSdZPlot.indicator_plot">
+<span class="sig-name descname"><span class="pre">indicator_plot</span></span><a class="headerlink" href="#pswamp.visualization.voltage_stability_viz.dSdZ_plot.dSdZPlot.indicator_plot" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.visualization.voltage_stability_viz.dSdZ_plot.dSdZPlot.isocurves">
+<span class="sig-name descname"><span class="pre">isocurves</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">[]</span></span><a class="headerlink" href="#pswamp.visualization.voltage_stability_viz.dSdZ_plot.dSdZPlot.isocurves" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.visualization.voltage_stability_viz.dSdZ_plot.dSdZPlot.Z_l">
+<span class="sig-name descname"><span class="pre">Z_l</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#pswamp.visualization.voltage_stability_viz.dSdZ_plot.dSdZPlot.Z_l" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pswamp.visualization.voltage_stability_viz.dSdZ_plot.dSdZPlot.add_isocurves">
+<span class="sig-name descname"><span class="pre">add_isocurves</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">curve_data</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pswamp.visualization.voltage_stability_viz.dSdZ_plot.dSdZPlot.add_isocurves" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pswamp.visualization.voltage_stability_viz.dSdZ_plot.dSdZPlot.update_external">
+<span class="sig-name descname"><span class="pre">update_external</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pswamp.visualization.voltage_stability_viz.dSdZ_plot.dSdZPlot.update_external" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pswamp.visualization.voltage_stability_viz.dSdZ_plot.dSdZPlot.update">
+<span class="sig-name descname"><span class="pre">update</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pswamp.visualization.voltage_stability_viz.dSdZ_plot.dSdZPlot.update" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="pswamp.visualization.voltage_stability_viz.dSdZ_plot.dSdZPlotAuto">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">pswamp.visualization.voltage_stability_viz.dSdZ_plot.</span></span><span class="sig-name descname"><span class="pre">dSdZPlotAuto</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pswamp.visualization.voltage_stability_viz.dSdZ_plot.dSdZPlotAuto" title="Link to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="#pswamp.visualization.voltage_stability_viz.dSdZ_plot.dSdZPlot" title="pswamp.visualization.voltage_stability_viz.dSdZ_plot.dSdZPlot"><code class="xref py py-obj docutils literal notranslate"><span class="pre">dSdZPlot</span></code></a></p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.visualization.voltage_stability_viz.dSdZ_plot.dSdZPlotAuto.Z_th_range">
+<span class="sig-name descname"><span class="pre">Z_th_range</span></span><a class="headerlink" href="#pswamp.visualization.voltage_stability_viz.dSdZ_plot.dSdZPlotAuto.Z_th_range" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.visualization.voltage_stability_viz.dSdZ_plot.dSdZPlotAuto.Z_l_range">
+<span class="sig-name descname"><span class="pre">Z_l_range</span></span><a class="headerlink" href="#pswamp.visualization.voltage_stability_viz.dSdZ_plot.dSdZPlotAuto.Z_l_range" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.visualization.voltage_stability_viz.dSdZ_plot.dSdZPlotAuto.colors">
+<span class="sig-name descname"><span class="pre">colors</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">['r',</span> <span class="pre">'g',</span> <span class="pre">'b',</span> <span class="pre">'y',</span> <span class="pre">'m']</span></span><a class="headerlink" href="#pswamp.visualization.voltage_stability_viz.dSdZ_plot.dSdZPlotAuto.colors" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.visualization.voltage_stability_viz.dSdZ_plot.dSdZPlotAuto.lpf_beta">
+<span class="sig-name descname"><span class="pre">lpf_beta</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">0.95</span></span><a class="headerlink" href="#pswamp.visualization.voltage_stability_viz.dSdZ_plot.dSdZPlotAuto.lpf_beta" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.visualization.voltage_stability_viz.dSdZ_plot.dSdZPlotAuto.Z_l">
+<span class="sig-name descname"><span class="pre">Z_l</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#pswamp.visualization.voltage_stability_viz.dSdZ_plot.dSdZPlotAuto.Z_l" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.visualization.voltage_stability_viz.dSdZ_plot.dSdZPlotAuto.Z_th">
+<span class="sig-name descname"><span class="pre">Z_th</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#pswamp.visualization.voltage_stability_viz.dSdZ_plot.dSdZPlotAuto.Z_th" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.visualization.voltage_stability_viz.dSdZ_plot.dSdZPlotAuto.E_th">
+<span class="sig-name descname"><span class="pre">E_th</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#pswamp.visualization.voltage_stability_viz.dSdZ_plot.dSdZPlotAuto.E_th" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.visualization.voltage_stability_viz.dSdZ_plot.dSdZPlotAuto.ang_Z_l">
+<span class="sig-name descname"><span class="pre">ang_Z_l</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#pswamp.visualization.voltage_stability_viz.dSdZ_plot.dSdZPlotAuto.ang_Z_l" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pswamp.visualization.voltage_stability_viz.dSdZ_plot.dSdZPlotAuto.add_isocurves">
+<span class="sig-name descname"><span class="pre">add_isocurves</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pswamp.visualization.voltage_stability_viz.dSdZ_plot.dSdZPlotAuto.add_isocurves" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pswamp.visualization.voltage_stability_viz.dSdZ_plot.dSdZPlotAuto.update_isocurves">
+<span class="sig-name descname"><span class="pre">update_isocurves</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">new_data</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pswamp.visualization.voltage_stability_viz.dSdZ_plot.dSdZPlotAuto.update_isocurves" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pswamp.visualization.voltage_stability_viz.dSdZ_plot.dSdZPlotAuto.update_ang_thev">
+<span class="sig-name descname"><span class="pre">update_ang_thev</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">new_data</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pswamp.visualization.voltage_stability_viz.dSdZ_plot.dSdZPlotAuto.update_ang_thev" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="pswamp.visualization.voltage_stability_viz.dSdZ_plot.dSdZPlotAutoUI">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">pswamp.visualization.voltage_stability_viz.dSdZ_plot.</span></span><span class="sig-name descname"><span class="pre">dSdZPlotAutoUI</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pswamp.visualization.voltage_stability_viz.dSdZ_plot.dSdZPlotAutoUI" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-obj docutils literal notranslate"><span class="pre">PySide6.QtWidgets.QWidget</span></code></p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.visualization.voltage_stability_viz.dSdZ_plot.dSdZPlotAutoUI.dSdZ_plot">
+<span class="sig-name descname"><span class="pre">dSdZ_plot</span></span><a class="headerlink" href="#pswamp.visualization.voltage_stability_viz.dSdZ_plot.dSdZPlotAutoUI.dSdZ_plot" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.visualization.voltage_stability_viz.dSdZ_plot.dSdZPlotAutoUI.slider">
+<span class="sig-name descname"><span class="pre">slider</span></span><a class="headerlink" href="#pswamp.visualization.voltage_stability_viz.dSdZ_plot.dSdZPlotAutoUI.slider" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pswamp.visualization.voltage_stability_viz.dSdZ_plot.dSdZPlotAutoUI.update_slider">
+<span class="sig-name descname"><span class="pre">update_slider</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">val</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pswamp.visualization.voltage_stability_viz.dSdZ_plot.dSdZPlotAutoUI.update_slider" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pswamp.visualization.voltage_stability_viz.dSdZ_plot.dSdZPlotAutoUI.add_isocurves">
+<span class="sig-name descname"><span class="pre">add_isocurves</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pswamp.visualization.voltage_stability_viz.dSdZ_plot.dSdZPlotAutoUI.add_isocurves" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pswamp.visualization.voltage_stability_viz.dSdZ_plot.dSdZPlotAutoUI.update_isocurves">
+<span class="sig-name descname"><span class="pre">update_isocurves</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pswamp.visualization.voltage_stability_viz.dSdZ_plot.dSdZPlotAutoUI.update_isocurves" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pswamp.visualization.voltage_stability_viz.dSdZ_plot.dSdZPlotAutoUI.update_ang_thev">
+<span class="sig-name descname"><span class="pre">update_ang_thev</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pswamp.visualization.voltage_stability_viz.dSdZ_plot.dSdZPlotAutoUI.update_ang_thev" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pswamp.visualization.voltage_stability_viz.dSdZ_plot.dSdZPlotAutoUI.update">
+<span class="sig-name descname"><span class="pre">update</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pswamp.visualization.voltage_stability_viz.dSdZ_plot.dSdZPlotAutoUI.update" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="pswamp.visualization.voltage_stability_viz.dSdZ_plot.data">
+<span class="sig-prename descclassname"><span class="pre">pswamp.visualization.voltage_stability_viz.dSdZ_plot.</span></span><span class="sig-name descname"><span class="pre">data</span></span><a class="headerlink" href="#pswamp.visualization.voltage_stability_viz.dSdZ_plot.data" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="../index.html" class="btn btn-neutral float-left" title="pswamp.visualization.voltage_stability_viz" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright .</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

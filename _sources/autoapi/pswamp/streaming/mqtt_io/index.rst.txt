@@ -1,0 +1,165 @@
+pswamp.streaming.mqtt_io
+========================
+
+.. py:module:: pswamp.streaming.mqtt_io
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   pswamp.streaming.mqtt_io.MQTTConsumer
+   pswamp.streaming.mqtt_io.MQTTProducer
+   pswamp.streaming.mqtt_io.MQTT_IO
+
+
+Module Contents
+---------------
+
+.. py:class:: MQTTConsumer(topic, hostname, port)
+
+   .. py:attribute:: client
+
+
+   .. py:attribute:: last_msg
+      :value: ''
+
+
+
+   .. py:attribute:: output_queue
+
+
+   .. py:method:: get_next()
+
+
+   .. py:method:: on_message(client, userdata, message)
+
+
+   .. py:method:: __iter__()
+
+
+   .. py:method:: __next__()
+
+
+.. py:class:: MQTTProducer(hostname, port)
+
+   .. py:attribute:: client
+
+
+   .. py:method:: publish(topic, msg)
+
+
+   .. py:method:: send(*args, **kwargs)
+
+
+   .. py:method:: flush(*args, **kwargs)
+
+
+.. py:class:: MQTT_IO(mqtt_kwargs, input_topic='pmudata', output_topic=None, status_topic='application.status', command_topic='application.commands')
+
+   Online input/output object to be used by applications.
+
+   TODO: Remove t_start from arguments.
+
+   :param kafka_kwargs: Kwargs that will be used in kafka consumers and producers.
+   :param input_topic: Kafka topic for input data stream.
+   :param output_topic: Kafka topic for output data stream.
+   :param status_topic: Kafka topic for status messages.
+   :param t_start: Not used anymore.
+   :param command_topic: Kafka topic for application commands.
+
+
+   .. py:attribute:: input_topic
+      :value: 'pmudata'
+
+
+
+   .. py:attribute:: mqtt_kwargs
+
+
+   .. py:attribute:: command_topic
+      :value: 'application.commands'
+
+
+
+   .. py:attribute:: input_stream
+
+
+   .. py:attribute:: output_topic
+      :value: None
+
+
+
+   .. py:attribute:: status_topic
+      :value: 'application.status'
+
+
+
+   .. py:attribute:: status_producer
+
+
+   .. py:attribute:: command_consumer
+
+
+   .. py:method:: get_sample_data_frame()
+
+      Get sample data frame from input (without affecting input stream)
+
+      :returns: Data frame
+      :rtype: _type_
+
+
+
+   .. py:method:: get_config_frame()
+
+      Get config frame
+
+      :returns: Config frame
+      :rtype: _type_
+
+
+
+   .. py:method:: get_next_data_frame()
+
+      Get next dataframe
+
+      :returns: Data frame
+      :rtype: _type_
+
+
+
+   .. py:method:: get_next_command()
+
+      Get command frame
+
+      :returns: Command frame
+      :rtype: _type_
+
+
+
+   .. py:method:: handle_result(result)
+
+      Handle result once analysis completes. If result is not None, the
+      result will be sent to the output topic.
+
+      :param result: Result
+      :type result: _type_
+
+
+
+   .. py:method:: handle_output(topic, output)
+
+
+   .. py:method:: handle_status(message)
+
+      Sends the satus message to the status topic.
+
+      :param message: Status message
+      :type message: _type_
+
+
+
+   .. py:method:: seek_relative_input_offset(n_samples)
+
+

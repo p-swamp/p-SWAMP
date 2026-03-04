@@ -1,0 +1,35 @@
+pswamp.test_utils.sample_datasets.n44_mock_case
+===============================================
+
+.. py:module:: pswamp.test_utils.sample_datasets.n44_mock_case
+
+
+Attributes
+----------
+
+.. autoapisummary::
+
+   pswamp.test_utils.sample_datasets.n44_mock_case.config
+
+
+Functions
+---------
+
+.. autoapisummary::
+
+   pswamp.test_utils.sample_datasets.n44_mock_case.generate_pmu_cfg_from_model
+   pswamp.test_utils.sample_datasets.n44_mock_case.run_mock_case
+   pswamp.test_utils.sample_datasets.n44_mock_case.stop_mock_case
+
+
+Module Contents
+---------------
+
+.. py:function:: generate_pmu_cfg_from_model(config)
+
+.. py:function:: run_mock_case(config, topic_data={}, publish_frequency=50, t_end=10)
+
+.. py:function:: stop_mock_case(config)
+
+.. py:data:: config
+

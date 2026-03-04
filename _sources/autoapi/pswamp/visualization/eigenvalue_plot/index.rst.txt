@@ -1,0 +1,81 @@
+pswamp.visualization.eigenvalue_plot
+====================================
+
+.. py:module:: pswamp.visualization.eigenvalue_plot
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   pswamp.visualization.eigenvalue_plot.EigenvaluePlot
+
+
+Functions
+---------
+
+.. autoapisummary::
+
+   pswamp.visualization.eigenvalue_plot.main
+
+
+Module Contents
+---------------
+
+.. py:class:: EigenvaluePlot(background_color=(30, 63, 64), *args, **kwargs)
+
+   Bases: :py:obj:`PySide6.QtWidgets.QWidget`
+
+
+   This class is for live plotting of eigenvalues.
+
+
+   .. py:attribute:: request_plot_update
+
+
+   .. py:attribute:: colors
+
+
+   .. py:attribute:: markers
+
+
+   .. py:attribute:: graphWidget
+
+
+   .. py:attribute:: y_scale
+      :value: 1
+
+
+
+   .. py:attribute:: eig_plots
+
+
+   .. py:attribute:: eigs
+
+
+   .. py:attribute:: focus_plot
+
+
+   .. py:attribute:: plot_counter
+      :value: 0
+
+
+
+   .. py:method:: add_plot(plot_id, plot_name)
+
+
+   .. py:method:: update(plot_id, plot_name, new_eigs)
+
+
+   .. py:method:: update_plot()
+
+      Update the eigenvalue plot with new values.
+
+
+
+   .. py:method:: set_focus(plot_id, idx)
+
+
+.. py:function:: main()
+

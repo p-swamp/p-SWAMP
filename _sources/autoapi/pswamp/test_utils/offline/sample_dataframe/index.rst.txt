@@ -1,0 +1,29 @@
+pswamp.test_utils.offline.sample_dataframe
+==========================================
+
+.. py:module:: pswamp.test_utils.offline.sample_dataframe
+
+
+Attributes
+----------
+
+.. autoapisummary::
+
+   pswamp.test_utils.offline.sample_dataframe.data_frame
+
+
+Functions
+---------
+
+.. autoapisummary::
+
+   pswamp.test_utils.offline.sample_dataframe.create_sample_data_frame
+
+
+Module Contents
+---------------
+
+.. py:function:: create_sample_data_frame()
+
+.. py:data:: data_frame
+

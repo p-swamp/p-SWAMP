@@ -1,0 +1,85 @@
+pswamp.visualization.components.heatmap
+=======================================
+
+.. py:module:: pswamp.visualization.components.heatmap
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   pswamp.visualization.components.heatmap.HeatMap
+   pswamp.visualization.components.heatmap.HeatMapGeo
+
+
+Functions
+---------
+
+.. autoapisummary::
+
+   pswamp.visualization.components.heatmap.main
+
+
+Module Contents
+---------------
+
+.. py:class:: HeatMap(coords, lims=[0.9, 1.1], y_scale=1, z_offset=1, background_color=(30, 63, 64), plot_window=None)
+
+   .. py:attribute:: z_offset
+      :value: 1
+
+
+
+   .. py:attribute:: y_scale
+      :value: 1
+
+
+
+   .. py:attribute:: not_nan_xy
+
+
+   .. py:attribute:: x
+
+
+   .. py:attribute:: y
+
+
+   .. py:attribute:: im_width
+
+
+   .. py:attribute:: im_height
+
+
+   .. py:attribute:: z_scale
+      :value: 1000.0
+
+
+
+   .. py:attribute:: cb
+
+
+   .. py:attribute:: im
+
+
+   .. py:attribute:: pl
+
+
+   .. py:attribute:: interp_method
+      :value: 'linear'
+
+
+
+   .. py:method:: update(new_z)
+
+
+.. py:class:: HeatMapGeo(*args, countries=None, **kwargs)
+
+   Bases: :py:obj:`HeatMap`
+
+
+   .. py:attribute:: geo_lines
+
+
+.. py:function:: main()
+

@@ -1,0 +1,99 @@
+pswamp.visualization.n4sid_viz
+==============================
+
+.. py:module:: pswamp.visualization.n4sid_viz
+
+
+Attributes
+----------
+
+.. autoapisummary::
+
+   pswamp.visualization.n4sid_viz.config
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   pswamp.visualization.n4sid_viz.N4SIDViz
+
+
+Functions
+---------
+
+.. autoapisummary::
+
+   pswamp.visualization.n4sid_viz.n4sid_viz
+   pswamp.visualization.n4sid_viz.run_n4sid_viz
+
+
+Module Contents
+---------------
+
+.. py:class:: N4SIDViz(kafka_kwargs, kafka_topic, geo_plot_kwargs)
+
+   Bases: :py:obj:`PySide6.QtWidgets.QMainWindow`
+
+
+   .. py:attribute:: request_text_update
+
+
+   .. py:attribute:: mode_estimation_stream
+
+
+   .. py:attribute:: _stopped
+      :value: False
+
+
+
+   .. py:attribute:: eigs_plot
+
+
+   .. py:attribute:: monitoring_apps
+
+
+   .. py:attribute:: selected_app_uuid
+      :value: None
+
+
+
+   .. py:attribute:: selected_mode_idx
+      :value: None
+
+
+
+   .. py:attribute:: mode_text
+
+
+   .. py:attribute:: phasor_plot
+
+
+   .. py:method:: monitoring_app_selected(val)
+
+
+   .. py:method:: set_mode_text(eig, cluster_id)
+
+
+   .. py:method:: update_mode_text()
+
+
+   .. py:method:: mode_selected(val)
+
+
+   .. py:method:: stop()
+
+
+   .. py:method:: update_plots(msg)
+
+
+   .. py:method:: run()
+
+
+.. py:function:: n4sid_viz(kafka_kwargs, kafka_topic='modeestimation', geo_plot_kwargs=None)
+
+.. py:function:: run_n4sid_viz(*config_args)
+
+.. py:data:: config
+

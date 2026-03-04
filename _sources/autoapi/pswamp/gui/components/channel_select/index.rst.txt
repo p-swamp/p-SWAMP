@@ -1,0 +1,136 @@
+pswamp.gui.components.channel_select
+====================================
+
+.. py:module:: pswamp.gui.components.channel_select
+
+
+Attributes
+----------
+
+.. autoapisummary::
+
+   pswamp.gui.components.channel_select.app
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   pswamp.gui.components.channel_select.ChannelSelect
+
+
+Module Contents
+---------------
+
+.. py:class:: ChannelSelect(channels)
+
+   Bases: :py:obj:`PySide6.QtWidgets.QWidget`
+
+
+   Widget for selecting channels.
+
+   The user can select channels in the list to the left, and move them to the
+   right to include in selection.
+
+   :param channels: List of channels.
+   :type channels: list
+
+
+   .. py:attribute:: channel_to_idx
+
+
+   .. py:attribute:: channels
+
+
+   .. py:attribute:: selected_channels
+      :value: []
+
+
+
+   .. py:attribute:: unselected_list
+
+
+   .. py:attribute:: selected_list
+
+
+   .. py:attribute:: move_up_button
+
+
+   .. py:attribute:: move_down_button
+
+
+   .. py:attribute:: select_all_button
+
+
+   .. py:attribute:: unselect_all_button
+
+
+   .. py:attribute:: select_button
+
+
+   .. py:attribute:: unselect_button
+
+
+   .. py:attribute:: filter_edit
+
+
+   .. py:attribute:: filter_selected_edit
+
+
+   .. py:attribute:: item_was_selected
+
+
+   .. py:attribute:: item_was_unselected
+
+
+   .. py:method:: select_channels()
+
+      Get channels from unselected list and transfer to selected list.
+
+
+
+   .. py:method:: select_all_channels()
+
+      Put all channels in selected list, remove from unselected.
+
+
+
+   .. py:method:: unselect_all_channels()
+
+      Put all channels in unselected list, remove from selected.
+
+
+
+   .. py:method:: unselect_channels()
+
+      Get channels from selected list and transfer to unselected list.
+
+
+
+   .. py:method:: move_up()
+
+      Move channel up.
+
+
+
+   .. py:method:: move_down()
+
+      Move channel down.
+
+
+
+   .. py:method:: filter_channels()
+
+      Show unselected channels contaning text in filter_edit text box.
+
+
+
+   .. py:method:: filter_channels_selected()
+
+      Show selected channels contaning text in filter_edit text box.
+
+
+
+.. py:data:: app
+

@@ -1,0 +1,17 @@
+pswamp.app_templates
+====================
+
+.. py:module:: pswamp.app_templates
+
+
+Submodules
+----------
+
+.. toctree::
+   :maxdepth: 1
+
+   /autoapi/pswamp/app_templates/snapshot_app/index
+   /autoapi/pswamp/app_templates/status_reporting/index
+   /autoapi/pswamp/app_templates/time_window_app/index
+
+

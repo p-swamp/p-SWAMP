@@ -1,0 +1,19 @@
+pswamp.visualization.freq_heatmap
+=================================
+
+.. py:module:: pswamp.visualization.freq_heatmap
+
+
+Functions
+---------
+
+.. autoapisummary::
+
+   pswamp.visualization.freq_heatmap.run_freq_heatmap
+
+
+Module Contents
+---------------
+
+.. py:function:: run_freq_heatmap(*config_args)
+

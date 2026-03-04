@@ -1,0 +1,84 @@
+pswamp.gui.alarms.handling
+==========================
+
+.. py:module:: pswamp.gui.alarms.handling
+
+
+Attributes
+----------
+
+.. autoapisummary::
+
+   pswamp.gui.alarms.handling.alarm_views
+   pswamp.gui.alarms.handling.config
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   pswamp.gui.alarms.handling.AlarmHandlingDialogue
+
+
+Module Contents
+---------------
+
+.. py:data:: alarm_views
+
+.. py:class:: AlarmHandlingDialogue(config, alarm_uuid, alarm_data, measurement_data_available=True, grid_view=None)
+
+   Bases: :py:obj:`PySide6.QtWidgets.QWidget`
+
+
+   Widget for alarm handling
+
+   Shows details on an alarm, e.g., identifying application, time of being
+   issued, acknowledged, silenced, etc. Also shows alarm views when possible.
+
+   :param config: pswamp config file.
+   :param alarm_uuid: UUID of the alarm to be shown.
+   :type alarm_uuid: uuid.uuid
+   :param alarm_data: Data for the alarm to be shown.
+   :type alarm_data: dict
+   :param measurement_data_available: If this is False, alarm views will not show.
+   :type measurement_data_available: bool
+   :param grid_view: Allow content to be shown on the SLD.
+   :type grid_view: GridViewContainer
+
+
+   .. py:attribute:: alarm_topic
+
+
+   .. py:attribute:: config
+
+
+   .. py:attribute:: alarm_uuid
+
+
+   .. py:attribute:: alarm_data
+
+
+   .. py:attribute:: tableWidget
+
+
+   .. py:attribute:: output_stream
+
+
+   .. py:attribute:: timer
+
+
+   .. py:method:: acknowledge_alarm()
+
+
+   .. py:method:: annotate_alarm()
+
+
+   .. py:method:: silence_alarm()
+
+
+   .. py:method:: update_message_display()
+
+
+.. py:data:: config
+

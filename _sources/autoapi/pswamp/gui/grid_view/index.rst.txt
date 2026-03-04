@@ -1,0 +1,20 @@
+pswamp.gui.grid_view
+====================
+
+.. py:module:: pswamp.gui.grid_view
+
+
+Submodules
+----------
+
+.. toctree::
+   :maxdepth: 1
+
+   /autoapi/pswamp/gui/grid_view/dim_2d/index
+   /autoapi/pswamp/gui/grid_view/dim_3d/index
+   /autoapi/pswamp/gui/grid_view/grid_view_container/index
+   /autoapi/pswamp/gui/grid_view/layer_select/index
+   /autoapi/pswamp/gui/grid_view/layer_settings/index
+   /autoapi/pswamp/gui/grid_view/tab_widget/index
+
+

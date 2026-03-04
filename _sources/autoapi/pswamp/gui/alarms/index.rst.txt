@@ -1,0 +1,17 @@
+pswamp.gui.alarms
+=================
+
+.. py:module:: pswamp.gui.alarms
+
+
+Submodules
+----------
+
+.. toctree::
+   :maxdepth: 1
+
+   /autoapi/pswamp/gui/alarms/handling/index
+   /autoapi/pswamp/gui/alarms/overview/index
+   /autoapi/pswamp/gui/alarms/views/index
+
+

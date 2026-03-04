@@ -1,0 +1,72 @@
+pswamp.visualization.components.phasor_plot_3d
+==============================================
+
+.. py:module:: pswamp.visualization.components.phasor_plot_3d
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   pswamp.visualization.components.phasor_plot_3d.PhasorPlot3D
+
+
+Functions
+---------
+
+.. autoapisummary::
+
+   pswamp.visualization.components.phasor_plot_3d.main
+
+
+Module Contents
+---------------
+
+.. py:class:: PhasorPlot3D(plot_window, pos0=None, n_phasors=None, normalize_length=True, normalize_angle=False, update_freq=None, *args, **kwargs)
+
+   This class inserts phasors in a 3D plot window at specific coordinates.
+
+
+   .. py:attribute:: normalize_length
+      :value: True
+
+
+
+   .. py:attribute:: normalize_angle
+      :value: False
+
+
+
+   .. py:attribute:: update_freq
+      :value: None
+
+
+
+   .. py:attribute:: angles_prev
+
+
+   .. py:attribute:: pos0
+      :value: None
+
+
+
+   .. py:attribute:: phasor_0
+
+
+   .. py:attribute:: colors
+
+
+   .. py:attribute:: phasor_plots
+      :value: []
+
+
+
+   .. py:method:: update(phasors, normalize=False)
+
+
+   .. py:method:: update_plot()
+
+
+.. py:function:: main()
+

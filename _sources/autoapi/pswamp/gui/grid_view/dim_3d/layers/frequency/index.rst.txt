@@ -1,0 +1,98 @@
+pswamp.gui.grid_view.dim_3d.layers.frequency
+============================================
+
+.. py:module:: pswamp.gui.grid_view.dim_3d.layers.frequency
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   pswamp.gui.grid_view.dim_3d.layers.frequency.Frequency3DLayer
+   pswamp.gui.grid_view.dim_3d.layers.frequency.Frequency3DLayerSettings
+
+
+Module Contents
+---------------
+
+.. py:class:: Frequency3DLayer(parent, config, geo=True)
+
+   .. py:attribute:: config
+
+
+   .. py:attribute:: plotWidget
+
+
+   .. py:attribute:: k
+      :value: 2
+
+
+
+   .. py:attribute:: uuid
+
+
+   .. py:attribute:: parent
+
+
+   .. py:attribute:: z_scale
+      :value: 3
+
+
+
+   .. py:attribute:: pmu_tw
+
+
+   .. py:attribute:: col_idx
+
+
+   .. py:attribute:: x
+
+
+   .. py:attribute:: y
+
+
+   .. py:attribute:: z_0
+
+
+   .. py:attribute:: z
+
+
+   .. py:attribute:: colors
+
+
+   .. py:method:: show()
+
+
+   .. py:method:: hide()
+
+
+   .. py:method:: get_col_idx()
+
+
+   .. py:method:: add_scatter_plot(bus_coords_3d)
+
+
+   .. py:method:: update_coords()
+
+
+   .. py:method:: update_scatter()
+
+
+   .. py:method:: generate_bus_lines()
+
+
+   .. py:method:: remove_layer()
+
+
+.. py:class:: Frequency3DLayerSettings(target_layer)
+
+   Bases: :py:obj:`PySide6.QtWidgets.QWidget`
+
+
+   .. py:attribute:: target_layer
+
+
+   .. py:method:: slider_change(val)
+
+

@@ -1,0 +1,1489 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../../../../../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>pswamp.gui.grid_view.dim_2d.layers &mdash; p-SWAMP  documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../../../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../../../../../_static/css/theme.css?v=9edc463e" />
+      <link rel="stylesheet" type="text/css" href="../../../../../../_static/graphviz.css?v=4ae1632d" />
+
+  
+      <script src="../../../../../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../../../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../../../../../_static/documentation_options.js?v=5929fcd5"></script>
+      <script src="../../../../../../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../../../../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../../../../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../../../search.html" />
+    <link rel="next" title="pswamp.gui.grid_view.dim_2d.layers.buses" href="buses/index.html" />
+    <link rel="prev" title="pswamp.gui.grid_view.dim_2d.base_plot_layers" href="../base_plot_layers/index.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../../../../index.html" class="icon icon-home">
+            p-SWAMP
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../../../../../../p-swamp.html">p-SWAMP (Power Stability Wide area Monitoring and Protection)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../../examples/index.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../../kafka.html">Streaming, microservices, Kafka</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../../testing.html">Test environments</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../../templates.html">Real-Time Application Templates</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../../models.html">Component models</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../../../../../index.html">API Reference</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="../../../../index.html">pswamp</a><ul class="current">
+<li class="toctree-l3 current"><a class="reference internal" href="../../../../index.html#submodules">Submodules</a><ul class="current">
+<li class="toctree-l4"><a class="reference internal" href="../../../../app_templates/index.html">pswamp.app_templates</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../../coordination/index.html">pswamp.coordination</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../../database/index.html">pswamp.database</a></li>
+<li class="toctree-l4 current"><a class="reference internal" href="../../../index.html">pswamp.gui</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../../models/index.html">pswamp.models</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../../monitoring/index.html">pswamp.monitoring</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../../streaming/index.html">pswamp.streaming</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../../styles/index.html">pswamp.styles</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../../test_utils/index.html">pswamp.test_utils</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../../utils/index.html">pswamp.utils</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../../visualization/index.html">pswamp.visualization</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../../../../index.html#functions">Functions</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../../index.html#package-contents">Package Contents</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../../../../index.html">p-SWAMP</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../../../../index.html">API Reference</a></li>
+          <li class="breadcrumb-item"><a href="../../../../index.html">pswamp</a></li>
+          <li class="breadcrumb-item"><a href="../../../index.html">pswamp.gui</a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">pswamp.gui.grid_view</a></li>
+          <li class="breadcrumb-item"><a href="../index.html">pswamp.gui.grid_view.dim_2d</a></li>
+      <li class="breadcrumb-item active">pswamp.gui.grid_view.dim_2d.layers</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../../../../../../_sources/autoapi/pswamp/gui/grid_view/dim_2d/layers/index.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="module-pswamp.gui.grid_view.dim_2d.layers">
+<span id="pswamp-gui-grid-view-dim-2d-layers"></span><h1>pswamp.gui.grid_view.dim_2d.layers<a class="headerlink" href="#module-pswamp.gui.grid_view.dim_2d.layers" title="Link to this heading"></a></h1>
+<section id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Link to this heading"></a></h2>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="buses/index.html">pswamp.gui.grid_view.dim_2d.layers.buses</a></li>
+<li class="toctree-l1"><a class="reference internal" href="countries/index.html">pswamp.gui.grid_view.dim_2d.layers.countries</a></li>
+<li class="toctree-l1"><a class="reference internal" href="heatmap/index.html">pswamp.gui.grid_view.dim_2d.layers.heatmap</a></li>
+<li class="toctree-l1"><a class="reference internal" href="layers/index.html">pswamp.gui.grid_view.dim_2d.layers.layers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="lines/index.html">pswamp.gui.grid_view.dim_2d.layers.lines</a></li>
+<li class="toctree-l1"><a class="reference internal" href="lines_2/index.html">pswamp.gui.grid_view.dim_2d.layers.lines_2</a></li>
+<li class="toctree-l1"><a class="reference internal" href="pmus/index.html">pswamp.gui.grid_view.dim_2d.layers.pmus</a></li>
+</ul>
+</div>
+</section>
+<section id="attributes">
+<h2>Attributes<a class="headerlink" href="#attributes" title="Link to this heading"></a></h2>
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#id87" title="pswamp.gui.grid_view.dim_2d.layers.sample_dataset_path"><code class="xref py py-obj docutils literal notranslate"><span class="pre">sample_dataset_path</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#pswamp.gui.grid_view.dim_2d.layers.config" title="pswamp.gui.grid_view.dim_2d.layers.config"><code class="xref py py-obj docutils literal notranslate"><span class="pre">config</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#id87" title="pswamp.gui.grid_view.dim_2d.layers.sample_dataset_path"><code class="xref py py-obj docutils literal notranslate"><span class="pre">sample_dataset_path</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="exceptions">
+<h2>Exceptions<a class="headerlink" href="#exceptions" title="Link to this heading"></a></h2>
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#pswamp.gui.grid_view.dim_2d.layers.LayerFailedException" title="pswamp.gui.grid_view.dim_2d.layers.LayerFailedException"><code class="xref py py-obj docutils literal notranslate"><span class="pre">LayerFailedException</span></code></a></p></td>
+<td><p>Raised when layer fails.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="classes">
+<h2>Classes<a class="headerlink" href="#classes" title="Link to this heading"></a></h2>
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#id47" title="pswamp.gui.grid_view.dim_2d.layers.PMUTimeWindowOnline"><code class="xref py py-obj docutils literal notranslate"><span class="pre">PMUTimeWindowOnline</span></code></a></p></td>
+<td><p>This class is intended for consuming PMU data from a specified Kafka topic and storing the last samples (n_samples) in a</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#id70" title="pswamp.gui.grid_view.dim_2d.layers.PhasorPlot"><code class="xref py py-obj docutils literal notranslate"><span class="pre">PhasorPlot</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#pswamp.gui.grid_view.dim_2d.layers.StationNamesLayer" title="pswamp.gui.grid_view.dim_2d.layers.StationNamesLayer"><code class="xref py py-obj docutils literal notranslate"><span class="pre">StationNamesLayer</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#pswamp.gui.grid_view.dim_2d.layers.PhasorPlotLayer" title="pswamp.gui.grid_view.dim_2d.layers.PhasorPlotLayer"><code class="xref py py-obj docutils literal notranslate"><span class="pre">PhasorPlotLayer</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#pswamp.gui.grid_view.dim_2d.layers.StaticLineDataLayer" title="pswamp.gui.grid_view.dim_2d.layers.StaticLineDataLayer"><code class="xref py py-obj docutils literal notranslate"><span class="pre">StaticLineDataLayer</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#pswamp.gui.grid_view.dim_2d.layers.StaticLineDataLayer_v0" title="pswamp.gui.grid_view.dim_2d.layers.StaticLineDataLayer_v0"><code class="xref py py-obj docutils literal notranslate"><span class="pre">StaticLineDataLayer_v0</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#pswamp.gui.grid_view.dim_2d.layers.StaticLineDataLayerSettings" title="pswamp.gui.grid_view.dim_2d.layers.StaticLineDataLayerSettings"><code class="xref py py-obj docutils literal notranslate"><span class="pre">StaticLineDataLayerSettings</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#id57" title="pswamp.gui.grid_view.dim_2d.layers.PMUTimeWindow"><code class="xref py py-obj docutils literal notranslate"><span class="pre">PMUTimeWindow</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#id70" title="pswamp.gui.grid_view.dim_2d.layers.PhasorPlot"><code class="xref py py-obj docutils literal notranslate"><span class="pre">PhasorPlot</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#pswamp.gui.grid_view.dim_2d.layers.BusesLayer" title="pswamp.gui.grid_view.dim_2d.layers.BusesLayer"><code class="xref py py-obj docutils literal notranslate"><span class="pre">BusesLayer</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#id57" title="pswamp.gui.grid_view.dim_2d.layers.PMUTimeWindow"><code class="xref py py-obj docutils literal notranslate"><span class="pre">PMUTimeWindow</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#id70" title="pswamp.gui.grid_view.dim_2d.layers.PhasorPlot"><code class="xref py py-obj docutils literal notranslate"><span class="pre">PhasorPlot</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#pswamp.gui.grid_view.dim_2d.layers.HeatMapBasePlot" title="pswamp.gui.grid_view.dim_2d.layers.HeatMapBasePlot"><code class="xref py py-obj docutils literal notranslate"><span class="pre">HeatMapBasePlot</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#id47" title="pswamp.gui.grid_view.dim_2d.layers.PMUTimeWindowOnline"><code class="xref py py-obj docutils literal notranslate"><span class="pre">PMUTimeWindowOnline</span></code></a></p></td>
+<td><p>This class is intended for consuming PMU data from a specified Kafka topic and storing the last samples (n_samples) in a</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#pswamp.gui.grid_view.dim_2d.layers.FrequencyHeatMap" title="pswamp.gui.grid_view.dim_2d.layers.FrequencyHeatMap"><code class="xref py py-obj docutils literal notranslate"><span class="pre">FrequencyHeatMap</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#pswamp.gui.grid_view.dim_2d.layers.CountriesLayer" title="pswamp.gui.grid_view.dim_2d.layers.CountriesLayer"><code class="xref py py-obj docutils literal notranslate"><span class="pre">CountriesLayer</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#pswamp.gui.grid_view.dim_2d.layers.CountriesLayerSettings" title="pswamp.gui.grid_view.dim_2d.layers.CountriesLayerSettings"><code class="xref py py-obj docutils literal notranslate"><span class="pre">CountriesLayerSettings</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#id57" title="pswamp.gui.grid_view.dim_2d.layers.PMUTimeWindow"><code class="xref py py-obj docutils literal notranslate"><span class="pre">PMUTimeWindow</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#id70" title="pswamp.gui.grid_view.dim_2d.layers.PhasorPlot"><code class="xref py py-obj docutils literal notranslate"><span class="pre">PhasorPlot</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#pswamp.gui.grid_view.dim_2d.layers.PMULayer" title="pswamp.gui.grid_view.dim_2d.layers.PMULayer"><code class="xref py py-obj docutils literal notranslate"><span class="pre">PMULayer</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="functions">
+<h2>Functions<a class="headerlink" href="#functions" title="Link to this heading"></a></h2>
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#id85" title="pswamp.gui.grid_view.dim_2d.layers.read_geo_data"><code class="xref py py-obj docutils literal notranslate"><span class="pre">read_geo_data</span></code></a>([countries])</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#id86" title="pswamp.gui.grid_view.dim_2d.layers.load_bus_coords_for_current_stations"><code class="xref py py-obj docutils literal notranslate"><span class="pre">load_bus_coords_for_current_stations</span></code></a>(config[, ...])</p></td>
+<td><p>Get coordinates for stations in PMU data frame</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#pswamp.gui.grid_view.dim_2d.layers.load_bus_coords_for_stations" title="pswamp.gui.grid_view.dim_2d.layers.load_bus_coords_for_stations"><code class="xref py py-obj docutils literal notranslate"><span class="pre">load_bus_coords_for_stations</span></code></a>(config, wanted_stations)</p></td>
+<td><p>Get coordinates for a subset of stations</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#pswamp.gui.grid_view.dim_2d.layers.load_dxf" title="pswamp.gui.grid_view.dim_2d.layers.load_dxf"><code class="xref py py-obj docutils literal notranslate"><span class="pre">load_dxf</span></code></a>(path)</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#id85" title="pswamp.gui.grid_view.dim_2d.layers.read_geo_data"><code class="xref py py-obj docutils literal notranslate"><span class="pre">read_geo_data</span></code></a>([countries])</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#id86" title="pswamp.gui.grid_view.dim_2d.layers.load_bus_coords_for_current_stations"><code class="xref py py-obj docutils literal notranslate"><span class="pre">load_bus_coords_for_current_stations</span></code></a>(config[, ...])</p></td>
+<td><p>Get coordinates for stations in PMU data frame</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#id85" title="pswamp.gui.grid_view.dim_2d.layers.read_geo_data"><code class="xref py py-obj docutils literal notranslate"><span class="pre">read_geo_data</span></code></a>([countries])</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#id86" title="pswamp.gui.grid_view.dim_2d.layers.load_bus_coords_for_current_stations"><code class="xref py py-obj docutils literal notranslate"><span class="pre">load_bus_coords_for_current_stations</span></code></a>(config[, ...])</p></td>
+<td><p>Get coordinates for stations in PMU data frame</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#id85" title="pswamp.gui.grid_view.dim_2d.layers.read_geo_data"><code class="xref py py-obj docutils literal notranslate"><span class="pre">read_geo_data</span></code></a>([countries])</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#id85" title="pswamp.gui.grid_view.dim_2d.layers.read_geo_data"><code class="xref py py-obj docutils literal notranslate"><span class="pre">read_geo_data</span></code></a>([countries])</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#id86" title="pswamp.gui.grid_view.dim_2d.layers.load_bus_coords_for_current_stations"><code class="xref py py-obj docutils literal notranslate"><span class="pre">load_bus_coords_for_current_stations</span></code></a>(config[, ...])</p></td>
+<td><p>Get coordinates for stations in PMU data frame</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#pswamp.gui.grid_view.dim_2d.layers.get_from_database" title="pswamp.gui.grid_view.dim_2d.layers.get_from_database"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_from_database</span></code></a>(config, field)</p></td>
+<td><p></p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="package-contents">
+<h2>Package Contents<a class="headerlink" href="#package-contents" title="Link to this heading"></a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.PMUTimeWindowOnline">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">pswamp.gui.grid_view.dim_2d.layers.</span></span><span class="sig-name descname"><span class="pre">PMUTimeWindowOnline</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">kafka_kwargs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">{}</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">kafka_topic</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'pmudata'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">auto_adjust_offset</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.PMUTimeWindowOnline" title="Link to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="#id57" title="pswamp.gui.grid_view.dim_2d.layers.PMUTimeWindow"><code class="xref py py-obj docutils literal notranslate"><span class="pre">PMUTimeWindow</span></code></a></p>
+<p>This class is intended for consuming PMU data from a specified Kafka topic and storing the last samples (n_samples) in a
+TimeWindow object.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.PMUTimeWindowOnline.kafka_topic">
+<span class="sig-name descname"><span class="pre">kafka_topic</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'pmudata'</span></span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.PMUTimeWindowOnline.kafka_topic" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.PMUTimeWindowOnline.kafka_kwargs">
+<span class="sig-name descname"><span class="pre">kafka_kwargs</span></span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.PMUTimeWindowOnline.kafka_kwargs" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.PMUTimeWindowOnline.auto_adjust_offset">
+<span class="sig-name descname"><span class="pre">auto_adjust_offset</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">False</span></span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.PMUTimeWindowOnline.auto_adjust_offset" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.PMUTimeWindowOnline.pmu_stream">
+<span class="sig-name descname"><span class="pre">pmu_stream</span></span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.PMUTimeWindowOnline.pmu_stream" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.PMUTimeWindowOnline._is_stopped">
+<span class="sig-name descname"><span class="pre">_is_stopped</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">False</span></span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.PMUTimeWindowOnline._is_stopped" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.PMUTimeWindowOnline.initialize">
+<span class="sig-name descname"><span class="pre">initialize</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.PMUTimeWindowOnline.initialize" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.PMUTimeWindowOnline.run">
+<span class="sig-name descname"><span class="pre">run</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.PMUTimeWindowOnline.run" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.PMUTimeWindowOnline.stop">
+<span class="sig-name descname"><span class="pre">stop</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.PMUTimeWindowOnline.stop" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.PhasorPlot">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">pswamp.gui.grid_view.dim_2d.layers.</span></span><span class="sig-name descname"><span class="pre">PhasorPlot</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n_phasors</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pos0</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">normalize_length</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">normalize_angle</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">update_freq</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">plot_widget</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">background_color</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">(30,</span> <span class="pre">63,</span> <span class="pre">64)</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.PhasorPlot" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-obj docutils literal notranslate"><span class="pre">PySide6.QtWidgets.QWidget</span></code></p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.PhasorPlot.request_plot_update">
+<span class="sig-name descname"><span class="pre">request_plot_update</span></span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.PhasorPlot.request_plot_update" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.PhasorPlot.pos0">
+<span class="sig-name descname"><span class="pre">pos0</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.PhasorPlot.pos0" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.PhasorPlot.approx_zero_value">
+<span class="sig-name descname"><span class="pre">approx_zero_value</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">1e-06</span></span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.PhasorPlot.approx_zero_value" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.PhasorPlot.normalize_length">
+<span class="sig-name descname"><span class="pre">normalize_length</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">True</span></span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.PhasorPlot.normalize_length" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.PhasorPlot.normalize_angle">
+<span class="sig-name descname"><span class="pre">normalize_angle</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">False</span></span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.PhasorPlot.normalize_angle" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.PhasorPlot.update_freq">
+<span class="sig-name descname"><span class="pre">update_freq</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.PhasorPlot.update_freq" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.PhasorPlot.angles_prev">
+<span class="sig-name descname"><span class="pre">angles_prev</span></span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.PhasorPlot.angles_prev" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.PhasorPlot.phasors">
+<span class="sig-name descname"><span class="pre">phasors</span></span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.PhasorPlot.phasors" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.PhasorPlot.phasor_0">
+<span class="sig-name descname"><span class="pre">phasor_0</span></span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.PhasorPlot.phasor_0" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.PhasorPlot.colors">
+<span class="sig-name descname"><span class="pre">colors</span></span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.PhasorPlot.colors" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.PhasorPlot.create_plot_items">
+<span class="sig-name descname"><span class="pre">create_plot_items</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.PhasorPlot.create_plot_items" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.PhasorPlot.update">
+<span class="sig-name descname"><span class="pre">update</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">phasors</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.PhasorPlot.update" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.PhasorPlot.update_plot">
+<span class="sig-name descname"><span class="pre">update_plot</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.PhasorPlot.update_plot" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.PhasorPlot.update_plot_items">
+<span class="sig-name descname"><span class="pre">update_plot_items</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">draw_phasors</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.PhasorPlot.update_plot_items" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.read_geo_data">
+<span class="sig-prename descclassname"><span class="pre">pswamp.gui.grid_view.dim_2d.layers.</span></span><span class="sig-name descname"><span class="pre">read_geo_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">countries</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'All'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.read_geo_data" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.load_bus_coords_for_current_stations">
+<span class="sig-prename descclassname"><span class="pre">pswamp.gui.grid_view.dim_2d.layers.</span></span><span class="sig-name descname"><span class="pre">load_bus_coords_for_current_stations</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">return_3d</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">geo</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.load_bus_coords_for_current_stations" title="Link to this definition"></a></dt>
+<dd><p>Get coordinates for stations in PMU data frame</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.load_bus_coords_for_stations">
+<span class="sig-prename descclassname"><span class="pre">pswamp.gui.grid_view.dim_2d.layers.</span></span><span class="sig-name descname"><span class="pre">load_bus_coords_for_stations</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">wanted_stations</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">return_3d</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">geo</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.load_bus_coords_for_stations" title="Link to this definition"></a></dt>
+<dd><p>Get coordinates for a subset of stations</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.load_dxf">
+<span class="sig-prename descclassname"><span class="pre">pswamp.gui.grid_view.dim_2d.layers.</span></span><span class="sig-name descname"><span class="pre">load_dxf</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.load_dxf" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py exception">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.LayerFailedException">
+<span class="property"><span class="k"><span class="pre">exception</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">pswamp.gui.grid_view.dim_2d.layers.</span></span><span class="sig-name descname"><span class="pre">LayerFailedException</span></span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.LayerFailedException" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-obj docutils literal notranslate"><span class="pre">Exception</span></code></p>
+<p>Raised when layer fails.</p>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.StationNamesLayer">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">pswamp.gui.grid_view.dim_2d.layers.</span></span><span class="sig-name descname"><span class="pre">StationNamesLayer</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">parent</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">geo</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.StationNamesLayer" title="Link to this definition"></a></dt>
+<dd><dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.StationNamesLayer.config">
+<span class="sig-name descname"><span class="pre">config</span></span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.StationNamesLayer.config" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.StationNamesLayer.plotWidget">
+<span class="sig-name descname"><span class="pre">plotWidget</span></span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.StationNamesLayer.plotWidget" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.StationNamesLayer.k">
+<span class="sig-name descname"><span class="pre">k</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">2</span></span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.StationNamesLayer.k" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.StationNamesLayer.bus_name_text">
+<span class="sig-name descname"><span class="pre">bus_name_text</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">[]</span></span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.StationNamesLayer.bus_name_text" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.StationNamesLayer.add_text">
+<span class="sig-name descname"><span class="pre">add_text</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">coord</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">text</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.StationNamesLayer.add_text" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.StationNamesLayer.remove_layer">
+<span class="sig-name descname"><span class="pre">remove_layer</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.StationNamesLayer.remove_layer" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.PhasorPlotLayer">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">pswamp.gui.grid_view.dim_2d.layers.</span></span><span class="sig-name descname"><span class="pre">PhasorPlotLayer</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">parent</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">geo</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.PhasorPlotLayer" title="Link to this definition"></a></dt>
+<dd><dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.PhasorPlotLayer.config">
+<span class="sig-name descname"><span class="pre">config</span></span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.PhasorPlotLayer.config" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.PhasorPlotLayer.k">
+<span class="sig-name descname"><span class="pre">k</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">2</span></span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.PhasorPlotLayer.k" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.PhasorPlotLayer.uuid">
+<span class="sig-name descname"><span class="pre">uuid</span></span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.PhasorPlotLayer.uuid" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.PhasorPlotLayer.parent">
+<span class="sig-name descname"><span class="pre">parent</span></span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.PhasorPlotLayer.parent" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.PhasorPlotLayer.pmu_tw">
+<span class="sig-name descname"><span class="pre">pmu_tw</span></span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.PhasorPlotLayer.pmu_tw" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.PhasorPlotLayer.col_idx_mag">
+<span class="sig-name descname"><span class="pre">col_idx_mag</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">[]</span></span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.PhasorPlotLayer.col_idx_mag" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.PhasorPlotLayer.col_idx_ang">
+<span class="sig-name descname"><span class="pre">col_idx_ang</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">[]</span></span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.PhasorPlotLayer.col_idx_ang" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.PhasorPlotLayer.plotWidget">
+<span class="sig-name descname"><span class="pre">plotWidget</span></span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.PhasorPlotLayer.plotWidget" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.PhasorPlotLayer.phasor_plot">
+<span class="sig-name descname"><span class="pre">phasor_plot</span></span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.PhasorPlotLayer.phasor_plot" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.PhasorPlotLayer.add_phasor_plot">
+<span class="sig-name descname"><span class="pre">add_phasor_plot</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">bus_coords</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.PhasorPlotLayer.add_phasor_plot" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.PhasorPlotLayer.remove_layer">
+<span class="sig-name descname"><span class="pre">remove_layer</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.PhasorPlotLayer.remove_layer" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.StaticLineDataLayer">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">pswamp.gui.grid_view.dim_2d.layers.</span></span><span class="sig-name descname"><span class="pre">StaticLineDataLayer</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">parent</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">geo</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">data_subkey</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'line_data_path'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.StaticLineDataLayer" title="Link to this definition"></a></dt>
+<dd><dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.StaticLineDataLayer.config">
+<span class="sig-name descname"><span class="pre">config</span></span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.StaticLineDataLayer.config" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.StaticLineDataLayer.k">
+<span class="sig-name descname"><span class="pre">k</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">2</span></span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.StaticLineDataLayer.k" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.StaticLineDataLayer.parent">
+<span class="sig-name descname"><span class="pre">parent</span></span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.StaticLineDataLayer.parent" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.StaticLineDataLayer.line_style">
+<span class="sig-name descname"><span class="pre">line_style</span></span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.StaticLineDataLayer.line_style" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.StaticLineDataLayer.ps_geo_data">
+<span class="sig-name descname"><span class="pre">ps_geo_data</span></span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.StaticLineDataLayer.ps_geo_data" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.StaticLineDataLayer.power_lines_pl">
+<span class="sig-name descname"><span class="pre">power_lines_pl</span></span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.StaticLineDataLayer.power_lines_pl" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.StaticLineDataLayer.add_line_plots">
+<span class="sig-name descname"><span class="pre">add_line_plots</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pos</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">line_width</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">color</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.StaticLineDataLayer.add_line_plots" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.StaticLineDataLayer.remove_layer">
+<span class="sig-name descname"><span class="pre">remove_layer</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.StaticLineDataLayer.remove_layer" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.StaticLineDataLayer.show_lines">
+<span class="sig-name descname"><span class="pre">show_lines</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">key</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.StaticLineDataLayer.show_lines" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.StaticLineDataLayer.hide_lines">
+<span class="sig-name descname"><span class="pre">hide_lines</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">key</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.StaticLineDataLayer.hide_lines" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.StaticLineDataLayer.set_power_lines_color">
+<span class="sig-name descname"><span class="pre">set_power_lines_color</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">key</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">color</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.StaticLineDataLayer.set_power_lines_color" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.StaticLineDataLayer.set_line_width">
+<span class="sig-name descname"><span class="pre">set_line_width</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">key</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">line_width</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.StaticLineDataLayer.set_line_width" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.StaticLineDataLayer.update_line_plots">
+<span class="sig-name descname"><span class="pre">update_line_plots</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">key</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">style_kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.StaticLineDataLayer.update_line_plots" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.StaticLineDataLayer_v0">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">pswamp.gui.grid_view.dim_2d.layers.</span></span><span class="sig-name descname"><span class="pre">StaticLineDataLayer_v0</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.StaticLineDataLayer_v0" title="Link to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="#pswamp.gui.grid_view.dim_2d.layers.StaticLineDataLayer" title="pswamp.gui.grid_view.dim_2d.layers.StaticLineDataLayer"><code class="xref py py-obj docutils literal notranslate"><span class="pre">StaticLineDataLayer</span></code></a></p>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.StaticLineDataLayerSettings">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">pswamp.gui.grid_view.dim_2d.layers.</span></span><span class="sig-name descname"><span class="pre">StaticLineDataLayerSettings</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">target_layer</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.StaticLineDataLayerSettings" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-obj docutils literal notranslate"><span class="pre">PySide6.QtWidgets.QWidget</span></code></p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.StaticLineDataLayerSettings.target_layer">
+<span class="sig-name descname"><span class="pre">target_layer</span></span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.StaticLineDataLayerSettings.target_layer" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.StaticLineDataLayerSettings.btn_name_to_key">
+<span class="sig-name descname"><span class="pre">btn_name_to_key</span></span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.StaticLineDataLayerSettings.btn_name_to_key" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.StaticLineDataLayerSettings.update_grid_plots">
+<span class="sig-name descname"><span class="pre">update_grid_plots</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">state</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.StaticLineDataLayerSettings.update_grid_plots" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.PMUTimeWindow">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">pswamp.gui.grid_view.dim_2d.layers.</span></span><span class="sig-name descname"><span class="pre">PMUTimeWindow</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n_samples</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">window_length</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">time_window_type</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">TimeWindowLabeled</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">substitute_zero_freq_with_nan</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">channel_selection</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">channel_selection_idx</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.PMUTimeWindow" title="Link to this definition"></a></dt>
+<dd><dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.PMUTimeWindow.time_window_type">
+<span class="sig-name descname"><span class="pre">time_window_type</span></span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.PMUTimeWindow.time_window_type" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.PMUTimeWindow.tw">
+<span class="sig-name descname"><span class="pre">tw</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.PMUTimeWindow.tw" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.PMUTimeWindow.header">
+<span class="sig-name descname"><span class="pre">header</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.PMUTimeWindow.header" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.PMUTimeWindow.n_samples">
+<span class="sig-name descname"><span class="pre">n_samples</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.PMUTimeWindow.n_samples" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.PMUTimeWindow.window_length">
+<span class="sig-name descname"><span class="pre">window_length</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.PMUTimeWindow.window_length" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.PMUTimeWindow.is_initialized">
+<span class="sig-name descname"><span class="pre">is_initialized</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">False</span></span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.PMUTimeWindow.is_initialized" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.PMUTimeWindow.n_channels">
+<span class="sig-name descname"><span class="pre">n_channels</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.PMUTimeWindow.n_channels" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.PMUTimeWindow.dt">
+<span class="sig-name descname"><span class="pre">dt</span></span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.PMUTimeWindow.dt" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.PMUTimeWindow.fs">
+<span class="sig-name descname"><span class="pre">fs</span></span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.PMUTimeWindow.fs" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.PMUTimeWindow.pmu_decoder">
+<span class="sig-name descname"><span class="pre">pmu_decoder</span></span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.PMUTimeWindow.pmu_decoder" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.PMUTimeWindow.initialize_from_config_frame">
+<span class="sig-name descname"><span class="pre">initialize_from_config_frame</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">config_frame</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.PMUTimeWindow.initialize_from_config_frame" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.PMUTimeWindow.update_window">
+<span class="sig-name descname"><span class="pre">update_window</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pmu_data_frame</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.PMUTimeWindow.update_window" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="id0">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">pswamp.gui.grid_view.dim_2d.layers.</span></span><span class="sig-name descname"><span class="pre">PhasorPlot</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n_phasors</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pos0</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">normalize_length</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">normalize_angle</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">update_freq</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">plot_widget</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">background_color</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">(30,</span> <span class="pre">63,</span> <span class="pre">64)</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#id0" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-obj docutils literal notranslate"><span class="pre">PySide6.QtWidgets.QWidget</span></code></p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="id1">
+<span class="sig-name descname"><span class="pre">request_plot_update</span></span><a class="headerlink" href="#id1" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="id2">
+<span class="sig-name descname"><span class="pre">pos0</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#id2" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="id3">
+<span class="sig-name descname"><span class="pre">approx_zero_value</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">1e-06</span></span><a class="headerlink" href="#id3" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="id4">
+<span class="sig-name descname"><span class="pre">normalize_length</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">True</span></span><a class="headerlink" href="#id4" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="id5">
+<span class="sig-name descname"><span class="pre">normalize_angle</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">False</span></span><a class="headerlink" href="#id5" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="id6">
+<span class="sig-name descname"><span class="pre">update_freq</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#id6" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="id7">
+<span class="sig-name descname"><span class="pre">angles_prev</span></span><a class="headerlink" href="#id7" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="id8">
+<span class="sig-name descname"><span class="pre">phasors</span></span><a class="headerlink" href="#id8" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="id9">
+<span class="sig-name descname"><span class="pre">phasor_0</span></span><a class="headerlink" href="#id9" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="id10">
+<span class="sig-name descname"><span class="pre">colors</span></span><a class="headerlink" href="#id10" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="id11">
+<span class="sig-name descname"><span class="pre">create_plot_items</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#id11" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="id12">
+<span class="sig-name descname"><span class="pre">update</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">phasors</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#id12" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="id13">
+<span class="sig-name descname"><span class="pre">update_plot</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#id13" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="id14">
+<span class="sig-name descname"><span class="pre">update_plot_items</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">draw_phasors</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#id14" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="id15">
+<span class="sig-prename descclassname"><span class="pre">pswamp.gui.grid_view.dim_2d.layers.</span></span><span class="sig-name descname"><span class="pre">read_geo_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">countries</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'All'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#id15" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="id16">
+<span class="sig-prename descclassname"><span class="pre">pswamp.gui.grid_view.dim_2d.layers.</span></span><span class="sig-name descname"><span class="pre">load_bus_coords_for_current_stations</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">return_3d</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">geo</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#id16" title="Link to this definition"></a></dt>
+<dd><p>Get coordinates for stations in PMU data frame</p>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.BusesLayer">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">pswamp.gui.grid_view.dim_2d.layers.</span></span><span class="sig-name descname"><span class="pre">BusesLayer</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">parent</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">geo</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.BusesLayer" title="Link to this definition"></a></dt>
+<dd><dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.BusesLayer.config">
+<span class="sig-name descname"><span class="pre">config</span></span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.BusesLayer.config" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.BusesLayer.plotWidget">
+<span class="sig-name descname"><span class="pre">plotWidget</span></span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.BusesLayer.plotWidget" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.BusesLayer.k">
+<span class="sig-name descname"><span class="pre">k</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">2</span></span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.BusesLayer.k" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.BusesLayer.x">
+<span class="sig-name descname"><span class="pre">x</span></span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.BusesLayer.x" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.BusesLayer.y">
+<span class="sig-name descname"><span class="pre">y</span></span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.BusesLayer.y" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.BusesLayer.z">
+<span class="sig-name descname"><span class="pre">z</span></span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.BusesLayer.z" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.BusesLayer.colors">
+<span class="sig-name descname"><span class="pre">colors</span></span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.BusesLayer.colors" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.BusesLayer.bus_scatter">
+<span class="sig-name descname"><span class="pre">bus_scatter</span></span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.BusesLayer.bus_scatter" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.BusesLayer.add_scatter_plot">
+<span class="sig-name descname"><span class="pre">add_scatter_plot</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">bus_coords_3d</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.BusesLayer.add_scatter_plot" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.BusesLayer.remove_layer">
+<span class="sig-name descname"><span class="pre">remove_layer</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.BusesLayer.remove_layer" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.sample_dataset_path">
+<span class="sig-prename descclassname"><span class="pre">pswamp.gui.grid_view.dim_2d.layers.</span></span><span class="sig-name descname"><span class="pre">sample_dataset_path</span></span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.sample_dataset_path" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="id17">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">pswamp.gui.grid_view.dim_2d.layers.</span></span><span class="sig-name descname"><span class="pre">PMUTimeWindow</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n_samples</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">window_length</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">time_window_type</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">TimeWindowLabeled</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">substitute_zero_freq_with_nan</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">channel_selection</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">channel_selection_idx</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#id17" title="Link to this definition"></a></dt>
+<dd><dl class="py attribute">
+<dt class="sig sig-object py" id="id18">
+<span class="sig-name descname"><span class="pre">time_window_type</span></span><a class="headerlink" href="#id18" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="id19">
+<span class="sig-name descname"><span class="pre">tw</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#id19" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="id20">
+<span class="sig-name descname"><span class="pre">header</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#id20" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="id21">
+<span class="sig-name descname"><span class="pre">n_samples</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#id21" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="id22">
+<span class="sig-name descname"><span class="pre">window_length</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#id22" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="id23">
+<span class="sig-name descname"><span class="pre">is_initialized</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">False</span></span><a class="headerlink" href="#id23" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="id24">
+<span class="sig-name descname"><span class="pre">n_channels</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#id24" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="id25">
+<span class="sig-name descname"><span class="pre">dt</span></span><a class="headerlink" href="#id25" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="id26">
+<span class="sig-name descname"><span class="pre">fs</span></span><a class="headerlink" href="#id26" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="id27">
+<span class="sig-name descname"><span class="pre">pmu_decoder</span></span><a class="headerlink" href="#id27" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="id28">
+<span class="sig-name descname"><span class="pre">initialize_from_config_frame</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">config_frame</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#id28" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="id29">
+<span class="sig-name descname"><span class="pre">update_window</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pmu_data_frame</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#id29" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="id30">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">pswamp.gui.grid_view.dim_2d.layers.</span></span><span class="sig-name descname"><span class="pre">PhasorPlot</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n_phasors</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pos0</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">normalize_length</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">normalize_angle</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">update_freq</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">plot_widget</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">background_color</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">(30,</span> <span class="pre">63,</span> <span class="pre">64)</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#id30" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-obj docutils literal notranslate"><span class="pre">PySide6.QtWidgets.QWidget</span></code></p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="id31">
+<span class="sig-name descname"><span class="pre">request_plot_update</span></span><a class="headerlink" href="#id31" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="id32">
+<span class="sig-name descname"><span class="pre">pos0</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#id32" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="id33">
+<span class="sig-name descname"><span class="pre">approx_zero_value</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">1e-06</span></span><a class="headerlink" href="#id33" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="id34">
+<span class="sig-name descname"><span class="pre">normalize_length</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">True</span></span><a class="headerlink" href="#id34" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="id35">
+<span class="sig-name descname"><span class="pre">normalize_angle</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">False</span></span><a class="headerlink" href="#id35" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="id36">
+<span class="sig-name descname"><span class="pre">update_freq</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#id36" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="id37">
+<span class="sig-name descname"><span class="pre">angles_prev</span></span><a class="headerlink" href="#id37" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="id38">
+<span class="sig-name descname"><span class="pre">phasors</span></span><a class="headerlink" href="#id38" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="id39">
+<span class="sig-name descname"><span class="pre">phasor_0</span></span><a class="headerlink" href="#id39" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="id40">
+<span class="sig-name descname"><span class="pre">colors</span></span><a class="headerlink" href="#id40" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="id41">
+<span class="sig-name descname"><span class="pre">create_plot_items</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#id41" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="id42">
+<span class="sig-name descname"><span class="pre">update</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">phasors</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#id42" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="id43">
+<span class="sig-name descname"><span class="pre">update_plot</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#id43" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="id44">
+<span class="sig-name descname"><span class="pre">update_plot_items</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">draw_phasors</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#id44" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="id45">
+<span class="sig-prename descclassname"><span class="pre">pswamp.gui.grid_view.dim_2d.layers.</span></span><span class="sig-name descname"><span class="pre">read_geo_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">countries</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'All'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#id45" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="id46">
+<span class="sig-prename descclassname"><span class="pre">pswamp.gui.grid_view.dim_2d.layers.</span></span><span class="sig-name descname"><span class="pre">load_bus_coords_for_current_stations</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">return_3d</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">geo</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#id46" title="Link to this definition"></a></dt>
+<dd><p>Get coordinates for stations in PMU data frame</p>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.HeatMapBasePlot">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">pswamp.gui.grid_view.dim_2d.layers.</span></span><span class="sig-name descname"><span class="pre">HeatMapBasePlot</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">coords</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lims</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">[0.9,</span> <span class="pre">1.1]</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y_scale</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">z_offset</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">background_color</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">(30,</span> <span class="pre">63,</span> <span class="pre">64)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">plot_window</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.HeatMapBasePlot" title="Link to this definition"></a></dt>
+<dd><dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.HeatMapBasePlot.z_offset">
+<span class="sig-name descname"><span class="pre">z_offset</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">1</span></span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.HeatMapBasePlot.z_offset" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.HeatMapBasePlot.y_scale">
+<span class="sig-name descname"><span class="pre">y_scale</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">1</span></span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.HeatMapBasePlot.y_scale" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.HeatMapBasePlot.not_nan_xy">
+<span class="sig-name descname"><span class="pre">not_nan_xy</span></span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.HeatMapBasePlot.not_nan_xy" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.HeatMapBasePlot.x">
+<span class="sig-name descname"><span class="pre">x</span></span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.HeatMapBasePlot.x" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.HeatMapBasePlot.y">
+<span class="sig-name descname"><span class="pre">y</span></span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.HeatMapBasePlot.y" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.HeatMapBasePlot.im_width">
+<span class="sig-name descname"><span class="pre">im_width</span></span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.HeatMapBasePlot.im_width" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.HeatMapBasePlot.im_height">
+<span class="sig-name descname"><span class="pre">im_height</span></span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.HeatMapBasePlot.im_height" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.HeatMapBasePlot.z_scale">
+<span class="sig-name descname"><span class="pre">z_scale</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">1000.0</span></span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.HeatMapBasePlot.z_scale" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.HeatMapBasePlot.cb">
+<span class="sig-name descname"><span class="pre">cb</span></span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.HeatMapBasePlot.cb" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.HeatMapBasePlot.im">
+<span class="sig-name descname"><span class="pre">im</span></span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.HeatMapBasePlot.im" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.HeatMapBasePlot.pl">
+<span class="sig-name descname"><span class="pre">pl</span></span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.HeatMapBasePlot.pl" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.HeatMapBasePlot.interp_method">
+<span class="sig-name descname"><span class="pre">interp_method</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'linear'</span></span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.HeatMapBasePlot.interp_method" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.HeatMapBasePlot.update">
+<span class="sig-name descname"><span class="pre">update</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">new_z</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.HeatMapBasePlot.update" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="id47">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">pswamp.gui.grid_view.dim_2d.layers.</span></span><span class="sig-name descname"><span class="pre">PMUTimeWindowOnline</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">kafka_kwargs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">{}</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">kafka_topic</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'pmudata'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">auto_adjust_offset</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#id47" title="Link to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="#id57" title="pswamp.gui.grid_view.dim_2d.layers.PMUTimeWindow"><code class="xref py py-obj docutils literal notranslate"><span class="pre">PMUTimeWindow</span></code></a></p>
+<p>This class is intended for consuming PMU data from a specified Kafka topic and storing the last samples (n_samples) in a
+TimeWindow object.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="id48">
+<span class="sig-name descname"><span class="pre">kafka_topic</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'pmudata'</span></span><a class="headerlink" href="#id48" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="id49">
+<span class="sig-name descname"><span class="pre">kafka_kwargs</span></span><a class="headerlink" href="#id49" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="id50">
+<span class="sig-name descname"><span class="pre">auto_adjust_offset</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">False</span></span><a class="headerlink" href="#id50" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="id51">
+<span class="sig-name descname"><span class="pre">pmu_stream</span></span><a class="headerlink" href="#id51" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="id52">
+<span class="sig-name descname"><span class="pre">_is_stopped</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">False</span></span><a class="headerlink" href="#id52" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="id53">
+<span class="sig-name descname"><span class="pre">initialize</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#id53" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="id54">
+<span class="sig-name descname"><span class="pre">run</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#id54" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="id55">
+<span class="sig-name descname"><span class="pre">stop</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#id55" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.FrequencyHeatMap">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">pswamp.gui.grid_view.dim_2d.layers.</span></span><span class="sig-name descname"><span class="pre">FrequencyHeatMap</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">parent</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">geo</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">heatmap_kwargs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">dict(y_scale=1,</span> <span class="pre">lims=[-0.035,</span> <span class="pre">0.035],</span> <span class="pre">z_offset=0)</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.FrequencyHeatMap" title="Link to this definition"></a></dt>
+<dd><dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.FrequencyHeatMap.config">
+<span class="sig-name descname"><span class="pre">config</span></span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.FrequencyHeatMap.config" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.FrequencyHeatMap.uuid">
+<span class="sig-name descname"><span class="pre">uuid</span></span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.FrequencyHeatMap.uuid" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.FrequencyHeatMap.plotWidget">
+<span class="sig-name descname"><span class="pre">plotWidget</span></span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.FrequencyHeatMap.plotWidget" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.FrequencyHeatMap.k">
+<span class="sig-name descname"><span class="pre">k</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">2</span></span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.FrequencyHeatMap.k" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.FrequencyHeatMap.x">
+<span class="sig-name descname"><span class="pre">x</span></span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.FrequencyHeatMap.x" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.FrequencyHeatMap.y">
+<span class="sig-name descname"><span class="pre">y</span></span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.FrequencyHeatMap.y" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.FrequencyHeatMap.z">
+<span class="sig-name descname"><span class="pre">z</span></span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.FrequencyHeatMap.z" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.FrequencyHeatMap.heatmap">
+<span class="sig-name descname"><span class="pre">heatmap</span></span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.FrequencyHeatMap.heatmap" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.FrequencyHeatMap.pmu_tw">
+<span class="sig-name descname"><span class="pre">pmu_tw</span></span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.FrequencyHeatMap.pmu_tw" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.FrequencyHeatMap.freq_col_idx">
+<span class="sig-name descname"><span class="pre">freq_col_idx</span></span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.FrequencyHeatMap.freq_col_idx" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.FrequencyHeatMap.update_heatmap">
+<span class="sig-name descname"><span class="pre">update_heatmap</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.FrequencyHeatMap.update_heatmap" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.FrequencyHeatMap.remove_layer">
+<span class="sig-name descname"><span class="pre">remove_layer</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.FrequencyHeatMap.remove_layer" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="id56">
+<span class="sig-prename descclassname"><span class="pre">pswamp.gui.grid_view.dim_2d.layers.</span></span><span class="sig-name descname"><span class="pre">read_geo_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">countries</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'All'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#id56" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.CountriesLayer">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">pswamp.gui.grid_view.dim_2d.layers.</span></span><span class="sig-name descname"><span class="pre">CountriesLayer</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">parent</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">geo</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.CountriesLayer" title="Link to this definition"></a></dt>
+<dd><dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.CountriesLayer.config">
+<span class="sig-name descname"><span class="pre">config</span></span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.CountriesLayer.config" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.CountriesLayer.k">
+<span class="sig-name descname"><span class="pre">k</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">2</span></span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.CountriesLayer.k" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.CountriesLayer.plotWidget">
+<span class="sig-name descname"><span class="pre">plotWidget</span></span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.CountriesLayer.plotWidget" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.CountriesLayer.geo_data">
+<span class="sig-name descname"><span class="pre">geo_data</span></span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.CountriesLayer.geo_data" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.CountriesLayer.geo_lines">
+<span class="sig-name descname"><span class="pre">geo_lines</span></span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.CountriesLayer.geo_lines" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.CountriesLayer.add_geo_lines">
+<span class="sig-name descname"><span class="pre">add_geo_lines</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">geo_data</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.CountriesLayer.add_geo_lines" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.CountriesLayer.update_countries">
+<span class="sig-name descname"><span class="pre">update_countries</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">countries</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">['Norway']</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.CountriesLayer.update_countries" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.CountriesLayer.remove_layer">
+<span class="sig-name descname"><span class="pre">remove_layer</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.CountriesLayer.remove_layer" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.CountriesLayerSettings">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">pswamp.gui.grid_view.dim_2d.layers.</span></span><span class="sig-name descname"><span class="pre">CountriesLayerSettings</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">target_layer</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.CountriesLayerSettings" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-obj docutils literal notranslate"><span class="pre">PySide6.QtWidgets.QWidget</span></code></p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.CountriesLayerSettings.target_layer">
+<span class="sig-name descname"><span class="pre">target_layer</span></span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.CountriesLayerSettings.target_layer" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.CountriesLayerSettings.item_list">
+<span class="sig-name descname"><span class="pre">item_list</span></span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.CountriesLayerSettings.item_list" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.CountriesLayerSettings.done_button">
+<span class="sig-name descname"><span class="pre">done_button</span></span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.CountriesLayerSettings.done_button" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.CountriesLayerSettings.done_button_click">
+<span class="sig-name descname"><span class="pre">done_button_click</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.CountriesLayerSettings.done_button_click" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.CountriesLayerSettings.onItemClicked">
+<span class="sig-name descname"><span class="pre">onItemClicked</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">item</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.CountriesLayerSettings.onItemClicked" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.config">
+<span class="sig-prename descclassname"><span class="pre">pswamp.gui.grid_view.dim_2d.layers.</span></span><span class="sig-name descname"><span class="pre">config</span></span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.config" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="id57">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">pswamp.gui.grid_view.dim_2d.layers.</span></span><span class="sig-name descname"><span class="pre">PMUTimeWindow</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n_samples</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">window_length</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">time_window_type</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">TimeWindowLabeled</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">substitute_zero_freq_with_nan</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">channel_selection</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">channel_selection_idx</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#id57" title="Link to this definition"></a></dt>
+<dd><dl class="py attribute">
+<dt class="sig sig-object py" id="id58">
+<span class="sig-name descname"><span class="pre">time_window_type</span></span><a class="headerlink" href="#id58" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="id59">
+<span class="sig-name descname"><span class="pre">tw</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#id59" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="id60">
+<span class="sig-name descname"><span class="pre">header</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#id60" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="id61">
+<span class="sig-name descname"><span class="pre">n_samples</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#id61" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="id62">
+<span class="sig-name descname"><span class="pre">window_length</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#id62" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="id63">
+<span class="sig-name descname"><span class="pre">is_initialized</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">False</span></span><a class="headerlink" href="#id63" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="id64">
+<span class="sig-name descname"><span class="pre">n_channels</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#id64" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="id65">
+<span class="sig-name descname"><span class="pre">dt</span></span><a class="headerlink" href="#id65" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="id66">
+<span class="sig-name descname"><span class="pre">fs</span></span><a class="headerlink" href="#id66" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="id67">
+<span class="sig-name descname"><span class="pre">pmu_decoder</span></span><a class="headerlink" href="#id67" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="id68">
+<span class="sig-name descname"><span class="pre">initialize_from_config_frame</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">config_frame</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#id68" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="id69">
+<span class="sig-name descname"><span class="pre">update_window</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pmu_data_frame</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#id69" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="id70">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">pswamp.gui.grid_view.dim_2d.layers.</span></span><span class="sig-name descname"><span class="pre">PhasorPlot</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n_phasors</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pos0</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">normalize_length</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">normalize_angle</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">update_freq</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">plot_widget</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">background_color</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">(30,</span> <span class="pre">63,</span> <span class="pre">64)</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#id70" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-obj docutils literal notranslate"><span class="pre">PySide6.QtWidgets.QWidget</span></code></p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="id71">
+<span class="sig-name descname"><span class="pre">request_plot_update</span></span><a class="headerlink" href="#id71" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="id72">
+<span class="sig-name descname"><span class="pre">pos0</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#id72" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="id73">
+<span class="sig-name descname"><span class="pre">approx_zero_value</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">1e-06</span></span><a class="headerlink" href="#id73" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="id74">
+<span class="sig-name descname"><span class="pre">normalize_length</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">True</span></span><a class="headerlink" href="#id74" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="id75">
+<span class="sig-name descname"><span class="pre">normalize_angle</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">False</span></span><a class="headerlink" href="#id75" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="id76">
+<span class="sig-name descname"><span class="pre">update_freq</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#id76" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="id77">
+<span class="sig-name descname"><span class="pre">angles_prev</span></span><a class="headerlink" href="#id77" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="id78">
+<span class="sig-name descname"><span class="pre">phasors</span></span><a class="headerlink" href="#id78" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="id79">
+<span class="sig-name descname"><span class="pre">phasor_0</span></span><a class="headerlink" href="#id79" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="id80">
+<span class="sig-name descname"><span class="pre">colors</span></span><a class="headerlink" href="#id80" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="id81">
+<span class="sig-name descname"><span class="pre">create_plot_items</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#id81" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="id82">
+<span class="sig-name descname"><span class="pre">update</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">phasors</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#id82" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="id83">
+<span class="sig-name descname"><span class="pre">update_plot</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#id83" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="id84">
+<span class="sig-name descname"><span class="pre">update_plot_items</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">draw_phasors</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#id84" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="id85">
+<span class="sig-prename descclassname"><span class="pre">pswamp.gui.grid_view.dim_2d.layers.</span></span><span class="sig-name descname"><span class="pre">read_geo_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">countries</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'All'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#id85" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="id86">
+<span class="sig-prename descclassname"><span class="pre">pswamp.gui.grid_view.dim_2d.layers.</span></span><span class="sig-name descname"><span class="pre">load_bus_coords_for_current_stations</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">return_3d</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">geo</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#id86" title="Link to this definition"></a></dt>
+<dd><p>Get coordinates for stations in PMU data frame</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.get_from_database">
+<span class="sig-prename descclassname"><span class="pre">pswamp.gui.grid_view.dim_2d.layers.</span></span><span class="sig-name descname"><span class="pre">get_from_database</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">field</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.get_from_database" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.PMULayer">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">pswamp.gui.grid_view.dim_2d.layers.</span></span><span class="sig-name descname"><span class="pre">PMULayer</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">parent</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">geo</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.PMULayer" title="Link to this definition"></a></dt>
+<dd><dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.PMULayer.config">
+<span class="sig-name descname"><span class="pre">config</span></span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.PMULayer.config" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.PMULayer.plotWidget">
+<span class="sig-name descname"><span class="pre">plotWidget</span></span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.PMULayer.plotWidget" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.PMULayer.k">
+<span class="sig-name descname"><span class="pre">k</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">2</span></span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.PMULayer.k" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.PMULayer.x">
+<span class="sig-name descname"><span class="pre">x</span></span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.PMULayer.x" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.PMULayer.y">
+<span class="sig-name descname"><span class="pre">y</span></span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.PMULayer.y" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.PMULayer.z">
+<span class="sig-name descname"><span class="pre">z</span></span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.PMULayer.z" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.PMULayer.colors">
+<span class="sig-name descname"><span class="pre">colors</span></span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.PMULayer.colors" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.PMULayer.bus_scatter">
+<span class="sig-name descname"><span class="pre">bus_scatter</span></span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.PMULayer.bus_scatter" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.PMULayer.add_scatter_plot">
+<span class="sig-name descname"><span class="pre">add_scatter_plot</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">bus_coords_3d</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.PMULayer.add_scatter_plot" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.dim_2d.layers.PMULayer.remove_layer">
+<span class="sig-name descname"><span class="pre">remove_layer</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pswamp.gui.grid_view.dim_2d.layers.PMULayer.remove_layer" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="id87">
+<span class="sig-prename descclassname"><span class="pre">pswamp.gui.grid_view.dim_2d.layers.</span></span><span class="sig-name descname"><span class="pre">sample_dataset_path</span></span><a class="headerlink" href="#id87" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="../base_plot_layers/index.html" class="btn btn-neutral float-left" title="pswamp.gui.grid_view.dim_2d.base_plot_layers" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="buses/index.html" class="btn btn-neutral float-right" title="pswamp.gui.grid_view.dim_2d.layers.buses" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright .</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

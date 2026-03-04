@@ -1,0 +1,35 @@
+pswamp.models.reader
+====================
+
+.. py:module:: pswamp.models.reader
+
+
+Attributes
+----------
+
+.. autoapisummary::
+
+   pswamp.models.reader.config
+
+
+Functions
+---------
+
+.. autoapisummary::
+
+   pswamp.models.reader.replace_data_lists_with_dataframes
+   pswamp.models.reader.get_model_data
+   pswamp.models.reader.read_model_data
+
+
+Module Contents
+---------------
+
+.. py:function:: replace_data_lists_with_dataframes(d)
+
+.. py:function:: get_model_data(config)
+
+.. py:function:: read_model_data(config, key=None, format='pandas')
+
+.. py:data:: config
+

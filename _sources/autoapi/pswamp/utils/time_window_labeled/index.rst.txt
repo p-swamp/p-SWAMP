@@ -1,0 +1,112 @@
+pswamp.utils.time_window_labeled
+================================
+
+.. py:module:: pswamp.utils.time_window_labeled
+
+
+Attributes
+----------
+
+.. autoapisummary::
+
+   pswamp.utils.time_window_labeled.gtw
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   pswamp.utils.time_window_labeled.Indexer
+   pswamp.utils.time_window_labeled.TimeWindowLabeled
+   pswamp.utils.time_window_labeled.GrowingTimeWindowLabeled
+
+
+Functions
+---------
+
+.. autoapisummary::
+
+   pswamp.utils.time_window_labeled.table_to_strarray
+
+
+Module Contents
+---------------
+
+.. py:function:: table_to_strarray(cols, data)
+
+.. py:class:: Indexer(n_cols=None, header=None)
+
+   .. py:attribute:: header
+
+
+   .. py:attribute:: n_cols
+      :value: 1
+
+
+
+   .. py:method:: get_col_idx(*args, **kwargs)
+
+
+   .. py:method:: get_col_idx_single_query(*args, **kwargs)
+
+
+.. py:class:: TimeWindowLabeled(n_samples=10, n_cols=None, header=None, dtype=float)
+
+   Bases: :py:obj:`pswamp.utils.time_window.TimeWindow`
+
+
+   Stores the most recent n_samples of multichannel data, and corresponding time stamps. Updating with a new
+   set of measurements is efficient, since only one row in the data array (self._data) is overwritten.
+
+
+   .. py:attribute:: indexer
+
+
+   .. py:attribute:: header
+
+
+   .. py:method:: get_col_idx(*args, **kwargs)
+
+
+   .. py:method:: get_col_str(*args, **kwargs)
+
+      Get data columns based on lookup of strings in self.header.
+      :param \*args: Strings to look for. Look for first arg in first header row, second in second row, and so on.
+      :param \*\*kwargs: Dictionary with header rows to lookup as keys and entries as values
+
+      :returns: Data array.
+
+
+
+.. py:class:: GrowingTimeWindowLabeled(n_samples=None, n_cols=None, header=None, dtype=float)
+
+   Bases: :py:obj:`pswamp.utils.time_window.GrowingTimeWindow`, :py:obj:`TimeWindowLabeled`
+
+
+   Stores the most recent n_samples of multichannel data, and corresponding time stamps. Updating with a new
+   set of measurements is efficient, since only one row in the data array (self._data) is overwritten.
+
+
+   .. py:attribute:: indexer
+
+
+   .. py:attribute:: header
+
+
+   .. py:method:: get_col_str(*args, **kwargs)
+
+      Get data columns based on lookup of strings in self.header.
+      TODO: This function is defined twice, also in TimeWindowLabeled.
+      If not redefined here, it will use TimeWindow's get_col, not
+      GrowingTimeWindow's variant. Could probably be done in a nicer way.
+
+      :param \*args: Strings to look for. Look for first arg in first header row, second in second row, and so on.
+      :param \*\*kwargs: Dictionary with header rows to lookup as keys and entries as values
+
+      :returns: Data array.
+
+
+
+.. py:data:: gtw
+

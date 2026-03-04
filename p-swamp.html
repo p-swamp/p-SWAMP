@@ -1,0 +1,170 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>p-SWAMP (Power Stability Wide area Monitoring and Protection) &mdash; p-SWAMP  documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=9edc463e" />
+      <link rel="stylesheet" type="text/css" href="_static/graphviz.css?v=4ae1632d" />
+
+  
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=5929fcd5"></script>
+      <script src="_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Examples" href="examples/index.html" />
+    <link rel="prev" title="Welcome to the documentation of p-SWAMP!" href="index.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            p-SWAMP
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">p-SWAMP (Power Stability Wide area Monitoring and Protection)</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#installation">Installation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#quick-start">Quick start</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#status">Status</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#kafka">Kafka</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="examples/index.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="kafka.html">Streaming, microservices, Kafka</a></li>
+<li class="toctree-l1"><a class="reference internal" href="testing.html">Test environments</a></li>
+<li class="toctree-l1"><a class="reference internal" href="templates.html">Real-Time Application Templates</a></li>
+<li class="toctree-l1"><a class="reference internal" href="models.html">Component models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="autoapi/index.html">API Reference</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">p-SWAMP</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">p-SWAMP (Power Stability Wide area Monitoring and Protection)</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/p-swamp.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="p-swamp-power-stability-wide-area-monitoring-and-protection">
+<h1>p-SWAMP (Power Stability Wide area Monitoring and Protection)<a class="headerlink" href="#p-swamp-power-stability-wide-area-monitoring-and-protection" title="Link to this heading"></a></h1>
+<p>The code in this repository is based on previous code from the NEWEPS research project.</p>
+<section id="installation">
+<h2>Installation<a class="headerlink" href="#installation" title="Link to this heading"></a></h2>
+<p>This Python package can be installed as follows:</p>
+<ol class="arabic">
+<li><p>Clone the repository using Git (or download and unzip manually),</p></li>
+<li><p>Create a virtual environment and activate it,</p></li>
+<li><p>Install the p-SWAMP-package using pip:</p>
+<div class="highlight-typescript notranslate"><div class="highlight"><pre><span></span><span class="nx">pip</span><span class="w"> </span><span class="nx">install</span><span class="w"> </span><span class="o">-</span><span class="nx">e</span><span class="w"> </span><span class="p">.[</span><span class="nx">full</span><span class="p">]</span>
+</pre></div>
+</div>
+<p>The “-e” allows code to be edited without requiring reinstalling. “[full]” causes extra dependencies to be installed, which are required to run the examples.</p>
+</li>
+</ol>
+</section>
+<section id="quick-start">
+<h2>Quick start<a class="headerlink" href="#quick-start" title="Link to this heading"></a></h2>
+<p>Two examples can be run once the package is installed (found in the “examples” folder). Follow the readme in the subfolders for instructions on how to run the examples.</p>
+<p>The examples can be run in two different modes:</p>
+<ul class="simple">
+<li><p><span class="raw-html-md"><strong> With Kafka</strong></span>: This requires a running Kafka server, as discussed further below.</p></li>
+<li><p><span class="raw-html-md"><strong>With NQKafka</strong></span>, which is a lightweight replacement of Kafka. With NQKafka, a server can be started easily from within Python without requiring installing extra software.</p></li>
+</ul>
+<p>By default, the examples are configured to use the second option (NQKafka).</p>
+</section>
+<section id="status">
+<h2>Status<a class="headerlink" href="#status" title="Link to this heading"></a></h2>
+<p>Currently, a few sample monitoring applications/microservices are included in the repository, among others:</p>
+<ul class="simple">
+<li><p><strong>N4SID Mode Estimation:</strong> Monitoring of electromechanical oscillations, producing estimates of oscillation frequency, damping and observability mode shapes.</p></li>
+<li><p><strong>Mode Estimation Visualization:</strong> Visualization of results from Mode Estimation applications.</p></li>
+<li><p><strong>FFT Visualization:</strong> Visualization of FFT (Fast Fourier Transform) of signals.</p></li>
+<li><p><strong>Islanding detection:</strong> Monitoring application to detect islanding operation.</p></li>
+</ul>
+<p>Additionally, some plotting functions and basic GUI functions are implemented (e.g. for launching applications).</p>
+</section>
+<section id="kafka">
+<h2>Kafka<a class="headerlink" href="#kafka" title="Link to this heading"></a></h2>
+<p>Kafka is chosen as the framework for facilitating communication between different monitoring applications. This requires installing and running a Kafka server. Once the server is running, applications can connect to the server. Within the Kafka framework, communication between applications is achieved through <em>Topics</em>. A <em>Producer</em> puts a <em>message</em>/<em>event</em>/<em>record</em> into a specific topic, and messages can be consumed by <em>Consumers</em> subscribing to specific topics. To use Kafka with Python, the package <a class="reference external" href="https://kafka-python.readthedocs.io/en/master/">kafka-python</a> is used, where the consumer and producer functionality is available in the <em>KafkaConsumer</em> and <em>KafkaProducer</em> classes.</p>
+<p>A Kafka server can be installed and run on different platforms. Currently, the following options have been tested:</p>
+<ul class="simple">
+<li><p><strong>Linux:</strong> This is the recommended option.</p></li>
+<li><p><strong>Windows:</strong> A server can be run in Windows, but this might have issues as Kafka is not developed for Windows. (For example, deleting topics or deleting parts of the log might cause errors.)</p></li>
+<li><p><strong>Windows Subsystem for Linux (WSL)</strong>: This also works.</p></li>
+</ul>
+<p>In short, setting up a server requires installing Java, downloading and extracting some files and running some scripts. There are many guides available online for doing this, both for Linux, Windows and WSL.</p>
+<p>For running small demonstrations (i.e. a few diffrent applications, lasting minutes-tens of minutes), the high performance of Kafka is not strictly neccessary. Therefore, a much simpler lightweight alternative to Kafka has been implemented, NQKafka (Not-Quite-Kafka), which allows running small setups without requiring installing and configuring a Kafka server.</p>
+<p>The possibility of running the platform with MQTT instead of Kafka is being investigated.</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="index.html" class="btn btn-neutral float-left" title="Welcome to the documentation of p-SWAMP!" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="examples/index.html" class="btn btn-neutral float-right" title="Examples" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright .</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

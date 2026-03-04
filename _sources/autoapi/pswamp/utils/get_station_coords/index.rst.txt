@@ -1,0 +1,44 @@
+pswamp.utils.get_station_coords
+===============================
+
+.. py:module:: pswamp.utils.get_station_coords
+
+
+Attributes
+----------
+
+.. autoapisummary::
+
+   pswamp.utils.get_station_coords.config
+
+
+Functions
+---------
+
+.. autoapisummary::
+
+   pswamp.utils.get_station_coords.load_bus_coords_for_current_stations
+   pswamp.utils.get_station_coords.load_bus_coords_for_stations
+   pswamp.utils.get_station_coords.load_bus_coords
+
+
+Module Contents
+---------------
+
+.. py:function:: load_bus_coords_for_current_stations(config, return_3d=False, geo=True)
+
+   Get coordinates for stations in PMU data frame
+
+
+.. py:function:: load_bus_coords_for_stations(config, wanted_stations, return_3d=False, geo=True)
+
+   Get coordinates for a subset of stations
+
+
+.. py:function:: load_bus_coords(config, return_3d=False, geo=True)
+
+   Get bus coordinates for all buses from pmu.coords topic
+
+
+.. py:data:: config
+

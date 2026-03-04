@@ -1,0 +1,89 @@
+pswamp.app_templates.status_reporting
+=====================================
+
+.. py:module:: pswamp.app_templates.status_reporting
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   pswamp.app_templates.status_reporting.ReportingApp
+   pswamp.app_templates.status_reporting.AlarmHandler
+
+
+Module Contents
+---------------
+
+.. py:class:: ReportingApp(parent, status_update_freq=1)
+
+   Implements the reporting functionality of applications. Uses a timer to
+   determine when to emit status messages.
+
+   TODO: Rename so it does not look like an application template.
+
+   :param parent: The application for which the reporting is done.
+   :param status_update_freq: How often the reporting is done (default is once
+                              per second).
+
+
+   .. py:attribute:: parent
+
+
+   .. py:attribute:: io
+
+
+   .. py:attribute:: status_update_freq
+      :value: 1
+
+
+
+   .. py:attribute:: status_update_timer
+      :value: None
+
+
+
+   .. py:attribute:: t_next_status
+      :value: None
+
+
+
+   .. py:attribute:: t_status_target
+
+
+   .. py:method:: communicate_status()
+
+      Determine when to send a new status message, generate the message,
+      and hand it over to the io object of the parent.
+
+
+
+.. py:class:: AlarmHandler(app, alarms_topic='alarms', alarm_time_threshold=15)
+
+   .. py:attribute:: app
+
+
+   .. py:attribute:: alarms_topic
+      :value: 'alarms'
+
+
+
+   .. py:attribute:: time_of_last_alarm
+      :value: None
+
+
+
+   .. py:attribute:: id_of_last_alarm
+      :value: None
+
+
+
+   .. py:attribute:: alarm_time_threshold
+      :value: 15
+
+
+
+   .. py:method:: update()
+
+

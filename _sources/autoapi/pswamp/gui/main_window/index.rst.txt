@@ -1,0 +1,83 @@
+pswamp.gui.main_window
+======================
+
+.. py:module:: pswamp.gui.main_window
+
+
+Attributes
+----------
+
+.. autoapisummary::
+
+   pswamp.gui.main_window.config
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   pswamp.gui.main_window.CoordinationModuleGUI
+
+
+Functions
+---------
+
+.. autoapisummary::
+
+   pswamp.gui.main_window.run_main_window
+
+
+Module Contents
+---------------
+
+.. py:class:: CoordinationModuleGUI(config, geo_plot_kwargs={}, parent=None, activate_default_layers=True)
+
+   Bases: :py:obj:`PySide6.QtWidgets.QMainWindow`
+
+
+   .. py:attribute:: update_freq
+      :value: 25
+
+
+
+   .. py:attribute:: config
+
+
+   .. py:attribute:: grid_view
+
+
+   .. py:attribute:: d1
+
+
+   .. py:attribute:: launcher
+
+
+   .. py:attribute:: d110
+
+
+   .. py:attribute:: freq_plot
+
+
+   .. py:attribute:: d11
+
+
+   .. py:attribute:: app_monitoring
+
+
+   .. py:attribute:: d_alarm
+
+
+   .. py:attribute:: d_alarm_focus
+
+
+   .. py:attribute:: alarm_display
+
+
+   .. py:method:: show_time_series_plot_popup(station)
+
+
+.. py:function:: run_main_window(*config_args, activate_default_layers=True)
+
+.. py:data:: config
+

@@ -1,0 +1,35 @@
+pswamp.gui.grid_view.dim_2d.base_plot_layers
+============================================
+
+.. py:module:: pswamp.gui.grid_view.dim_2d.base_plot_layers
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   pswamp.gui.grid_view.dim_2d.base_plot_layers.GridBasePlot2DLayers
+
+
+Functions
+---------
+
+.. autoapisummary::
+
+   pswamp.gui.grid_view.dim_2d.base_plot_layers.main
+
+
+Module Contents
+---------------
+
+.. py:class:: GridBasePlot2DLayers(config, activate_default_layers=True, *args, **kwargs)
+
+   Bases: :py:obj:`pswamp.gui.grid_view.dim_2d.layers.GridBasePlot2D`
+
+
+   .. py:attribute:: layer_settings
+
+
+.. py:function:: main()
+

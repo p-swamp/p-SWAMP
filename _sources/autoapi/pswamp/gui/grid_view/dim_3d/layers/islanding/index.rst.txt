@@ -1,0 +1,109 @@
+pswamp.gui.grid_view.dim_3d.layers.islanding
+============================================
+
+.. py:module:: pswamp.gui.grid_view.dim_3d.layers.islanding
+
+
+Attributes
+----------
+
+.. autoapisummary::
+
+   pswamp.gui.grid_view.dim_3d.layers.islanding.config
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   pswamp.gui.grid_view.dim_3d.layers.islanding.Islanding
+   pswamp.gui.grid_view.dim_3d.layers.islanding.IslandingOnline
+   pswamp.gui.grid_view.dim_3d.layers.islanding.IslandingLayerSettings
+
+
+Module Contents
+---------------
+
+.. py:class:: Islanding(parent, bus_coords_3d, geo=True, color_scheme='islanding', n_max_islands=8)
+
+   .. py:attribute:: plotWidget
+
+
+   .. py:attribute:: k
+      :value: 2
+
+
+
+   .. py:attribute:: uuid
+
+
+   .. py:attribute:: parent
+
+
+   .. py:attribute:: newest_message
+      :value: None
+
+
+
+   .. py:attribute:: stopped
+      :value: False
+
+
+
+   .. py:attribute:: x
+
+
+   .. py:attribute:: y
+
+
+   .. py:attribute:: z
+
+
+   .. py:attribute:: n_max_islands
+      :value: 8
+
+
+
+   .. py:attribute:: bus_scatters
+
+
+   .. py:method:: add_scatter_plot(color)
+
+
+   .. py:method:: hide()
+
+
+   .. py:method:: show()
+
+
+   .. py:method:: update_scatter(islands=None, z=None)
+
+
+   .. py:method:: remove_layer()
+
+
+.. py:class:: IslandingOnline(parent, config, geo=True)
+
+   Bases: :py:obj:`Islanding`
+
+
+   .. py:attribute:: config
+
+
+   .. py:attribute:: consumer
+
+
+   .. py:method:: add_scatter_plot(color)
+
+
+.. py:class:: IslandingLayerSettings(target_layer)
+
+   Bases: :py:obj:`PySide6.QtWidgets.QWidget`
+
+
+   .. py:attribute:: target_layer
+
+
+.. py:data:: config
+

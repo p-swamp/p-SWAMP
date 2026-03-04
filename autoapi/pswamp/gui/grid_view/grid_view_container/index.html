@@ -1,0 +1,309 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../../../../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>pswamp.gui.grid_view.grid_view_container &mdash; p-SWAMP  documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../../../../_static/css/theme.css?v=9edc463e" />
+      <link rel="stylesheet" type="text/css" href="../../../../../_static/graphviz.css?v=4ae1632d" />
+
+  
+      <script src="../../../../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../../../../_static/documentation_options.js?v=5929fcd5"></script>
+      <script src="../../../../../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../../../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../../../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../../search.html" />
+    <link rel="next" title="pswamp.gui.grid_view.layer_select" href="../layer_select/index.html" />
+    <link rel="prev" title="pswamp.gui.grid_view.dim_3d.layers.voltage_stability" href="../dim_3d/layers/voltage_stability/index.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../../../index.html" class="icon icon-home">
+            p-SWAMP
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../../../../../p-swamp.html">p-SWAMP (Power Stability Wide area Monitoring and Protection)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../examples/index.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../kafka.html">Streaming, microservices, Kafka</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../testing.html">Test environments</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../templates.html">Real-Time Application Templates</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../models.html">Component models</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../../../../index.html">API Reference</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="../../../index.html">pswamp</a><ul class="current">
+<li class="toctree-l3 current"><a class="reference internal" href="../../../index.html#submodules">Submodules</a><ul class="current">
+<li class="toctree-l4"><a class="reference internal" href="../../../app_templates/index.html">pswamp.app_templates</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../coordination/index.html">pswamp.coordination</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../database/index.html">pswamp.database</a></li>
+<li class="toctree-l4 current"><a class="reference internal" href="../../index.html">pswamp.gui</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../models/index.html">pswamp.models</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../monitoring/index.html">pswamp.monitoring</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../streaming/index.html">pswamp.streaming</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../styles/index.html">pswamp.styles</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../test_utils/index.html">pswamp.test_utils</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../utils/index.html">pswamp.utils</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../visualization/index.html">pswamp.visualization</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../../../index.html#functions">Functions</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../index.html#package-contents">Package Contents</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../../../index.html">p-SWAMP</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../../../index.html">API Reference</a></li>
+          <li class="breadcrumb-item"><a href="../../../index.html">pswamp</a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">pswamp.gui</a></li>
+          <li class="breadcrumb-item"><a href="../index.html">pswamp.gui.grid_view</a></li>
+      <li class="breadcrumb-item active">pswamp.gui.grid_view.grid_view_container</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../../../../../_sources/autoapi/pswamp/gui/grid_view/grid_view_container/index.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="module-pswamp.gui.grid_view.grid_view_container">
+<span id="pswamp-gui-grid-view-grid-view-container"></span><h1>pswamp.gui.grid_view.grid_view_container<a class="headerlink" href="#module-pswamp.gui.grid_view.grid_view_container" title="Link to this heading"></a></h1>
+<section id="attributes">
+<h2>Attributes<a class="headerlink" href="#attributes" title="Link to this heading"></a></h2>
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#pswamp.gui.grid_view.grid_view_container.app" title="pswamp.gui.grid_view.grid_view_container.app"><code class="xref py py-obj docutils literal notranslate"><span class="pre">app</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="classes">
+<h2>Classes<a class="headerlink" href="#classes" title="Link to this heading"></a></h2>
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#pswamp.gui.grid_view.grid_view_container.NewViewOpts" title="pswamp.gui.grid_view.grid_view_container.NewViewOpts"><code class="xref py py-obj docutils literal notranslate"><span class="pre">NewViewOpts</span></code></a></p></td>
+<td><p>Dialog with options for a new grid view.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#pswamp.gui.grid_view.grid_view_container.GridViewContainer" title="pswamp.gui.grid_view.grid_view_container.GridViewContainer"><code class="xref py py-obj docutils literal notranslate"><span class="pre">GridViewContainer</span></code></a></p></td>
+<td><p>Container for multiple grid views.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="module-contents">
+<h2>Module Contents<a class="headerlink" href="#module-contents" title="Link to this heading"></a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.grid_view_container.NewViewOpts">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">pswamp.gui.grid_view.grid_view_container.</span></span><span class="sig-name descname"><span class="pre">NewViewOpts</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">show_sld</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pswamp.gui.grid_view.grid_view_container.NewViewOpts" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-obj docutils literal notranslate"><span class="pre">PySide6.QtWidgets.QDialog</span></code></p>
+<p>Dialog with options for a new grid view.</p>
+<p>This is shown when a new grid view is to be added to the grid view
+container. The user selects 2D or 3D view, and whether to use geographic
+(geo) or single-line diagram (sld) representation.</p>
+<p>TODO: geo/sld is a bit confusing, since both variants show single-line
+diagrams. Should be changed (available variants could instead be specified
+in config.toml, and show up with similar names here).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>show_sld</strong> (<em>bool</em>) – Determines whether buttons for SLD view are shown.</p>
+</dd>
+</dl>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.grid_view_container.NewViewOpts.text_input">
+<span class="sig-name descname"><span class="pre">text_input</span></span><a class="headerlink" href="#pswamp.gui.grid_view.grid_view_container.NewViewOpts.text_input" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.grid_view_container.NewViewOpts.done_button">
+<span class="sig-name descname"><span class="pre">done_button</span></span><a class="headerlink" href="#pswamp.gui.grid_view.grid_view_container.NewViewOpts.done_button" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.grid_view_container.NewViewOpts.select_2d">
+<span class="sig-name descname"><span class="pre">select_2d</span></span><a class="headerlink" href="#pswamp.gui.grid_view.grid_view_container.NewViewOpts.select_2d" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.grid_view_container.NewViewOpts.select_3d">
+<span class="sig-name descname"><span class="pre">select_3d</span></span><a class="headerlink" href="#pswamp.gui.grid_view.grid_view_container.NewViewOpts.select_3d" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.grid_view_container.NewViewOpts.select_geo">
+<span class="sig-name descname"><span class="pre">select_geo</span></span><a class="headerlink" href="#pswamp.gui.grid_view.grid_view_container.NewViewOpts.select_geo" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.grid_view_container.NewViewOpts.select_sld">
+<span class="sig-name descname"><span class="pre">select_sld</span></span><a class="headerlink" href="#pswamp.gui.grid_view.grid_view_container.NewViewOpts.select_sld" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.grid_view_container.NewViewOpts.data">
+<span class="sig-name descname"><span class="pre">data</span></span><a class="headerlink" href="#pswamp.gui.grid_view.grid_view_container.NewViewOpts.data" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.grid_view_container.NewViewOpts.canceled">
+<span class="sig-name descname"><span class="pre">canceled</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">True</span></span><a class="headerlink" href="#pswamp.gui.grid_view.grid_view_container.NewViewOpts.canceled" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.grid_view_container.NewViewOpts.submitclose">
+<span class="sig-name descname"><span class="pre">submitclose</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pswamp.gui.grid_view.grid_view_container.NewViewOpts.submitclose" title="Link to this definition"></a></dt>
+<dd><p>Close the dialog and create the new view.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.grid_view_container.NewViewOpts.submitcancel">
+<span class="sig-name descname"><span class="pre">submitcancel</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pswamp.gui.grid_view.grid_view_container.NewViewOpts.submitcancel" title="Link to this definition"></a></dt>
+<dd><p>Close the dialog and don’t create the new view.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.grid_view_container.GridViewContainer">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">pswamp.gui.grid_view.grid_view_container.</span></span><span class="sig-name descname"><span class="pre">GridViewContainer</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">activate_default_layers</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pswamp.gui.grid_view.grid_view_container.GridViewContainer" title="Link to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="../tab_widget/index.html#pswamp.gui.grid_view.tab_widget.QTabWidgetPlus" title="pswamp.gui.grid_view.tab_widget.QTabWidgetPlus"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pswamp.gui.grid_view.tab_widget.QTabWidgetPlus</span></code></a></p>
+<p>Container for multiple grid views.</p>
+<p>This widget holds multiple grid views as tabs. New views can be defined
+based on user input (2D/3D, geo/sld). When double clicking the tab for a
+view, the settings for the view can be modified (e.g., activate/deactivate
+visualization layers).</p>
+<p>TODO: Check if <a href="#id1"><span class="problematic" id="id2">*</span></a>args, <a href="#id3"><span class="problematic" id="id4">**</span></a>kwargs are used. Remove if not.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>config</strong> (<em>dict</em>) – pswamp configuration</p></li>
+<li><p><strong>activate_default_layers</strong> (<em>bool</em>) – Activate default layers or not.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.grid_view_container.GridViewContainer.new_tab_dialog_type">
+<span class="sig-name descname"><span class="pre">new_tab_dialog_type</span></span><a class="headerlink" href="#pswamp.gui.grid_view.grid_view_container.GridViewContainer.new_tab_dialog_type" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.grid_view_container.GridViewContainer.config">
+<span class="sig-name descname"><span class="pre">config</span></span><a class="headerlink" href="#pswamp.gui.grid_view.grid_view_container.GridViewContainer.config" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.grid_view_container.GridViewContainer.activate_default_layers">
+<span class="sig-name descname"><span class="pre">activate_default_layers</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">True</span></span><a class="headerlink" href="#pswamp.gui.grid_view.grid_view_container.GridViewContainer.activate_default_layers" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.grid_view_container.GridViewContainer.tabname_to_widget_lookup">
+<span class="sig-name descname"><span class="pre">tabname_to_widget_lookup</span></span><a class="headerlink" href="#pswamp.gui.grid_view.grid_view_container.GridViewContainer.tabname_to_widget_lookup" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.grid_view_container.GridViewContainer.views">
+<span class="sig-name descname"><span class="pre">views</span></span><a class="headerlink" href="#pswamp.gui.grid_view.grid_view_container.GridViewContainer.views" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.grid_view_container.GridViewContainer.openTabDialog">
+<span class="sig-name descname"><span class="pre">openTabDialog</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">tab_idx</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pswamp.gui.grid_view.grid_view_container.GridViewContainer.openTabDialog" title="Link to this definition"></a></dt>
+<dd><p>Open grid view settings dialog.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>tab_idx</strong> (<em>int</em>) – Index of the clicked tab.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.grid_view_container.GridViewContainer._build_tabs">
+<span class="sig-name descname"><span class="pre">_build_tabs</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pswamp.gui.grid_view.grid_view_container.GridViewContainer._build_tabs" title="Link to this definition"></a></dt>
+<dd><p>Defines how new tabs are created.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.grid_view_container.GridViewContainer.new_tab">
+<span class="sig-name descname"><span class="pre">new_tab</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pswamp.gui.grid_view.grid_view_container.GridViewContainer.new_tab" title="Link to this definition"></a></dt>
+<dd><p>Add new tab, store which widget the tab points to.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="pswamp.gui.grid_view.grid_view_container.app">
+<span class="sig-prename descclassname"><span class="pre">pswamp.gui.grid_view.grid_view_container.</span></span><span class="sig-name descname"><span class="pre">app</span></span><a class="headerlink" href="#pswamp.gui.grid_view.grid_view_container.app" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="../dim_3d/layers/voltage_stability/index.html" class="btn btn-neutral float-left" title="pswamp.gui.grid_view.dim_3d.layers.voltage_stability" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="../layer_select/index.html" class="btn btn-neutral float-right" title="pswamp.gui.grid_view.layer_select" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright .</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

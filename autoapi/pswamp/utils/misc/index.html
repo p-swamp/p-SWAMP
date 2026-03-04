@@ -1,0 +1,271 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../../../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>pswamp.utils.misc &mdash; p-SWAMP  documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../../../_static/css/theme.css?v=9edc463e" />
+      <link rel="stylesheet" type="text/css" href="../../../../_static/graphviz.css?v=4ae1632d" />
+
+  
+      <script src="../../../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../../../_static/documentation_options.js?v=5929fcd5"></script>
+      <script src="../../../../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" />
+    <link rel="next" title="pswamp.utils.pmu_time_window" href="../pmu_time_window/index.html" />
+    <link rel="prev" title="pswamp.utils.load_config" href="../load_config/index.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../../index.html" class="icon icon-home">
+            p-SWAMP
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../../../../p-swamp.html">p-SWAMP (Power Stability Wide area Monitoring and Protection)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../examples/index.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../kafka.html">Streaming, microservices, Kafka</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../testing.html">Test environments</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../templates.html">Real-Time Application Templates</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../models.html">Component models</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../../../index.html">API Reference</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="../../index.html">pswamp</a><ul class="current">
+<li class="toctree-l3 current"><a class="reference internal" href="../../index.html#submodules">Submodules</a><ul class="current">
+<li class="toctree-l4"><a class="reference internal" href="../../app_templates/index.html">pswamp.app_templates</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../coordination/index.html">pswamp.coordination</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../database/index.html">pswamp.database</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../gui/index.html">pswamp.gui</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../models/index.html">pswamp.models</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../monitoring/index.html">pswamp.monitoring</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../streaming/index.html">pswamp.streaming</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../styles/index.html">pswamp.styles</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../test_utils/index.html">pswamp.test_utils</a></li>
+<li class="toctree-l4 current"><a class="reference internal" href="../index.html">pswamp.utils</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../visualization/index.html">pswamp.visualization</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../../index.html#functions">Functions</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../index.html#package-contents">Package Contents</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../../index.html">p-SWAMP</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../../index.html">API Reference</a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">pswamp</a></li>
+          <li class="breadcrumb-item"><a href="../index.html">pswamp.utils</a></li>
+      <li class="breadcrumb-item active">pswamp.utils.misc</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../../../../_sources/autoapi/pswamp/utils/misc/index.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="module-pswamp.utils.misc">
+<span id="pswamp-utils-misc"></span><h1>pswamp.utils.misc<a class="headerlink" href="#module-pswamp.utils.misc" title="Link to this heading"></a></h1>
+<section id="attributes">
+<h2>Attributes<a class="headerlink" href="#attributes" title="Link to this heading"></a></h2>
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#pswamp.utils.misc.convert_datetime_to_seconds" title="pswamp.utils.misc.convert_datetime_to_seconds"><code class="xref py py-obj docutils literal notranslate"><span class="pre">convert_datetime_to_seconds</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="functions">
+<h2>Functions<a class="headerlink" href="#functions" title="Link to this heading"></a></h2>
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#pswamp.utils.misc.recursively_default_dict" title="pswamp.utils.misc.recursively_default_dict"><code class="xref py py-obj docutils literal notranslate"><span class="pre">recursively_default_dict</span></code></a>()</p></td>
+<td><p>Dict which allows assigning fields that don't exist. Source:</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#pswamp.utils.misc.lookup_strings" title="pswamp.utils.misc.lookup_strings"><code class="xref py py-obj docutils literal notranslate"><span class="pre">lookup_strings</span></code></a>(a, b[, return_mask])</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#pswamp.utils.misc.convert_time_stamp_to_seconds" title="pswamp.utils.misc.convert_time_stamp_to_seconds"><code class="xref py py-obj docutils literal notranslate"><span class="pre">convert_time_stamp_to_seconds</span></code></a>(time_stamp)</p></td>
+<td><p>Convert time stamp (datetime) to seconds (float)</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#pswamp.utils.misc.convert_seconds_to_datetime" title="pswamp.utils.misc.convert_seconds_to_datetime"><code class="xref py py-obj docutils literal notranslate"><span class="pre">convert_seconds_to_datetime</span></code></a>(time_seconds)</p></td>
+<td><p>Convert seconds (float) to datetime object</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#pswamp.utils.misc.flatten_array_insert_nan" title="pswamp.utils.misc.flatten_array_insert_nan"><code class="xref py py-obj docutils literal notranslate"><span class="pre">flatten_array_insert_nan</span></code></a>(x, y)</p></td>
+<td><p>Flatten arrays and insert nan values, useful for fast plotting</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#pswamp.utils.misc.flatten_list_insert_nan" title="pswamp.utils.misc.flatten_list_insert_nan"><code class="xref py py-obj docutils literal notranslate"><span class="pre">flatten_list_insert_nan</span></code></a>(listlist)</p></td>
+<td><p></p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="module-contents">
+<h2>Module Contents<a class="headerlink" href="#module-contents" title="Link to this heading"></a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="pswamp.utils.misc.recursively_default_dict">
+<span class="sig-prename descclassname"><span class="pre">pswamp.utils.misc.</span></span><span class="sig-name descname"><span class="pre">recursively_default_dict</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pswamp.utils.misc.recursively_default_dict" title="Link to this definition"></a></dt>
+<dd><p>Dict which allows assigning fields that don’t exist. Source:
+<a class="reference external" href="https://stackoverflow.com/questions/13151276/automatically-add-key-to-python-dict">https://stackoverflow.com/questions/13151276/automatically-add-key-to-python-dict</a></p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Empty dict</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>dict</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="pswamp.utils.misc.lookup_strings">
+<span class="sig-prename descclassname"><span class="pre">pswamp.utils.misc.</span></span><span class="sig-name descname"><span class="pre">lookup_strings</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">a</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">b</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">return_mask</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pswamp.utils.misc.lookup_strings" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="pswamp.utils.misc.convert_time_stamp_to_seconds">
+<span class="sig-prename descclassname"><span class="pre">pswamp.utils.misc.</span></span><span class="sig-name descname"><span class="pre">convert_time_stamp_to_seconds</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">time_stamp</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pswamp.utils.misc.convert_time_stamp_to_seconds" title="Link to this definition"></a></dt>
+<dd><p>Convert time stamp (datetime) to seconds (float)</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>time_stamp</strong> (<em>datetime.datetime</em>) – Input datetime object.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Number of seconds.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>float</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="pswamp.utils.misc.convert_datetime_to_seconds">
+<span class="sig-prename descclassname"><span class="pre">pswamp.utils.misc.</span></span><span class="sig-name descname"><span class="pre">convert_datetime_to_seconds</span></span><a class="headerlink" href="#pswamp.utils.misc.convert_datetime_to_seconds" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="pswamp.utils.misc.convert_seconds_to_datetime">
+<span class="sig-prename descclassname"><span class="pre">pswamp.utils.misc.</span></span><span class="sig-name descname"><span class="pre">convert_seconds_to_datetime</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">time_seconds</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pswamp.utils.misc.convert_seconds_to_datetime" title="Link to this definition"></a></dt>
+<dd><p>Convert seconds (float) to datetime object</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>time_seconds</strong> (<em>float</em>) – Number of seconds</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Datetime object</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>datetime.datetime</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="pswamp.utils.misc.flatten_array_insert_nan">
+<span class="sig-prename descclassname"><span class="pre">pswamp.utils.misc.</span></span><span class="sig-name descname"><span class="pre">flatten_array_insert_nan</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pswamp.utils.misc.flatten_array_insert_nan" title="Link to this definition"></a></dt>
+<dd><p>Flatten arrays and insert nan values, useful for fast plotting</p>
+<p>Allows multiple series (in y) to be plotted with a single plot call.
+E.g. instead of plt.plot(x, y), plt.plot(<a href="#id1"><span class="problematic" id="id2">*</span></a>flatten_array_insert_nan(x, y)).
+Since the latter produces a single plot handle, it is much faster when there
+are many time series in y. Depending on plotting library, formatting of
+individual lines might not be possible.</p>
+<p>Output arrays both have shape (n_series*(n_samples+1),).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>x</strong> (<em>np.ndarray</em>) – x-values, with shape (n_series, n_samples) or (n_series,)</p></li>
+<li><p><strong>y</strong> (<em>np.ndarray</em>) – y-values, with shape (n_series, n_samples)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>Exception</strong> – If dimensions of x and y are not compatible.</p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>x-values, with shape (n_series*(n_samples+1),)
+y_data: y-values, with shape (n_series*(n_samples+1),)</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>x_data</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="pswamp.utils.misc.flatten_list_insert_nan">
+<span class="sig-prename descclassname"><span class="pre">pswamp.utils.misc.</span></span><span class="sig-name descname"><span class="pre">flatten_list_insert_nan</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">listlist</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pswamp.utils.misc.flatten_list_insert_nan" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="../load_config/index.html" class="btn btn-neutral float-left" title="pswamp.utils.load_config" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="../pmu_time_window/index.html" class="btn btn-neutral float-right" title="pswamp.utils.pmu_time_window" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright .</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

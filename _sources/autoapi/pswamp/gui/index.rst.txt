@@ -1,0 +1,20 @@
+pswamp.gui
+==========
+
+.. py:module:: pswamp.gui
+
+
+Submodules
+----------
+
+.. toctree::
+   :maxdepth: 1
+
+   /autoapi/pswamp/gui/alarms/index
+   /autoapi/pswamp/gui/app_launcher/index
+   /autoapi/pswamp/gui/app_monitoring/index
+   /autoapi/pswamp/gui/components/index
+   /autoapi/pswamp/gui/grid_view/index
+   /autoapi/pswamp/gui/main_window/index
+
+

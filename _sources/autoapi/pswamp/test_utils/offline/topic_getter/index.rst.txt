@@ -1,0 +1,67 @@
+pswamp.test_utils.offline.topic_getter
+======================================
+
+.. py:module:: pswamp.test_utils.offline.topic_getter
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   pswamp.test_utils.offline.topic_getter.TopicGetter
+   pswamp.test_utils.offline.topic_getter.TopicToFile
+   pswamp.test_utils.offline.topic_getter.TopicFromFile
+
+
+Module Contents
+---------------
+
+.. py:class:: TopicGetter(topic, kafka_kwargs, relative_start_offset=-np.inf, empty_topic_timeout=0.2)
+
+   .. py:attribute:: data
+      :value: []
+
+
+
+   .. py:attribute:: consumer
+
+
+   .. py:attribute:: consumer_thread
+
+
+   .. py:attribute:: newest_msg
+      :value: None
+
+
+
+   .. py:method:: run()
+
+
+   .. py:method:: store_data(msg)
+
+
+.. py:class:: TopicToFile(*args, file_path, **kwargs)
+
+   Bases: :py:obj:`TopicGetter`
+
+
+   .. py:attribute:: file_path
+
+
+   .. py:attribute:: file
+
+
+   .. py:method:: store_data(msg)
+
+
+.. py:class:: TopicFromFile(file_path)
+
+   .. py:attribute:: file_path
+
+
+   .. py:attribute:: data
+      :value: []
+
+
+

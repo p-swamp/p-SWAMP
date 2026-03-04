@@ -1,0 +1,76 @@
+pswamp.gui.alarms.views.voltage_stability
+=========================================
+
+.. py:module:: pswamp.gui.alarms.views.voltage_stability
+
+
+Attributes
+----------
+
+.. autoapisummary::
+
+   pswamp.gui.alarms.views.voltage_stability.config
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   pswamp.gui.alarms.views.voltage_stability.PhasorsFromTimeWindow
+   pswamp.gui.alarms.views.voltage_stability.VoltageStabilityAlarmView
+
+
+Module Contents
+---------------
+
+.. py:class:: PhasorsFromTimeWindow(tw, wanted_phasors)
+
+   .. py:attribute:: tw
+
+
+   .. py:attribute:: idx_mag
+
+
+   .. py:attribute:: idx_ang
+
+
+   .. py:method:: get(idx=slice(None))
+
+
+.. py:class:: VoltageStabilityAlarmView(config, *args, **kwargs)
+
+   Bases: :py:obj:`pswamp.gui.alarms.views.interactive.InteractiveAlarmView`
+
+
+   .. py:attribute:: initialized
+      :value: False
+
+
+
+   .. py:attribute:: app_results
+
+
+   .. py:attribute:: app_data_rate
+
+
+   .. py:attribute:: pmu_data_rate
+
+
+   .. py:attribute:: app_res_thread
+
+
+   .. py:attribute:: phasor_extractor
+
+
+   .. py:method:: define_layout()
+
+
+   .. py:method:: update_plots(value)
+
+
+   .. py:method:: close_view()
+
+
+.. py:data:: config
+

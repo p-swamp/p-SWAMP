@@ -1,0 +1,119 @@
+pswamp.models.line
+==================
+
+.. py:module:: pswamp.models.line
+
+
+Attributes
+----------
+
+.. autoapisummary::
+
+   pswamp.models.line.config
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   pswamp.models.line.Line
+
+
+Functions
+---------
+
+.. autoapisummary::
+
+   pswamp.models.line.find_strings_containing_substring
+
+
+Module Contents
+---------------
+
+.. py:function:: find_strings_containing_substring(strings_to_search, string_to_find)
+
+.. py:class:: Line(config, meas_data, units=None)
+
+   .. py:attribute:: from_bus_idx
+
+
+   .. py:attribute:: to_bus_idx
+
+
+   .. py:attribute:: freq_from_extractor
+
+
+   .. py:attribute:: freq_to_extractor
+
+
+   .. py:attribute:: current_phasor_extractor_from
+
+
+   .. py:attribute:: current_phasor_extractor_to
+
+
+   .. py:attribute:: v_from_phasor_extractor
+
+
+   .. py:attribute:: v_to_phasor_extractor
+
+
+   .. py:attribute:: line_out_threshold
+      :value: 0.001
+
+
+
+   .. py:attribute:: S_n
+
+
+   .. py:attribute:: V_n
+
+
+   .. py:attribute:: I_n
+
+
+   .. py:method:: V_from(meas)
+
+
+   .. py:method:: V_to(meas)
+
+
+   .. py:method:: freq_from(meas)
+
+
+   .. py:method:: freq_to(meas)
+
+
+   .. py:method:: I_from(meas)
+
+
+   .. py:method:: I_to(meas)
+
+
+   .. py:method:: S_from(meas)
+
+
+   .. py:method:: S_to(meas)
+
+
+   .. py:method:: P_from(meas)
+
+
+   .. py:method:: P_to(meas)
+
+
+   .. py:method:: Q_from(meas)
+
+
+   .. py:method:: Q_to(meas)
+
+
+   .. py:method:: disconnected(meas)
+
+
+   .. py:method:: connectable(meas)
+
+
+.. py:data:: config
+

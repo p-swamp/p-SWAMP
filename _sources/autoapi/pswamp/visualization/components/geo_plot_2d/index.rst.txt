@@ -1,0 +1,123 @@
+pswamp.visualization.components.geo_plot_2d
+===========================================
+
+.. py:module:: pswamp.visualization.components.geo_plot_2d
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   pswamp.visualization.components.geo_plot_2d.GeoPlot2D
+   pswamp.visualization.components.geo_plot_2d.GridPlotControl
+
+
+Functions
+---------
+
+.. autoapisummary::
+
+   pswamp.visualization.components.geo_plot_2d.main
+
+
+Module Contents
+---------------
+
+.. py:class:: GeoPlot2D(update_freq=50, k=1, countries=None, power_line_geo_data=None, bus_kwargs=None, phasors_kwargs=None, *args, **kwargs)
+
+   Bases: :py:obj:`PySide6.QtWidgets.QWidget`
+
+
+   .. py:attribute:: station_was_clicked
+
+
+   .. py:attribute:: k
+      :value: 1
+
+
+
+   .. py:attribute:: update_funs
+      :value: []
+
+
+
+   .. py:attribute:: window
+
+
+   .. py:attribute:: plotWidget
+
+
+   .. py:attribute:: t_prev
+
+
+   .. py:method:: update()
+
+
+   .. py:method:: draw_buses(bus_coords, bus_names, use_colors=False)
+
+
+   .. py:method:: show_lines(key)
+
+
+   .. py:method:: hide_lines(key)
+
+
+   .. py:method:: show_geo_lines()
+
+
+   .. py:method:: hide_geo_lines()
+
+
+   .. py:method:: set_geo_lines_color(color)
+
+
+   .. py:method:: set_power_lines_data(key, data)
+
+
+   .. py:method:: get_geo_data(key)
+
+
+   .. py:method:: set_power_lines_color(key, color)
+
+
+   .. py:method:: hide_bus_names()
+
+
+   .. py:method:: show_bus_names()
+
+
+   .. py:method:: draw_bus_connectors()
+
+
+   .. py:method:: draw_power_line_geo_data(ps_geo_data_path)
+
+
+   .. py:method:: draw_countries(countries)
+
+
+   .. py:method:: draw_phasors(bus_coords, phasor_fun=None)
+
+
+   .. py:method:: set_focus(station_idx, coeffs=None)
+
+
+   .. py:method:: set_focus_coords(coords, coeffs=None)
+
+
+.. py:class:: GridPlotControl(grid_plot)
+
+   Bases: :py:obj:`PySide6.QtWidgets.QWidget`
+
+
+   .. py:attribute:: grid_plot
+
+
+   .. py:attribute:: btn_name_to_key
+
+
+   .. py:method:: update_grid_plots(state)
+
+
+.. py:function:: main()
+

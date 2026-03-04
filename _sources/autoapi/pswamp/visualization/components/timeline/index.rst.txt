@@ -1,0 +1,29 @@
+pswamp.visualization.components.timeline
+========================================
+
+.. py:module:: pswamp.visualization.components.timeline
+
+
+Attributes
+----------
+
+.. autoapisummary::
+
+   pswamp.visualization.components.timeline.t
+
+
+Functions
+---------
+
+.. autoapisummary::
+
+   pswamp.visualization.components.timeline.add_timeline_entry
+
+
+Module Contents
+---------------
+
+.. py:function:: add_timeline_entry(ax, x, txt, color)
+
+.. py:data:: t
+

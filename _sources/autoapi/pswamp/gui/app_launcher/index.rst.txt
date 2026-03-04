@@ -1,0 +1,56 @@
+pswamp.gui.app_launcher
+=======================
+
+.. py:module:: pswamp.gui.app_launcher
+
+
+Attributes
+----------
+
+.. autoapisummary::
+
+   pswamp.gui.app_launcher.config
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   pswamp.gui.app_launcher.AppLauncher
+
+
+Functions
+---------
+
+.. autoapisummary::
+
+   pswamp.gui.app_launcher.run_app_launcher
+
+
+Module Contents
+---------------
+
+.. py:class:: AppLauncher(config)
+
+   Bases: :py:obj:`PySide6.QtWidgets.QWidget`
+
+
+   Creates a list of buttons for launching applications.
+
+
+   .. py:attribute:: config
+
+
+   .. py:attribute:: app_dialogues
+      :value: []
+
+
+
+   .. py:method:: open_run_app_dialogue_with_channel_select(run_app_func, params={})
+
+
+.. py:function:: run_app_launcher(config_arg)
+
+.. py:data:: config
+

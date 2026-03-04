@@ -1,0 +1,136 @@
+pswamp.gui.alarms.views.default
+===============================
+
+.. py:module:: pswamp.gui.alarms.views.default
+
+
+Attributes
+----------
+
+.. autoapisummary::
+
+   pswamp.gui.alarms.views.default.config
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   pswamp.gui.alarms.views.default.TimeWindowAppMod
+   pswamp.gui.alarms.views.default.BaseAlarmView
+   pswamp.gui.alarms.views.default.DefaultAlarmView
+
+
+Module Contents
+---------------
+
+.. py:class:: TimeWindowAppMod(*args, store_dataframes=True, **kwargs)
+
+   Bases: :py:obj:`pswamp.app_templates.time_window_app.TimeWindowApp`
+
+
+   Modified TimeWindowApp, for customizing how often updating happens.
+   TODO: Generalize original TimeWindowApp so that this subclass is not needed.
+
+
+   .. py:attribute:: store_dataframes
+      :value: True
+
+
+
+   .. py:attribute:: update_funs
+      :value: []
+
+
+
+   .. py:attribute:: k
+      :value: 0
+
+
+
+   .. py:attribute:: data_frame_storage
+      :value: []
+
+
+
+   .. py:method:: run_analysis(time_stamp, measurements)
+
+
+   .. py:method:: update_storage(next_data_frame)
+
+      Update internal storage with data frames
+
+
+
+.. py:class:: BaseAlarmView(config, alarm_uuid, alarm_data, update_freq=50, grid_view=None, channel_selection=None)
+
+   Bases: :py:obj:`PySide6.QtWidgets.QWidget`
+
+
+   .. py:attribute:: update_requested
+
+
+   .. py:attribute:: alarm_topic
+
+
+   .. py:attribute:: grid_view
+      :value: None
+
+
+
+   .. py:attribute:: alarm_uuid
+
+
+   .. py:attribute:: alarm_data
+
+
+   .. py:attribute:: t_end_seconds
+
+
+   .. py:attribute:: simplified_alarm_views
+
+
+   .. py:attribute:: tw_app
+
+
+   .. py:attribute:: freq_tw_thread
+
+
+   .. py:method:: check_for_alarm_not_critical()
+
+
+   .. py:method:: alarm_not_critical_detected_callback()
+
+
+.. py:class:: DefaultAlarmView(*args, **kwargs)
+
+   Bases: :py:obj:`BaseAlarmView`
+
+
+   .. py:attribute:: col_idx_freq
+
+
+   .. py:attribute:: freq_ax
+
+
+   .. py:method:: draw_alarm_timeline_entry(plotWidget, time_stamp, entry)
+
+
+   .. py:method:: alarm_not_critical_detected_callback()
+
+
+   .. py:method:: define_layout()
+
+
+   .. py:method:: update_function()
+
+
+   .. py:method:: update_plots(value)
+
+
+   .. py:method:: close_view()
+
+
+.. py:data:: config
+

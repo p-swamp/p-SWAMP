@@ -1,0 +1,62 @@
+pswamp.test_utils.offline.rtsim_adapter
+=======================================
+
+.. py:module:: pswamp.test_utils.offline.rtsim_adapter
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   pswamp.test_utils.offline.rtsim_adapter.PMUPublisherMod
+
+
+Module Contents
+---------------
+
+.. py:class:: PMUPublisherMod(sim=None, *args, **kwargs)
+
+   Bases: :py:obj:`pswamp.test_utils.pmu_rtsim_to_kafka.PMUPublisher`, :py:obj:`pswamp.test_utils.csv_playback.offline_testing_adapter.OfflineTestingAdapter`
+
+
+   .. py:attribute:: sim
+      :value: None
+
+
+
+   .. py:attribute:: new_frame_already_obtained
+      :value: False
+
+
+
+   .. py:attribute:: latest_frame
+      :value: None
+
+
+
+   .. py:attribute:: results
+      :value: []
+
+
+
+   .. py:attribute:: statuses
+      :value: []
+
+
+
+   .. py:method:: initialize(*args, **kwargs)
+
+
+   .. py:method:: update(*args, **kwargs)
+
+
+   .. py:method:: get_data_frame(sim)
+
+
+   .. py:method:: get_next_data_frame()
+
+
+   .. py:method:: seek_relative_input_offset()
+
+

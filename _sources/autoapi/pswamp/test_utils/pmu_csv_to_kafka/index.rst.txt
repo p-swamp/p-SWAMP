@@ -1,0 +1,50 @@
+pswamp.test_utils.pmu_csv_to_kafka
+==================================
+
+.. py:module:: pswamp.test_utils.pmu_csv_to_kafka
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   pswamp.test_utils.pmu_csv_to_kafka.CSVtoKafka
+
+
+Module Contents
+---------------
+
+.. py:class:: CSVtoKafka(kafka_kwargs, *args, topic='pmudata', freq_data=None, dfreq_data=None, speed=1, t_end=None, **kwargs)
+
+   Bases: :py:obj:`synchrophasor.timeSeriesPlayback.PMUTimeSeriesPublisher`
+
+
+   .. py:attribute:: t_end
+
+
+   .. py:attribute:: speed
+      :value: 1
+
+
+
+   .. py:attribute:: topic
+      :value: 'pmudata'
+
+
+
+   .. py:attribute:: kafka_producer
+
+
+   .. py:attribute:: freq_data
+
+
+   .. py:attribute:: dfreq_data
+
+
+   .. py:method:: initialize()
+
+
+   .. py:method:: main_loop()
+
+

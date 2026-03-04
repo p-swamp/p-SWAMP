@@ -1,0 +1,63 @@
+pswamp.gui.components.single_channel_select
+===========================================
+
+.. py:module:: pswamp.gui.components.single_channel_select
+
+
+Attributes
+----------
+
+.. autoapisummary::
+
+   pswamp.gui.components.single_channel_select.app
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   pswamp.gui.components.single_channel_select.SingleChannelSelect
+
+
+Module Contents
+---------------
+
+.. py:class:: SingleChannelSelect(channels)
+
+   Bases: :py:obj:`PySide6.QtWidgets.QWidget`
+
+
+   Widget for selecting a single channel.
+
+   (Currently used only in FFT viz)
+   :param channels: List of channels to select from.
+   :type channels: list
+
+
+   .. py:attribute:: channel_to_idx
+
+
+   .. py:attribute:: channels
+
+
+   .. py:attribute:: channel_list
+
+
+   .. py:attribute:: item_was_selected
+
+
+   .. py:attribute:: last_selected
+
+
+   .. py:method:: selected_channel()
+
+
+   .. py:method:: selected_channel_idx()
+
+
+   .. py:method:: on_select(item, item2)
+
+
+.. py:data:: app
+

@@ -1,0 +1,37 @@
+pswamp.gui.grid_view.dim_3d.layers.voltage
+==========================================
+
+.. py:module:: pswamp.gui.grid_view.dim_3d.layers.voltage
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   pswamp.gui.grid_view.dim_3d.layers.voltage.Voltage3DLayer
+   pswamp.gui.grid_view.dim_3d.layers.voltage.Voltage3DLayerSettings
+
+
+Module Contents
+---------------
+
+.. py:class:: Voltage3DLayer(parent, config, *args, **kwargs)
+
+   Bases: :py:obj:`pswamp.gui.grid_view.dim_3d.layers.frequency.Frequency3DLayer`
+
+
+   .. py:attribute:: station_V_n
+
+
+   .. py:method:: update_coords()
+
+
+   .. py:method:: get_col_idx()
+
+
+.. py:class:: Voltage3DLayerSettings(target_layer)
+
+   Bases: :py:obj:`pswamp.gui.grid_view.dim_3d.layers.frequency.Frequency3DLayerSettings`
+
+

@@ -1,0 +1,71 @@
+pswamp.visualization.components.channel_select
+==============================================
+
+.. py:module:: pswamp.visualization.components.channel_select
+
+
+Attributes
+----------
+
+.. autoapisummary::
+
+   pswamp.visualization.components.channel_select.app
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   pswamp.visualization.components.channel_select.ChannelSelect
+
+
+Module Contents
+---------------
+
+.. py:class:: ChannelSelect(station_names, channel_names)
+
+   Bases: :py:obj:`PySide6.QtWidgets.QWidget`
+
+
+   For selecting a single channel.
+
+
+   .. py:attribute:: channel_names
+
+
+   .. py:attribute:: station_names
+
+
+   .. py:attribute:: station_select
+
+
+   .. py:attribute:: channel_select
+
+
+   .. py:attribute:: station_idx
+      :value: 0
+
+
+
+   .. py:attribute:: channel_idx
+      :value: 0
+
+
+
+   .. py:attribute:: station_channel_idx
+
+
+   .. py:attribute:: col_idx
+      :value: 0
+
+
+
+   .. py:method:: station_selected(station_idx)
+
+
+   .. py:method:: channel_selected(channel_idx)
+
+
+.. py:data:: app
+

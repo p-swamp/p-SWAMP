@@ -1,0 +1,50 @@
+pswamp.gui.grid_view.dim_3d.layers.line_outages
+===============================================
+
+.. py:module:: pswamp.gui.grid_view.dim_3d.layers.line_outages
+
+
+Attributes
+----------
+
+.. autoapisummary::
+
+   pswamp.gui.grid_view.dim_3d.layers.line_outages.config
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   pswamp.gui.grid_view.dim_3d.layers.line_outages.LineOutages
+
+
+Module Contents
+---------------
+
+.. py:class:: LineOutages(parent, config, *args, **kwargs)
+
+   Bases: :py:obj:`pswamp.gui.grid_view.dim_3d.layers.lines.LineLayer`
+
+
+   .. py:attribute:: config
+
+
+   .. py:attribute:: uuid
+
+
+   .. py:attribute:: snapshot_app
+
+
+   .. py:attribute:: line_model
+
+
+   .. py:method:: update_colors()
+
+
+   .. py:method:: add_line_plots(pos, line_width=7, color='gray')
+
+
+.. py:data:: config
+

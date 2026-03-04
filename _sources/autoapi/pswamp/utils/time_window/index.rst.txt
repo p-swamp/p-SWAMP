@@ -1,0 +1,170 @@
+pswamp.utils.time_window
+========================
+
+.. py:module:: pswamp.utils.time_window
+
+
+Attributes
+----------
+
+.. autoapisummary::
+
+   pswamp.utils.time_window.tw
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   pswamp.utils.time_window.TimeWindow
+   pswamp.utils.time_window.GrowingTimeWindow
+
+
+Module Contents
+---------------
+
+.. py:class:: TimeWindow(n_samples=100, n_cols=0, dtype=float)
+
+   Stores the most recent n_samples of multichannel data, and corresponding time stamps. Updating with a new
+   set of measurements is efficient, since only one row in the data array (self._data) is overwritten.
+
+
+   .. py:attribute:: n_samples
+      :value: 100
+
+
+
+   .. py:attribute:: n_cols
+      :value: 0
+
+
+
+   .. py:attribute:: n_channels
+      :value: 0
+
+
+
+   .. py:attribute:: lock
+
+
+   .. py:attribute:: _data
+
+
+   .. py:attribute:: _time
+
+
+   .. py:attribute:: _k
+      :value: 0
+
+
+
+   .. py:method:: get_safe(col_idx=slice(None))
+
+
+   .. py:method:: get(col_idx=slice(None))
+
+      Get time vector and data array. If col_idx is specified, only the corresponding columns are returned. If not
+      specified, all columns are returned.
+
+      :param col_idx: Indices of data columns to be returned.
+
+      :returns: Time vector and data array.
+
+
+
+   .. py:method:: get_time()
+
+      Get time vector.
+      :returns: Time vector.
+
+
+
+   .. py:method:: get_col(col_idx=slice(None))
+
+      Get data columns.  If col_idx is specified, only the corresponding columns are returned. If not
+      specified, all columns are returned.
+      :param col_idx: Indices of data columns to be returned.
+
+      :returns: Data array.
+
+
+
+   .. py:method:: append(new_time, new_data)
+
+      Append a new set of measurement data, and corresopnding time stap.
+      :param new_time: Time stamp. Single number.
+      :param new_data: Row of measurement data.
+
+
+
+   .. py:method:: append_data(new_data)
+
+      Append a new set of measurement data, without time stamp.
+      :param new_data: Row of measurement data.
+
+
+
+.. py:class:: GrowingTimeWindow(n_samples=None, n_cols=0, dtype=float)
+
+   Bases: :py:obj:`TimeWindow`
+
+
+   Stores the most recent n_samples of multichannel data, and corresponding time stamps. Updating with a new
+   set of measurements is efficient, since only one row in the data array (self._data) is overwritten.
+
+
+   .. py:attribute:: n_samples
+      :value: None
+
+
+
+   .. py:attribute:: n_cols
+      :value: 0
+
+
+
+   .. py:attribute:: n_channels
+      :value: 0
+
+
+
+   .. py:attribute:: lock
+
+
+   .. py:attribute:: _time
+
+
+   .. py:attribute:: _data
+
+
+   .. py:method:: get_time()
+
+      Get time vector.
+      :returns: Time vector.
+
+
+
+   .. py:method:: get_col(col_idx=slice(None))
+
+      Get data columns.  If col_idx is specified, only the corresponding columns are returned. If not
+      specified, all columns are returned.
+      :param col_idx: Indices of data columns to be returned.
+
+      :returns: Data array.
+
+
+
+   .. py:method:: append(new_time, new_data)
+
+      Append a new set of measurement data, and corresponding time stap.
+      :param new_time: Time stamp. Single number.
+      :param new_data: Row of measurement data.
+
+      Returns:
+
+
+
+
+.. py:data:: tw
+

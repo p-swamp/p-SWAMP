@@ -1,0 +1,44 @@
+pswamp.gui.grid_view.dim_3d.layers.countries
+============================================
+
+.. py:module:: pswamp.gui.grid_view.dim_3d.layers.countries
+
+
+Attributes
+----------
+
+.. autoapisummary::
+
+   pswamp.gui.grid_view.dim_3d.layers.countries.config
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   pswamp.gui.grid_view.dim_3d.layers.countries.CountriesLayer
+   pswamp.gui.grid_view.dim_3d.layers.countries.CountriesLayerSettings
+
+
+Module Contents
+---------------
+
+.. py:class:: CountriesLayer(*args, **kwargs)
+
+   Bases: :py:obj:`pswamp.gui.grid_view.dim_2d.layers.CountriesLayer`
+
+
+   .. py:method:: add_geo_lines(geo_data)
+
+
+   .. py:method:: update_countries(countries=['Norway'])
+
+
+.. py:class:: CountriesLayerSettings(target_layer, *args, **kwargs)
+
+   Bases: :py:obj:`pswamp.gui.grid_view.dim_2d.layers.CountriesLayerSettings`
+
+
+.. py:data:: config
+

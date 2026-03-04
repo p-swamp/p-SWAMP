@@ -1,0 +1,19 @@
+pswamp.gui.alarms.views
+=======================
+
+.. py:module:: pswamp.gui.alarms.views
+
+
+Submodules
+----------
+
+.. toctree::
+   :maxdepth: 1
+
+   /autoapi/pswamp/gui/alarms/views/default/index
+   /autoapi/pswamp/gui/alarms/views/interactive/index
+   /autoapi/pswamp/gui/alarms/views/islanding/index
+   /autoapi/pswamp/gui/alarms/views/oscillations/index
+   /autoapi/pswamp/gui/alarms/views/voltage_stability/index
+
+

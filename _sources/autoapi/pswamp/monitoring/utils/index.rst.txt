@@ -1,0 +1,107 @@
+pswamp.monitoring.utils
+=======================
+
+.. py:module:: pswamp.monitoring.utils
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   pswamp.monitoring.utils.TimeWindowRTApp
+   pswamp.monitoring.utils.StatusCom
+
+
+Module Contents
+---------------
+
+.. py:class:: TimeWindowRTApp(kafka_kwargs, time_window_length=None, n_samples_window=None, input_topic='pmudata', output_topic=None, input_meta_topic=None, output_meta_topic=None, phasor_selection=None, channel_selection=None, channel_selection_idx=None, eval_freq=None, auto_adjust_offset=False, t_end=np.inf)
+
+   Generic real-time application, which does nothing, except stores a time window with PMU data of specified length.
+   The run_analysis method should be overwritten in order to perform various analysis. Results can be forwarded to
+   another topic automatically.
+
+
+   .. py:attribute:: t_end
+
+
+   .. py:attribute:: eval_freq
+      :value: None
+
+
+
+   .. py:attribute:: app_name
+      :value: 'TimeWindowRTApp'
+
+
+
+   .. py:attribute:: pmu_tw
+
+
+   .. py:attribute:: kafka_server
+
+
+   .. py:attribute:: output_topic
+      :value: None
+
+
+
+   .. py:attribute:: _stopped
+      :value: False
+
+
+
+   .. py:method:: output_metadata()
+
+
+   .. py:method:: send_output_metadata()
+
+
+   .. py:method:: stop()
+
+      :returns: None
+
+
+
+   .. py:method:: run_analysis(t, phasors)
+
+      This should be overwritten.
+      :param t:
+      :param phasors:
+      :return:
+
+
+
+   .. py:method:: run()
+
+
+.. py:class:: StatusCom(kafka_kwargs, status_topic='application.status')
+
+   .. py:attribute:: status_topic
+      :value: 'application.status'
+
+
+
+   .. py:attribute:: producer
+
+
+   .. py:attribute:: uuid
+
+
+   .. py:attribute:: app_name
+      :value: 'StatusCom'
+
+
+
+   .. py:attribute:: status_update_thread
+
+
+   .. py:attribute:: status
+      :value: 'Undefined'
+
+
+
+   .. py:method:: update_status()
+
+

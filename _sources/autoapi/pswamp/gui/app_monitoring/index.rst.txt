@@ -1,0 +1,95 @@
+pswamp.gui.app_monitoring
+=========================
+
+.. py:module:: pswamp.gui.app_monitoring
+
+
+Attributes
+----------
+
+.. autoapisummary::
+
+   pswamp.gui.app_monitoring.config
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   pswamp.gui.app_monitoring.AppStatusMonitoring
+   pswamp.gui.app_monitoring.AppStatusMonitoringWidget
+
+
+Functions
+---------
+
+.. autoapisummary::
+
+   pswamp.gui.app_monitoring.run_app_monitoring
+
+
+Module Contents
+---------------
+
+.. py:class:: AppStatusMonitoring(kafka_kwargs, input_topic='application.status')
+
+   .. py:attribute:: input_topic
+      :value: 'application.status'
+
+
+
+   .. py:attribute:: kafka_kwargs
+
+
+   .. py:attribute:: input_stream
+
+
+   .. py:attribute:: app_status
+
+
+   .. py:method:: run()
+
+
+.. py:class:: AppStatusMonitoringWidget(config)
+
+   Bases: :py:obj:`PySide6.QtWidgets.QWidget`
+
+
+   .. py:attribute:: config
+
+
+   .. py:attribute:: status_mon
+
+
+   .. py:attribute:: t_1
+
+
+   .. py:attribute:: tableWidget
+
+
+   .. py:attribute:: timer
+
+
+   .. py:attribute:: stop_button
+
+
+   .. py:attribute:: console_button
+
+
+   .. py:method:: disable_buttons()
+
+
+   .. py:method:: send_command(command)
+
+
+   .. py:method:: update()
+
+
+   .. py:method:: start()
+
+
+.. py:function:: run_app_monitoring(*config_args)
+
+.. py:data:: config
+

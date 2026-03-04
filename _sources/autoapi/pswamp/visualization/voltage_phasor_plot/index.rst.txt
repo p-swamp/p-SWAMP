@@ -1,0 +1,42 @@
+pswamp.visualization.voltage_phasor_plot
+========================================
+
+.. py:module:: pswamp.visualization.voltage_phasor_plot
+
+
+Attributes
+----------
+
+.. autoapisummary::
+
+   pswamp.visualization.voltage_phasor_plot.config
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   pswamp.visualization.voltage_phasor_plot.VoltagePhasorPlot
+
+
+Functions
+---------
+
+.. autoapisummary::
+
+   pswamp.visualization.voltage_phasor_plot.run_voltage_phasor_plot
+
+
+Module Contents
+---------------
+
+.. py:class:: VoltagePhasorPlot(kafka_kwargs, kafka_topic='pmudata', **kwargs)
+
+   .. py:attribute:: phasor_plot
+
+
+.. py:function:: run_voltage_phasor_plot(*config_args, update_freq=25, **kwargs)
+
+.. py:data:: config
+

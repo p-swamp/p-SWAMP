@@ -1,0 +1,20 @@
+pswamp.test_utils.csv_playback
+==============================
+
+.. py:module:: pswamp.test_utils.csv_playback
+
+
+Submodules
+----------
+
+.. toctree::
+   :maxdepth: 1
+
+   /autoapi/pswamp/test_utils/csv_playback/data_frame_generator/index
+   /autoapi/pswamp/test_utils/csv_playback/data_reader/index
+   /autoapi/pswamp/test_utils/csv_playback/kafka_streamer/index
+   /autoapi/pswamp/test_utils/csv_playback/offline_testing_adapter/index
+   /autoapi/pswamp/test_utils/csv_playback/playback_gui/index
+   /autoapi/pswamp/test_utils/csv_playback/pmu_streamer/index
+
+

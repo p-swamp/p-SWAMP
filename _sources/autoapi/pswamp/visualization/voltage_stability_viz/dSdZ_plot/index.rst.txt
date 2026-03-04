@@ -1,0 +1,159 @@
+pswamp.visualization.voltage_stability_viz.dSdZ_plot
+====================================================
+
+.. py:module:: pswamp.visualization.voltage_stability_viz.dSdZ_plot
+
+
+Attributes
+----------
+
+.. autoapisummary::
+
+   pswamp.visualization.voltage_stability_viz.dSdZ_plot.data
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   pswamp.visualization.voltage_stability_viz.dSdZ_plot.dSdZPlot
+   pswamp.visualization.voltage_stability_viz.dSdZ_plot.dSdZPlotAuto
+   pswamp.visualization.voltage_stability_viz.dSdZ_plot.dSdZPlotAutoUI
+
+
+Functions
+---------
+
+.. autoapisummary::
+
+   pswamp.visualization.voltage_stability_viz.dSdZ_plot.lpf
+   pswamp.visualization.voltage_stability_viz.dSdZ_plot.generate_dSdZ_curve
+
+
+Module Contents
+---------------
+
+.. py:function:: lpf(v_prev, v_in, beta)
+
+.. py:function:: generate_dSdZ_curve(E_th, Z_th, Z_l, ang_Z_l, ang_thev)
+
+.. py:class:: dSdZPlot(curve_data=None)
+
+   Bases: :py:obj:`pyqtgraph.GraphicsLayoutWidget`
+
+
+   .. py:attribute:: request_plot_update
+
+
+   .. py:attribute:: plot_ax
+
+
+   .. py:attribute:: colors
+      :value: ['b', 'lightblue', 'm', 'g']
+
+
+
+   .. py:attribute:: ang_thev
+
+
+   .. py:attribute:: indicator_plot
+
+
+   .. py:attribute:: isocurves
+      :value: []
+
+
+
+   .. py:attribute:: Z_l
+      :value: None
+
+
+
+   .. py:method:: add_isocurves(curve_data)
+
+
+   .. py:method:: update_external(data)
+
+
+   .. py:method:: update(data=None)
+
+
+.. py:class:: dSdZPlotAuto(*args, **kwargs)
+
+   Bases: :py:obj:`dSdZPlot`
+
+
+   .. py:attribute:: Z_th_range
+
+
+   .. py:attribute:: Z_l_range
+
+
+   .. py:attribute:: colors
+      :value: ['r', 'g', 'b', 'y', 'm']
+
+
+
+   .. py:attribute:: lpf_beta
+      :value: 0.95
+
+
+
+   .. py:attribute:: Z_l
+      :value: None
+
+
+
+   .. py:attribute:: Z_th
+      :value: None
+
+
+
+   .. py:attribute:: E_th
+      :value: None
+
+
+
+   .. py:attribute:: ang_Z_l
+      :value: None
+
+
+
+   .. py:method:: add_isocurves()
+
+
+   .. py:method:: update_isocurves(new_data)
+
+
+   .. py:method:: update_ang_thev(new_data)
+
+
+.. py:class:: dSdZPlotAutoUI(*args, **kwargs)
+
+   Bases: :py:obj:`PySide6.QtWidgets.QWidget`
+
+
+   .. py:attribute:: dSdZ_plot
+
+
+   .. py:attribute:: slider
+
+
+   .. py:method:: update_slider(val)
+
+
+   .. py:method:: add_isocurves(*args, **kwargs)
+
+
+   .. py:method:: update_isocurves(*args, **kwargs)
+
+
+   .. py:method:: update_ang_thev(*args, **kwargs)
+
+
+   .. py:method:: update(*args, **kwargs)
+
+
+.. py:data:: data
+

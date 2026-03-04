@@ -1,0 +1,100 @@
+pswamp.visualization.time_window_plot_v2
+========================================
+
+.. py:module:: pswamp.visualization.time_window_plot_v2
+
+
+Attributes
+----------
+
+.. autoapisummary::
+
+   pswamp.visualization.time_window_plot_v2.config
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   pswamp.visualization.time_window_plot_v2.TimeWindowPlotV2
+   pswamp.visualization.time_window_plot_v2.TimeWindowPlotGUI
+
+
+Functions
+---------
+
+.. autoapisummary::
+
+   pswamp.visualization.time_window_plot_v2.run_time_window_plot
+
+
+Module Contents
+---------------
+
+.. py:class:: TimeWindowPlotV2(tw, update_freq=10, n_max_plots=50, title='', datetime_xaxis=True, background_color=(30, 63, 64), *args, **kwargs)
+
+   Bases: :py:obj:`PySide6.QtWidgets.QWidget`
+
+
+   .. py:attribute:: n_max_plots
+      :value: 50
+
+
+
+   .. py:attribute:: tw
+
+
+   .. py:attribute:: colors
+
+
+   .. py:attribute:: channel_names
+      :value: []
+
+
+
+   .. py:attribute:: pens
+      :value: []
+
+
+
+   .. py:attribute:: graphWidget
+
+
+   .. py:attribute:: selected_channels
+      :value: []
+
+
+
+   .. py:attribute:: plotWidget
+
+
+   .. py:attribute:: pl
+      :value: []
+
+
+
+   .. py:attribute:: timer
+
+
+   .. py:method:: add_channel(index)
+
+
+   .. py:method:: remove_channel(index)
+
+
+   .. py:method:: update_colors()
+
+
+   .. py:method:: update()
+
+
+.. py:class:: TimeWindowPlotGUI(kafka_kwargs, input_topic='pmudata', pmu_coords_topic='pmu_coords_topic', countries=[], update_freq=25, n_max_plots=50, include_map=True, *args, **kwargs)
+
+   Bases: :py:obj:`PySide6.QtWidgets.QMainWindow`
+
+
+.. py:function:: run_time_window_plot(*config_args, update_freq=25, n_max_plots=50, **kwargs)
+
+.. py:data:: config
+

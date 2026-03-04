@@ -1,0 +1,65 @@
+pswamp.visualization.components.surface_plot
+============================================
+
+.. py:module:: pswamp.visualization.components.surface_plot
+
+
+Attributes
+----------
+
+.. autoapisummary::
+
+   pswamp.visualization.components.surface_plot.cols
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   pswamp.visualization.components.surface_plot.SurfacePlot
+
+
+Module Contents
+---------------
+
+.. py:class:: SurfacePlot(cols, rows, height_fun, *args, col_ticks=[], row_ticks=[], background_color=(30, 63, 64), **kwargs)
+
+   Bases: :py:obj:`pyqtgraph.Qt.QtWidgets.QWidget`
+
+
+   Creates a 3D surface plot for visualizing a 2D array.
+
+
+   .. py:attribute:: w
+
+
+   .. py:attribute:: window
+
+
+   .. py:attribute:: cols
+
+
+   .. py:attribute:: rows
+
+
+   .. py:attribute:: height_fun
+
+
+   .. py:attribute:: pl
+
+
+   .. py:attribute:: timer
+
+
+   .. py:method:: update()
+
+      Function for updating the surface plot with new array.
+      :returns: None
+
+
+
+.. py:data:: cols
+   :value: 50
+
+

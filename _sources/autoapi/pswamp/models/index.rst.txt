@@ -1,0 +1,18 @@
+pswamp.models
+=============
+
+.. py:module:: pswamp.models
+
+
+Submodules
+----------
+
+.. toctree::
+   :maxdepth: 1
+
+   /autoapi/pswamp/models/bus/index
+   /autoapi/pswamp/models/line/index
+   /autoapi/pswamp/models/load/index
+   /autoapi/pswamp/models/reader/index
+
+

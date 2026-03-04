@@ -1,0 +1,34 @@
+pswamp.test_utils.offline.csv_to_pmu
+====================================
+
+.. py:module:: pswamp.test_utils.offline.csv_to_pmu
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   pswamp.test_utils.offline.csv_to_pmu.CSVToPMUData
+
+
+Module Contents
+---------------
+
+.. py:class:: CSVToPMUData(time, phasors, station_names, channel_names, freq_data=None, dfreq_data=None)
+
+   Bases: :py:obj:`synchrophasor.timeSeriesPlayback.PMUTimeSeriesPublisher`
+
+
+   .. py:attribute:: freq_data
+
+
+   .. py:attribute:: dfreq_data
+
+
+   .. py:method:: generate_pmu_data_frames()
+
+
+   .. py:method:: make_time_window(n_samples=None, window_length=None, t_start=0, phasor_selection=None, time_window_type=PMUTimeWindowOffline)
+
+

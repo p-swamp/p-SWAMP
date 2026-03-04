@@ -1,0 +1,19 @@
+pswamp.database.base
+====================
+
+.. py:module:: pswamp.database.base
+
+
+Functions
+---------
+
+.. autoapisummary::
+
+   pswamp.database.base.get_from_database
+
+
+Module Contents
+---------------
+
+.. py:function:: get_from_database(config, field)
+

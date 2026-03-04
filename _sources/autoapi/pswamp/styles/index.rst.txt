@@ -1,0 +1,15 @@
+pswamp.styles
+=============
+
+.. py:module:: pswamp.styles
+
+
+Submodules
+----------
+
+.. toctree::
+   :maxdepth: 1
+
+   /autoapi/pswamp/styles/colors/index
+
+

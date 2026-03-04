@@ -1,0 +1,53 @@
+pswamp.visualization.freq_plot
+==============================
+
+.. py:module:: pswamp.visualization.freq_plot
+
+
+Attributes
+----------
+
+.. autoapisummary::
+
+   pswamp.visualization.freq_plot.config
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   pswamp.visualization.freq_plot.FreqPlot
+
+
+Module Contents
+---------------
+
+.. py:class:: FreqPlot(config, update_freq=10)
+
+   Bases: :py:obj:`PySide6.QtWidgets.QWidget`
+
+
+   .. py:attribute:: tw_app
+
+
+   .. py:attribute:: tw_app_thread
+
+
+   .. py:attribute:: freq_ax
+
+
+   .. py:attribute:: timer
+
+
+   .. py:method:: minimumSizeHint()
+
+
+   .. py:method:: sizeHint()
+
+
+   .. py:method:: update_plots()
+
+
+.. py:data:: config
+

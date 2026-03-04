@@ -1,0 +1,49 @@
+pswamp.gui.grid_view.dim_3d.base_plot_layers
+============================================
+
+.. py:module:: pswamp.gui.grid_view.dim_3d.base_plot_layers
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   pswamp.gui.grid_view.dim_3d.base_plot_layers.GridBasePlot3DLayers
+
+
+Functions
+---------
+
+.. autoapisummary::
+
+   pswamp.gui.grid_view.dim_3d.base_plot_layers.main
+
+
+Module Contents
+---------------
+
+.. py:class:: GridBasePlot3DLayers(config, activate_default_layers=True, geo=True, *args, **kwargs)
+
+   Bases: :py:obj:`pswamp.gui.grid_view.dim_3d.layers.GridBasePlot3D`
+
+
+   .. py:attribute:: geo
+      :value: True
+
+
+
+   .. py:attribute:: layer_settings
+
+
+   .. py:method:: set_non_base_layers_visibility(show=False)
+
+
+   .. py:method:: set_layer_visibility(category, layer, show=False)
+
+
+   .. py:method:: center_camera_position(config)
+
+
+.. py:function:: main()
+

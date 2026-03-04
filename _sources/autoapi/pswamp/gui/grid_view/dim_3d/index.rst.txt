@@ -1,0 +1,17 @@
+pswamp.gui.grid_view.dim_3d
+===========================
+
+.. py:module:: pswamp.gui.grid_view.dim_3d
+
+
+Submodules
+----------
+
+.. toctree::
+   :maxdepth: 1
+
+   /autoapi/pswamp/gui/grid_view/dim_3d/base_plot/index
+   /autoapi/pswamp/gui/grid_view/dim_3d/base_plot_layers/index
+   /autoapi/pswamp/gui/grid_view/dim_3d/layers/index
+
+

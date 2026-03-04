@@ -1,0 +1,66 @@
+pswamp.visualization.time_window_plot_v15
+=========================================
+
+.. py:module:: pswamp.visualization.time_window_plot_v15
+
+
+Attributes
+----------
+
+.. autoapisummary::
+
+   pswamp.visualization.time_window_plot_v15.config
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   pswamp.visualization.time_window_plot_v15.RunAppLocal
+
+
+Functions
+---------
+
+.. autoapisummary::
+
+   pswamp.visualization.time_window_plot_v15.plot_time_window
+   pswamp.visualization.time_window_plot_v15.run_time_window_plot
+
+
+Module Contents
+---------------
+
+.. py:function:: plot_time_window(kafka_kwargs, kafka_topic='pmudata', update_freq=25, phasor_selection=None, channel_selection_idx=None, auto_adjust_offset=True, window_length=30, n_samples=None, *args, **kwargs)
+
+.. py:class:: RunAppLocal(*args, **kwargs)
+
+   Bases: :py:obj:`pswamp.gui.components.run_app_dialogue.RunApp`
+
+
+   Dialogue for running application.
+
+   :param config: pswamp configuration.
+   :type config: dict
+   :param run_app_func: Function to run.
+   :type run_app_func: function
+   :param params: Parameters which will be arguments to the function to run.
+   :type params: dict
+
+
+   .. py:attribute:: tw_plots
+      :value: []
+
+
+
+   .. py:method:: launch_app()
+
+      Run the application with channel selection indices and parameters.
+
+
+
+.. py:function:: run_time_window_plot(*config_args, update_freq=25, **kwargs)
+
+.. py:data:: config
+

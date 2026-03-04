@@ -1,0 +1,160 @@
+pswamp.app_templates.snapshot_app
+=================================
+
+.. py:module:: pswamp.app_templates.snapshot_app
+
+
+Attributes
+----------
+
+.. autoapisummary::
+
+   pswamp.app_templates.snapshot_app.app
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   pswamp.app_templates.snapshot_app.SnapshotApp
+
+
+Module Contents
+---------------
+
+.. py:class:: SnapshotApp(io=None, eval_freq=None, t_end=None, t_start=None, app_name=None, input_decoder=None, decoder_kwargs={}, report_status=False, **io_kwargs)
+
+   General application template.
+
+   New applications could be defined by inheriting from this template, and
+   defining the "run_analysis" method.
+
+   :param io: Input/output object (normally connects to Kafka)
+   :param eval_freq: How often the evaluation of the application should be run
+                     (e.g., the part in "run_analysis")
+   :param t_end: The application will stop running when this time is reached
+                 (but can be restarted)
+   :param t_start: The application will ask the io object (first argument) to
+                   search for t_start when initializing.
+   :param app_name: Name for the application.
+   :param input_decoder: This determines how the input is read/decoded (if no
+                         decoder is specified, a decoder for PMU data frames will be used.)
+   :param decoder_kwargs: Kwargs for initalizing the "input_decoder".
+   :param report_status: If enabled, status messages will be emitted.
+   :param io_kwargs: Any other kwargs will be forwarded to the io object.
+
+
+   .. py:attribute:: app_name
+
+
+   .. py:attribute:: uuid
+
+
+   .. py:attribute:: status
+      :value: 'Undefined'
+
+
+
+   .. py:attribute:: eval_freq
+      :value: None
+
+
+
+   .. py:attribute:: _stopped
+      :value: False
+
+
+
+   .. py:attribute:: most_recent_data_frame
+      :value: None
+
+
+
+   .. py:attribute:: most_recent_time_stamp
+      :value: None
+
+
+
+   .. py:attribute:: last_result
+      :value: None
+
+
+
+   .. py:attribute:: t_next_eval
+      :value: None
+
+
+
+   .. py:attribute:: update_callbacks
+      :value: []
+
+
+
+   .. py:attribute:: decoder
+
+
+   .. py:attribute:: time_stamp_at_init
+
+
+   .. py:attribute:: input_dt
+
+
+   .. py:attribute:: pmu_dt
+
+
+   .. py:attribute:: results
+      :value: []
+
+
+
+   .. py:attribute:: t_eval_target
+
+
+   .. py:method:: get_sample_data_frame()
+
+
+   .. py:method:: get_input_data_rate()
+
+
+   .. py:method:: get_time_stamp_from_frame(data_frame)
+
+
+   .. py:method:: stop()
+
+
+   .. py:method:: get_config_frame()
+
+
+   .. py:method:: get_next_data_frame()
+
+
+   .. py:method:: handle_result(result)
+
+
+   .. py:method:: run_analysis(time_stamp, measurements)
+
+
+   .. py:method:: run_in_thread()
+
+
+   .. py:method:: run()
+
+
+   .. py:method:: update()
+
+
+   .. py:method:: update_storage(next_data_frame)
+
+
+   .. py:method:: get_result(next_data_frame)
+
+
+   .. py:method:: start()
+
+
+   .. py:method:: console_popup()
+
+
+.. py:data:: app
+

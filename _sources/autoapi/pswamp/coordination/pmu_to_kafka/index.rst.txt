@@ -1,0 +1,66 @@
+pswamp.coordination.pmu_to_kafka
+================================
+
+.. py:module:: pswamp.coordination.pmu_to_kafka
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   pswamp.coordination.pmu_to_kafka.PMUToKafka
+
+
+Module Contents
+---------------
+
+.. py:class:: PMUToKafka(pdc_id, pmu_ip, pmu_port, kafka_kwargs, kafka_topic='pmudata')
+
+   This class receives PMU data (using PyPMU) and forwards the full dataframes to a specified Kafka topic.
+
+
+   .. py:attribute:: pdc
+
+
+   .. py:attribute:: subscribers
+      :value: []
+
+
+
+   .. py:attribute:: header
+      :value: None
+
+
+
+   .. py:attribute:: config
+      :value: None
+
+
+
+   .. py:attribute:: _stopped
+      :value: False
+
+
+
+   .. py:attribute:: kafka_topic
+      :value: 'pmudata'
+
+
+
+   .. py:attribute:: kafka_producer
+
+
+   .. py:method:: connect_to_pmu()
+
+      Connect to the PDC, and receive header- and configuration frames. Does not start stream of data.
+      :returns: None
+
+
+
+   .. py:method:: run()
+
+      Ask PDC to start sending data and start receiving and forwarding data.
+
+
+

@@ -1,0 +1,74 @@
+pswamp.test_utils.csv_playback.pmu_streamer
+===========================================
+
+.. py:module:: pswamp.test_utils.csv_playback.pmu_streamer
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   pswamp.test_utils.csv_playback.pmu_streamer.PMUDataStreamer
+
+
+Module Contents
+---------------
+
+.. py:class:: PMUDataStreamer(pmu_data_folder, publisher_kwargs, case_name_hint='', pdc_id=1, publish_frequency=50, speed=1, n_samples=None, t_end=None, skip_seconds_in_beginning=0, *args, **kwargs)
+
+   Bases: :py:obj:`pswamp.test_utils.csv_playback.data_frame_generator.DataFrameGenerator`
+
+
+   .. py:attribute:: skip_seconds_in_beginning
+      :value: 0
+
+
+
+   .. py:attribute:: speed
+      :value: 1
+
+
+
+   .. py:attribute:: publish_frequency
+      :value: 50
+
+
+
+   .. py:attribute:: n_samples
+
+
+   .. py:attribute:: t_end
+
+
+   .. py:attribute:: _stopped
+      :value: False
+
+
+
+   .. py:attribute:: dt
+
+
+   .. py:attribute:: pause_cv
+
+
+   .. py:attribute:: paused
+      :value: False
+
+
+
+   .. py:method:: init_publisher(ip, port)
+
+
+   .. py:method:: toggle_pause()
+
+
+   .. py:method:: stop()
+
+
+   .. py:method:: publish(data_frame)
+
+
+   .. py:method:: main_loop()
+
+

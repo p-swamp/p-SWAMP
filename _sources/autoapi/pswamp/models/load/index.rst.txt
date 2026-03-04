@@ -1,0 +1,66 @@
+pswamp.models.load
+==================
+
+.. py:module:: pswamp.models.load
+
+
+Attributes
+----------
+
+.. autoapisummary::
+
+   pswamp.models.load.config
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   pswamp.models.load.Load
+
+
+Functions
+---------
+
+.. autoapisummary::
+
+   pswamp.models.load.find_strings_containing_substring
+
+
+Module Contents
+---------------
+
+.. py:function:: find_strings_containing_substring(strings_to_search, string_to_find)
+
+.. py:class:: Load(config, meas_data, units=None)
+
+   .. py:attribute:: bus_data
+
+
+   .. py:attribute:: bus_idx
+
+
+   .. py:attribute:: current_phasor_extractor
+
+
+   .. py:attribute:: v_phasor_extractor
+
+
+   .. py:method:: V(meas)
+
+
+   .. py:method:: I(meas)
+
+
+   .. py:method:: S(meas)
+
+
+   .. py:method:: P(meas)
+
+
+   .. py:method:: Q(meas)
+
+
+.. py:data:: config
+

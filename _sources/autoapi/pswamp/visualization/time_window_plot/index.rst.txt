@@ -1,0 +1,113 @@
+pswamp.visualization.time_window_plot
+=====================================
+
+.. py:module:: pswamp.visualization.time_window_plot
+
+
+Attributes
+----------
+
+.. autoapisummary::
+
+   pswamp.visualization.time_window_plot.config
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   pswamp.visualization.time_window_plot.TimeSeriesPlot
+   pswamp.visualization.time_window_plot.TimeWindowPlot
+   pswamp.visualization.time_window_plot.AnglePlot
+
+
+Functions
+---------
+
+.. autoapisummary::
+
+   pswamp.visualization.time_window_plot.plot_time_window
+   pswamp.visualization.time_window_plot.run_time_window_plot
+
+
+Module Contents
+---------------
+
+.. py:class:: TimeSeriesPlot(title='', datetime_xaxis=True, background_color=(30, 63, 64))
+
+   Bases: :py:obj:`pyqtgraph.GraphicsLayoutWidget`
+
+
+   Basic  time series plot. Adds date axis, background color, legend, etc.
+
+
+   .. py:attribute:: plotWidget
+
+
+   .. py:attribute:: plots
+      :value: []
+
+
+
+   .. py:method:: add_plot(color='lightgray', width=2, **kwargs)
+
+
+.. py:class:: TimeWindowPlot(tw, update_freq=10, title='', datetime_xaxis=True, background_color=(30, 63, 64), col_idx=None, col_sel=None, *args, **kwargs)
+
+   Bases: :py:obj:`PySide6.QtWidgets.QWidget`
+
+
+   Time window plot with automatic updating from most recent values in time window.
+
+
+   .. py:attribute:: tw
+
+
+   .. py:attribute:: channel_names
+      :value: []
+
+
+
+   .. py:attribute:: graphWidget
+
+
+   .. py:attribute:: colors
+
+
+   .. py:attribute:: plotWidget
+
+
+   .. py:attribute:: pl
+      :value: []
+
+
+
+   .. py:method:: update()
+
+
+   .. py:method:: request_update()
+
+
+.. py:class:: AnglePlot(*args, subtract_mean=True, **kwargs)
+
+   Bases: :py:obj:`TimeWindowPlot`
+
+
+   Time window plot with automatic updating from most recent values in time window.
+
+
+   .. py:attribute:: subtract_mean
+      :value: True
+
+
+
+   .. py:method:: update()
+
+
+.. py:function:: plot_time_window(kafka_kwargs, update_freq=25, **kwargs)
+
+.. py:function:: run_time_window_plot(*config_args, update_freq=25, channel_selection_idx=None, **kwargs)
+
+.. py:data:: config
+

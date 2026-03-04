@@ -1,0 +1,138 @@
+pswamp.utils.pmu_time_window
+============================
+
+.. py:module:: pswamp.utils.pmu_time_window
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   pswamp.utils.pmu_time_window.PMUDecoder
+   pswamp.utils.pmu_time_window.PMUTimeWindow
+   pswamp.utils.pmu_time_window.PMUTimeWindowOnline
+
+
+Module Contents
+---------------
+
+.. py:class:: PMUDecoder(channel_selection=None, channel_selection_idx=None, substitute_zero_freq_with_nan=True)
+
+   .. py:attribute:: channel_selection
+      :value: None
+
+
+
+   .. py:attribute:: channel_selection_idx
+
+
+   .. py:attribute:: substitute_zero_freq_with_nan
+      :value: True
+
+
+
+   .. py:attribute:: data_dtype
+
+
+   .. py:method:: get_time_stamp(data_frame)
+
+
+   .. py:method:: get_data_rate(sample_data_frame)
+
+
+   .. py:method:: generate_header(sample_data_frame=None, config_frame=None)
+
+
+   .. py:method:: data_frame_to_row(pmu_data_frame)
+
+
+.. py:class:: PMUTimeWindow(n_samples=None, window_length=None, time_window_type=TimeWindowLabeled, substitute_zero_freq_with_nan=True, channel_selection=None, channel_selection_idx=None)
+
+   .. py:attribute:: time_window_type
+
+
+   .. py:attribute:: tw
+      :value: None
+
+
+
+   .. py:attribute:: header
+      :value: None
+
+
+
+   .. py:attribute:: n_samples
+      :value: None
+
+
+
+   .. py:attribute:: window_length
+      :value: None
+
+
+
+   .. py:attribute:: is_initialized
+      :value: False
+
+
+
+   .. py:attribute:: n_channels
+      :value: None
+
+
+
+   .. py:attribute:: dt
+
+
+   .. py:attribute:: fs
+
+
+   .. py:attribute:: pmu_decoder
+
+
+   .. py:method:: initialize_from_config_frame(config_frame)
+
+
+   .. py:method:: update_window(pmu_data_frame)
+
+
+.. py:class:: PMUTimeWindowOnline(kafka_kwargs={}, kafka_topic='pmudata', auto_adjust_offset=False, **kwargs)
+
+   Bases: :py:obj:`PMUTimeWindow`
+
+
+   This class is intended for consuming PMU data from a specified Kafka topic and storing the last samples (n_samples) in a
+   TimeWindow object.
+
+
+   .. py:attribute:: kafka_topic
+      :value: 'pmudata'
+
+
+
+   .. py:attribute:: kafka_kwargs
+
+
+   .. py:attribute:: auto_adjust_offset
+      :value: False
+
+
+
+   .. py:attribute:: pmu_stream
+
+
+   .. py:attribute:: _is_stopped
+      :value: False
+
+
+
+   .. py:method:: initialize()
+
+
+   .. py:method:: run()
+
+
+   .. py:method:: stop()
+
+

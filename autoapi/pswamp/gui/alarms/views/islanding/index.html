@@ -1,0 +1,311 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../../../../../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>pswamp.gui.alarms.views.islanding &mdash; p-SWAMP  documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../../../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../../../../../_static/css/theme.css?v=9edc463e" />
+      <link rel="stylesheet" type="text/css" href="../../../../../../_static/graphviz.css?v=4ae1632d" />
+
+  
+      <script src="../../../../../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../../../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../../../../../_static/documentation_options.js?v=5929fcd5"></script>
+      <script src="../../../../../../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../../../../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../../../../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../../../search.html" />
+    <link rel="next" title="pswamp.gui.alarms.views.oscillations" href="../oscillations/index.html" />
+    <link rel="prev" title="pswamp.gui.alarms.views.interactive" href="../interactive/index.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../../../../index.html" class="icon icon-home">
+            p-SWAMP
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../../../../../../p-swamp.html">p-SWAMP (Power Stability Wide area Monitoring and Protection)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../../examples/index.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../../kafka.html">Streaming, microservices, Kafka</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../../testing.html">Test environments</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../../templates.html">Real-Time Application Templates</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../../models.html">Component models</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../../../../../index.html">API Reference</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="../../../../index.html">pswamp</a><ul class="current">
+<li class="toctree-l3 current"><a class="reference internal" href="../../../../index.html#submodules">Submodules</a><ul class="current">
+<li class="toctree-l4"><a class="reference internal" href="../../../../app_templates/index.html">pswamp.app_templates</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../../coordination/index.html">pswamp.coordination</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../../database/index.html">pswamp.database</a></li>
+<li class="toctree-l4 current"><a class="reference internal" href="../../../index.html">pswamp.gui</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../../models/index.html">pswamp.models</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../../monitoring/index.html">pswamp.monitoring</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../../streaming/index.html">pswamp.streaming</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../../styles/index.html">pswamp.styles</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../../test_utils/index.html">pswamp.test_utils</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../../utils/index.html">pswamp.utils</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../../visualization/index.html">pswamp.visualization</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../../../../index.html#functions">Functions</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../../index.html#package-contents">Package Contents</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../../../../index.html">p-SWAMP</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../../../../index.html">API Reference</a></li>
+          <li class="breadcrumb-item"><a href="../../../../index.html">pswamp</a></li>
+          <li class="breadcrumb-item"><a href="../../../index.html">pswamp.gui</a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">pswamp.gui.alarms</a></li>
+          <li class="breadcrumb-item"><a href="../index.html">pswamp.gui.alarms.views</a></li>
+      <li class="breadcrumb-item active">pswamp.gui.alarms.views.islanding</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../../../../../../_sources/autoapi/pswamp/gui/alarms/views/islanding/index.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="module-pswamp.gui.alarms.views.islanding">
+<span id="pswamp-gui-alarms-views-islanding"></span><h1>pswamp.gui.alarms.views.islanding<a class="headerlink" href="#module-pswamp.gui.alarms.views.islanding" title="Link to this heading"></a></h1>
+<section id="attributes">
+<h2>Attributes<a class="headerlink" href="#attributes" title="Link to this heading"></a></h2>
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#pswamp.gui.alarms.views.islanding.config" title="pswamp.gui.alarms.views.islanding.config"><code class="xref py py-obj docutils literal notranslate"><span class="pre">config</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="classes">
+<h2>Classes<a class="headerlink" href="#classes" title="Link to this heading"></a></h2>
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#pswamp.gui.alarms.views.islanding.IslandingResultKeeper" title="pswamp.gui.alarms.views.islanding.IslandingResultKeeper"><code class="xref py py-obj docutils literal notranslate"><span class="pre">IslandingResultKeeper</span></code></a></p></td>
+<td><p>General application template.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#pswamp.gui.alarms.views.islanding.IslandingAlarmView" title="pswamp.gui.alarms.views.islanding.IslandingAlarmView"><code class="xref py py-obj docutils literal notranslate"><span class="pre">IslandingAlarmView</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="module-contents">
+<h2>Module Contents<a class="headerlink" href="#module-contents" title="Link to this heading"></a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="pswamp.gui.alarms.views.islanding.IslandingResultKeeper">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">pswamp.gui.alarms.views.islanding.</span></span><span class="sig-name descname"><span class="pre">IslandingResultKeeper</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pswamp.gui.alarms.views.islanding.IslandingResultKeeper" title="Link to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="../../../../app_templates/snapshot_app/index.html#pswamp.app_templates.snapshot_app.SnapshotApp" title="pswamp.app_templates.snapshot_app.SnapshotApp"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pswamp.app_templates.snapshot_app.SnapshotApp</span></code></a></p>
+<p>General application template.</p>
+<p>New applications could be defined by inheriting from this template, and
+defining the “run_analysis” method.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>io</strong> – Input/output object (normally connects to Kafka)</p></li>
+<li><p><strong>eval_freq</strong> – How often the evaluation of the application should be run
+(e.g., the part in “run_analysis”)</p></li>
+<li><p><strong>t_end</strong> – The application will stop running when this time is reached
+(but can be restarted)</p></li>
+<li><p><strong>t_start</strong> – The application will ask the io object (first argument) to
+search for t_start when initializing.</p></li>
+<li><p><strong>app_name</strong> – Name for the application.</p></li>
+<li><p><strong>input_decoder</strong> – This determines how the input is read/decoded (if no
+decoder is specified, a decoder for PMU data frames will be used.)</p></li>
+<li><p><strong>decoder_kwargs</strong> – Kwargs for initalizing the “input_decoder”.</p></li>
+<li><p><strong>report_status</strong> – If enabled, status messages will be emitted.</p></li>
+<li><p><strong>io_kwargs</strong> – Any other kwargs will be forwarded to the io object.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.gui.alarms.views.islanding.IslandingResultKeeper.storage">
+<span class="sig-name descname"><span class="pre">storage</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">[]</span></span><a class="headerlink" href="#pswamp.gui.alarms.views.islanding.IslandingResultKeeper.storage" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pswamp.gui.alarms.views.islanding.IslandingResultKeeper.get_input_data_rate">
+<span class="sig-name descname"><span class="pre">get_input_data_rate</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pswamp.gui.alarms.views.islanding.IslandingResultKeeper.get_input_data_rate" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pswamp.gui.alarms.views.islanding.IslandingResultKeeper.get_time_stamp_from_frame">
+<span class="sig-name descname"><span class="pre">get_time_stamp_from_frame</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data_frame</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pswamp.gui.alarms.views.islanding.IslandingResultKeeper.get_time_stamp_from_frame" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pswamp.gui.alarms.views.islanding.IslandingResultKeeper.run_analysis">
+<span class="sig-name descname"><span class="pre">run_analysis</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data_frame</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pswamp.gui.alarms.views.islanding.IslandingResultKeeper.run_analysis" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pswamp.gui.alarms.views.islanding.IslandingResultKeeper.get_result">
+<span class="sig-name descname"><span class="pre">get_result</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">next_data_frame</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pswamp.gui.alarms.views.islanding.IslandingResultKeeper.get_result" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="pswamp.gui.alarms.views.islanding.IslandingAlarmView">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">pswamp.gui.alarms.views.islanding.</span></span><span class="sig-name descname"><span class="pre">IslandingAlarmView</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">config</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pswamp.gui.alarms.views.islanding.IslandingAlarmView" title="Link to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="../interactive/index.html#pswamp.gui.alarms.views.interactive.InteractiveAlarmView" title="pswamp.gui.alarms.views.interactive.InteractiveAlarmView"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pswamp.gui.alarms.views.interactive.InteractiveAlarmView</span></code></a></p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.gui.alarms.views.islanding.IslandingAlarmView.initialized">
+<span class="sig-name descname"><span class="pre">initialized</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">False</span></span><a class="headerlink" href="#pswamp.gui.alarms.views.islanding.IslandingAlarmView.initialized" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.gui.alarms.views.islanding.IslandingAlarmView.simplified_alarm_views">
+<span class="sig-name descname"><span class="pre">simplified_alarm_views</span></span><a class="headerlink" href="#pswamp.gui.alarms.views.islanding.IslandingAlarmView.simplified_alarm_views" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.gui.alarms.views.islanding.IslandingAlarmView.islanding_results">
+<span class="sig-name descname"><span class="pre">islanding_results</span></span><a class="headerlink" href="#pswamp.gui.alarms.views.islanding.IslandingAlarmView.islanding_results" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.gui.alarms.views.islanding.IslandingAlarmView.islanding_data_rate">
+<span class="sig-name descname"><span class="pre">islanding_data_rate</span></span><a class="headerlink" href="#pswamp.gui.alarms.views.islanding.IslandingAlarmView.islanding_data_rate" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.gui.alarms.views.islanding.IslandingAlarmView.pmu_data_rate">
+<span class="sig-name descname"><span class="pre">pmu_data_rate</span></span><a class="headerlink" href="#pswamp.gui.alarms.views.islanding.IslandingAlarmView.pmu_data_rate" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.gui.alarms.views.islanding.IslandingAlarmView.col_idx_freq">
+<span class="sig-name descname"><span class="pre">col_idx_freq</span></span><a class="headerlink" href="#pswamp.gui.alarms.views.islanding.IslandingAlarmView.col_idx_freq" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.gui.alarms.views.islanding.IslandingAlarmView.col_idx_mag">
+<span class="sig-name descname"><span class="pre">col_idx_mag</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">[]</span></span><a class="headerlink" href="#pswamp.gui.alarms.views.islanding.IslandingAlarmView.col_idx_mag" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.gui.alarms.views.islanding.IslandingAlarmView.col_idx_ang">
+<span class="sig-name descname"><span class="pre">col_idx_ang</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">[]</span></span><a class="headerlink" href="#pswamp.gui.alarms.views.islanding.IslandingAlarmView.col_idx_ang" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.gui.alarms.views.islanding.IslandingAlarmView.islanding_res_thread">
+<span class="sig-name descname"><span class="pre">islanding_res_thread</span></span><a class="headerlink" href="#pswamp.gui.alarms.views.islanding.IslandingAlarmView.islanding_res_thread" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.gui.alarms.views.islanding.IslandingAlarmView.phasor_ax">
+<span class="sig-name descname"><span class="pre">phasor_ax</span></span><a class="headerlink" href="#pswamp.gui.alarms.views.islanding.IslandingAlarmView.phasor_ax" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.gui.alarms.views.islanding.IslandingAlarmView.voltage_phasor_plots">
+<span class="sig-name descname"><span class="pre">voltage_phasor_plots</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">[]</span></span><a class="headerlink" href="#pswamp.gui.alarms.views.islanding.IslandingAlarmView.voltage_phasor_plots" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.gui.alarms.views.islanding.IslandingAlarmView.grid_view_islanding_layers">
+<span class="sig-name descname"><span class="pre">grid_view_islanding_layers</span></span><a class="headerlink" href="#pswamp.gui.alarms.views.islanding.IslandingAlarmView.grid_view_islanding_layers" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pswamp.gui.alarms.views.islanding.IslandingAlarmView.grid_view_islanding_line_layers">
+<span class="sig-name descname"><span class="pre">grid_view_islanding_line_layers</span></span><a class="headerlink" href="#pswamp.gui.alarms.views.islanding.IslandingAlarmView.grid_view_islanding_line_layers" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pswamp.gui.alarms.views.islanding.IslandingAlarmView.define_layout">
+<span class="sig-name descname"><span class="pre">define_layout</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pswamp.gui.alarms.views.islanding.IslandingAlarmView.define_layout" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pswamp.gui.alarms.views.islanding.IslandingAlarmView.update_plots">
+<span class="sig-name descname"><span class="pre">update_plots</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pswamp.gui.alarms.views.islanding.IslandingAlarmView.update_plots" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pswamp.gui.alarms.views.islanding.IslandingAlarmView.close_view">
+<span class="sig-name descname"><span class="pre">close_view</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pswamp.gui.alarms.views.islanding.IslandingAlarmView.close_view" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="pswamp.gui.alarms.views.islanding.config">
+<span class="sig-prename descclassname"><span class="pre">pswamp.gui.alarms.views.islanding.</span></span><span class="sig-name descname"><span class="pre">config</span></span><a class="headerlink" href="#pswamp.gui.alarms.views.islanding.config" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="../interactive/index.html" class="btn btn-neutral float-left" title="pswamp.gui.alarms.views.interactive" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="../oscillations/index.html" class="btn btn-neutral float-right" title="pswamp.gui.alarms.views.oscillations" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright .</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

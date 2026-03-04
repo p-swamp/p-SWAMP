@@ -1,0 +1,19 @@
+pswamp.test_utils.sample_datasets.create_database
+=================================================
+
+.. py:module:: pswamp.test_utils.sample_datasets.create_database
+
+
+Attributes
+----------
+
+.. autoapisummary::
+
+   pswamp.test_utils.sample_datasets.create_database.config
+
+
+Module Contents
+---------------
+
+.. py:data:: config
+

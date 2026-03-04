@@ -1,0 +1,47 @@
+pswamp.test_utils.csv_playback.playback_gui
+===========================================
+
+.. py:module:: pswamp.test_utils.csv_playback.playback_gui
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   pswamp.test_utils.csv_playback.playback_gui.SimulationControl
+
+
+Functions
+---------
+
+.. autoapisummary::
+
+   pswamp.test_utils.csv_playback.playback_gui.run_simulation_control
+
+
+Module Contents
+---------------
+
+.. py:class:: SimulationControl(rts, *args, **kwargs)
+
+   Bases: :py:obj:`PySide6.QtWidgets.QWidget`
+
+
+   .. py:attribute:: rts
+
+
+   .. py:attribute:: ctrlWidget
+
+
+   .. py:attribute:: speed_slider
+
+
+   .. py:method:: updateSpeed()
+
+
+   .. py:method:: pauseSimulation()
+
+
+.. py:function:: run_simulation_control(rts)
+

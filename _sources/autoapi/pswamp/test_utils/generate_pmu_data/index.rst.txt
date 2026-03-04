@@ -1,0 +1,19 @@
+pswamp.test_utils.generate_pmu_data
+===================================
+
+.. py:module:: pswamp.test_utils.generate_pmu_data
+
+
+Functions
+---------
+
+.. autoapisummary::
+
+   pswamp.test_utils.generate_pmu_data.generate_pmu_data
+
+
+Module Contents
+---------------
+
+.. py:function:: generate_pmu_data(n_stations=40, n_channels=1, t_end=10, dt=0.02)
+

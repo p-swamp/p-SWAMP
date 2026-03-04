@@ -1,0 +1,27 @@
+pswamp.utils.gl
+===============
+
+.. py:module:: pswamp.utils.gl
+
+
+Functions
+---------
+
+.. autoapisummary::
+
+   pswamp.utils.gl.set_gl_options
+
+
+Module Contents
+---------------
+
+.. py:function:: set_gl_options(config, pl)
+
+   Set graphics options from config.
+
+   :param config: pswamp Configuration file (from config.toml)
+   :type config: dict
+   :param pl: Plot item for which to set options.
+   :type pl: GLGraphicsItem
+
+

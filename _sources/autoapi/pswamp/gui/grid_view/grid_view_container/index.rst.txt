@@ -1,0 +1,143 @@
+pswamp.gui.grid_view.grid_view_container
+========================================
+
+.. py:module:: pswamp.gui.grid_view.grid_view_container
+
+
+Attributes
+----------
+
+.. autoapisummary::
+
+   pswamp.gui.grid_view.grid_view_container.app
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   pswamp.gui.grid_view.grid_view_container.NewViewOpts
+   pswamp.gui.grid_view.grid_view_container.GridViewContainer
+
+
+Module Contents
+---------------
+
+.. py:class:: NewViewOpts(show_sld=False)
+
+   Bases: :py:obj:`PySide6.QtWidgets.QDialog`
+
+
+   Dialog with options for a new grid view.
+
+   This is shown when a new grid view is to be added to the grid view
+   container. The user selects 2D or 3D view, and whether to use geographic
+   (geo) or single-line diagram (sld) representation.
+
+   TODO: geo/sld is a bit confusing, since both variants show single-line
+   diagrams. Should be changed (available variants could instead be specified
+   in config.toml, and show up with similar names here).
+
+   :param show_sld: Determines whether buttons for SLD view are shown.
+   :type show_sld: bool
+
+
+   .. py:attribute:: text_input
+
+
+   .. py:attribute:: done_button
+
+
+   .. py:attribute:: select_2d
+
+
+   .. py:attribute:: select_3d
+
+
+   .. py:attribute:: select_geo
+
+
+   .. py:attribute:: select_sld
+
+
+   .. py:attribute:: data
+
+
+   .. py:attribute:: canceled
+      :value: True
+
+
+
+   .. py:method:: submitclose()
+
+      Close the dialog and create the new view.
+
+
+
+   .. py:method:: submitcancel()
+
+      Close the dialog and don't create the new view.
+
+
+
+.. py:class:: GridViewContainer(config, activate_default_layers=True, *args, **kwargs)
+
+   Bases: :py:obj:`pswamp.gui.grid_view.tab_widget.QTabWidgetPlus`
+
+
+   Container for multiple grid views.
+
+   This widget holds multiple grid views as tabs. New views can be defined
+   based on user input (2D/3D, geo/sld). When double clicking the tab for a
+   view, the settings for the view can be modified (e.g., activate/deactivate
+   visualization layers).
+
+   TODO: Check if *args, **kwargs are used. Remove if not.
+
+   :param config: pswamp configuration
+   :type config: dict
+   :param activate_default_layers: Activate default layers or not.
+   :type activate_default_layers: bool
+
+
+   .. py:attribute:: new_tab_dialog_type
+
+
+   .. py:attribute:: config
+
+
+   .. py:attribute:: activate_default_layers
+      :value: True
+
+
+
+   .. py:attribute:: tabname_to_widget_lookup
+
+
+   .. py:attribute:: views
+
+
+   .. py:method:: openTabDialog(tab_idx)
+
+      Open grid view settings dialog.
+
+      :param tab_idx: Index of the clicked tab.
+      :type tab_idx: int
+
+
+
+   .. py:method:: _build_tabs()
+
+      Defines how new tabs are created.
+
+
+
+   .. py:method:: new_tab()
+
+      Add new tab, store which widget the tab points to.
+
+
+
+.. py:data:: app
+

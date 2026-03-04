@@ -1,0 +1,63 @@
+pswamp.gui.components.run_app_dialogue
+======================================
+
+.. py:module:: pswamp.gui.components.run_app_dialogue
+
+
+Attributes
+----------
+
+.. autoapisummary::
+
+   pswamp.gui.components.run_app_dialogue.config
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   pswamp.gui.components.run_app_dialogue.RunApp
+
+
+Module Contents
+---------------
+
+.. py:class:: RunApp(config, run_app_func, params={})
+
+   Bases: :py:obj:`PySide6.QtWidgets.QWidget`
+
+
+   Dialogue for running application.
+
+   :param config: pswamp configuration.
+   :type config: dict
+   :param run_app_func: Function to run.
+   :type run_app_func: function
+   :param params: Parameters which will be arguments to the function to run.
+   :type params: dict
+
+
+   .. py:attribute:: layout
+
+
+   .. py:attribute:: config
+
+
+   .. py:attribute:: run_app_func
+
+
+   .. py:attribute:: selector
+
+
+   .. py:attribute:: inputs
+
+
+   .. py:method:: launch_app()
+
+      Run the application with channel selection indices and parameters.
+
+
+
+.. py:data:: config
+

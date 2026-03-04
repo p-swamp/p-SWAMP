@@ -1,0 +1,62 @@
+pswamp.monitoring.fft_v2
+========================
+
+.. py:module:: pswamp.monitoring.fft_v2
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   pswamp.monitoring.fft_v2.FFTOnline
+
+
+Module Contents
+---------------
+
+.. py:class:: FFTOnline(kafka_kwargs, fft_window=5, kafka_topic='pmudata', status_topic='application.status', *args, **kwargs)
+
+   Bases: :py:obj:`pswamp.monitoring.utils.TimeWindowRTApp`, :py:obj:`pswamp.monitoring.utils.StatusCom`
+
+
+   Generic real-time application, which does nothing, except stores a time window with PMU data of specified length.
+   The run_analysis method should be overwritten in order to perform various analysis. Results can be forwarded to
+   another topic automatically.
+
+
+   .. py:attribute:: n_samples_store
+      :value: 500
+
+
+
+   .. py:attribute:: freq_range
+
+
+   .. py:attribute:: em_freq_idx
+
+
+   .. py:attribute:: threshold_emergency
+      :value: 10
+
+
+
+   .. py:attribute:: threshold_alert
+      :value: 1
+
+
+
+   .. py:attribute:: max_amplitude
+      :value: 0
+
+
+
+   .. py:method:: run_analysis(t, measurement)
+
+      This should be overwritten.
+      :param t:
+      :param phasors:
+      :return:
+
+
+

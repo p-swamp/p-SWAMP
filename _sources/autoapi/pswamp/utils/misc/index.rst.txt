@@ -1,0 +1,91 @@
+pswamp.utils.misc
+=================
+
+.. py:module:: pswamp.utils.misc
+
+
+Attributes
+----------
+
+.. autoapisummary::
+
+   pswamp.utils.misc.convert_datetime_to_seconds
+
+
+Functions
+---------
+
+.. autoapisummary::
+
+   pswamp.utils.misc.recursively_default_dict
+   pswamp.utils.misc.lookup_strings
+   pswamp.utils.misc.convert_time_stamp_to_seconds
+   pswamp.utils.misc.convert_seconds_to_datetime
+   pswamp.utils.misc.flatten_array_insert_nan
+   pswamp.utils.misc.flatten_list_insert_nan
+
+
+Module Contents
+---------------
+
+.. py:function:: recursively_default_dict()
+
+   Dict which allows assigning fields that don't exist. Source:
+   https://stackoverflow.com/questions/13151276/automatically-add-key-to-python-dict
+
+   :returns: Empty dict
+   :rtype: dict
+
+
+.. py:function:: lookup_strings(a, b, return_mask=False)
+
+.. py:function:: convert_time_stamp_to_seconds(time_stamp)
+
+   Convert time stamp (datetime) to seconds (float)
+
+   :param time_stamp: Input datetime object.
+   :type time_stamp: datetime.datetime
+
+   :returns: Number of seconds.
+   :rtype: float
+
+
+.. py:data:: convert_datetime_to_seconds
+
+.. py:function:: convert_seconds_to_datetime(time_seconds)
+
+   Convert seconds (float) to datetime object
+
+   :param time_seconds: Number of seconds
+   :type time_seconds: float
+
+   :returns: Datetime object
+   :rtype: datetime.datetime
+
+
+.. py:function:: flatten_array_insert_nan(x, y)
+
+   Flatten arrays and insert nan values, useful for fast plotting
+
+   Allows multiple series (in y) to be plotted with a single plot call.
+   E.g. instead of plt.plot(x, y), plt.plot(*flatten_array_insert_nan(x, y)).
+   Since the latter produces a single plot handle, it is much faster when there
+   are many time series in y. Depending on plotting library, formatting of
+   individual lines might not be possible.
+
+   Output arrays both have shape (n_series*(n_samples+1),).
+
+   :param x: x-values, with shape (n_series, n_samples) or (n_series,)
+   :type x: np.ndarray
+   :param y: y-values, with shape (n_series, n_samples)
+   :type y: np.ndarray
+
+   :raises Exception: If dimensions of x and y are not compatible.
+
+   :returns: x-values, with shape (n_series*(n_samples+1),)
+             y_data: y-values, with shape (n_series*(n_samples+1),)
+   :rtype: x_data
+
+
+.. py:function:: flatten_list_insert_nan(listlist)
+

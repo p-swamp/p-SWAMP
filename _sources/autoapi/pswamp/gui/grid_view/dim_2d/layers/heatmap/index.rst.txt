@@ -1,0 +1,57 @@
+pswamp.gui.grid_view.dim_2d.layers.heatmap
+==========================================
+
+.. py:module:: pswamp.gui.grid_view.dim_2d.layers.heatmap
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   pswamp.gui.grid_view.dim_2d.layers.heatmap.FrequencyHeatMap
+
+
+Module Contents
+---------------
+
+.. py:class:: FrequencyHeatMap(parent, config, geo=True, heatmap_kwargs=dict(y_scale=1, lims=[-0.035, 0.035], z_offset=0))
+
+   .. py:attribute:: config
+
+
+   .. py:attribute:: uuid
+
+
+   .. py:attribute:: plotWidget
+
+
+   .. py:attribute:: k
+      :value: 2
+
+
+
+   .. py:attribute:: x
+
+
+   .. py:attribute:: y
+
+
+   .. py:attribute:: z
+
+
+   .. py:attribute:: heatmap
+
+
+   .. py:attribute:: pmu_tw
+
+
+   .. py:attribute:: freq_col_idx
+
+
+   .. py:method:: update_heatmap()
+
+
+   .. py:method:: remove_layer()
+
+

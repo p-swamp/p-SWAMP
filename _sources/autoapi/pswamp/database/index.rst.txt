@@ -1,0 +1,28 @@
+pswamp.database
+===============
+
+.. py:module:: pswamp.database
+
+
+Submodules
+----------
+
+.. toctree::
+   :maxdepth: 1
+
+   /autoapi/pswamp/database/base/index
+
+
+Functions
+---------
+
+.. autoapisummary::
+
+   pswamp.database.get_from_database
+
+
+Package Contents
+----------------
+
+.. py:function:: get_from_database(config, field)
+

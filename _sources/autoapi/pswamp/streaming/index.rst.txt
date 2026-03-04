@@ -1,0 +1,416 @@
+pswamp.streaming
+================
+
+.. py:module:: pswamp.streaming
+
+
+Submodules
+----------
+
+.. toctree::
+   :maxdepth: 1
+
+   /autoapi/pswamp/streaming/base/index
+   /autoapi/pswamp/streaming/kafka_extras/index
+   /autoapi/pswamp/streaming/kafka_io/index
+   /autoapi/pswamp/streaming/mqtt_io/index
+   /autoapi/pswamp/streaming/time_series_io/index
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   pswamp.streaming.KafkaProducer
+   pswamp.streaming.KafkaConsumer
+   pswamp.streaming.KafkaIO
+   pswamp.streaming.MQTTProducer
+   pswamp.streaming.MQTTConsumer
+   pswamp.streaming.MQTT_IO
+   pswamp.streaming.Producer
+   pswamp.streaming.Consumer
+   pswamp.streaming.BaseIO
+
+
+Package Contents
+----------------
+
+.. py:class:: KafkaProducer(*args, use_nqkafka=False, **kwargs)
+
+   Wrapper for Kafka producer.
+
+   :param use_nqkafka: Determines whether self.instance is a NQKafkaProducer (from the nqkafka package, can be thought of as a "mock") or actual KafkaProducer (from the kafka-python package), which connects to a Kafka server. Defaults to False.
+   :type use_nqkafka: bool, optional
+   :param \*args: Variable length argument list.
+   :param \*\*kwargs: Arbitrary keyword arguments.
+
+   .. attribute:: instance
+
+      Determined from input parameters.
+
+      :type: :obj:`nqkafka.NQKafkaProducer` or :obj:`kafka.KafkaProducer`
+
+
+   .. py:attribute:: instance
+
+
+   .. py:method:: __getattr__(name)
+
+      Inherits the same attributes as the instance.
+
+      :param name: Name of the attribute.
+      :type name: _type_
+
+      :returns: The attribute of the instance.
+
+
+
+   .. py:method:: __iter__()
+
+      The iterator is the same as the iterator of the instance.
+
+      :returns: The instance.
+
+
+
+.. py:class:: KafkaConsumer(*args, use_nqkafka=False, **kwargs)
+
+   Wrapper for Kafka consumer.
+
+   :param use_nqkafka: Determines whether self.instance is a NQKafkaConsumer (from the nqkafka package, can be thought of as a "mock") or actual KafkaConsumer (from the kafka-python package), which connects to a Kafka server. Defaults to False.
+   :type use_nqkafka: bool, optional
+   :param \*args: Variable length argument list.
+   :param \*\*kwargs: Arbitrary keyword arguments.
+
+   .. attribute:: instance
+
+      Determined from input parameters.
+
+      :type: :obj:`nqkafka.NQKafkaConsumer` or :obj:`kafka.KafkaConsumer`
+
+
+   .. py:attribute:: instance
+
+
+   .. py:method:: __getattr__(name)
+
+      Inherits the same attributes as the instance.
+
+      :param name: Name of the attribute.
+      :type name: _type_
+
+      :returns: The attribute of the instance.
+
+
+
+   .. py:method:: __iter__()
+
+      The iterator is the same as the iterator of the instance.
+
+      :returns: The instance.
+
+
+
+.. py:class:: KafkaIO(kafka_kwargs, input_topic='pmudata', output_topic=None, status_topic='application.status', t_start=None, command_topic='application.commands')
+
+   Online input/output object to be used by applications.
+
+   TODO: Remove t_start from arguments.
+
+   :param kafka_kwargs: Kwargs that will be used in kafka consumers and producers.
+   :param input_topic: Kafka topic for input data stream.
+   :param output_topic: Kafka topic for output data stream.
+   :param status_topic: Kafka topic for status messages.
+   :param t_start: Not used anymore.
+   :param command_topic: Kafka topic for application commands.
+
+
+   .. py:attribute:: input_topic
+      :value: 'pmudata'
+
+
+
+   .. py:attribute:: kafka_kwargs
+
+
+   .. py:attribute:: kafka_server
+
+
+   .. py:attribute:: command_topic
+      :value: 'application.commands'
+
+
+
+   .. py:attribute:: input_stream
+
+
+   .. py:attribute:: output_topic
+      :value: None
+
+
+
+   .. py:attribute:: status_topic
+      :value: 'application.status'
+
+
+
+   .. py:attribute:: status_producer
+
+
+   .. py:attribute:: command_consumer
+
+
+   .. py:method:: get_sample_data_frame()
+
+      Get sample data frame from input (without affecting input stream)
+
+      :returns: Data frame
+      :rtype: _type_
+
+
+
+   .. py:method:: get_sample_pmu_data_frame()
+
+      Included for backwards compatibility
+
+      :returns: Data frame
+      :rtype: _type_
+
+
+
+   .. py:method:: get_config_frame()
+
+      Get config frame
+
+      :returns: Config frame
+      :rtype: _type_
+
+
+
+   .. py:method:: get_next_data_frame()
+
+      Get next dataframe
+
+      :returns: Data frame
+      :rtype: _type_
+
+
+
+   .. py:method:: get_next_command()
+
+      Get command frame
+
+      :returns: Command frame
+      :rtype: _type_
+
+
+
+   .. py:method:: handle_result(result)
+
+      Handle result once analysis completes. If result is not None, the
+      result will be sent to the output topic.
+
+      :param result: Result
+      :type result: _type_
+
+
+
+   .. py:method:: handle_output(topic, output)
+
+
+   .. py:method:: handle_status(message)
+
+      Sends the satus message to the status topic.
+
+      :param message: Status message
+      :type message: _type_
+
+
+
+   .. py:method:: seek_relative_input_offset(n_samples)
+
+      Changes the offset of the input data consumer according to the
+      specified number of samples.
+
+      :param n_samples: Number of samples to shift
+      :type n_samples: int
+
+
+
+.. py:class:: MQTTProducer(hostname, port)
+
+   .. py:attribute:: client
+
+
+   .. py:method:: publish(topic, msg)
+
+
+   .. py:method:: send(*args, **kwargs)
+
+
+   .. py:method:: flush(*args, **kwargs)
+
+
+.. py:class:: MQTTConsumer(topic, hostname, port)
+
+   .. py:attribute:: client
+
+
+   .. py:attribute:: last_msg
+      :value: ''
+
+
+
+   .. py:attribute:: output_queue
+
+
+   .. py:method:: get_next()
+
+
+   .. py:method:: on_message(client, userdata, message)
+
+
+   .. py:method:: __iter__()
+
+
+   .. py:method:: __next__()
+
+
+.. py:class:: MQTT_IO(mqtt_kwargs, input_topic='pmudata', output_topic=None, status_topic='application.status', command_topic='application.commands')
+
+   Online input/output object to be used by applications.
+
+   TODO: Remove t_start from arguments.
+
+   :param kafka_kwargs: Kwargs that will be used in kafka consumers and producers.
+   :param input_topic: Kafka topic for input data stream.
+   :param output_topic: Kafka topic for output data stream.
+   :param status_topic: Kafka topic for status messages.
+   :param t_start: Not used anymore.
+   :param command_topic: Kafka topic for application commands.
+
+
+   .. py:attribute:: input_topic
+      :value: 'pmudata'
+
+
+
+   .. py:attribute:: mqtt_kwargs
+
+
+   .. py:attribute:: command_topic
+      :value: 'application.commands'
+
+
+
+   .. py:attribute:: input_stream
+
+
+   .. py:attribute:: output_topic
+      :value: None
+
+
+
+   .. py:attribute:: status_topic
+      :value: 'application.status'
+
+
+
+   .. py:attribute:: status_producer
+
+
+   .. py:attribute:: command_consumer
+
+
+   .. py:method:: get_sample_data_frame()
+
+      Get sample data frame from input (without affecting input stream)
+
+      :returns: Data frame
+      :rtype: _type_
+
+
+
+   .. py:method:: get_config_frame()
+
+      Get config frame
+
+      :returns: Config frame
+      :rtype: _type_
+
+
+
+   .. py:method:: get_next_data_frame()
+
+      Get next dataframe
+
+      :returns: Data frame
+      :rtype: _type_
+
+
+
+   .. py:method:: get_next_command()
+
+      Get command frame
+
+      :returns: Command frame
+      :rtype: _type_
+
+
+
+   .. py:method:: handle_result(result)
+
+      Handle result once analysis completes. If result is not None, the
+      result will be sent to the output topic.
+
+      :param result: Result
+      :type result: _type_
+
+
+
+   .. py:method:: handle_output(topic, output)
+
+
+   .. py:method:: handle_status(message)
+
+      Sends the satus message to the status topic.
+
+      :param message: Status message
+      :type message: _type_
+
+
+
+   .. py:method:: seek_relative_input_offset(n_samples)
+
+
+.. py:class:: Producer(*args, type='kafka', **kwargs)
+
+   .. py:attribute:: base_object
+
+
+   .. py:method:: __getattr__(name)
+
+
+.. py:class:: Consumer(*args, type='kafka', **kwargs)
+
+   .. py:attribute:: base_object
+
+
+   .. py:method:: __getattr__(name)
+
+
+   .. py:method:: __iter__()
+
+
+   .. py:method:: __next__()
+
+
+.. py:class:: BaseIO(*args, type='kafka', **kwargs)
+
+   .. py:attribute:: base_object
+
+
+   .. py:method:: __getattr__(name)
+
+

@@ -1,0 +1,135 @@
+pswamp.test_utils.csv_playback.data_reader
+==========================================
+
+.. py:module:: pswamp.test_utils.csv_playback.data_reader
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   pswamp.test_utils.csv_playback.data_reader.DataReader
+
+
+Functions
+---------
+
+.. autoapisummary::
+
+   pswamp.test_utils.csv_playback.data_reader.float_nan
+
+
+Module Contents
+---------------
+
+.. py:function:: float_nan(x, replace_empty_string_with=np.nan)
+
+.. py:class:: DataReader(pmu_data_folder, case_name_hint='', input_given_in_rad=False, skip_rows=0, skip_until_time=None)
+
+   .. py:attribute:: pmu_data_folder
+
+
+   .. py:attribute:: case_name_hint
+      :value: ''
+
+
+
+   .. py:attribute:: original_case_name_hint
+      :value: ''
+
+
+
+   .. py:attribute:: input_given_in_rad
+      :value: False
+
+
+
+   .. py:attribute:: current_case_name_hint
+      :value: ''
+
+
+
+   .. py:attribute:: file_readers_next
+
+
+   .. py:attribute:: file_readers_paused
+
+
+   .. py:attribute:: idx_time
+
+
+   .. py:attribute:: idx_freq
+
+
+   .. py:attribute:: idx_dfreq
+
+
+   .. py:attribute:: idx_phasors
+
+
+   .. py:attribute:: skip_rows
+      :value: 0
+
+
+
+   .. py:attribute:: skip_seconds_until_time
+      :value: None
+
+
+
+   .. py:method:: reset()
+
+
+   .. py:method:: skip_until_time(target_time_stamp)
+
+
+   .. py:method:: create_file_readers(pmu_data_folder, case_name_hint)
+
+
+   .. py:method:: voltage_search_terms()
+
+
+   .. py:method:: current_search_terms()
+
+
+   .. py:method:: search_for_idx(list_of_strings, search_terms, mode='all', return_mask=False)
+      :staticmethod:
+
+
+
+   .. py:method:: get_time_stamp(rows)
+
+
+   .. py:method:: str2date(date_string)
+      :staticmethod:
+
+
+
+   .. py:method:: ensure_radians(angle, substitute_nan_with=0)
+
+
+   .. py:method:: handle_end_of_file()
+
+
+   .. py:method:: get_next_case_name_hint(case_name_hint)
+
+
+   .. py:method:: read_next_rows()
+
+
+   .. py:method:: get_next_row()
+
+
+   .. py:method:: get_file_path_list(pmu_data_folder, case_name_hint)
+
+
+   .. py:method:: get_pmu_id(file_path)
+
+
+   .. py:method:: read_row_from_file(file_reader)
+
+
+   .. py:method:: new_file_reader(file_path)
+
+

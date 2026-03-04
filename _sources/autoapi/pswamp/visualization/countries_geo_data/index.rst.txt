@@ -1,0 +1,15 @@
+pswamp.visualization.countries_geo_data
+=======================================
+
+.. py:module:: pswamp.visualization.countries_geo_data
+
+
+Submodules
+----------
+
+.. toctree::
+   :maxdepth: 1
+
+   /autoapi/pswamp/visualization/countries_geo_data/read_geo_data/index
+
+

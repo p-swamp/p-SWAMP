@@ -1,0 +1,79 @@
+pswamp.streaming.time_series_io
+===============================
+
+.. py:module:: pswamp.streaming.time_series_io
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   pswamp.streaming.time_series_io.TimeSeriesIO
+   pswamp.streaming.time_series_io.Decoder
+
+
+Module Contents
+---------------
+
+.. py:class:: TimeSeriesIO(time_stamps, measurements)
+
+   .. py:attribute:: time_stamps
+
+
+   .. py:attribute:: dt
+
+
+   .. py:attribute:: measurements
+
+
+   .. py:attribute:: iterator
+
+
+   .. py:attribute:: output
+
+
+   .. py:attribute:: metadata
+
+
+   .. py:method:: get_config_frame()
+
+
+   .. py:method:: get_sample_data_frame()
+
+
+   .. py:method:: get_next_data_frame()
+
+
+   .. py:method:: handle_result(result)
+
+
+   .. py:method:: handle_output(topic, output)
+
+
+   .. py:method:: handle_status(status)
+
+
+   .. py:method:: seek_relative_input_offset(offset)
+
+
+   .. py:method:: get_next_command()
+
+
+.. py:class:: Decoder(**app_kwargs)
+
+   .. py:attribute:: data_dtype
+
+
+   .. py:method:: get_data_rate(data_frame)
+
+
+   .. py:method:: generate_header(sample_data_frame)
+
+
+   .. py:method:: get_time_stamp(data_frame)
+
+
+   .. py:method:: data_frame_to_row(data_frame)
+
+

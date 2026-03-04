@@ -1,0 +1,73 @@
+pswamp.app_templates.time_window_app
+====================================
+
+.. py:module:: pswamp.app_templates.time_window_app
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   pswamp.app_templates.time_window_app.TimeWindowApp
+
+
+Module Contents
+---------------
+
+.. py:class:: TimeWindowApp(io=None, eval_freq=None, t_end=None, t_start=None, app_name=None, input_decoder=None, decoder_kwargs={}, channel_selection=None, channel_selection_idx=None, n_samples=None, window_length=None, report_status=False, auto_adjust_offset=None, **io_kwargs)
+
+   Bases: :py:obj:`pswamp.app_templates.snapshot_app.SnapshotApp`
+
+
+   General time window application template.
+
+   New applications could be defined by inheriting from this template, and
+   defining the "run_analysis" method. Similar to SnapshotApp, but has an
+   internal time window storage. The length of the time window is determined by
+   either of the arguments n_samples or window_length. If neither are
+   specified, the size of the time window will grow indefinitely.
+
+
+   TODO: Remove channel_selection and channel_selection_idx from arguments.
+
+   :param io: Input/output object (normally connects to Kafka)
+   :param eval_freq: How often the evaluation of the application should be run
+                     (e.g., the part in "run_analysis")
+   :param t_end: The application will stop running when this time is reached
+                 (but can be restarted)
+   :param t_start: The application will ask the io object (first argument) to
+                   search for t_start when initializing.
+   :param app_name: Name for the application.
+   :param input_decoder: This determines how the input is read/decoded (if no
+                         decoder is specified, a decoder for PMU data frames will be used.)
+   :param decoder_kwargs: Kwargs for initalizing the "input_decoder".
+   :param channel_selection: Argument for specifying channel subset.
+   :param channel_selection_idx: Argument for specifying channel subset.
+   :param n_samples: Determines the window length in samples.
+   :param window_length: Determines the window length in seconds.
+   :param report_status: If enabled, status messages will be emitted.
+   :param io_kwargs: Any other kwargs will be forwarded to the io object.
+
+
+   .. py:attribute:: sampling_frequency
+
+
+   .. py:attribute:: sampling_time
+
+
+   .. py:attribute:: tw
+
+
+   .. py:method:: update_storage(next_data_frame)
+
+      Adds the data frame to the time window storage
+
+
+
+   .. py:method:: get_result(next_data_frame)
+
+      Perform assessment on the currently stored data and return result
+
+
+

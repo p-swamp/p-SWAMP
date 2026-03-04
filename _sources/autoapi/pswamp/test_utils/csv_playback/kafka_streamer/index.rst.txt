@@ -1,0 +1,28 @@
+pswamp.test_utils.csv_playback.kafka_streamer
+=============================================
+
+.. py:module:: pswamp.test_utils.csv_playback.kafka_streamer
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   pswamp.test_utils.csv_playback.kafka_streamer.PMUDataStreamerKafka
+
+
+Module Contents
+---------------
+
+.. py:class:: PMUDataStreamerKafka(pmu_data_folder, publisher_kwargs, case_name_hint='', pdc_id=1, publish_frequency=50, speed=1, n_samples=None, t_end=None, skip_seconds_in_beginning=0, *args, **kwargs)
+
+   Bases: :py:obj:`pswamp.test_utils.csv_playback.pmu_streamer.PMUDataStreamer`
+
+
+   .. py:method:: init_publisher(topic, **kafka_kwargs)
+
+
+   .. py:method:: publish(data_frame)
+
+

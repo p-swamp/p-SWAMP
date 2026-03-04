@@ -1,0 +1,18 @@
+pswamp.gui.components
+=====================
+
+.. py:module:: pswamp.gui.components
+
+
+Submodules
+----------
+
+.. toctree::
+   :maxdepth: 1
+
+   /autoapi/pswamp/gui/components/channel_select/index
+   /autoapi/pswamp/gui/components/channel_select_geo/index
+   /autoapi/pswamp/gui/components/run_app_dialogue/index
+   /autoapi/pswamp/gui/components/single_channel_select/index
+
+

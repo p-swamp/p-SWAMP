@@ -1,0 +1,130 @@
+pswamp.visualization.fft_viz_v2
+===============================
+
+.. py:module:: pswamp.visualization.fft_viz_v2
+
+
+Attributes
+----------
+
+.. autoapisummary::
+
+   pswamp.visualization.fft_viz_v2.config
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   pswamp.visualization.fft_viz_v2.FFTOnlineSingleChannel
+   pswamp.visualization.fft_viz_v2.FFTViz
+   pswamp.visualization.fft_viz_v2.RunApp
+
+
+Functions
+---------
+
+.. autoapisummary::
+
+   pswamp.visualization.fft_viz_v2.run_fft_viz_launcher
+
+
+Module Contents
+---------------
+
+.. py:class:: FFTOnlineSingleChannel(kafka_kwargs, fft_window=5, kafka_topic='pmudata', channel_selection_idx=None, *args, **kwargs)
+
+   Bases: :py:obj:`pswamp.app_templates.time_window_app.TimeWindowApp`
+
+
+   General time window application template.
+
+   New applications could be defined by inheriting from this template, and
+   defining the "run_analysis" method. Similar to SnapshotApp, but has an
+   internal time window storage. The length of the time window is determined by
+   either of the arguments n_samples or window_length. If neither are
+   specified, the size of the time window will grow indefinitely.
+
+
+   TODO: Remove channel_selection and channel_selection_idx from arguments.
+
+   :param io: Input/output object (normally connects to Kafka)
+   :param eval_freq: How often the evaluation of the application should be run
+                     (e.g., the part in "run_analysis")
+   :param t_end: The application will stop running when this time is reached
+                 (but can be restarted)
+   :param t_start: The application will ask the io object (first argument) to
+                   search for t_start when initializing.
+   :param app_name: Name for the application.
+   :param input_decoder: This determines how the input is read/decoded (if no
+                         decoder is specified, a decoder for PMU data frames will be used.)
+   :param decoder_kwargs: Kwargs for initalizing the "input_decoder".
+   :param channel_selection: Argument for specifying channel subset.
+   :param channel_selection_idx: Argument for specifying channel subset.
+   :param n_samples: Determines the window length in samples.
+   :param window_length: Determines the window length in seconds.
+   :param report_status: If enabled, status messages will be emitted.
+   :param io_kwargs: Any other kwargs will be forwarded to the io object.
+
+
+   .. py:attribute:: n_samples_store
+      :value: 500
+
+
+
+   .. py:attribute:: freq_range
+
+
+   .. py:attribute:: em_freq_idx
+
+
+   .. py:attribute:: fft_tw
+
+
+   .. py:attribute:: run_fft
+
+
+   .. py:method:: run_analysis(t, measurement)
+
+
+.. py:class:: FFTViz(kafka_kwargs, fft_window=10, kafka_topic='pmudata', channel_selection_idx=None)
+
+   Bases: :py:obj:`QWidget`
+
+
+   .. py:attribute:: fft_plt
+
+
+.. py:class:: RunApp(config, run_app_func)
+
+   Bases: :py:obj:`QWidget`
+
+
+   .. py:attribute:: tw_plots
+      :value: []
+
+
+
+   .. py:attribute:: layout
+
+
+   .. py:attribute:: config
+
+
+   .. py:attribute:: run_app_func
+
+
+   .. py:attribute:: selector
+
+
+   .. py:attribute:: parameters
+
+
+   .. py:method:: launch_app()
+
+
+.. py:function:: run_fft_viz_launcher(*config_args, update_freq=25, **kwargs)
+
+.. py:data:: config
+

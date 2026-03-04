@@ -1,0 +1,164 @@
+pswamp.gui.grid_view.dim_2d.layers.layers
+=========================================
+
+.. py:module:: pswamp.gui.grid_view.dim_2d.layers.layers
+
+
+Exceptions
+----------
+
+.. autoapisummary::
+
+   pswamp.gui.grid_view.dim_2d.layers.layers.LayerFailedException
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   pswamp.gui.grid_view.dim_2d.layers.layers.StationNamesLayer
+   pswamp.gui.grid_view.dim_2d.layers.layers.PhasorPlotLayer
+   pswamp.gui.grid_view.dim_2d.layers.layers.StaticLineDataLayer
+   pswamp.gui.grid_view.dim_2d.layers.layers.StaticLineDataLayer_v0
+   pswamp.gui.grid_view.dim_2d.layers.layers.StaticLineDataLayerSettings
+
+
+Module Contents
+---------------
+
+.. py:exception:: LayerFailedException
+
+   Bases: :py:obj:`Exception`
+
+
+   Raised when layer fails.
+
+
+.. py:class:: StationNamesLayer(parent, config, geo=True)
+
+   .. py:attribute:: config
+
+
+   .. py:attribute:: plotWidget
+
+
+   .. py:attribute:: k
+      :value: 2
+
+
+
+   .. py:attribute:: bus_name_text
+      :value: []
+
+
+
+   .. py:method:: add_text(coord, text)
+
+
+   .. py:method:: remove_layer()
+
+
+.. py:class:: PhasorPlotLayer(parent, config, geo=True)
+
+   .. py:attribute:: config
+
+
+   .. py:attribute:: k
+      :value: 2
+
+
+
+   .. py:attribute:: uuid
+
+
+   .. py:attribute:: parent
+
+
+   .. py:attribute:: pmu_tw
+
+
+   .. py:attribute:: col_idx_mag
+      :value: []
+
+
+
+   .. py:attribute:: col_idx_ang
+      :value: []
+
+
+
+   .. py:attribute:: plotWidget
+
+
+   .. py:attribute:: phasor_plot
+
+
+   .. py:method:: add_phasor_plot(bus_coords)
+
+
+   .. py:method:: remove_layer()
+
+
+.. py:class:: StaticLineDataLayer(parent, config, geo=True, data_subkey='line_data_path')
+
+   .. py:attribute:: config
+
+
+   .. py:attribute:: k
+      :value: 2
+
+
+
+   .. py:attribute:: parent
+
+
+   .. py:attribute:: line_style
+
+
+   .. py:attribute:: ps_geo_data
+
+
+   .. py:attribute:: power_lines_pl
+
+
+   .. py:method:: add_line_plots(pos, line_width, color)
+
+
+   .. py:method:: remove_layer()
+
+
+   .. py:method:: show_lines(key)
+
+
+   .. py:method:: hide_lines(key)
+
+
+   .. py:method:: set_power_lines_color(key, color)
+
+
+   .. py:method:: set_line_width(key, line_width)
+
+
+   .. py:method:: update_line_plots(key, **style_kwargs)
+
+
+.. py:class:: StaticLineDataLayer_v0(*args, **kwargs)
+
+   Bases: :py:obj:`StaticLineDataLayer`
+
+
+.. py:class:: StaticLineDataLayerSettings(target_layer)
+
+   Bases: :py:obj:`PySide6.QtWidgets.QWidget`
+
+
+   .. py:attribute:: target_layer
+
+
+   .. py:attribute:: btn_name_to_key
+
+
+   .. py:method:: update_grid_plots(state)
+
+

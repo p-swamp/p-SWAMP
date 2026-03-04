@@ -1,0 +1,48 @@
+pswamp.gui.grid_view.layer_settings
+===================================
+
+.. py:module:: pswamp.gui.grid_view.layer_settings
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   pswamp.gui.grid_view.layer_settings.LayerSettings
+
+
+Functions
+---------
+
+.. autoapisummary::
+
+   pswamp.gui.grid_view.layer_settings.main
+
+
+Module Contents
+---------------
+
+.. py:class:: LayerSettings(config, parent_widget, *args, **kwargs)
+
+   Bases: :py:obj:`PySide6.QtWidgets.QWidget`
+
+
+   Settings for grid view.
+
+   Allows activating/deactivating visualization layers in the GridView, and
+   seleecting the background color for the GridView.
+
+   TODO: Change name to GridViewSettings?
+
+   :param config: pswamp configuration.
+   :type config: dict
+   :param parent_widget: Grid view whose settings are adjusted.
+   :type parent_widget: GridView2D or GridView3D
+
+
+   .. py:attribute:: layer_select
+
+
+.. py:function:: main()
+

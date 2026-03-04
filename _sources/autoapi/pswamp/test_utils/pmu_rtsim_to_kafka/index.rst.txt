@@ -1,0 +1,36 @@
+pswamp.test_utils.pmu_rtsim_to_kafka
+====================================
+
+.. py:module:: pswamp.test_utils.pmu_rtsim_to_kafka
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   pswamp.test_utils.pmu_rtsim_to_kafka.PMUToKafkaPublisher
+
+
+Module Contents
+---------------
+
+.. py:class:: PMUToKafkaPublisher(kafka_kwargs, *args, topic='pmudata', **kwargs)
+
+   Bases: :py:obj:`topsrt.pmu_v2.PMUPublisherV2`
+
+
+   .. py:attribute:: topic
+      :value: 'pmudata'
+
+
+
+   .. py:attribute:: kafka_producer
+
+
+   .. py:method:: initialize(*args, **kwargs)
+
+
+   .. py:method:: update(input_signal)
+
+

@@ -1,0 +1,82 @@
+pswamp.visualization.fft_viz
+============================
+
+.. py:module:: pswamp.visualization.fft_viz
+
+
+Attributes
+----------
+
+.. autoapisummary::
+
+   pswamp.visualization.fft_viz.config
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   pswamp.visualization.fft_viz.FFTControlWidget
+
+
+Functions
+---------
+
+.. autoapisummary::
+
+   pswamp.visualization.fft_viz.fft_viz
+   pswamp.visualization.fft_viz.run_fft_viz
+
+
+Module Contents
+---------------
+
+.. py:function:: fft_viz(kafka_kwargs, fft_window=5, kafka_topic='pmudata', channel_selection_idx=None, channel_selection={'measurement': 'f'}, **kwargs)
+
+.. py:class:: FFTControlWidget(fft_anl)
+
+   Bases: :py:obj:`PySide6.QtWidgets.QWidget`
+
+
+   For setting scale and thresholds for FFT App.
+
+
+   .. py:attribute:: fft_anl
+
+
+   .. py:attribute:: z_plot_scale
+      :value: 20
+
+
+
+   .. py:attribute:: z_scale
+      :value: 10
+
+
+
+   .. py:attribute:: threshold_adjustment
+
+
+   .. py:attribute:: timer
+
+
+   .. py:method:: redraw_indicator()
+
+
+   .. py:method:: slider_change(val)
+
+
+   .. py:method:: scale_change(val)
+
+
+   .. py:method:: update_thresholds()
+
+
+   .. py:method:: scale_plot_change(val)
+
+
+.. py:function:: run_fft_viz(*config_args, fft_window=5, channel_selection_idx=None)
+
+.. py:data:: config
+

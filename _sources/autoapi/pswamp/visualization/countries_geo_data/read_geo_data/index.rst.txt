@@ -1,0 +1,29 @@
+pswamp.visualization.countries_geo_data.read_geo_data
+=====================================================
+
+.. py:module:: pswamp.visualization.countries_geo_data.read_geo_data
+
+
+Attributes
+----------
+
+.. autoapisummary::
+
+   pswamp.visualization.countries_geo_data.read_geo_data.data
+
+
+Functions
+---------
+
+.. autoapisummary::
+
+   pswamp.visualization.countries_geo_data.read_geo_data.read_geo_data
+
+
+Module Contents
+---------------
+
+.. py:function:: read_geo_data(countries='All')
+
+.. py:data:: data
+
