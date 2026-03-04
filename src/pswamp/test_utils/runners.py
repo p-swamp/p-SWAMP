@@ -173,8 +173,8 @@ def create_database(*config_args):
             
 
     if config["database"]["type"] == "sqlite":
-        print(f"{config["database"]["file_path"]}")
-        con = sqlite3.connect(f"{config["database"]["file_path"]}")
+        print(f"""{config["database"]["file_path"]}""")
+        con = sqlite3.connect(f"""{config["database"]["file_path"]}""")
         for key, val in data["model"].items():
             if isinstance(val, pd.DataFrame):
                 try:
