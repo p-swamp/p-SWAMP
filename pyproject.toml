@@ -38,10 +38,10 @@ dev = [
 ]
 
 doc = [
-  "sphinx",
-  "sphinx-rtd-theme",
-  "sphinx-autoapi",
-  "sphinx-mdinclude"
+    "sphinx",
+    "sphinx-rtd-theme",
+    "sphinx-autoapi",
+    "sphinx-mdinclude"
 ]
 
 [build-system]
