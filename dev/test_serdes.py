@@ -99,7 +99,7 @@ cons = KafkaConsumer(
     # value_deserializer=lambda msg: json.dumps(msg).encode("utf8"),
     # auto_offset_reset=True,
 )
-from pswamp.streaming.kafka_extras.utils import consumer_seek_relative_offset
+from pswamp.streaming import consumer_seek_relative_offset
 consumer_seek_relative_offset(cons, 0)
 
 for msg in cons:
