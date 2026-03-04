@@ -1,7 +1,7 @@
 from pswamp.gui.components.run_app_dialogue import RunApp
 from PySide6 import QtWidgets
 import sys
-from pswamp.utils.pmu_time_window import PMUTimeWindowOnline, PMUTimeWindow
+from pswamp.utils.pmu_time_window import PMUTimeWindowOnline
 from pswamp import load_config
 import threading
 from pswamp.visualization.time_window_plot import TimeWindowPlot

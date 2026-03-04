@@ -1,5 +1,4 @@
 import numpy as np
-from pswamp.utils.pmu_time_window import PMUTimeWindowOnline
 from pswamp.utils.load_config import load_config
 import threading
 import PySide6.QtCore as QtCore
@@ -7,7 +6,6 @@ import PySide6.QtWidgets as QtWidgets
 import pyqtgraph as pg
 import sys
 from pswamp.visualization.components.date_time_axis import DateAxisItem
-from pswamp.utils.time_window_labeled import TimeWindowLabeled, GrowingTimeWindowLabeled
 from pswamp.app_templates.time_window_app import TimeWindowApp
 
 
@@ -142,18 +140,6 @@ def plot_time_window(
     **kwargs
 ):
 
-    # pmu_tw = PMUTimeWindowOnline(
-    #     *args,
-    #     io_kwargs,
-    #     kafka_topic=kafka_topic,
-    #     # phasor_selection=phasor_selection,
-    #     auto_adjust_offset=auto_adjust_offset,
-    #     window_length=window_length,
-    #     n_samples=n_samples,
-    #     channel_selection_idx=channel_selection_idx,
-    #     **kwargs
-    # )
-    # pmu_tw.initialize()
     tw_app = TimeWindowApp(
         io_kwargs=io_kwargs,  # config["streaming"],
         **kwargs,

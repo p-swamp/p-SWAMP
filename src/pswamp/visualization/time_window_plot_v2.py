@@ -135,15 +135,6 @@ class TimeWindowPlotGUI(QtWidgets.QMainWindow):
     ):
         super().__init__()
         
-        # pmu_tw = PMUTimeWindowOnline(
-        #     *args,
-        #     io_kwargs,
-        #     kafka_topic=kafka_topic,
-        #     # phasor_selection=phasor_selection,
-        #     window_length=30,
-        #     auto_adjust_offset=True,
-        #     **kwargs
-        # )
         tw_app = TimeWindowApp(
             io_kwargs=io_kwargs,  # config["streaming"],
             **kwargs,
