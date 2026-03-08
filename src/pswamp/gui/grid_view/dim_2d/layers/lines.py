@@ -137,15 +137,32 @@ class LineLayer:
         # self.parent.plotWidget.removeItem(self.lines_plot)
         # self.parent.plotWidget.removeItem(self.trafos_plot)
 
-    def get_branches_from_buses(self, bus_idx):
-        line_idx = np.isin(self.lines_from_bus_idx, bus_idx) + np.isin(
-            self.lines_to_bus_idx, bus_idx
-        )
-        trafo_idx = np.isin(self.trafos_from_bus_idx, bus_idx) + np.isin(
-            self.trafos_to_bus_idx, bus_idx
-        )
+    def get_branches_from_buses(self, bus_idx, keys=None):
+        if keys is None:
+            keys = self.branch_data.keys()
+        
+        ret = {}
+        for key in keys:
+            from_bus_idx = self.branch_data[key]["from_bus_idx"]
+            to_bus_idx = self.branch_data[key]["to_bus_idx"]
+            
+            branch_idx = np.isin(from_bus_idx, bus_idx) + np.isin(
+                to_bus_idx, bus_idx
+            )
 
-        return np.where(line_idx)[0], np.where(trafo_idx)[0]
+            ret[key] = np.where(branch_idx)[0]
+            # line_idx)[0]
+
+        return ret
+
+        # line_idx = np.isin(self.lines_from_bus_idx, bus_idx) + np.isin(
+        #     self.lines_to_bus_idx, bus_idx
+        # )
+        # trafo_idx = np.isin(self.trafos_from_bus_idx, bus_idx) + np.isin(
+        #     self.trafos_to_bus_idx, bus_idx
+        # )
+
+        # return np.where(line_idx)[0], np.where(trafo_idx)[0]
 
     def __del__(self):
         try:

@@ -1,11 +1,9 @@
 import numpy as np
 
 # from pswamp_monitoring.utils.pmu_receiver import PMUReceiver
-from pswamp.utils.pmu_time_window import PMUTimeWindowOnline
 from pswamp.utils.load_config import load_config
 from pswamp.visualization.components.phasor_plot import PhasorPlotFancy
 import threading
-import PySide6.QtCore as QtCore
 import PySide6.QtWidgets as QtWidgets
 import pyqtgraph as pg
 import sys
@@ -23,14 +21,6 @@ class VoltagePhasorPlot:
         **kwargs
     ):
 
-        # pmu_tw = PMUTimeWindowOnline(
-        #     io_kwargs=io_kwargs,
-        #     n_samples=1,
-        #     kafka_topic=kafka_topic,
-        #     # phasor_selection=phasor_selection,
-        #     **kwargs
-        # )
-        # pmu_tw.initialize()
         self.pmu_input = SnapshotApp(
             # n_samples=1,
             input_topic=input_topic,

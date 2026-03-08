@@ -4,13 +4,17 @@ import time
 from pswamp.utils.misc import lookup_strings
 
 
+# TODO: Calling these functions should be replaced with reading from database
+
+
+
 def load_bus_coords_for_current_stations(config, return_3d=False, geo=True):
     """Get coordinates for stations in PMU data frame"""
     while True:
         sample_pmu_data_frame = get_last_message_from_topic(
-            config["topics"]["pmudata"], **config["streaming"]
+            topic=config["topics"]["pmudata"], **config["streaming"]
         )
-        if not sample_pmu_data_frame is None:
+        if sample_pmu_data_frame is not None:
             break
         else:
             time.sleep(1)

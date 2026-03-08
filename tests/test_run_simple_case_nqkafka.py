@@ -1,6 +1,6 @@
 config = dict(
-    kafka=dict(
-        use_nqkafka=True,
+    streaming=dict(
+        type="nqkafka",
         bootstrap_servers="localhost:51006"
     ),
 

@@ -67,7 +67,7 @@ class SnapshotApp:
         else:
             self.io = io
         if input_decoder is None:
-            from pswamp.utils.pmu_time_window import PMUDecoder
+            from pswamp.utils.pypmu import PMUDecoder
             input_decoder = PMUDecoder
 
         self.decoder = input_decoder(

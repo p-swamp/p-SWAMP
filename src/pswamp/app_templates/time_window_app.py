@@ -1,11 +1,6 @@
-# import numpy as np
-# from pswamp.streaming import consumer_seek_relative_offset
 from pswamp.utils.time_window_labeled import TimeWindowLabeled
 from pswamp.utils.time_window_labeled import GrowingTimeWindowLabeled
 from pswamp.app_templates.snapshot_app import SnapshotApp
-# from pswamp.streaming.online_app import OnlineApp, ReportingApp
-from pswamp.utils.time_window_labeled import TimeWindowLabeled
-# from pswamp.utils.pmu_time_window import PMUDecoder
 
 
 class TimeWindowApp(SnapshotApp):

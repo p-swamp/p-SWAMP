@@ -3,7 +3,7 @@ import threading
 import uuid
 from pswamp.utils.get_station_coords import load_bus_coords_for_current_stations
 import pyqtgraph.opengl as gl
-from pswamp.streaming.kafka_extras import Consumer
+from pswamp.streaming import Consumer
 from pswamp.utils.misc import lookup_strings
 from pswamp.utils.gl import set_gl_options
 

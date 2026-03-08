@@ -1,9 +1,10 @@
-from PySide6 import QtWidgets
+from PySide6 import QtWidgets, QtGui
 import sys
 from pswamp.gui.grid_view.dim_3d.base_plot import GridBasePlot3D
 import pswamp.gui.grid_view.dim_3d.layers as lrs
 from pswamp.gui.grid_view.layer_settings import LayerSettings
 from pswamp.utils.load_config import load_config
+import numpy as np
 
 
 class GridBasePlot3DLayers(GridBasePlot3D):
@@ -53,7 +54,10 @@ class GridBasePlot3DLayers(GridBasePlot3D):
                 "Line outages": (lrs.LineOutages, None),
             },
         }
-        default_layers = ['Static line data', 'Static line data (oim)', 'Station names', 'Buses']
+        default_layers = [
+            # 'Static line data', 'Static line data (oim)', 'Station names',
+            "Bus names", "Buses", "Lines",
+        ]
         if self.geo:
             available_layers["Base layers"].update(
                 {"Countries": (lrs.CountriesLayer, lrs.CountriesLayerSettings)}
@@ -68,8 +72,10 @@ class GridBasePlot3DLayers(GridBasePlot3D):
                 if child_layer in default_layers:
                     self.layer_settings.layer_select.show_layer('Base layers', child_layer) 
         # self.layer_select.hide()
+        bus_coords = self.layer_settings.layer_select.active_layer_instances[
+            "Base layers"]["Buses"].bus_coords
         
-            # self.center_camera_position(config)
+        self.center_camera_position(bus_coords)
 
         
     def set_non_base_layers_visibility(self, show=False):
@@ -93,27 +99,21 @@ class GridBasePlot3DLayers(GridBasePlot3D):
 
             
     
-    # def center_camera_position(self, config):
-    #     try:
-    #         _, bus_coords = load_bus_coords_for_current_stations(config, geo=self.geo)
-    #     except ConnectionRefusedError:
-    #         print('None')
-    #         return
-        
-    #     k = 2 if self.geo else 1
-    #     bus_coords[:, 1] *= k
+    def center_camera_position(self, bus_coords):       
+        # k = 2 if self.geo else 1
+        # bus_coords[:, 1] *= k
 
-    #     x_center = np.mean([np.nanmin(bus_coords[:, 0]), np.nanmax(bus_coords[:, 0])])
-    #     y_center = np.mean([np.nanmin(bus_coords[:, 1]), np.nanmax(bus_coords[:, 1])])
+        x_center = np.mean([np.nanmin(bus_coords[:, 0]), np.nanmax(bus_coords[:, 0])])
+        y_center = np.mean([np.nanmin(bus_coords[:, 1]), np.nanmax(bus_coords[:, 1])])
 
-    #     self.plotWidget.setCameraPosition(
-    #         pos=QtGui.QVector3D(
-    #             x_center, y_center, 0
-    #         ),
-    #         distance=40,
-    #         elevation=25,
-    #         azimuth=-90,
-    #     )
+        self.plotWidget.setCameraPosition(
+            pos=QtGui.QVector3D(
+                x_center, y_center, 0
+            ),
+            distance=40,
+            elevation=25,
+            azimuth=-90,
+        )
 
     # def onLayersEditClicked(self):
         # self.layer_select.show()

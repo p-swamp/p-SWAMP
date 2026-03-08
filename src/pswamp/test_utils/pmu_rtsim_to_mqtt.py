@@ -1,6 +1,5 @@
 from topsrt.pmu_v2 import PMUPublisherV2 as PMUPublisher
 from queue import Queue
-# from pswamp.streaming.kafka_extras import KafkaProducer
 # from pswamp.streaming.mqtt_io import MQTTProducer
 from pswamp.streaming import Producer
 import pickle

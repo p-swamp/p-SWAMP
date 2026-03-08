@@ -4,7 +4,7 @@ from pswamp.streaming import Producer
 from synchrophasor.timeSeriesPlayback import PMUTimeSeriesPublisher
 from pswamp.coordination.pmu_to_kafka import PMUToKafka
 from pswamp.test_utils.pmu_csv_to_kafka import CSVtoKafka
-from pswamp.streaming.kafka_extras import create_topic
+from pswamp.streaming.base import create_topic
 from pswamp.utils.load_config import load_config
 from pswamp.test_utils.csv_playback.kafka_streamer import PMUDataStreamerKafka
 import json

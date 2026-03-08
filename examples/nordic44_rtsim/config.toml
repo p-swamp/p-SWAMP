@@ -1,7 +1,4 @@
-# # include=['model_measurement_map.toml']
-include=['startup_apps.toml']
 model_data_path='data/model_data.json'
-
 
 [pmus]
 ip='localhost'
@@ -21,19 +18,19 @@ id=1
 "application.status"="application.status"
 "application.commands"="application.commands"
 "pmudata"="pmudata"
-"pmu.coords"="pmu.coords"
+# "pmu.coords"="pmu.coords"
 "modeestimation"="modeestimation"
 "voltage.stability.index"="voltage.stability.index"
 "alarms"="alarms"
 "islanding"="islanding"
 "grid.events"="grid.events"
-"model.data"="model.data"
+# "model.data"="model.data"
 
 [streaming]
-type="kafka"
-bootstrap_servers="localhost:9094"
-# type="nqkafka"
-# bootstrap_servers="localhost:40000"
+# type="kafka"
+# bootstrap_servers="localhost:9094"
+type="nqkafka"
+bootstrap_servers="localhost:40000"
 # type="mqtt"
 # hostname="localhost"
 # port=1883
@@ -53,3 +50,14 @@ line_data_path='data/sld_geo.dxf'
 
 [sld_data]
 line_data_path='data/sld.dxf'
+
+
+[single_line_diagrams]
+[single_line_diagrams.geo]
+countries=["Norway", "Sweden", "Denmark", "Finland"]
+aspect_ratio=2
+data_path='data/sld_geo.dxf'
+geo=true
+
+[single_line_diagrams.other]
+data_path='data/sld.dxf'

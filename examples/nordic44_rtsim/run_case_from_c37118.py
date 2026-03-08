@@ -4,7 +4,7 @@ from nqkafka.utils import stop_server as stop_nqkafka_server
 import time
 from pswamp.gui.main_window import run_main_window
 import multiprocessing as mp
-from data.coords import n44_coordinates
+# from data.coords import n44_coordinates
 import pswamp.test_utils.runners as runners
 
 
@@ -19,7 +19,7 @@ if __name__ == '__main__':
     time.sleep(2)
 
     runners.create_topics(config)
-    runners.publish_geo_data(config, n44_coordinates())
+    # runners.publish_geo_data(config, n44_coordinates())
 
     p = mp.Process(
         target=runners.c37118_to_kafka,

@@ -9,28 +9,40 @@ import sqlite3
 
 
 def create_minimal_test_case():
-    # Create a new DXF document.
+    # Returns:
+    # config: The configuration for the case, which is used across the p-SWAMP
+    # platform
+    # con: A reference to the SQLite in-memory database connection, which holds
+    # data on the three buses, lines, and a single-line diagram-
+    # pmu: A PyPMU object which can be used to generate PMU data frames for
+    # the minimal test case.
+    
+    # Create a new DXF document, which will hold the Single-Line Diagram (SLD).
     doc = ezdxf.new(dxfversion="R2010")
-
     msp = doc.modelspace()
-
-    # Add entities to a layout by factory methods: layout.add_...()
+    
+    # Add lines
     msp.add_line((0, 0), (20, 0))  # , dxfattribs={"color": colors.YELLOW})
     msp.add_line((20, 0), (10, 20))  # , dxfattribs={"color": colors.YELLOW})
     msp.add_line((0, 0), (10, 20))  # , dxfattribs={"color": colors.YELLOW})
+
+    # Add buses
     msp.add_mtext("B1").set_location((0, 0))
     msp.add_mtext("B2").set_location((20, 0))
     msp.add_mtext("B3").set_location((10, 20))
 
+    # Write to the DXF document
     f = StringIO()
     doc.write(f)
-
     fout = StringIO(f.getvalue())
     doc = ezdxf.read(fout)
 
+    # From the SLD, the coordinates of buses can be obtained by matching names
+    # with MTEXT-objects:
     sld.SCALING_FACTOR = 1
     sld.get_buses(doc, ["B1", "B2", "B3"])
 
+    # The configuration for the case:
     config = {
         "database": {
             "type": "sqlite",
@@ -45,6 +57,8 @@ def create_minimal_test_case():
             }
         },
     }
+
+    # Make a SQLite in-memory database
     con = sqlite3.connect("file::memory:?cache=shared", uri=True)
 
     # Remove previous tables (if present)
@@ -78,18 +92,24 @@ def create_minimal_test_case():
     )
     con.commit()
 
+    # Add some fields to the configuration
     config["streaming"] = {
         "type": "nqkafka",
         "bootstrap_servers": "localhost: 50000",
         "consumers_seek_to_beginning": True,
     }
 
+    # Start a NQKafka server, acting as a NQKafka server which consumers or
+    # producers can connect to.
     runners.run_nqkafka_server(config, run_in_process=False)
     runners.create_topic("pmudata", config["streaming"])
     config["topics"] = {"pmudata": "pmudata"}
 
     # consumer = Consumer(**config["streaming"], topic="pmudata")
 
+    # Create a PyPMU object that can generate PMU data frames (according to 
+    # C37.118), with voltage measurements at the three buses and current
+    # measurements at the lines
     pmu = SimplePMU(
         "",
         0,
@@ -101,6 +121,8 @@ def create_minimal_test_case():
         ],
     )
 
+    # Create a single PMU data frame and send it to the "pmudata" topic of the
+    # NQKafka server
     dataframe = pmu.generate_dataframe()
     producer = Producer(**config["streaming"])
     producer.send(topic="pmudata", msg=dataframe)

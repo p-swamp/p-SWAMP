@@ -7,8 +7,8 @@ from pswamp.streaming import Consumer
 from pswamp.utils.time_window_labeled import GrowingTimeWindowLabeled
 from pswamp.utils.time_window_labeled import Indexer
 
-
 class PMUDecoder:
+    # TODO: This is defined in pypmu instead, should be removed.
     def __init__(
             self,
             channel_selection=None,
@@ -85,6 +85,7 @@ class PMUDecoder:
         return t, np.concatenate([freq, dfreq, phasors])[self.channel_selection_idx]
 
 class PMUTimeWindow:
+    # TODO: TimeWindowApp should be used instead of this class.
     def __init__(
             self,
             n_samples=None,

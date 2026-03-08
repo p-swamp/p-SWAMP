@@ -51,6 +51,7 @@ class GridBasePlot2DLayers(GridBasePlot2D):
             # "Static line data (oim)",
             "Bus names",
             "Buses",
+            "Lines",
         ]
         if self.geo:
             available_layers['Base layers'].update(
