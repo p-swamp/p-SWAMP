@@ -35,11 +35,12 @@ full = [
 	"ezdxf",
     "paho-mqtt",
     "matplotlib",
-    "ipython"
+    "p-swamp[dev]"
 ]
 dev = [
     "pytest>=9.0.2",
     "ipython>=9.9.0",
+    "pre-commit"
 ]
 [build-system]
 requires = ["uv_build"]
