@@ -4,6 +4,7 @@ This repo contains a Python package for enabling development and testing of WAMP
 [*H. Haugdal, S. D’Arco and K. Uhlen, "A Platform for Development and Testing of WAMPAC Applications based on Kafka Streaming," 2024 IEEE PES Innovative Smart Grid Technologies Europe (ISGT EUROPE), Dubrovnik, Croatia, 2024.*](https://ieeexplore.ieee.org/document/10863035)
 
 In the NEWEPS project, several demonstration videos were created, which can be accessed below. Note, however, that not all the functionality shown in the videos is available here.
+
 [![Videos](https://img.youtube.com/vi/IB7JYJ0BG9U/0.jpg)](https://www.youtube.com/playlist?list=PLE8zTKw5VFOGFu1mKQllDV4mm9gt1W3zd)
 
 **NOTE:** This code is being developed as part of ongoing research, and thus contains experimental features. Use at your own risk!
