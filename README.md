@@ -1,28 +1,32 @@
 # p-SWAMP (Power Stability Wide area Monitoring and Protection)
+This repo contains a Python package for enabling development and testing of WAMPAC applications. The code is based on developments in the research project [NEWEPS](https://ri.diva-portal.org/smash/record.jsf?pid=diva2%3A1933825&dswid=2773), and is described in this paper:
 
-The code in this repository is based on previous code from the research project NEWEPS.
+[*H. Haugdal, S. D’Arco and K. Uhlen, "A Platform for Development and Testing of WAMPAC Applications based on Kafka Streaming," 2024 IEEE PES Innovative Smart Grid Technologies Europe (ISGT EUROPE), Dubrovnik, Croatia, 2024.*](https://ieeexplore.ieee.org/document/10863035)
+
+In the NEWEPS project, several demonstration videos were created, which can be accessed below. Note, however, that not all the functionality shown in the videos is available here.
+[![Videos](https://img.youtube.com/vi/IB7JYJ0BG9U/0.jpg)](https://www.youtube.com/playlist?list=PLE8zTKw5VFOGFu1mKQllDV4mm9gt1W3zd)
+
+**NOTE:** This code is being developed as part of ongoing research, and thus contains experimental features. Use at your own risk!
+
 
 ## Installation
-This Python package can be installed as follows:
-
-1. Clone the repository using Git (or download and unzip manually),
-2. Create a virtual environment and activate it,
-3. Install the p-SWAMP-package using pip:
-    
-    ```typescript
-    pip install -e .[full]
-    ```
-    The "-e" allows code to be edited without requiring reinstalling. "[full]" causes extra dependencies to be installed, which are required to run the examples.
+This Python package can be installed using pip (or another package manager, for instance uv):    
+```typescript
+pip install -e .[full]
+```
+"[full]" causes extra dependencies to be installed, which are required to run the examples.
 
 
 ## Quick start
 Two examples can be run once the package is installed (found in the "examples" folder). Follow the readme in the subfolders for instructions on how to run the examples.
 
-The examples can be run in two different modes:
+The examples can be run using different streaming platforms:
 
-* <strong> With Kafka</strong>: This requires a running Kafka server, as discussed further below.
+* <strong>Kafka</strong>: This requires a running Kafka server, as discussed further below.
 
-* <strong>With NQKafka</strong>, which is a lightweight replacement of Kafka. With NQKafka, a server can be started easily from within Python without requiring installing extra software.
+* <strong>NQKafka</strong>: This is a lightweight replacement of Kafka. With NQKafka, a server can be started from within Python.
+
+* <strong> MQTT</strong>: Supporting MQTT is work in progress.
 
 By default, the examples are configured to use the second option (NQKafka).
 
