@@ -105,7 +105,7 @@ class MQTT_IO:
             _type_: Data frame
         """
         # msg = subscribe.simple(self.input_topic, **self.io_kwargs)
-        cons = MQTTConsumer(topic="pmudata", **self.io_kwargs)
+        cons = MQTTConsumer(topic=self.input_topic, **self.io_kwargs)
         msg = next(iter(cons))
         return msg.value
 
