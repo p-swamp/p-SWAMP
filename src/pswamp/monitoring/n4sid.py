@@ -156,7 +156,7 @@ class N4SIDApp(N4SID, TimeWindowApp):
                 'n_measurements': self.n_measurements,
                 'order': self.sys_order,
                 'eval_freq': self.eval_freq,
-                # 'channel_selection_idx': self.decoder.channel_selection_idx,
+                'channel_selection_idx': self.decoder.channel_selection_idx,
 
             },
             'result': {
