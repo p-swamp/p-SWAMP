@@ -75,10 +75,11 @@ class GridBasePlot3DLayers(GridBasePlot3D):
                 if child_layer in default_layers:
                     self.layer_settings.layer_select.show_layer('Base layers', child_layer) 
         # self.layer_select.hide()
-        bus_coords = self.layer_settings.layer_select.active_layer_instances[
-            "Base layers"]["Buses"].bus_coords
+        if "Base layers" in self.layer_settings.layer_select.active_layer_instances:
+            bus_coords = self.layer_settings.layer_select.active_layer_instances[
+                "Base layers"]["Buses"].bus_coords
         
-        self.center_camera_position(bus_coords)
+            self.center_camera_position(bus_coords)
 
         
     def set_non_base_layers_visibility(self, show=False):
