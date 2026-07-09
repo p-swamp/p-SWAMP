@@ -8,7 +8,7 @@ from pswamp.database import get_from_database
 
 
 def find_strings_containing_substring(strings_to_search, string_to_find):
-    return np.flatnonzero(np.core.defchararray.find(strings_to_search, string_to_find) != -1)[0]
+    return np.flatnonzero(np.char.find(strings_to_search, string_to_find) != -1)[0]
 
 
 class Load:

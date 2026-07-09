@@ -34,9 +34,9 @@ class DataReader:
         self.column_names = column_names = np.concatenate(column_names_per_file, dtype=str)
         # column_names = np.array([item.strip() for file_reader in self.file_readers.values() for item in next(file_reader).split(',')], dtype=str)
 
-        self.idx_time = np.flatnonzero(np.core.defchararray.find(column_names,'Timestamp')!=-1)
-        self.idx_freq = np.flatnonzero(np.core.defchararray.find(column_names,'Frequency')!=-1)
-        self.idx_dfreq = np.flatnonzero(np.core.defchararray.find(column_names,'Dfrequency')!=-1)
+        self.idx_time = np.flatnonzero(np.char.find(column_names,'Timestamp')!=-1)
+        self.idx_freq = np.flatnonzero(np.char.find(column_names,'Frequency')!=-1)
+        self.idx_dfreq = np.flatnonzero(np.char.find(column_names,'Dfrequency')!=-1)
 
         self.stations = stations = []
         self.pmu_ids = pmu_ids = []
@@ -135,11 +135,11 @@ class DataReader:
         if mode == 'all':
             mask = np.ones(len(list_of_strings), dtype=bool)
             for search_term in search_terms:
-                mask *= (np.core.defchararray.find(list_of_strings, search_term) != -1)
+                mask *= (np.char.find(list_of_strings, search_term) != -1)
         else:  # elif mode == 'any':
             mask = np.zeros(len(list_of_strings), dtype=bool)
             for search_term in search_terms:
-                mask += (np.core.defchararray.find(list_of_strings, search_term) != -1)
+                mask += (np.char.find(list_of_strings, search_term) != -1)
         if return_mask:
             return mask
         else:

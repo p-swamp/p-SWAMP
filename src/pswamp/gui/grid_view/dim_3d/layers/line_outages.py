@@ -40,7 +40,7 @@ class LineOutages(LineLayer):
     #     for line_name in self.lines_data['name']:
     #         string_to_be_found = line_name
     #         strings_to_search_in = np.array([h[1] for h in self.pmu_tw.tw.header[i_mag_cols]])
-    #         idx = np.flatnonzero(np.core.defchararray.find(strings_to_search_in,string_to_be_found)!=-1)
+    #         idx = np.flatnonzero(np.char.find(strings_to_search_in,string_to_be_found)!=-1)
     #         if len(idx) == 0:
     #             mask.append(False)
     #             continue
