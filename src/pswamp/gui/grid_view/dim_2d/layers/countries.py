@@ -11,7 +11,9 @@ class CountriesLayer:
         self.config = config
         sld_data = self.config["single_line_diagrams"][sld_id]
         geo = sld_data["geo"] if "geo" in sld_data else False
-        self.k = 2 if geo else 1
+        # self.k = 2 if geo else 1
+        self.k = sld_data["aspect_ratio"] if "aspect_ratio" in sld_data else (
+            2 if geo else 1)
         self.plotWidget = parent.plotWidget
         # countries_to_be_drawn = config['geo_data']['countries'] if 'geo_data' in config and 'countries' in config['geo_data'] else []
         if sld_id is not None:
