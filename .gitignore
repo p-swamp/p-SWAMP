@@ -25,6 +25,7 @@ __pycache__/
 *__pycache__/
 *.py[codz]
 *$py.class
+.db
 
 # C extensions
 *.so
