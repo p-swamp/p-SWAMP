@@ -55,7 +55,7 @@ def detect_islands(t, data, mean_threshold=0.05):
 
 
 class IslandingApp(TimeWindowApp):
-    def __init__(self, mean_threshold=None, eval_freq=1, window_length=10, **kwargs):
+    def __init__(self, mean_threshold=None, eval_freq=1, window_length=10, alarms_topic="alarms", **kwargs):
 
         TimeWindowApp.__init__(
             self,
@@ -68,7 +68,7 @@ class IslandingApp(TimeWindowApp):
             **kwargs)
         
         self.init(mean_threshold=mean_threshold)
-        self.alarm_handler = AlarmHandler(self)
+        self.alarm_handler = AlarmHandler(self, alarms_topic=alarms_topic)
         self.update_callbacks.append(self.alarm_handler.update)
         
     def init(self, mean_threshold=None):
@@ -123,6 +123,7 @@ def run_islanding_application(config, **kwargs):
         input_topic=config['topics']['pmudata'],
         output_topic=config['topics']['islanding'],
         status_topic=config['topics']['application.status'],
+        alarms_topic=config['topics']['alarms'],
         io_kwargs=config["streaming"],
         # eval_freq=1,
         **kwargs
