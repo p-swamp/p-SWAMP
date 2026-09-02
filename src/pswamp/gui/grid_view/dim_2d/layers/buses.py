@@ -21,7 +21,10 @@ class SLDLayer:
     def __init__(self, parent, config, sld_id=None, dim3d=False) -> None:
         self.config = config
         self.plotWidget = parent.plotWidget
-        self.k = 1. # 2 if geo else 1
+        sld_data = self.config["single_line_diagrams"][sld_id]
+        self.k = sld_data.get("aspect_ratio", 1)
+        self.k_dxf = sld_data.get("dxf_aspect_ratio", 1)
+        
         self.z0 = 1
         self.sld_id = sld_id
         
@@ -43,6 +46,9 @@ class SLDLayer:
         self.bus_names, self.bus_coords = sld.get_buses(
             doc, self.bus_data["name"].to_numpy()
         )
+
+        self.bus_coords[:, 1] *= self.k/self.k_dxf
+        
         self.x = self.bus_coords[:, 0]
         self.y = self.bus_coords[:, 1]
         self.z = self.y*0 + self.z0
