@@ -91,13 +91,13 @@ class OscillationAlarmView(InteractiveAlarmView):
                     continue
 
                 # self.bus_names, bus_coords_3d = load_bus_coords_for_current_stations(config, geo=view.geo, return_3d=True)
-                bus_coords_3d = load_bus_coords_for_stations(config, self.stations, geo=view.geo, return_3d = True)
+                bus_coords_3d = load_bus_coords_for_stations(config, self.stations, geo=view.geo, return_3d = True, sld_id=view.sld_id)
                 self.grid_view_islanding_layers[view_name] = Islanding(view, bus_coords_3d, view.geo, color_scheme='oscillations', n_max_islands = len(self.stations))
                 self.grid_view_islanding_layers[view_name].update_scatter([[i] for i in range(len(self.stations))])
                 
                 try:
-                    self.line_calculator = Line(config, self.tw_app.get_config_frame())
-                    self.grid_view_islanding_line_layers[view_name] = LineLayer(view, config, view.geo)
+                    self.line_calculator = Line(config["database"], self.tw_app.get_sample_data_frame())
+                    self.grid_view_islanding_line_layers[view_name] = LineLayer(view, config, view.sld_id)
                     
                     view.set_non_base_layers_visibility(False)
                     view.set_layer_visibility('Base layers', 'Static line data', False)
@@ -212,18 +212,24 @@ class OscillationAlarmView(InteractiveAlarmView):
 
         for layer in self.grid_view_islanding_layers.values():
             layer.update_scatter(islands=[[i] for i in range(len(self.stations))], z=node_z[self.station_idx])
+            [sc.setData(
+                size=50*(abs(ph/phasors[max_ph_idx])*0.6 + 0.4)
+            ) for ph, sc in zip(phasors, layer.bus_scatters)]
 
         # Set color of disconnected lines
         if self.line_calculator is not None:
             disconnected_lines = np.where(self.line_calculator.disconnected(self.tw_app.data_frame_storage[value]))[0]
             # connectable_lines = np.where((self.line_calculator.connectable(self.tw_app.pmu_data_frame_storage[value])))[0]
             for line_layer in self.grid_view_islanding_line_layers.values():
-                line_layer.reset_line_colors()
-                line_layer.reset_trafo_colors()
-                line_layer.set_line_colors(colors=[1, 0, 0, 1], idx=disconnected_lines)
+                line_layer.reset_colors()
+                line_layer.reset_colors()
+                line_layer.set_colors(colors=[1, 0, 0, 1], idx=disconnected_lines, key="line")
+                # line_layer.set_colors(colors=[0, 1, 0, 1], idx=connectable_lines, key="line")
+                line_layer.update_colors()
+                # line_layer.set_line_colors(colors=[1, 0, 0, 1], idx=disconnected_lines)
                 # line_layer.set_line_colors(colors=[0, 1, 0, 1], idx=connectable_lines)
-                line_layer.update_line_colors()
-                line_layer.update_trafo_colors()
+                # line_layer.update_line_colors()
+                # line_layer.update_trafo_colors()
 
     def close_view(self):
         for view in self.grid_view_islanding_layers.values():
