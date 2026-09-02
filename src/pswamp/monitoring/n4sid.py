@@ -107,6 +107,7 @@ class N4SIDApp(N4SID, TimeWindowApp):
             channel_selection={'measurement': 'f'}, 
             sys_order=10,
             num_block_rows=10,
+            alarms_topic="alarms",
             **kwargs
         ):
         TimeWindowApp.__init__(
@@ -118,7 +119,7 @@ class N4SIDApp(N4SID, TimeWindowApp):
             **kwargs
         )
         self.init(sys_order=sys_order, num_block_rows=num_block_rows)
-        self.alarm_handler = AlarmHandler(self)
+        self.alarm_handler = AlarmHandler(self, alarms_topic=alarms_topic)
         self.update_callbacks.append(self.alarm_handler.update)
 
     def init(self, sys_order=10, num_block_rows=10):
@@ -169,12 +170,14 @@ class N4SIDApp(N4SID, TimeWindowApp):
 
 
 
-def run_n4sid(config, window_length=45, sys_order=10, channel_selection_idx=None,):
+def run_n4sid(config, window_length=45, sys_order=10, channel_selection_idx=None):
     sid = N4SIDApp(
         io_kwargs=config["streaming"],
         window_length=window_length,
         input_topic=config['topics']["pmudata"],
         output_topic=config['topics']["modeestimation"],
+        alarms_topic=config["topics"]["alarms"],
+        status_topic=config["topics"]["application.status"],
         sys_order=sys_order,
         channel_selection_idx=channel_selection_idx,
     )
