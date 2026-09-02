@@ -2,7 +2,7 @@
 # Copyright Contributors to the p-SWAMP Project.
 
 import sys
-from PySide6.QtWidgets import QApplication, QMainWindow, QHBoxLayout, QDockWidget
+from PySide6.QtWidgets import QApplication, QMainWindow, QHBoxLayout, QDockWidget, QWidget
 from PySide6.QtCore import Qt
 # from PySide6.QtGui import *
 from pswamp.visualization.components.label_widget import LabelWidget
@@ -42,7 +42,7 @@ class CoordinationModuleGUI(QMainWindow):
         )
         alarm_monitor.start()
 
-        if 'other_tso' in config.keys():
+        if 'other_tso' in config:
             alarm_monitors_other_tsos = []
             for config_ in config['other_tso']:
                 alarm_monitor_other_tso = AlarmMonitor(
@@ -55,10 +55,19 @@ class CoordinationModuleGUI(QMainWindow):
         self.setCentralWidget(self.grid_view)
 
         dock_widget_area = Qt.RightDockWidgetArea
-        
-        if 'misc' in config and 'logo_path' in config['misc'].keys():
+
+        if "misc" in config and "logo_path" in config["misc"].keys():
+            self.d0_pswamp = QDockWidget("", self)
+            self.d0_pswamp.setTitleBarWidget(QWidget()) # Empty title bar
+            img_path = config["misc"]["logo_path"].resolve()
+            self.logo_widget = LabelWidget(img_path)
+            self.d0_pswamp.setWidget(self.logo_widget)
+            self.addDockWidget(dock_widget_area, self.d0_pswamp)
+
+        if 'misc' in config and 'tso_logo_path' in config['misc'].keys():
             self.d0 = QDockWidget("", self)
-            img_path = config['misc']['logo_path'].resolve()
+            self.d0.setTitleBarWidget(QWidget())
+            img_path = config["misc"]["tso_logo_path"].resolve()
             self.logo_widget = LabelWidget(img_path)
             self.d0.setWidget(self.logo_widget)
             self.addDockWidget(dock_widget_area, self.d0)
