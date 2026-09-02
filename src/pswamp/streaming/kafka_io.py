@@ -133,8 +133,11 @@ class KafkaIO:
         self.status_producer = KafkaProducer(
             **io_kwargs, value_serializer=encoder)
         
-        self.command_consumer = KafkaConsumer(
-            self.command_topic, **self.io_kwargs)
+        if self.command_topic is not None:
+            self.command_consumer = KafkaConsumer(
+                self.command_topic, **self.io_kwargs)
+        else:
+            self.command_consumer = None
 
     def get_sample_data_frame(self):
         """Get sample data frame from input (without affecting input stream)
