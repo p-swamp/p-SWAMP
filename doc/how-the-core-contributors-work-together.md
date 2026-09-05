@@ -84,7 +84,9 @@ testable locally for example via synthetic data, stubs/mocks etc.
 
 ## Do not put any secrets in this repo
 
-**This repo will periodically be published to a public mirror**. Do not check in any sensitive api keys, tokens etc.
+**This is an implicitly public open source repo**. Assume that anything committed and pushed to the github remote of the repo is public knowledge. 
+
+Do not check in any sensitive api keys, tokens etc.
 
 If this happens by accident, such "leaks" are hard to remove again fully from git due to its distributed nature, so secrets added to the git repo are considered compromised and have to immediately be updated/rotated in the system they access/belong to.
 
@@ -96,11 +98,22 @@ need to be kept up to date frequently/continously.
 
 ## "Holding off" sharing some algorithms with published code?
 
-Remember: the main branch of the repo will periodically be published in the public [Linux Foundation Energy](https://lfenergy.org/projects/p-swamp/project) project.
+If you have any algorithms or other sensitive work that should not land in the public repo right away 
+(pending a paper being published or something like that),
+we suggest you clone the public repo, then create your own feature branch that you work in (and keep rebased off the main repo regularly).
 
-If you have any algorithms or other sensitive work that should not land there right away,
-raise that concern and lets chat about it together *before* you do a pull request into main - so we can figure out
-together if those bits should just live in branch or something else, depending on timeline and sensitivity.
+## DCO: signing off your commits
+
+The Linux Foundation Energy hosts our project and requires the developers to sign off commits in all their work on the repo.
+Signing off commits in this manner is a way to declare that your contribution complies with the points laid out in
+https://developercertificate.org/
+
+The repo has a DCO check on PRs. If it finds commits with missing signature in your PR, you can amend it on your branch 
+like this:
+
+`git rebase --signoff $(git merge-base HEAD main)`
+
+Then force push, this should fix the issue.
 
 ## Write down the decisions that shape the system
 

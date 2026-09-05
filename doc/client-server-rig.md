@@ -1,7 +1,5 @@
 # P-SWAMP client-server architecture
 
-
-
 Driving goals, constraints and principles:
 ==
 
@@ -17,18 +15,17 @@ against real production data from inside TSO infrastructure.
 - Should do what we can to prevent people from tripping over each other and break others code/modules (some guardrails, such as basic syntax error checking before push). Probably also some automated testing
 at least for a "reference app" to ensure the basic structure of the repo/project stays intact.
 
-- Should have private github repo for partners to contribute to/pull from, without confidential data.
-  With a public mirror that we publish to Linux Foundation Energy regularly.
+- The public open source repo does not contain any TSO config/details, nor any explicit authentication. 
+- Any deployments of the repo in the wild must bolt on their own auth, config etc.
 
 - Consumed PMU/grid data need to be stubbed out, so that deployments in TSO infra fetches from full dataset, while the public
   repo consumes local non-sensitive test data during local development/testing.
 
-- Apis that return sensitive prod data when deployed in SN infra must filter/shape/transform the data to only show what the UI needs to display/convey,
+- Apis that return sensitive prod data when deployed in TSO infra must filter/shape/transform the data to only show what the UI needs to display/convey,
   not send entire dataset to client (production PMU data is K3 graded eg. should not be directly transmitted to a frontend in its raw form)
 
 - Tech stack is as basic as possible, should be as easy as possible now but also make it easy to promote to prod system later if value is clear.
-  Python is the research language used so far in the project. 
-- React + Typescript is the lingua franca of web dev in 2026, and also main choice in on of the backing TSOs.
+  Python is the research language used so far in the project. Eeact + Typescript is the lingua franca of web dev in 2026, and also main choice inside of the currently backing TSO(s).
 
 - Start with only basic modularization (clear src folder structure separation between different pages/api endpoints in the repo).
   Defer jumping down rabbithole of microservices, separate packages, multi repo etc to begin with.
