@@ -60,8 +60,8 @@ k8s/          Kubernetes manifests
 scripts/      the stable developer interface — start the server, start the web
               client, run in minikube, etc. Call these rather than the underlying
               docker/npm/uv commands; they stay the same if the tooling changes.
-.github/      CI: workflows/ci-pipeline.yml (static-errorcheck -> e2e-smoke-test ->
-              push the container image to GHCR)
+.github/      CI: workflows/quality-checks.yml (checks + tests on pull requests) and
+              workflows/build-and-publish.yml (push the container image to GHCR on main)
 .githooks/    pre-push hook running scripts/error_check.sh. Opt in per clone with
               `git config core.hooksPath .githooks`.
 ```
@@ -165,8 +165,9 @@ the same host/port. Test this "prod mode" locally in minikube with
 Build pipeline (CI)
 ==
 
-One pipeline, `.github/workflows/ci-pipeline.yml`, publishing to **GHCR** —
-`ghcr.io/<owner>/p-swamp`.
+Two workflows under `.github/workflows/`: `quality-checks.yml` gates pull
+requests, and `build-and-publish.yml` publishes every change to `main` (and any
+`v*` tag) to **GHCR** — `ghcr.io/<owner>/p-swamp`.
 
 ```
 docker pull ghcr.io/<owner>/p-swamp:latest

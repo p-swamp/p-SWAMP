@@ -46,8 +46,8 @@ which exist to keep the "adding a page" path honest:
   a refactor or a dependency upgrade, open it and click: a working counter proves
   routing, the socket, the client id, a POST command and the generated contract
   all still hold. **`./scripts/e2e-smoke-test.sh` now does that click-through for
-  you**, and CI runs it against the built image before publishing, so breaking
-  this app fails the pipeline rather than someone's afternoon. So keep it boring
+  you**, and CI runs it against the built image on every pull request, so
+  breaking this app fails the checks rather than someone's afternoon. So keep it boring
   and keep it current: change a convention here
   first, don't grow features on it, and don't use it for p-SWAMP experiments —
   generate a new subapp for those.
@@ -96,9 +96,8 @@ Consequences worth knowing before touching anything:
   `app/server-python/src/` is the server. This file always means the latter unless
   it says otherwise.
 - **Root `src/` is now IN the image**, installed editable at
-  `/workspace/p-SWAMP/src`. It follows that CI's path filters include `src/**` and
-  the root `pyproject.toml`, and that `.dockerignore` has to keep `build/` (~1.6
-  GB), `examples/` and `tests/` out of the build context by hand. It also follows
+  `/workspace/p-SWAMP/src`. It follows that `.dockerignore` has to keep `build/`
+  (~1.6 GB), `examples/` and `tests/` out of the build context by hand. It also follows
   that the image mirrors the *repo root*, not just the server dir — see the
   workspace note at the top of the Dockerfile's runtime stage for why the depth is
   required rather than a matter of taste.
@@ -1083,39 +1082,37 @@ mind when editing that script:
   it. Ruff's own version is pinned in the `dev` dependency group of
   `app/server-python/pyproject.toml` and locked, so everyone runs the identical
   linter.
-- **CI publishes; it never deploys.** The pipeline (below) checks, then builds and
-  pushes the image. Nothing rolls anything out to a cluster. The **pre-push hook**
+- **CI publishes; it never deploys.** The workflows (below) check pull requests
+  and push an image from `main`. Nothing rolls anything out to a cluster. The **pre-push hook**
   is still the first gate and the fast one — run `error_check.sh` before finishing
   any change rather than discovering it in CI.
 
 ## CI
 
-**One pipeline: `.github/workflows/ci-pipeline.yml`**, `static-errorcheck` →
-`unit-tests` → `e2e-smoke-test` → `build`, publishing to **GHCR**
-(`ghcr.io/<owner>/<repo>`). The three gates run on every branch and pull request;
-**only a push to `main` (or a `v*` tag) publishes**, and a failing check, a
-failing unit test, or a smoke test that cannot get a response out of the built
-image produces no image. No secret to configure — the automatic `GITHUB_TOKEN`
-covers GHCR. The `unit-tests` job runs the Python suites through their runner
-scripts (`run-python-server-tests.sh`; the desktop `run-core-python-tests.sh`
-step is commented out with a TODO until its missing-module failure is resolved),
-so `error_check.sh` stays strictly static.
+**Two workflows under `.github/workflows/`, one per concern:**
 
-**A pull request no longer builds the publishable image at all.** The job used to
-run there with `push: false`, to prove the Dockerfile still built — but the
-e2e-smoke-test job now builds that same image *and* gets a response out of it, which
-proves strictly more, so the publish job is skipped outright rather than run with
-the push disabled.
+- **`quality-checks.yml`** runs on every pull request (and from the Actions tab):
+  three independent jobs, `static-errorcheck`, `unit-tests` and
+  `e2e-smoke-test`. It publishes nothing. `unit-tests` runs the Python suites
+  through their runner scripts (`run-python-server-tests.sh`; the desktop
+  `run-core-python-tests.sh` step is commented out with a TODO until its
+  missing-module failure is resolved), so `error_check.sh` stays strictly static.
+- **`build-and-publish.yml`** runs on every push to `main`, on a `v*` tag, and
+  from the Actions tab: it builds the image and pushes it to **GHCR**
+  (`ghcr.io/<owner>/<repo>`). It runs no gates of its own — `main` is protected,
+  so every commit on it already passed the checks on its pull request. No secret
+  to configure — the automatic `GITHUB_TOKEN` covers GHCR.
 
-**Blocking a merge on those gates is a repo setting, not something the workflow
+A branch with no PR open runs nothing.
+
+**Blocking a merge on the checks is a repo setting, not something a workflow
 can express.** Settings → Branches → branch protection for `main` → "Require
 status checks to pass", selecting **`static-errorcheck`**, **`unit-tests`** and
 **`e2e-smoke-test`**. Those rules match on the *job* name, not the workflow's, so
 renaming a job silently un-requires it there — rename the job and the protection
-rule together. `unit-tests` is the newest gate; add it to the required set, or a
-PR could merge with a failing test.
-(The job was called `check` before the workflow was renamed to `ci-pipeline.yml`;
-if protection was configured against that name it needs re-selecting.)
+rule together. (The jobs used to live in a single `ci-pipeline.yml`, and before
+that the check job was called `check`; if protection was configured against
+either, it needs re-selecting.)
 
 GHCR is the only registry. A GitLab pipeline publishing to a GitLab registry was
 built and tested against the internal mirror's runners, then dropped: publishing
@@ -1161,33 +1158,19 @@ What has to hold in the `static-errorcheck` job:
   off the network.
 - **Cache keys:** npm on `app/client-web/package-lock.json`, uv on
   `app/server-python/uv.lock`. Both are committed, so both are valid keys.
-- **The push filter must list this workflow's own filename.** It is
-  `.github/workflows/ci-pipeline.yml`; a filter naming a path that no longer
-  exists fails silently, by never re-running the pipeline for a change to the
-  pipeline. Rename the file and fix the filter in the same commit.
-- **Use directory globs in path filters, never per-file lists.** An older workflow
-  listed the two `.py` files individually, which silently missed
-  `pyproject.toml`/`uv.lock` — a dependency-only change would not have triggered
-  a rebuild. `app/**` plus `Dockerfile`, and `scripts/error_check.sh` so a change
-  to the gate re-runs the gate.
-- **The filters also cover root `src/**` and root `pyproject.toml`.** They used to
-  be `app/**` only, correctly, back when the image contained nothing from the repo
-  root. It now installs the desktop package from root `src/`, so a change there
-  changes what gets published and must rebuild. If the image's contents ever
-  change again, check these filters — a stale filter fails silently, by publishing
-  an image that does not match the commit.
-- **…but the `pull_request` trigger deliberately has NO paths filter.** The two
-  gates are required status checks, and GitHub scores a required check that never
+- **No `paths` filter on the `pull_request` trigger, on purpose.** The three
+  jobs are required status checks, and GitHub scores a required check that never
   ran as *pending* rather than passed — so a PR whose files all fell outside a
   filter would sit "Expected — waiting for status to be reported" and be
-  unmergeable for ever. On the publish side a filter only decides whether to spend
-  a build; on the merge-gate side it decides whether a PR can merge at all. A
-  docs-only PR therefore pays for a heavily cached run. Don't "tidy" the two
-  triggers into agreeing.
-- **Gate ordering:** the build job `needs:` the smoke test job, which `needs:` the
-  `static-errorcheck` job, or a failing gate still produces an image.
-- **The smoke test job builds the image a second time, but rarely pays for it.**
-  It shares the publish job's `type=gha` buildx cache, so whichever runs first
+  unmergeable for ever. A docs-only PR therefore pays for a heavily cached run.
+  The `main` push trigger in `build-and-publish.yml` has none either: every
+  change to `main` builds. If one is ever added there, use directory globs (a
+  per-file list once silently missed `pyproject.toml`/`uv.lock`), cover root
+  `src/**` and the root `pyproject.toml` (both are in the image), and list the
+  workflow's own path — a filter naming a file that no longer exists fails
+  silently, by never re-running the pipeline for a change to the pipeline.
+- **The smoke test builds the image too, but rarely pays for it.** Both
+  workflows use the same `type=gha` buildx cache, so whichever runs first
   populates it and the other mostly hits it; `load: true` (not `push`) puts the
   image in the runner's own daemon. It runs the image with `docker run` and its
   own CMD rather than `docker compose up`, because compose overrides the command

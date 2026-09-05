@@ -1,0 +1,126 @@
+# Quality gates for pull requests. Publishes nothing; the container image is
+# built and pushed by build-and-publish.yml on main.
+#
+# Three independent jobs:
+#   static-errorcheck — scripts/error_check.sh, the same gate .githooks/pre-push runs
+#   unit-tests        — the Python test suites via their runner scripts
+#   e2e-smoke-test    — builds the image, runs it, drives the Reference example
+#
+# Making these block a merge is a repo setting: Settings → Branches → protection
+# for main → "Require status checks to pass", selecting the three JOB names above.
+# Renaming a job here silently un-requires it there — rename both together.
+#
+# No paths filter on pull_request, on purpose: GitHub scores a required check
+# that never ran as pending, so a PR outside the filter could never merge.
+name: quality-checks
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+# A new push to the same PR cancels the previous run.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  static-errorcheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      # error_check.sh needs node, npx, uv and python3. Node 24 matches the
+      # Dockerfile's web-build stage.
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: app/client-web/package-lock.json
+
+      # `uv`, not `uvx`: ruff comes from the locked dev dependency group.
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+          cache-dependency-glob: app/server-python/uv.lock
+
+      # `uv lock --check` runs --offline and needs a real 3.11 (per
+      # app/server-python/.python-version); the runner's newer python3 won't do.
+      - name: Install Python 3.11 for uv
+        run: uv python install 3.11
+
+      # Installs node_modules and syncs the server env itself (the api-contract
+      # check imports the FastAPI app), so there is no separate install step.
+      - name: Static checks (tsc, eslint, uv lock --check, py_compile, ruff, api contract)
+        run: ./scripts/error_check.sh
+
+  unit-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+          cache-dependency-glob: app/server-python/uv.lock
+      - run: uv python install 3.11
+
+      # Hermetic: HubRegistry is driven with a stubbed Hub, nothing binds a port.
+      - name: Server unit tests
+        run: ./scripts/run-python-server-tests.sh
+
+      # TODO Re-enable once the desktop suite (repo-root tests/) collects again:
+      # tests/test_run_simple_case_{kafka,nqkafka}.py import
+      # pswamp.monitoring.utils.TimeWindowRTApp, removed in 15a3f7a. It also needs
+      # Kafka/NQKafka/MQTT brokers and a Qt display, so the infra-bound tests
+      # must be skip-guarded first.
+      # - name: Core (desktop) unit tests
+      #   run: ./scripts/run-core-python-tests.sh
+
+  # error_check.sh never starts the app; this job only starts it. It runs the
+  # image as a cluster would (the Dockerfile's own CMD, no compose dev overrides)
+  # and drives the Reference example end to end. See scripts/e2e-smoke-test.sh.
+  e2e-smoke-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      # uv for the WebSocket half of the test, which runs in the server's locked
+      # environment (websockets is already there via uvicorn[standard]).
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+          cache-dependency-glob: app/server-python/uv.lock
+      - run: uv python install 3.11
+
+      # Shares the type=gha layer cache with build-and-publish.yml, so this build
+      # is mostly a cache hit. `load: true` puts the image in the runner's daemon.
+      - uses: docker/setup-buildx-action@v4
+      - name: Build the image under test
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          platforms: linux/amd64
+          load: true
+          tags: p-swamp:smoketest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # `docker run`, not `docker compose up`: compose overrides the command with
+      # `uvicorn --reload` for local dev, which is not what ships.
+      - name: Start the server
+        run: |
+          docker run -d --name p-swamp-smoketest \
+            -p 8000:8000 -e HOST=0.0.0.0 -e PORT=8000 \
+            p-swamp:smoketest
+
+      # SMOKETEST_URL = test this server, don't manage its lifecycle. The script
+      # waits for /healthz itself.
+      - name: Smoke test the running image
+        run: SMOKETEST_URL=http://127.0.0.1:8000 ./scripts/e2e-smoke-test.sh
+
+      - name: Server log
+        if: always()
+        run: docker logs p-swamp-smoketest || true
+
+      - name: Stop the server
+        if: always()
+        run: docker rm -f p-swamp-smoketest || true

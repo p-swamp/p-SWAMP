@@ -1,0 +1,95 @@
+# Build the container image (web client + server, one Dockerfile) and push it to
+# GitHub Container Registry. Runs on every change to main, on v* tags, and from
+# the Actions tab.
+#
+# No quality gates here: main is protected, so every commit on it already passed
+# quality-checks.yml on its pull request.
+#
+# Pulling what this publishes:
+#   docker pull ghcr.io/<owner>/p-swamp:latest          # newest main
+#   docker pull ghcr.io/<owner>/p-swamp:sha-<full sha>  # immutable; pin deployments to this
+#   docker pull ghcr.io/<owner>/p-swamp:v1.2.3          # from a v* tag
+#
+# A newly created GHCR package is PRIVATE: an unauthenticated pull fails until it
+# is flipped to public once, under the package's settings on github.com. The
+# org.opencontainers.image.source label links the package back to this repo.
+name: build-and-publish
+
+on:
+  push:
+    branches: [main] # Main is protected, but this runs on PR merges as well (github pushes to main)
+    tags: ["v*"]
+  workflow_dispatch:
+
+# Never cancel a publish in progress: every main commit should get its sha tag.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  # GHCR needs an all-lowercase path and this repo's name is not (p-SWAMP).
+  # docker/metadata-action lowercases it; anything using IMAGE_NAME directly
+  # must lowercase it too, or the push fails with "invalid reference format".
+  IMAGE_NAME: ghcr.io/${{ github.repository }}
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write # GHCR push with the automatic GITHUB_TOKEN; no extra secret
+    steps:
+      - uses: actions/checkout@v5
+
+      # buildx for the layer cache; no QEMU, the image is amd64 only.
+      - uses: docker/setup-buildx-action@v4
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Tags produced:
+      #   main / latest      — on a push to main
+      #   sha-<full sha>     — always; immutable, the one to pin a deployment to
+      #   v1.2.3 / 1.2       — on a v* tag
+      - id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=sha,format=long
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      # Context is the repo root: the web-build stage needs app/client-web/ and
+      # the runtime stage needs root src/. amd64 only: that is what the clusters
+      # run, and dev boxes build their own image via compose/minikube.
+      - name: Build and push
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          platforms: linux/amd64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          # Exposed to Vite as VITE_GIT_SHA; the footer shows it on deployed origins.
+          build-args: |
+            GIT_SHA=${{ github.sha }}
+          # Layer cache in GitHub's cache backend, shared with quality-checks.yml.
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Summary
+        run: |
+          {
+            echo "### Pushed image tags"
+            echo
+            echo '```'
+            echo "${{ steps.meta.outputs.tags }}"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
