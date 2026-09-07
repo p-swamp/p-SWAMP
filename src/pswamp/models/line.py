@@ -25,8 +25,22 @@ class Line:
             
         line_subset_idx = lookup_strings(units, line_data['name'])
 
-        self.from_bus_idx = lookup_strings(line_data['from_bus'][line_subset_idx], bus_data['name'])
-        self.to_bus_idx = lookup_strings(line_data['to_bus'][line_subset_idx], bus_data['name'])
+        from_bus = -1*np.ones(len(self.units), dtype=int)
+        to_bus = -1*np.ones(len(self.units), dtype=int)
+        fr, f_mask = lookup_strings(line_data['from_bus'][line_subset_idx], bus_data['name'], return_mask=True)
+        to, t_mask = lookup_strings(line_data['to_bus'][line_subset_idx], bus_data['name'], return_mask=True)
+        from_bus[f_mask] = fr
+        to_bus[t_mask] = to
+
+        self.units = units[f_mask*t_mask]
+        line_subset_idx = line_subset_idx[f_mask * t_mask]
+        self.from_bus_idx = from_bus[f_mask*t_mask]
+        self.to_bus_idx = to_bus[f_mask*t_mask]
+        # self.from_bus_idx = lookup_strings(line_data['from_bus'][line_subset_idx], bus_data['name'])
+        # self.to_bus_idx = lookup_strings(line_data['to_bus'][line_subset_idx], bus_data['name'])
+        # assert len(self.from_bus_idx) == len(self.units)
+        # assert len(self.to_bus_idx) == len(self.units)
+
 
         self.freq_from_extractor = PMUFreqExtractor(
             wanted_stations=bus_data['name'][self.from_bus_idx].to_list(),
