@@ -19,8 +19,9 @@ class Islanding:
     def __init__(self, parent, bus_coords_3d, geo=True, color_scheme='islanding', n_max_islands=8) -> None:
         self.plotWidget = parent.plotWidget
 
-        self.k = 2 if geo else 1
-        bus_coords_3d[:, 1] *= self.k
+        # self.k = 2 if geo else 1
+        # bus_coords_3d[:, 1] *= self.k
+        self.k = 1
 
         self.uuid = uuid.uuid4()
         self.parent = parent
