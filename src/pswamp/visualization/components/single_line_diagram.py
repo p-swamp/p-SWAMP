@@ -127,7 +127,10 @@ def get_lines(doc):
         segment_lengths = np.sqrt(np.sum((xy[1:, :] - xy[:-1, :])**2, axis=1))
         target_length = sum(segment_lengths) / 2
         segment_idx = np.argmax(np.cumsum(segment_lengths) > target_length)
-        share = (target_length - np.sum(segment_lengths[:segment_idx]))/segment_lengths[segment_idx]
+        if segment_lengths[segment_idx] > 0:
+            share = (target_length - np.sum(segment_lengths[:segment_idx]))/segment_lengths[segment_idx]
+        else:
+            share = np.nan
         midpoint = xy[segment_idx] + share*(xy[segment_idx + 1] - xy[segment_idx])
 
         full_lines.append({'from': from_bus, 'to': to_bus, 'xy': xy, 'midpoint': midpoint})
