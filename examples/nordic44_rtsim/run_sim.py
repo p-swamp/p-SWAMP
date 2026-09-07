@@ -1,19 +1,24 @@
+import multiprocessing
 import multiprocessing as mp
-import numpy as np
-
-from topsrt.interfacing import QueueManager, InterfaceListener
-from PySide6 import QtWidgets, QtCore
-from topsrt.rtsim_plot import SyncPlot
-import sys
-from topsrt.rtsim_plot import RTSimPlot
-from topsrt.sim import RealTimeSimulatorThread
-from topsrt.gui import LineOutageWidget, SimulationControl, ConsoleWidget, VSCControlWidget
-from topsrt.pmu_currents_freq import PMUPublisherCurrentsFreq as PMUPublisher
-from multiprocessing.managers import dispatch,listener_client
-
-import time
-from topsrt_random_load_variations import RandomLoadVariations
 import socket
+import sys
+import time
+from multiprocessing.managers import dispatch, listener_client
+
+import numpy as np
+from PySide6 import QtCore, QtWidgets
+from topsrt.gui import (
+    ConsoleWidget,
+    LineOutageWidget,
+    SimulationControl,
+    VSCControlWidget,
+)
+from topsrt.interfacing import InterfaceListener, QueueManager
+from topsrt.pmu_currents_freq import PMUPublisherCurrentsFreq as PMUPublisher
+from topsrt.rtsim_plot import SyncPlot  # , RTSimPlot
+from topsrt.sim import RealTimeSimulatorThread
+from topsrt_random_load_variations import RandomLoadVariations
+
 local_ip = socket.gethostbyname(socket.gethostname())
 
 
@@ -26,14 +31,14 @@ def main_pmu(qm_kwargs, pmu_publisher_type=PMUPublisher, pmu_kwargs={'ip': local
     # interface = RTSimPlot(n_samples=1000)
     # InterfaceListener.send_interface_init(manager, interface)
 
-    sync_plot = SyncPlot(n_samples=1000, update_freq=50)
-    tw_plot = RTSimPlot(n_samples=1000)
+    # sync_plot = SyncPlot(n_samples=1000, update_freq=50)
+    # tw_plot = RTSimPlot(n_samples=1000)
     pmus = pmu_publisher_type(**pmu_kwargs)
 
-    [InterfaceListener.send_interface_init(manager, interface) for interface in [sync_plot, pmus, tw_plot]]
-    sync_plot.start()
+    [InterfaceListener.send_interface_init(manager, interface) for interface in [pmus]]  # [sync_plot, pmus, tw_plot]]
+    # sync_plot.start()
     pmus.start()
-    tw_plot.start()
+    # tw_plot.start()
 
     app.exec()
 
@@ -64,16 +69,19 @@ class RTSimControlPanel(QtWidgets.QWidget):
         self.sim_ctrl = SimulationControl(rts)
         self.load_ctrl = VSCControlWidget(rts, max_dev=5)
         self.console = ConsoleWidget(namespace=console_namespace)
+        self.sync_plot = SyncPlot(rts, n_samples=1000, update_freq=50)
+        self.sync_plot.start()
         
         layout = QtWidgets.QGridLayout()
-        layout.addWidget(QtWidgets.QLabel('Connect/disconnect lines'), 0, 0, 1, 2)
-        layout.addWidget(self.line_outage_ctrl.ctrlWidget, 1, 0, 1, 2)
+        layout.addWidget(QtWidgets.QLabel('Connect/disconnect lines'), 0, 0, 1, 3)
+        layout.addWidget(self.line_outage_ctrl.ctrlWidget, 1, 0, 1, 3)
         layout.addWidget(QtWidgets.QLabel('Simulation speed, pause, reset'), 2, 0)
         layout.addWidget(self.sim_ctrl.ctrlWidget, 3, 0)
         layout.addWidget(QtWidgets.QLabel('Adjust loads'), 4, 0)
         layout.addWidget(self.load_ctrl.ctrlWidget, 5, 0)
         layout.addWidget(QtWidgets.QLabel('Console'), 2, 1)
         layout.addWidget(self.console, 3, 1, 3, 1)
+        layout.addWidget(self.sync_plot.graphWidget, 3, 2, 3, 1)
 
         self.setLayout(layout)
 
@@ -90,6 +98,9 @@ def main(qm_kwargs, speed=1, t_end=np.inf):
     ps = create_sim()
     rts = RealTimeSimulatorThread(ps, dt=10e-3, t_end=t_end, speed=speed)
 
+    
+    print(multiprocessing.current_process())
+
     random_loads = RandomLoadVariations(rts, name='RandomLoads')
     random_loads.start()
 
@@ -99,9 +110,8 @@ def main(qm_kwargs, speed=1, t_end=np.inf):
     app = QtWidgets.QApplication(sys.argv)
 
     # Add Control Widgets
-    control_panel = RTSimControlPanel(rts, console_namespace=dict(
-        rts=rts, random_loads=random_loads)
-    )
+    control_panel = RTSimControlPanel(rts, console_namespace={
+        "rts": rts, "random_loads": random_loads})
     control_panel.show()
 
     rts.start()
