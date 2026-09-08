@@ -198,7 +198,7 @@ class TimeWindowPlotGUI(QtWidgets.QMainWindow):
     
 
 
-def run_time_window_plot(*config_args, update_freq=25, n_max_plots=50, **kwargs):
+def run_time_window_plot(*config_args, window_length=10, update_freq=25, n_max_plots=50, **kwargs):
     config = load_config(*config_args)
 
     app = QtWidgets.QApplication(sys.argv)
@@ -219,6 +219,7 @@ def run_time_window_plot(*config_args, update_freq=25, n_max_plots=50, **kwargs)
         # countries=config['geo_data']['countries'] if 'geo_data' in config and 'countries' in config['geo_data'] else [],
         update_freq=update_freq,
         n_max_plots=n_max_plots,
+        window_length=window_length,
         **kwargs
     )
     time_window_plot_gui.show()
