@@ -40,17 +40,15 @@ class FrequencyHeatMap:
         self.config = config
         self.uuid = uuid.uuid4()
         self.plotWidget = parent.plotWidget
-        self.k = 1  # 2 if geo else 1
+        sld_data = self.config["single_line_diagrams"][sld_id]
+        self.k = sld_data["aspect_ratio"] if "aspect_ratio" in sld_data else 1
+        self.k_dxf = (
+            sld_data["dxf_aspect_ratio"] if "dxf_aspect_ratio" in sld_data else 1
+        )
         self.sld_id = sld_id
         
-        # bus_names, bus_coords_3d = load_bus_coords_for_current_stations(config, return_3d=True, geo=geo)
-        
-        # bus_coords_3d[:, 1] *= self.k
         self.read_sld_data(config["database"])
 
-        # self.x = bus_coords_3d[:, 0]
-        # self.y = bus_coords_3d[:, 1]
-        # self.z = bus_coords_3d[:, 2]
         self.y *= self.k
         bus_coords_3d = np.vstack([self.x, self.y, self.z]).T
 
@@ -61,22 +59,14 @@ class FrequencyHeatMap:
         )
         self.heatmap.im.setZValue(-10)
 
-        # pmu_tw = PMUTimeWindowOnline(n_samples=1, kafka_topic=config['topics']['pmudata'], io_kwargs=config["streaming"])
-        # pmu_tw.initialize()
-        # self.pmu_tw = pmu_tw
-        # pmu_tw_thread = threading.Thread(target=pmu_tw.run, daemon=True)
-        # pmu_tw_thread.start()
         self.pmu_tw = SnapshotApp(
             # n_samples=1,
             input_topic=config["topics"]["pmudata"],
             io_kwargs=config["streaming"],
         )
-        # self.pmu_tw.update_callbacks.append(lambda: print("Update"))
 
         pmu_tw_thread = threading.Thread(target=self.pmu_tw.run, daemon=True)
         pmu_tw_thread.start()
-
-        # self.freq_col_idx = self.pmu_tw.tw.get_col_idx(measurement="f")
 
         self.bus_mdl = model_lib.bus.Bus(
             config["database"], self.pmu_tw.get_sample_data_frame()
@@ -97,6 +87,8 @@ class FrequencyHeatMap:
         self.bus_names, self.bus_coords = sld.get_buses(
             doc, self.bus_data["name"].to_numpy()
         )
+        self.bus_coords[:, 1] *= self.k/self.k_dxf
+
         self.x = self.bus_coords[:, 0]
         self.y = self.bus_coords[:, 1]
         self.z = self.y * 0

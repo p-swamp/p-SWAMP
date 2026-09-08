@@ -39,6 +39,7 @@ class LinesFreq(LineLayer):
             # n_samples=1,
             input_topic=config["topics"]["pmudata"],
             io_kwargs=config["streaming"],
+            command_topic=None,
         )
         # pmu_input.initialize()
         self.pmu_input = pmu_input

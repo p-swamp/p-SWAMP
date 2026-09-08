@@ -25,7 +25,12 @@ from pswamp.database import get_from_database
 class PhasorPlotLayer:
     def __init__(self, parent, config, sld_id=None, geo=True) -> None:
         self.config = config
-        self.k = 2 if geo else 1
+        sld_data = self.config["single_line_diagrams"][sld_id]
+        self.k = sld_data["aspect_ratio"] if "aspect_ratio" in sld_data else 1
+        self.k_dxf = (
+            sld_data["dxf_aspect_ratio"] if "dxf_aspect_ratio" in sld_data else 1
+        )
+
         self.uuid = uuid.uuid4()
         self.parent = parent
         self.sld_id = sld_id
@@ -87,6 +92,7 @@ class PhasorPlotLayer:
         self.bus_names, self.bus_coords = sld.get_buses(
             doc, self.bus_data["name"].to_numpy()
         )
+        self.bus_coords[:, 1] *= self.k/self.k_dxf
         
     def add_phasor_plot(self, bus_coords):
         return PhasorPlot(

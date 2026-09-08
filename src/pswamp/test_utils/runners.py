@@ -29,7 +29,7 @@ def run_nqkafka_server(*config_args, run_in_process=True):
 def create_topics(*config_args, n_samples=6000):
     config = load_config(*config_args)
     # Create topics:
-    for topic in config['topics']:
+    for topic in config['topics'].values():
         create_topic(name=topic, io_kwargs=config["streaming"], n_samples=n_samples)
 
 

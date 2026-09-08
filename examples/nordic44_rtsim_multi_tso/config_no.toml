@@ -1,0 +1,110 @@
+model_data_path='data_no/model_data.json'
+
+[pmus]
+ip='192.168.10.1'
+port=50000
+stations = [
+    '3359', '3115', '3244', '3701',  # SE
+    '5100', '5101', '5102', '5103', '5300', '5301',
+    '5304', '5305', '5400', '5401', '5402', '5500',
+    '5501', '5600', '5601', '5602', '5603', '5610',
+    '5620', '6000', '6001', '6100', '6500', '6700',
+    '6701',
+]
+
+[pdc]
+ip='192.168.10.1'
+port=50000
+id=1
+
+
+[misc]
+logo_path='tso_logos/pswamp.svg'
+tso_logo_path='tso_logos/statnett.png'
+
+# ['graphics']
+# background_color=[255, 255, 255]
+# gl_mode='translucent'
+
+[topics]
+"application.status"="no.application.status"
+"application.commands"="no.application.commands"
+"pmudata"="no.pmudata"
+# "pmu.coords"="no.pmu.coords"
+"modeestimation"="no.modeestimation"
+"voltage.stability.index"="no.voltage.stability.index"
+"alarms"="no.alarms"
+"islanding"="no.islanding"
+"grid.events"="no.grid.events"
+# "model.data"="no.model.data"
+
+
+[streaming]
+# type="kafka"
+# bootstrap_servers="192.168.10.10:9092"
+type="nqkafka"
+bootstrap_servers="localhost:40000"
+# type="mqtt"
+# hostname="localhost"
+# port=1883
+
+
+
+# [database]
+# type="file"
+# file_path='data/model_data.json'
+[database]
+type="sqlite"
+file_path="data_no/grid_database.db"
+
+# [geo_data]
+# countries=["Norway", "Sweden", "Denmark", "Finland"]
+# line_data_path='data_no/sld_geo.dxf'
+
+# [sld_data]
+# line_data_path='data_no/sld.dxf'
+
+
+[single_line_diagrams]
+[single_line_diagrams.geo]
+countries=["Norway", "Sweden", "Denmark", "Finland"]
+aspect_ratio=2
+data_path='data_no/sld_geo.dxf'
+dxf_aspect_ratio=2
+geo=true
+
+[single_line_diagrams.other]
+data_path='data_no/sld.dxf'
+
+
+
+[[other_tso]]
+name='SvK'
+
+[other_tso.topics]
+"application.status"="se.application.status"
+"pmudata"="se.pmudata"
+"pmu.coords"="se.pmu.coords"
+"modeestimation"="se.modeestimation"
+"voltage.stability.index"="se.voltage.stability.index"
+"alarms"="se.alarms"
+"islanding"="se.islanding"
+
+[other_tso.streaming]
+# type="kafka"
+# bootstrap_servers="192.168.10.10:9092"
+type="nqkafka"
+bootstrap_servers="localhost:40000"
+
+[other_tso.database]
+type="sqlite"
+file_path="data_se/grid_database.db"
+
+
+[other_tso.single_line_diagrams]
+[other_tso.single_line_diagrams.geo]
+# countries=["Norway", "Sweden", "Denmark", "Finland"]
+aspect_ratio=2
+data_path='data_se/sld_geo.dxf'
+dxf_aspect_ratio=2
+geo=true

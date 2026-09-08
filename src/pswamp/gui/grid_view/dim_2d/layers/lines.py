@@ -25,12 +25,12 @@ class LineLayer:
 
         self.sld_id = sld_id
 
-        try:
-            self.k = (
-                1  # config["single_line_diagrams"][self.sld_data_key]["aspect_ratio"]
-            )
-        except KeyError:
-            self.k = 1
+        sld_data = config["single_line_diagrams"][sld_id]
+        self.k = sld_data["aspect_ratio"] if "aspect_ratio" in sld_data else 1
+        self.k_dxf = (
+            sld_data["dxf_aspect_ratio"] if "dxf_aspect_ratio" in sld_data else 1
+        )
+
 
         self.parent = parent
         plotWidget = parent.plotWidget
@@ -70,7 +70,6 @@ class LineLayer:
         tables = ["bus"] + self.branch_types
 
         model_data = {table: get_from_database(db_kwargs, table) for table in tables}
-        model_data["bus"]
         self.model_data = model_data
         # model_data = {key: val for key, val in model_data.items() if val is not None}
 
@@ -87,9 +86,10 @@ class LineLayer:
         self.bus_names, self.bus_coords = get_buses(
             doc, self.bus_data["name"].to_numpy()
         )
+        self.bus_coords[:, 1] *= self.k / self.k_dxf
 
         for key in self.branch_types:
-            if key not in model_data or model_data[key] is None:
+            if key not in model_data or model_data[key] is None or len(model_data[key]) == 0:
                 continue
             branch_data = {}
             branch_data["paths"], branch_data["midpoints"] = (

@@ -47,12 +47,19 @@ class LineLayer(LineLayer2D):
             # print(line)
             from_bus_idx = lookup_strings(line['from_bus'], np.array(self.bus_names))
             to_bus_idx = lookup_strings(line['to_bus'], np.array(self.bus_names))
+
             line_idx = slice(ix, ix + len(line_path))
             ix += len(line_path) + 1
             segment_lengths = np.sqrt(np.sum((line_path[1:, :] - line_path[:-1, :])**2, axis=1))
 
+            # if len(segment_lengths) == 0:
+                # continue
+
             cumsum = np.insert(np.cumsum(segment_lengths), 0, 0)
             cumsum /= cumsum[-1] if cumsum[-1] > 0 else 1
+
+            if np.isnan(from_bus_idx) or np.isnan(to_bus_idx):
+                continue
             
             line_z_mat[line_idx, from_bus_idx] = 1 - cumsum
             line_z_mat[line_idx, to_bus_idx] = cumsum
@@ -104,7 +111,7 @@ class LineLayer(LineLayer2D):
 
         for key in keys:
             self.branch_colors[key] = 0.5*np.ones((len(self.model_data[key]), 4))
-        self.line_colors = 0.5 * np.ones((self.n_lines, 4))
+        # self.line_colors = 0.5 * np.ones((self.n_lines, 4))
     
     def set_colors(self, colors, key, idx=slice(None)):
         self.branch_colors[key][idx, :] = colors

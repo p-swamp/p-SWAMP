@@ -62,8 +62,8 @@ class AlarmHandler:
              (time_stamp_dt - self.time_of_last_alarm).total_seconds() >\
                 self.alarm_time_threshold)
 
-        if not ready_for_new_alarm:
-            return
+        # if not ready_for_new_alarm:
+            # return
         
         if self.app.status == "Emergency":
             self.time_of_last_alarm = time_stamp_dt
@@ -83,7 +83,7 @@ class AlarmHandler:
                 # 'identifiers': {freq=0.5Hz} etc.
             }                
         
-        elif self.id_of_last_alarm is not None:
+        elif self.id_of_last_alarm is not None and ready_for_new_alarm:
             alarm_message = {
                 'uuid': self.id_of_last_alarm,
                 'time_stamp': time_stamp_dt,

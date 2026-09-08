@@ -122,18 +122,18 @@ class AppLauncher(QWidget):
         button.clicked.connect(clicked_fun)
         layout.addWidget(button, 2, 1)
 
-        button = QPushButton('Frequency heatmap')
-        button.setToolTip(
-            '''Visualization: A heat map indicating frequency variations throughout the system.''')
+        # button = QPushButton('Frequency heatmap')
+        # button.setToolTip(
+        #     '''Visualization: A heat map indicating frequency variations throughout the system.''')
 
-        def clicked_fun():
-            print('Launching Frequency heatmap')
-            # fft.main(ip, port)
-            self.p = mp.Process(target=run_freq_heatmap, args=(config,))
-            self.p.start()
-            # p.join()
-        button.clicked.connect(clicked_fun)
-        layout.addWidget(button, 3, 0)
+        # def clicked_fun():
+        #     print('Launching Frequency heatmap')
+        #     # fft.main(ip, port)
+        #     self.p = mp.Process(target=run_freq_heatmap, args=(config,))
+        #     self.p.start()
+        #     # p.join()
+        # button.clicked.connect(clicked_fun)
+        # layout.addWidget(button, 3, 0)
 
         # button = QPushButton('Voltage heatmap')
         # def clicked_fun():
@@ -145,18 +145,18 @@ class AppLauncher(QWidget):
         # button.clicked.connect(clicked_fun)
         # layout.addWidget(button, 3, 1)
 
-        button = QPushButton('Voltage phasor plot')
-        button.setToolTip(
-            '''Visualization: A phasor plot showing the voltage phasors in the system.''')
+        # button = QPushButton('Voltage phasor plot')
+        # button.setToolTip(
+        #     '''Visualization: A phasor plot showing the voltage phasors in the system.''')
 
-        def clicked_fun():
-            print('Launching Voltage phasor plot')
-            # fft.main(ip, port)
-            self.p = mp.Process(target=run_voltage_phasor_plot, args=(config,))
-            self.p.start()
-            # p.join()
-        button.clicked.connect(clicked_fun)
-        layout.addWidget(button, 3, 1)
+        # def clicked_fun():
+        #     print('Launching Voltage phasor plot')
+        #     # fft.main(ip, port)
+        #     self.p = mp.Process(target=run_voltage_phasor_plot, args=(config,))
+        #     self.p.start()
+        #     # p.join()
+        # button.clicked.connect(clicked_fun)
+        # layout.addWidget(button, 3, 1)
 
         button = QPushButton('Islanding detection')
         button.setToolTip(

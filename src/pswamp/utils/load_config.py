@@ -19,6 +19,10 @@ def get_calling_file_path():
     ).parent if main_module is not None else Path('')
 
 
+def islistofdicts(item):
+    return isinstance(item, list) and all(isinstance(item_, dict) for item_ in item)
+
+
 def load_config(arg=None):
     """Load pswamp configuration file, usually named config.toml.
 
@@ -88,12 +92,15 @@ def load_config(arg=None):
     # Loop through all entries. For those with "_path" in the name, full/absolute paths are substituted.
     toml_dict_out = toml_dict.copy()
    
-    def recursive_substitute(toml_dict):
-        for key, val in toml_dict.items():
-            if isinstance(key, str) and '_path' in key:
-                toml_dict[key] = project_dir_path / Path(val)
-            elif isinstance(val, dict):
-                recursive_substitute(val)
+    def recursive_substitute(toml_dicts):
+        if isinstance(toml_dicts, dict):
+            toml_dicts = [toml_dicts]
+        for toml_dict in toml_dicts:
+            for key, val in toml_dict.items():
+                if isinstance(key, str) and '_path' in key:
+                    toml_dict[key] = project_dir_path / Path(val)
+                elif isinstance(val, dict) or islistofdicts(val):
+                    recursive_substitute(val)
     
     recursive_substitute(toml_dict_out)
     

@@ -19,13 +19,14 @@ import time
 import pswamp.test_utils.runners as runners
 # from pswamp.gui.main_window import run_main_window
 from pswamp.test_utils.generate_pmu_data import generate_pmu_data
-from pswamp.monitoring.utils import TimeWindowRTApp
+# from pswamp.monitoring.utils import TimeWindowRTApp
+from pswamp.app_templates.time_window_app import TimeWindowApp
 import sys
 import numpy as np
 import threading
 
 
-class SomeRTApp(TimeWindowRTApp):
+class SomeRTApp(TimeWindowApp):
     #TODO: Change TimeWindowRTApp with TimeWindowApp
     def run_analysis(self, t, phasors):
         sys.stdout.write("\rTime window {:.2f}% complete".format(100 * (1 - (sum(np.isnan(t))) / len(t))))
@@ -50,7 +51,7 @@ def test_case():
     time.sleep(2)
 
     test_app = SomeRTApp(
-        time_window_length=1,
+        window_length=1,
         input_topic=config['topics']['pmudata'],
         io_kwargs=config["streaming"],
     )
@@ -58,7 +59,7 @@ def test_case():
     app_thread = threading.Thread(target=test_app.run)
     app_thread.start()
     
-    # run_main_window(config)
+    # run_main_window(config)s
     time.sleep(5)
     test_app.stop()
     print('Stopped test app')

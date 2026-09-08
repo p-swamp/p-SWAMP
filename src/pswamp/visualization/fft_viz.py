@@ -145,41 +145,41 @@ class FFTControlWidget(QtWidgets.QWidget):
         layout.addWidget(depthSpin)
         
         # range_slider = QRangeSlider(QtCore.Qt.Horizontal)
-        self.threshold_adjustment = ThresholdAdjustment()
-        range_slider = self.threshold_adjustment.range_slider
-        self.alert_slider_val, self.emergency_slider_val = range_slider.value()
-        range_slider.valueChanged.connect(self.slider_change)
+        # self.threshold_adjustment = ThresholdAdjustment()
+        # range_slider = self.threshold_adjustment.range_slider
+        # self.alert_slider_val, self.emergency_slider_val = range_slider.value()
+        # range_slider.valueChanged.connect(self.slider_change)
         
         
         # layout.addWidget(range_slider)
-        layout.addWidget(self.threshold_adjustment)
+        # layout.addWidget(self.threshold_adjustment)
         
         self.setLayout(layout)
         self.show()
 
-        update_freq = 10
-        self.timer = QtCore.QTimer()
-        self.timer.timeout.connect(self.redraw_indicator)
-        self.timer.start(1000 // update_freq)
+        # update_freq = 10
+        # self.timer = QtCore.QTimer()
+        # self.timer.timeout.connect(self.redraw_indicator)
+        # self.timer.start(1000 // update_freq)
 
-    def redraw_indicator(self):
-        indicator = self.fft_anl.max_amplitude*(self.z_scale)
-        if not indicator == 0:
-            self.threshold_adjustment.indicator_slider.setValue(indicator)
+    # def redraw_indicator(self):
+        # indicator = self.fft_anl.max_amplitude*(self.z_scale)
+        # if not indicator == 0:
+            # self.threshold_adjustment.indicator_slider.setValue(indicator)
         # print(indicator)
 
-    def slider_change(self, val):
-        self.alert_slider_val = val[0]
-        self.emergency_slider_val = val[1]
-        self.update_thresholds()
+    # def slider_change(self, val):
+        # self.alert_slider_val = val[0]
+        # self.emergency_slider_val = val[1]
+        # self.update_thresholds()
 
     def scale_change(self, val):
         self.z_scale = val
-        self.update_thresholds()
+        # self.update_thresholds()
 
-    def update_thresholds(self):
-        self.fft_anl.threshold_alert = self.alert_slider_val/(self.z_scale)
-        self.fft_anl.threshold_emergency = self.emergency_slider_val/(self.z_scale)
+    # def update_thresholds(self):
+        # self.fft_anl.threshold_alert = self.alert_slider_val/(self.z_scale)
+        # self.fft_anl.threshold_emergency = self.emergency_slider_val/(self.z_scale)
 
     def scale_plot_change(self, val):
         self.z_plot_scale = val

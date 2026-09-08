@@ -1,12 +1,10 @@
-import numpy as np
-import tops.dynamic as dps
-
-
-import multiprocessing as mp
-from topsrt_random_load_variations import RandomLoadVariations, remove_model_data
-# import n44_model as model_data
 import json
 from pathlib import Path
+
+import numpy as np
+import tops.dynamic as dps
+from topsrt_random_load_variations import remove_model_data  # , RandomLoadVariations
+
 
 def create_sim():
     
