@@ -38,7 +38,7 @@ class FFTOnline(TimeWindowApp):
         *args,
         **kwargs
     ):
-        sample_msg = get_last_message_from_topic(kafka_topic, **io_kwargs)
+        sample_msg = get_last_message_from_topic(topic=kafka_topic, **io_kwargs)
         dt = 1 / sample_msg.cfg.get_data_rate()
         n_samples_fft = 2 ** int(np.ceil(np.log(fft_window / dt) / np.log(2)))
         self.n_samples_store = int(round(time_window_store/dt))
@@ -54,7 +54,10 @@ class FFTOnline(TimeWindowApp):
             *args,
             **kwargs
         )
-        consumer_seek_relative_offset(self.io.input_stream, -n_samples_fft - self.n_samples_store)
+        consumer_seek_relative_offset(
+            self.io.input_stream,
+            -n_samples_fft - self.n_samples_store,
+            type=io_kwargs["type"])
 
         self.freq_range = fftfreq(n_samples_fft, dt)
         self.em_freq_idx = (self.freq_range >= 0) & (self.freq_range <= 2)
