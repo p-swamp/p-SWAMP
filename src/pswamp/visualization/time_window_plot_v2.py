@@ -13,6 +13,7 @@ from PySide6 import QtWidgets, QtCore
 import pyqtgraph as pg
 import sys
 from pswamp.app_templates.time_window_app import TimeWindowApp
+from pswamp.utils.get_station_coords import load_bus_coords_for_current_stations
 
 
 class TimeWindowPlotV2(QtWidgets.QWidget):
@@ -126,9 +127,11 @@ class TimeWindowPlotGUI(QtWidgets.QMainWindow):
     def __init__(
             self,
             io_kwargs,
-            input_topic="pmudata",
-            pmu_coords_topic="pmu_coords_topic",
-            countries=[],
+            # input_topic="pmudata",
+            bus_names,
+            bus_coords,
+            # pmu_coords_topic="pmu_coords_topic",
+            countries=None,
             update_freq=25,
             # phasor_selection=None,
             n_max_plots=50,
@@ -156,9 +159,9 @@ class TimeWindowPlotGUI(QtWidgets.QMainWindow):
 
         # channel_select = ChannelSelect(channels)
         if include_map:
-            bus_names, bus_coords = get_last_message_from_topic(
-                pmu_coords_topic, **io_kwargs
-            )
+            # bus_names, bus_coords = get_last_message_from_topic(
+                # pmu_coords_topic, **io_kwargs
+            # )
                     
             channel_select_map = ChannelSelectMap(
                 channels=channels,
@@ -200,11 +203,20 @@ def run_time_window_plot(*config_args, update_freq=25, n_max_plots=50, **kwargs)
 
     app = QtWidgets.QApplication(sys.argv)
 
+    sld_id, sld_data = next(iter(config["single_line_diagrams"].items()))
+    bus_names, bus_coords = load_bus_coords_for_current_stations(config, sld_id=sld_id)
+    k = 1/sld_data.get("dxf_aspect_ratio", 1)
+    bus_coords[:, 1] *= k
+    
+    bus_names = [name.strip() for name in bus_names]
     time_window_plot_gui = TimeWindowPlotGUI(
+        countries=sld_data["countries"],
+        bus_names=bus_names,
+        bus_coords=bus_coords,
         input_topic=config['topics']['pmudata'],
-        pmu_coords_topic=config['topics']['pmu.coords'],
+        # pmu_coords_topic=config['topics']['pmu.coords'],
         io_kwargs=config["streaming"],
-        countries=config['geo_data']['countries'] if 'geo_data' in config and 'countries' in config['geo_data'] else [],
+        # countries=config['geo_data']['countries'] if 'geo_data' in config and 'countries' in config['geo_data'] else [],
         update_freq=update_freq,
         n_max_plots=n_max_plots,
         **kwargs
