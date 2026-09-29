@@ -8,24 +8,24 @@ fail-on-scopes:
 vulnerability-check: true
 license-check: true
 allow-licenses:
-  - 0BSD
-  - Apache-2.0
-  - BSD-2-Clause
-  - BSD-2-Clause-Views
-  - BSD-3-Clause
-  - BlueOak-1.0.0
-  - CC-BY-4.0
-  - CC0-1.0
+  - 0BSD                         # permissive
+  - Apache-2.0                   # permissive
+  - BSD-2-Clause                 # permissive
+  - BSD-2-Clause-Views           # permissive
+  - BSD-3-Clause                 # permissive
+  - BlueOak-1.0.0                # permissive
+  - CC-BY-4.0                    # permissive
+  - CC0-1.0                      # permissive
   - HPND-Markus-Kuhn             # permissive (used by pypy:wcwidth)
-  - ISC
+  - ISC                          # permissive
   - JSON                         # permissive (used by npm:json-schema-typed)
   - LicenseRef-scancode-matplotlib-1.3.0 # permissive
-  - MIT
-  - MIT-CMU
-  - MPL-2.0
-  - OFL-1.1
-  - PSF-2.0
-  - Python-2.0
+  - MIT                          # permissive
+  - MIT-CMU                      # permissive
+  - MPL-2.0                      # weak copyleft
+  - OFL-1.1                      # permissive for embedding
+  - PSF-2.0                      # permissive
+  - Python-2.0                   # permissive
   - Zlib                         # permissive (used by pypy:numpy)
 
 allow-dependencies-licenses:
