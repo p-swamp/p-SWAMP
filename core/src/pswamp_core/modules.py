@@ -21,6 +21,10 @@ A module may also answer commands: it lists their concrete classes in
 command's ``request_id``. A module that only answers commands sets
 ``input_model = None``.
 
+A module may also read data itself, a batch question over a range, say: it
+sets ``reads_gateway = True`` and its host gives each instance a gateway of
+its own (``self.gateway``) over the pipeline's sources, wherever it runs.
+
 A module never sees the transport. A ``ModuleHost`` feeds it one run's input
 and publishes what it emits (``pswamp_core.host``); whether the host is in the
 server or in a worker is the deployment's choice. ``process`` runs on the
@@ -45,6 +49,7 @@ from .subscription import Overflow
 from .util.time import utcnow
 
 if TYPE_CHECKING:
+    from .datagateway import DataGateway
     from .messages.commands import Command
     from .messages.data_model import DataModel
     from .subscription import Sink, Subscription
@@ -64,6 +69,7 @@ class Module(ABC):
         commands: The concrete ``Command`` classes it answers.
         overflow, maxsize: Its input queue. ``DROP_OLDEST`` by default: a
             module that falls behind a live stream analyses the newest frame.
+        reads_gateway: Its host sets ``self.gateway`` before ``setup``.
     """
 
     name: ClassVar[str] = "module"
@@ -72,11 +78,14 @@ class Module(ABC):
     commands: ClassVar[tuple[type[Command], ...]] = ()
     overflow: ClassVar[Overflow] = Overflow.DROP_OLDEST
     maxsize: ClassVar[int] = 64
+    reads_gateway: ClassVar[bool] = False
 
     def __init__(self) -> None:
         self.identity = AppIdentity(name=self.name, uuid=uuid4().hex)
         #: Settings recorded on every result.
         self.parameters: dict[str, Any] = {}
+        #: The pipeline's sources, for a module that ``reads_gateway``.
+        self.gateway: DataGateway | None = None
 
     async def setup(self, out: Sink) -> None:
         """Called once before ``run``. ``out`` is where to publish anything

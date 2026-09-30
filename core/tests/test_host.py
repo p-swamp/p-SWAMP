@@ -87,3 +87,26 @@ async def test_a_host_ignores_what_its_module_does_not_read():
     await settle()
     assert host.keys() == []
     await cancel_and_wait(task)
+
+
+async def test_a_module_that_reads_the_gateway_gets_its_own():
+    from support import ListClient
+
+    from pswamp_core.datagateway import DataGateway
+
+    class Reader(Doubler):
+        reads_gateway = True
+        gateways: list = []
+
+        async def setup(self, out) -> None:
+            Reader.gateways.append(self.gateway)
+
+    broker = InMemoryTransport()
+    host = ModuleHost(Reader, broker, app="a", gateway=lambda: DataGateway([ListClient()]))
+    task = asyncio.create_task(host.serve())
+    await settle()
+    for key in ("k1", "k2"):
+        await broker.publish(measurement(1), app="a", key=key)
+    await settle()
+    assert len(Reader.gateways) == 2 and Reader.gateways[0] is not Reader.gateways[1]
+    await cancel_and_wait(task)

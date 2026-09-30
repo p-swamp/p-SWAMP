@@ -4,10 +4,11 @@
 """The PMU test streamer's edge: one POST per command, one socket for state.
 
 Each client gets its own run of ``PIPELINE``: a gateway over the sample
-recording and the live feed, a player, and the frame statistics module wherever
-the deployment hosts it. Each POST builds one typed command and dispatches it
-(404 without a run, 409 when the player refuses). The socket pushes one
-``PmuStreamState`` on connect and after every change.
+recording and the live feed, a player, and the modules wherever the deployment
+hosts them. Each POST builds one typed command and dispatches it: a player
+command is checked here (404 without a run, 409 when refused), a module command
+where the module runs (a refusal comes back as an ``ErrorEvent``). The socket
+pushes one ``PmuStreamState`` on connect and after every change.
 """
 
 from __future__ import annotations
@@ -42,7 +43,9 @@ from pswamp_core.messages import (
 )
 from pswamp_core.pipeline import PipelineRegistry, PipelineRun
 
+from .excursion_module import AutoPauseCommand, ExcursionResult
 from .pipeline import PIPELINE
+from .range_summary_module import RangeSummaryResult, SummarizeRangeCommand
 from .stats_module import FrameStatsResult
 
 logger = get_logger("pmu")
@@ -72,6 +75,8 @@ class PmuStreamState(BaseModel):
     stats: FrameStatsResult | None = Field(description="The frame statistics for (about) that frame.")
     frame_index: int | None = Field(description="0-based position of the frame in the recording; null when live.")
     frame_count: int | None = Field(description="Frames in the recording; null when live.")
+    excursion: ExcursionResult | None = Field(description="The excursion module's latest result.")
+    summary: RangeSummaryResult | None = Field(description="The answer to this client's last range summary.")
 
 
 def state_message(run: PipelineRun) -> PmuStreamState:
@@ -90,7 +95,15 @@ def state_message(run: PipelineRun) -> PmuStreamState:
             count = round((status.coverage_end - status.coverage_start).total_seconds() / interval)
     else:
         stats = None
-    return PmuStreamState(frame=frame, player=status, stats=stats, frame_index=index, frame_count=count)
+    return PmuStreamState(
+        frame=frame,
+        player=status,
+        stats=stats,
+        frame_index=index,
+        frame_count=count,
+        excursion=run.latest.get(ExcursionResult),
+        summary=run.latest.get(RangeSummaryResult),
+    )
 
 
 # --- commands ------------------------------------------------------------------------
@@ -155,6 +168,32 @@ async def source(client_id: ClientId, body: SourceBody) -> CommandAck:
     """Read another source: a recording lands paused at its start, a live feed
     is followed from now."""
     return dispatch(SwitchSourceCommand(client_id=client_id, source=body.name))
+
+
+# Module commands: published as they are, and checked where the module runs.
+
+
+class AutoPauseBody(BaseModel):
+    enabled: bool = Field(description="Pause the player when the frequency leaves the band.")
+
+
+@router.post("/excursion/auto-pause", operation_id="pmu_test_streamer_auto_pause", responses=COMMAND_RESPONSES)
+async def auto_pause(client_id: ClientId, body: AutoPauseBody) -> CommandAck:
+    """Tell the excursion module whether to pause the player on an excursion."""
+    return dispatch(AutoPauseCommand(client_id=client_id, enabled=body.enabled))
+
+
+class SummaryBody(BaseModel):
+    source: str = Field(description="The recording to read: one of PlayerStatus.sources.")
+    offset_s: float = Field(ge=0, description="Seconds from the start of the recording.")
+    end_offset_s: float = Field(gt=0, description="Exclusive end, in seconds from the start.")
+
+
+@router.post("/summary", operation_id="pmu_test_streamer_summary", responses=COMMAND_RESPONSES)
+async def summary(client_id: ClientId, body: SummaryBody) -> CommandAck:
+    """Ask the range summary module to summarize a range of a recording. The
+    answer arrives on the socket as ``summary``."""
+    return dispatch(SummarizeRangeCommand(client_id=client_id, **body.model_dump()))
 
 
 # --- the socket ----------------------------------------------------------------------

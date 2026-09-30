@@ -21,6 +21,8 @@ import os
 from pswamp_core.datagateway import CimReferenceEnricher, DataGateway, gateway_from_env
 from pswamp_core.pipeline import Pipeline
 
+from .excursion_module import ExcursionModule
+from .range_summary_module import RangeSummaryModule
 from .stats_module import FrameStatsModule
 
 APP = "pmu-test-streamer"
@@ -41,4 +43,5 @@ def gateway() -> DataGateway:
     return gateway_from_env(DATA_CLIENTS_VARIABLE, DEFAULT_DATA_CLIENTS, enrichers=[cim])
 
 
-PIPELINE = Pipeline(APP, gateway, modules=(FrameStatsModule,))
+#: Frames → frame stats → excursion, plus a range summary answering commands.
+PIPELINE = Pipeline(APP, gateway, modules=(FrameStatsModule, ExcursionModule, RangeSummaryModule))

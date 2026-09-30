@@ -17,9 +17,10 @@ const fire = (promise: Promise<void>) => fireCommand('pmu-test-streamer', promis
 
 /**
  * The streamer's socket and commands. Each command is a POST that becomes a
- * typed command for this client's player; the effect arrives as the next state.
- * A command that does not apply now is a 409, which `fireCommand` logs; the
- * page renders its controls from `player` so it does not offer one.
+ * typed command for this client's player or one of its modules; the effect
+ * arrives as the next state. A player command that does not apply now is a
+ * 409, which `fireCommand` logs; the page renders its controls from `player`
+ * so it does not offer one. A module command is checked where the module runs.
  */
 export function usePmuStreamSocket() {
   const { message, status, connected } = useServerSocket<PmuStreamState>(PMU_STREAM_WS_PATH)
@@ -54,5 +55,33 @@ export function usePmuStreamSocket() {
     [],
   )
 
-  return { state: message, header, status, connected, play, pause, step, seek, setSpeed, switchSource }
+  const setAutoPause = useCallback(
+    (enabled: boolean) =>
+      fire(postCommand(`${PMU_STREAM_API_PATH}/excursion/auto-pause`, { body: { enabled } })),
+    [],
+  )
+  const summarize = useCallback(
+    (source: string, offsetS: number, endOffsetS: number) =>
+      fire(
+        postCommand(`${PMU_STREAM_API_PATH}/summary`, {
+          body: { source, offset_s: offsetS, end_offset_s: endOffsetS },
+        }),
+      ),
+    [],
+  )
+
+  return {
+    state: message,
+    header,
+    status,
+    connected,
+    play,
+    pause,
+    step,
+    seek,
+    setSpeed,
+    switchSource,
+    setAutoPause,
+    summarize,
+  }
 }
