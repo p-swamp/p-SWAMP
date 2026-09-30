@@ -185,9 +185,37 @@ broker as `kafka` (Apache Kafka, one KRaft node, no volume).
 `KAFKA_TEST_BOOTSTRAP_SERVERS=127.0.0.1:19092`).
 
 ### Modules
-A module declares its input class, its result class and any commands it
-answers, and implements `process`. A host runs it; the module never sees the
-transport.
+*What.* A module reads one message class and publishes a result class; it may
+also answer commands.
+
+```python
+class FrameStatsModule(Module):
+    name = "frame-stats"
+    input_model = PmuFrame
+    output_model = FrameStatsResult            # a ResultEnvelope subclass
+
+    async def process(self, frame: PmuFrame) -> FrameStats | None: ...
+```
+
+A module that answers commands lists their concrete classes in `commands`
+and implements `handle`, and `validate` if it can refuse one. What `handle`
+returns is published like a `process` result, carrying the command's
+`request_id`. A refusal or failure is published as an `ErrorEvent` carrying it
+too.
+
+A `ModuleHost` runs a module. It subscribes to the module's input and command
+topics for every key, and builds one instance per run key on that key's first
+message. It drops the instance when the run publishes `PipelineClosed`, or
+after five minutes with nothing for it.
+
+*Why.* A contributor writes the analysis and three class attributes. The
+module never sees the transport: it reads a queue and publishes into a sink.
+That lets the same module run in the server or in a worker. Reading the layout
+off `frame.header` means it needs no configuration. `process` runs on the
+event loop; a CPU-heavy module runs its analysis in a thread or process pool.
+
+*Where.* `core/src/pswamp_core/modules.py`, `host.py`, `command_routing.py`;
+the example is `app/server-python/src/pmu_test_streamer/stats_module.py`.
 
 ### Gateway and providers
 The provider contract a data source implements, and the gateway that holds a
