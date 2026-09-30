@@ -173,8 +173,16 @@ oldest data message, but never a command or an error.
 - **A transport is not a data source.** It carries what is published, in
   order, and keeps nothing for late subscribers.
 
+**Kafka.** `KafkaTransport` (`kafka:pswamp_core.transport.kafka:KafkaTransport`
+with `KAFKA_BOOTSTRAP_SERVERS`) creates each topic with one partition and
+about a minute of retention. It reads every topic its process listens to with
+one consumer, from the topic's end, with no consumer group. Compose runs the
+broker as `kafka` (Apache Kafka, one KRaft node, no volume).
+
 *Where.* `core/src/pswamp_core/transport/`, `subscription.py`, `settings.py`
-(spec loading, shared with the data providers).
+(spec loading, shared with the data providers); `core/tests/transport_suite.py`
+(run against the compose broker with
+`KAFKA_TEST_BOOTSTRAP_SERVERS=127.0.0.1:19092`).
 
 ### Modules
 A module declares its input class, its result class and any commands it
