@@ -22,6 +22,9 @@ It takes the player commands (``PlayCommand``, ``SeekCommand``, ...) through
 - **Pacing drops time rather than bursting** when the loop falls behind.
 - **A provider failure stops the stream**: paused, ``error`` set in the
   status, and an ``ErrorEvent`` published. Play or seek tries again.
+- **With ``follow_live``, a live source is not opened here.** The player of a
+  client's run only reports that it is on the live source; the run follows the
+  shared live run's topics instead (``pswamp_core.pipeline``).
 
 One task does everything: it reads the stream, paces frames, and applies
 commands, which ``handle`` queues for it. So nothing here needs a lock, and a
@@ -86,15 +89,17 @@ class Player:
         gateway: Where the frames come from.
         sink: Where frames, ``PlayerStatus`` and ``ErrorEvent`` go: the run.
         loop: Start a recording over when it ends.
+        follow_live: Leave a live source to a shared run: open no stream on it.
     """
 
     name: ClassVar[str] = "player"
     commands: ClassVar[tuple[type[Command], ...]] = PLAYER_COMMANDS
 
-    def __init__(self, gateway: DataGateway, sink: Sink, *, loop: bool = False) -> None:
+    def __init__(self, gateway: DataGateway, sink: Sink, *, loop: bool = False, follow_live: bool = False) -> None:
         self._gateway = gateway
         self._sink = sink
         self.loop = loop
+        self.follow_live = follow_live
         self.speed = 1.0
         self.paused = True
         self.ended = False
@@ -286,7 +291,8 @@ class Player:
             if self.live:
                 self._coverage = None
                 self.cursor = None
-                self._stream = await self._gateway.consume(utcnow())
+                if not self.follow_live:
+                    self._stream = await self._gateway.consume(utcnow())
                 return
             self._coverage = await self._gateway.coverage()
             if self._coverage is None:

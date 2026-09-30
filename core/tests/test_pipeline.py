@@ -6,15 +6,23 @@ import asyncio
 from typing import Literal
 
 import pytest
-from support import ListClient, Number, NumberResult
+from support import ListClient, Number, NumberResult, TickingClient
 from test_modules import HalveCommand, Halver
 
 from pswamp_core.command_routing import CommandRefused, NoReceiver
 from pswamp_core.datagateway import DataGateway
 from pswamp_core.host import serve_hosts
-from pswamp_core.messages import Command, ErrorEvent, PauseCommand, PlayCommand, PmuFrame, SeekCommand
+from pswamp_core.messages import (
+    Command,
+    ErrorEvent,
+    PauseCommand,
+    PlayCommand,
+    PmuFrame,
+    SeekCommand,
+    SwitchSourceCommand,
+)
 from pswamp_core.modules import Module
-from pswamp_core.pipeline import Pipeline, PipelineRun
+from pswamp_core.pipeline import Pipeline, PipelineRun, start_live_runs
 from pswamp_core.transport import InMemoryTransport
 from pswamp_core.util.tasks import cancel_and_wait
 
@@ -143,3 +151,34 @@ def test_hosts_can_be_limited_to_named_modules():
 
 
 PIPELINE_FOR_WORKER = Pipeline("app", gateway, modules=(FrameCounter, Halver))
+
+
+def two_sources() -> DataGateway:
+    return DataGateway([ListClient("rec"), TickingClient("tick")])
+
+
+async def test_live_is_one_shared_run_that_client_runs_follow():
+    transport = InMemoryTransport()
+    pipeline = Pipeline("app", two_sources, modules=(FrameCounter,))
+    (host,) = pipeline.hosts(transport)
+    hosting = asyncio.create_task(host.serve())
+    await asyncio.sleep(0)
+    (live,) = await start_live_runs(pipeline, transport)
+    clients = [PipelineRun(key, pipeline, transport) for key in ("a", "b")]
+    for run in clients:
+        await run.start()
+        run.dispatch(SwitchSourceCommand(source="tick"))
+    await until(lambda: all(run.frame is not None and run.frame.timestamp == live.frame.timestamp for run in clients))
+    assert live.key == "live.tick" and all(run.player.status().mode == "live" for run in clients)
+    # One module instance counts the live frames for everyone.
+    await until(lambda: all(run.latest.get(NumberResult) is not None for run in clients))
+    uuids = {run.latest.get(NumberResult).app.uuid for run in clients}
+    assert len(uuids) == 1 and "live.tick" in host.keys()
+    # The clients' own gateways never opened the live source.
+    assert all(run.gateway.clients["tick"].opened == 0 for run in clients)
+    clients[0].dispatch(SwitchSourceCommand(source="rec"))
+    await until(lambda: clients[0].player.status().mode == "replay")
+    assert clients[0].frame.timestamp == clients[0].player.last_frame.timestamp
+    for run in (*clients, live):
+        await run.stop()
+    await cancel_and_wait(hosting)
