@@ -76,7 +76,7 @@ class PmuStreamState(BaseModel):
 
 def state_message(run: PipelineRun) -> PmuStreamState:
     status = run.player.status()
-    frame = run.player.last_frame if isinstance(run.player.last_frame, PmuFrame) else None
+    frame = run.frame if isinstance(run.frame, PmuFrame) else None
     stats = run.latest.get(FrameStatsResult)
     index = count = None
     if frame is not None:
