@@ -13,10 +13,10 @@
 #     - tsc -b ....... type-check (also catches unused locals, bad imports)
 #     - eslint . ..... lint (flat eslint.config.js, react-hooks etc)
 #
-#   Python (app/server-python)
+#   Python (app/server-python + core)
 #     - uv lock --check  pyproject.toml vs uv.lock in sync (read-only)
-#     - py_compile ..... syntax/AST errors (app/ + the older root src/ package)
-#     - ruff check ..... lint (pyflakes F — real bugs, not style), app/ only, from the locked dev group
+#     - py_compile ..... syntax/AST errors (app/, core/, + the older root src/ package)
+#     - ruff check ..... lint (pyflakes F — real bugs, not style), app/ + core/, from the locked dev group
 #
 #   The api contract (doc/api/openapi.json + app/client-web/src/api/schema.ts)
 #     - generate-api-contract.sh --check — both are generated and committed, so a
@@ -98,7 +98,7 @@ fi
 PY_FILES=()
 while IFS= read -r -d '' py_file; do
   PY_FILES+=("$py_file")
-done < <(find app -name '*.py' -not -path '*/__pycache__/*' -print0)
+done < <(find app core -name '*.py' -not -path '*/__pycache__/*' -not -path '*/.venv/*' -print0)
 
 if [ "${#PY_FILES[@]}" -eq 0 ]; then
   echo "  (no Python files found)"
@@ -130,7 +130,7 @@ else
   # checks correctness, not style — we do NOT select pycodestyle E or run
   # `ruff format`, nor inherit ruff's other opinionated families (I, B, S…).
   RUFF=(uv run --project app/server-python --only-group dev ruff)
-  run "ruff check (Python lint)"   "${RUFF[@]}" check --select F app
+  run "ruff check (Python lint)"   "${RUFF[@]}" check --select F app core
 fi
 
 # --- The published api contract ---------------------------------------------
