@@ -16,6 +16,9 @@ dependencies = [
     "fastapi>=0.141.1,<0.142",
     "uvicorn[standard]>=0.52.4,<0.53",
     "p-swamp",
+    # The server data architecture (core/). The extras bring the Kafka transport
+    # and the remote data client.
+    "pswamp-core[kafka,remote-data]",
 ]
 
 # p-swamp is the desktop package at the repo root (root pyproject.toml, root
@@ -42,6 +45,10 @@ dependencies = [
 # Dockerfile.
 [tool.uv.sources]
 p-swamp = { path = "../../", editable = true }
+# The shared core at core/. Same one-way rule: nothing under core/ imports from
+# app/. After editing core/pyproject.toml, run
+# `uv lock --upgrade-package pswamp-core`.
+pswamp-core = { path = "../../core", editable = true }
 
 # Tooling that must never ship in the image — the Dockerfile installs with
 # --no-dev. Declared here so the versions are locked and hash-verified like
@@ -81,5 +88,6 @@ package = false
 # deliberately isn't one (see the note above).
 [tool.pytest.ini_options]
 pythonpath = ["src"]
-testpaths = ["tests"]
+# core/tests runs here too: one runner and one CI job cover both suites.
+testpaths = ["tests", "../../core/tests"]
 asyncio_mode = "auto"
