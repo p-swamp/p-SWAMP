@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from datetime import datetime, timedelta, timezone
 from typing import Literal
 
@@ -45,3 +46,16 @@ class Number(BaseModel):
 
 class NumberResult(ResultEnvelope[Number]):
     version: Literal["v1"] = "v1"
+
+
+def measurement(i: int, seconds: float | None = None) -> Measurement:
+    """``Measurement`` number ``i`` (mRID ``m<i>``)."""
+    return Measurement(mRID=f"m{i}", timestamp=at(i if seconds is None else seconds), value=float(i))
+
+
+async def take(subscription, n: int, timeout: float = 5.0) -> list:
+    """The next ``n`` items of ``subscription``, or fail after ``timeout``."""
+    async def read():
+        return [await subscription.get() for _ in range(n)]
+
+    return await asyncio.wait_for(read(), timeout)
