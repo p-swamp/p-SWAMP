@@ -1,274 +1,167 @@
-"""The PMU test streamer's backend: WebSocket api, per-client position, ticker.
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Contributors to the p-SWAMP Project.
 
-Streams sample grid records line by line, keeping per-client state keyed by the
-client id. There is nothing to pick: one data file, one stream.
+"""The PMU test streamer's edge: one POST per command, one socket for state.
 
-Commands come up over REST and state goes down over the socket; the reasoning is
-in AGENTS.md and doc/the-client-server-api.md.
-
-server.py mounts this `router` under /api/pmu-test-streamer, so the endpoint below
-is reachable at /api/pmu-test-streamer/ws. Nothing here knows about that prefix.
-
-All state is in memory and dies with the process, and everything
-runs on the one asyncio event loop — the WS handlers, the request handlers, the
-ticker, and broadcasts are cooperatively scheduled and never truly parallel, so no
-locking is needed.
+Each client gets its own run of ``PIPELINE``: a gateway over the sample
+recording and the live feed, a player, and the frame statistics module wherever
+the deployment hosts it. Each POST builds one typed command and dispatches it
+(404 without a run, 409 when the player refuses). The socket pushes one
+``PmuStreamState`` on connect and after every change.
 """
 
-import asyncio
-import time
-from contextlib import asynccontextmanager
-from dataclasses import dataclass, field
+from __future__ import annotations
+
+import contextlib
 from typing import Literal
 
 from fastapi import APIRouter, FastAPI, WebSocket
 from pydantic import BaseModel, Field
 from shared import (
+    COMMAND_RESPONSES,
     ClientId,
     CommandAck,
-    SocketRegistry,
+    connected_pipeline,
+    dispatch_command,
     get_logger,
-    read_client_id,
-    send_state,
-    wait_for_disconnect,
+    push_changes,
+    serve_pipeline,
+    transport,
 )
 
-from .model import LINES, TICKS_PER_SECOND, PmuStreamModel
+from pswamp_core.messages import (
+    Command,
+    PauseCommand,
+    PlayCommand,
+    PlayerStatus,
+    PmuFrame,
+    SeekCommand,
+    SpeedCommand,
+    StepCommand,
+    SwitchSourceCommand,
+)
+from pswamp_core.pipeline import PipelineRegistry, PipelineRun
 
-# Discrete client events only — never the ticker's auto-advance, which fires
-# TICKS_PER_SECOND times a second per playing client.
+from .pipeline import PIPELINE
+from .stats_module import FrameStatsResult
+
 logger = get_logger("pmu")
 
-
-# --- authoritative in-memory state ------------------------------------------
-#
-# One position + play flag per client seed (the ?client_id= URL param), kept across
-# reconnects so a dropped client resumes mid-stream, and never evicted (a bounded,
-# acceptable leak for a local dev demo). This dict is the only store; nothing is
-# persisted, so a restart puts every client back at the first record.
+REGISTRY: PipelineRegistry[PipelineRun] = PipelineRegistry(
+    lambda client_id: PipelineRun(client_id, PIPELINE, transport(), loop=True)
+)
 
 
-@dataclass
-class ClientState:
-    model: PmuStreamModel = field(default_factory=PmuStreamModel)
-    playing: bool = False
+@contextlib.asynccontextmanager
+async def lifespan(app: FastAPI):
+    async with serve_pipeline(PIPELINE, REGISTRY):
+        yield
 
 
-states: dict[str, ClientState] = {}
-
-
-def get_state(client_id: str) -> ClientState:
-    """The single place per-client state is born; called on connect and on every
-    command, so a command can never hit a missing client."""
-    state = states.get(client_id)
-    if state is None:
-        state = states[client_id] = ClientState()
-    return state
-
-
-class PmuRecord(BaseModel):
-    """One record in the visible window: a 1-based line number and its text."""
-
-    line_number: int = Field(description="1-based, matching how `wc -l` counts.")
-    text: str = Field(description="The raw record, verbatim from sample_data.txt.")
+# --- the socket message --------------------------------------------------------------
 
 
 class PmuStreamState(BaseModel):
-    """The single message shape pushed to a client on connect and every change.
-
-    A declared model rather than a loose dict, because this IS the downstream half
-    of the published contract: api_contract.py collects it via this package's
-    WS_MESSAGE export, and a bare dict would silently drop the app out of it.
-
-    `total_lines` lets the client show "record N of M" — which is also how the
-    wrap-around at the end of the file becomes visible in the UI.
-    """
+    """What the page renders, pushed on connect and after every change. Its parts
+    are the core's messages as they are, so the browser's types are generated
+    from the same classes."""
 
     type: Literal["state"] = "state"
-    window: list[PmuRecord | None] = Field(
-        description="Records around the cursor; null where it runs off an end.",
-    )
-    index: int = Field(description="0-based cursor into the sample file.")
-    total_lines: int = Field(description="How many records the sample file holds.")
-    playing: bool = Field(description="Whether the server is advancing this client.")
+    frame: PmuFrame | None = Field(description="The frame at the cursor, with its layout.")
+    player: PlayerStatus = Field(description="Where the player is and which controls apply.")
+    stats: FrameStatsResult | None = Field(description="The frame statistics for (about) that frame.")
+    frame_index: int | None = Field(description="0-based position of the frame in the recording; null when live.")
+    frame_count: int | None = Field(description="Frames in the recording; null when live.")
 
 
-def state_message(state: ClientState) -> PmuStreamState:
-    """The single message shape pushed to a client on connect and every change."""
-    return PmuStreamState(
-        window=state.model.visible_window(),
-        index=state.model.index,
-        total_lines=len(LINES),
-        playing=state.playing,
-    )
+def state_message(run: PipelineRun) -> PmuStreamState:
+    status = run.player.status()
+    frame = run.player.last_frame if isinstance(run.player.last_frame, PmuFrame) else None
+    stats = run.latest.get(FrameStatsResult)
+    index = count = None
+    if frame is not None:
+        interval = 1.0 / frame.header.data_rate
+        # A result comes back over the transport a little after its frame, so
+        # one up to two frames old still counts; one from another stream does not.
+        if stats is not None and not 0 <= (frame.timestamp - stats.timestamp).total_seconds() <= 2 * interval:
+            stats = None
+        if status.mode == "replay" and status.coverage_start and status.coverage_end:
+            index = round((frame.timestamp - status.coverage_start).total_seconds() / interval)
+            count = round((status.coverage_end - status.coverage_start).total_seconds() / interval)
+    else:
+        stats = None
+    return PmuStreamState(frame=frame, player=status, stats=stats, frame_index=index, frame_count=count)
 
 
-def roster_table(acting_id: str | None = None) -> str:
-    """An aligned table of every currently connected client: where it is in the
-    stream and whether it's playing. Disconnected-but-remembered seeds are excluded
-    — this is the live roster, not the state table. The client that triggered the
-    current event is flagged with an arrow."""
-    ids = sorted(sockets.clients(), key=int)
-    if not ids:
-        return "    (no clients connected)"
-    headers = ("", "CLIENT", "RECORD", "STATE")
-    rows = [headers]
-    for cid in ids:
-        state = states[cid]
-        rows.append(
-            (
-                "->" if cid == acting_id else "",
-                str(cid),
-                f"{state.model.index + 1}/{len(LINES)}",
-                "playing" if state.playing else "paused",
-            )
-        )
-    widths = [max(len(row[i]) for row in rows) for i in range(len(headers))]
-
-    def fmt(row: tuple[str, ...]) -> str:
-        return "    " + "  ".join(cell.ljust(widths[i]) for i, cell in enumerate(row))
-
-    rule = "    " + "-" * (sum(widths) + 2 * (len(widths) - 1))
-    return "\n".join([fmt(headers), rule, *(fmt(row) for row in rows[1:])])
-
-
-def log_event(action: str, client_id: str) -> None:
-    """The single logging entry point: the triggering client + action, then the full
-    live roster, so the console always shows the complete picture after any
-    operation."""
-    logger.info("client %s: %s\n\n%s\n", client_id, action, roster_table(client_id))
-
-
-# --- connection tracking ----------------------------------------------------
-#
-# Transport bookkeeping only, so it comes from shared.py; this app's own state lives
-# in `states` above and deliberately outlives a disconnect.
-
-sockets = SocketRegistry()
-
-
-# --- server-side playback ticker -------------------------------------------
-
-
-async def ticker() -> None:
-    """One driver for every client: each tick, advance only the clients that are
-    currently playing and push each its own updated state.
-
-    Paced against a monotonic deadline rather than `sleep(interval)`, because the
-    latter waits interval *plus* the time the tick's own work took — a 5% shortfall
-    at this app's 100 ticks/s, which would compound over a long replay and quietly
-    make "real time" a lie. If a tick ever overruns by more than one interval (a
-    stalled client, a throttled CPU) the deadline is reset to now instead of firing
-    a catch-up burst: better to drop time than to flood the socket.
-
-    Iterate a snapshot of `states` because a connect/disconnect can mutate it
-    across the `await`.
-    """
-    interval = 1 / TICKS_PER_SECOND
-    next_tick = time.monotonic()
-    while True:
-        next_tick += interval
-        now = time.monotonic()
-        if now > next_tick + interval:
-            next_tick = now
-        await asyncio.sleep(max(0.0, next_tick - now))
-        for client_id, state in list(states.items()):
-            if state.playing:
-                state.model.step_forward()
-                await sockets.send_to_client(client_id, state_message(state))
-
-
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    """This app's slice of the process lifespan: run the streaming ticker for as
-    long as the server is up. server.py composes it with the other app packages'
-    lifespans (see APPS there)."""
-    task = asyncio.create_task(ticker())
-    try:
-        yield
-    finally:
-        task.cancel()
-
-
-# --- REST commands ----------------------------------------------------------
-#
-# One POST per operation; see doc/the-client-server-api.md for why the upstream
-# half is HTTP and the downstream half is not.
-#
-# Paths are relative to wherever server.py mounts this router
-# (/api/pmu-test-streamer), so "/playback/play" is served as
-# /api/pmu-test-streamer/playback/play.
+# --- commands ------------------------------------------------------------------------
 
 router = APIRouter()
 
 
-async def applied(client_id: str, state: ClientState, action: str) -> CommandAck:
-    """Log the command, push this client its new state, acknowledge the request."""
-    log_event(action, client_id)
-    await sockets.send_to_client(client_id, state_message(state))
-    return CommandAck(applied=action)
+def dispatch(command: Command) -> CommandAck:
+    return dispatch_command(REGISTRY, command, logger)
 
 
-@router.post("/playback/play", operation_id="pmu_test_streamer_play")
+@router.post("/playback/play", operation_id="pmu_test_streamer_play", responses=COMMAND_RESPONSES)
 async def play(client_id: ClientId) -> CommandAck:
-    """Start advancing this client through the recorded stream."""
-    state = get_state(client_id)
-    state.playing = True
-    return await applied(client_id, state, "play")
+    """Play the recording from the cursor."""
+    return dispatch(PlayCommand(client_id=client_id))
 
 
-@router.post("/playback/stop", operation_id="pmu_test_streamer_stop")
-async def stop(client_id: ClientId) -> CommandAck:
-    """Pause this client where it is in the stream."""
-    state = get_state(client_id)
-    state.playing = False
-    return await applied(client_id, state, "stop")
+@router.post("/playback/pause", operation_id="pmu_test_streamer_pause", responses=COMMAND_RESPONSES)
+async def pause(client_id: ClientId) -> CommandAck:
+    """Pause the recording at the cursor."""
+    return dispatch(PauseCommand(client_id=client_id))
 
 
-@router.post("/playback/forward", operation_id="pmu_test_streamer_forward")
-async def forward(client_id: ClientId) -> CommandAck:
-    """Step one record forward, independently of the play/pause flag."""
-    state = get_state(client_id)
-    state.model.step_forward()
-    return await applied(client_id, state, "forward")
+class StepBody(BaseModel):
+    n: int = Field(description="Frames to step; negative steps back.")
 
 
-@router.post("/playback/back", operation_id="pmu_test_streamer_back")
-async def back(client_id: ClientId) -> CommandAck:
-    """Step one record back, independently of the play/pause flag."""
-    state = get_state(client_id)
-    state.model.step_back()
-    return await applied(client_id, state, "back")
+@router.post("/playback/step", operation_id="pmu_test_streamer_step", responses=COMMAND_RESPONSES)
+async def step(client_id: ClientId, body: StepBody) -> CommandAck:
+    """Step ``n`` frames, forward or back."""
+    return dispatch(StepCommand(client_id=client_id, n=body.n))
 
 
-# --- websocket endpoint (downstream only) -----------------------------------
+class SeekBody(BaseModel):
+    offset_s: float = Field(ge=0, description="Seconds from the start of the recording.")
+    end_offset_s: float | None = Field(default=None, gt=0, description="Stop here: play a chunk.")
+    play: bool = Field(default=False, description="Also start playing.")
+
+
+@router.post("/playback/seek", operation_id="pmu_test_streamer_seek", responses=COMMAND_RESPONSES)
+async def seek(client_id: ClientId, body: SeekBody) -> CommandAck:
+    """Move to an offset into the recording; with an end, play only that chunk."""
+    return dispatch(SeekCommand(client_id=client_id, **body.model_dump()))
+
+
+class SpeedBody(BaseModel):
+    speed: float = Field(gt=0, le=10, description="Speed multiplier; 1 is real time.")
+
+
+@router.post("/playback/speed", operation_id="pmu_test_streamer_speed", responses=COMMAND_RESPONSES)
+async def speed(client_id: ClientId, body: SpeedBody) -> CommandAck:
+    """Change the replay speed."""
+    return dispatch(SpeedCommand(client_id=client_id, speed=body.speed))
+
+
+class SourceBody(BaseModel):
+    name: str = Field(description="One of PlayerStatus.sources.")
+
+
+@router.post("/playback/source", operation_id="pmu_test_streamer_source", responses=COMMAND_RESPONSES)
+async def source(client_id: ClientId, body: SourceBody) -> CommandAck:
+    """Read another source: a recording lands paused at its start, a live feed
+    is followed from now."""
+    return dispatch(SwitchSourceCommand(client_id=client_id, source=body.name))
+
+
+# --- the socket ----------------------------------------------------------------------
 
 
 @router.websocket("/ws")
 async def ws_endpoint(ws: WebSocket) -> None:
-    # The client identifies itself with a numeric seed in the URL
-    # (ws://.../api/pmu-test-streamer/ws?client_id=<seed>); reject a connection
-    # without a valid one. `read_client_id` applies the very rule the `ClientId`
-    # query parameter enforces, so a page's socket and its commands can never
-    # address different state.
-    client_id = read_client_id(ws)
-    if client_id is None:
-        await ws.close(code=1008)  # policy violation
-        return
-
-    # Resuming an existing seed vs. a brand-new one changes the connect message.
-    known = client_id in states
-    async with sockets.connected(ws, client_id):
-        state = get_state(client_id)  # born here so it shows in the roster below
-        log_event("reconnected" if known else "connected", client_id)
-        # Straight down this socket, not through the registry: the opening
-        # message is for the connection that just arrived (and resumes its prior
-        # position if known), while a command's result goes to every socket the
-        # client has open.
-        await send_state(ws, state_message(state))
-        # Nothing is sent up this socket; this is what notices the client going
-        # away. See pswamp_web/pump.py -- the page packages share it.
-        await wait_for_disconnect(ws)
-    # Outside the block, so the socket is already out of the registry and the
-    # roster this logs shows who is left rather than who is leaving.
-    log_event("disconnected", client_id)
+    async with connected_pipeline(ws, REGISTRY) as run:
+        if run is not None:
+            await push_changes(ws, run, lambda: state_message(run))
