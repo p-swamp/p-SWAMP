@@ -1,0 +1,12 @@
+"""The __LABEL__ app: a module over the core pipeline, and the page that shows it.
+
+  router      the endpoints, mounted under /api/__SLUG__
+  lifespan    the shared live run, the module hosted here when there is no broker
+  WS_MESSAGE  the model pushed down the socket
+"""
+
+from .api import __NAME__State, lifespan, router
+
+WS_MESSAGE = __NAME__State
+
+__all__ = ["WS_MESSAGE", "__NAME__State", "lifespan", "router"]

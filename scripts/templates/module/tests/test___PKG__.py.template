@@ -1,0 +1,50 @@
+"""The __LABEL__ app, bottom up: the analysis, the module around it, and the
+page's socket end to end, in-process."""
+
+from datetime import datetime, timezone
+
+import pytest
+from __PKG__.__PKG___module import __NAME__Module, highest_frequency
+
+from pswamp_core.messages import PmuFrame, PmuHeader
+
+
+def test_picks_the_station_with_the_highest_frequency():
+    assert highest_frequency(["a", "b", "c"], [49.9, 50.1, 50.0]) == ("b", 50.1)
+    assert highest_frequency(["a", "b"], [None, 49.8]) == ("b", 49.8)
+    assert highest_frequency(["a"], [None]) is None
+
+
+def frame(values: list[float | None]) -> PmuFrame:
+    n = len(values)
+    header = PmuHeader(station=[f"s{i}" for i in range(n)], channel=["f"] * n, measurement=["f"] * n,
+                       units=["Hz"] * n, data_rate=50.0)
+    return PmuFrame(mRID="test", timestamp=datetime.now(timezone.utc), header=header, values=values)
+
+
+async def test_the_module_reads_the_frequency_columns():
+    body = await __NAME__Module().process(frame([49.9, 50.1, None]))
+    assert (body.station, body.frequency_hz) == ("s1", 50.1)
+    assert await __NAME__Module().process(frame([None])) is None
+
+
+@pytest.fixture
+def server(monkeypatch):
+    """The whole server, in-memory transport: the module is hosted in-process."""
+    monkeypatch.delenv("PSWAMP_TRANSPORT", raising=False)
+    from fastapi.testclient import TestClient
+
+    import server as server_module
+
+    with TestClient(server_module.app) as client:
+        yield client
+
+
+def test_the_page_s_socket_gets_results(server):
+    with server.websocket_connect("/api/__SLUG__/ws?client_id=4242") as ws:
+        for _ in range(200):
+            state = ws.receive_json()
+            if state["result"] is not None:
+                break
+    assert state["result"]["app"]["name"] == "__SLUG__"
+    assert 40 < state["result"]["result"]["frequency_hz"] < 70

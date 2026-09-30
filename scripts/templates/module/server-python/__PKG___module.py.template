@@ -1,0 +1,49 @@
+"""The __LABEL__ module: one ``PmuFrame`` in, one ``__NAME__Result`` out.
+
+The analysis is a placeholder: the station with the highest frequency in each
+frame. It is a plain function, ``highest_frequency``; ``process`` only adapts a
+frame to it and its answer to a result. Replace the function and the
+``__NAME__Body`` it fills with yours, keeping that split.
+"""
+
+from typing import Literal
+
+from pydantic import BaseModel, Field
+
+from pswamp_core.messages import PmuFrame, ResultEnvelope
+from pswamp_core.modules import Module
+
+__all__ = ["__NAME__Body", "__NAME__Module", "__NAME__Result", "highest_frequency"]
+
+
+def highest_frequency(stations: list[str], frequencies: list[float | None]) -> tuple[str, float] | None:
+    """The station with the highest frequency, and that frequency; ``None``
+    when no station has a value."""
+    readings = [(hz, station) for station, hz in zip(stations, frequencies) if hz is not None]
+    if not readings:
+        return None
+    hz, station = max(readings)
+    return station, hz
+
+
+class __NAME__Body(BaseModel):
+    station: str = Field(description="The station with the highest frequency in the frame.")
+    frequency_hz: float = Field(description="Its frequency, in Hz.")
+
+
+class __NAME__Result(ResultEnvelope[__NAME__Body]):
+    version: Literal["v1"] = "v1"
+
+
+class __NAME__Module(Module):
+    name = "__SLUG__"
+    input_model = PmuFrame
+    output_model = __NAME__Result
+
+    async def process(self, frame: PmuFrame) -> __NAME__Body | None:
+        columns = frame.header.columns(measurement="f")
+        peak = highest_frequency([frame.header.station[i] for i in columns], [frame.values[i] for i in columns])
+        if peak is None:
+            return None  # publish nothing for this frame
+        station, hz = peak
+        return __NAME__Body(station=station, frequency_hz=hz)
