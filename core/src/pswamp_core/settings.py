@@ -51,7 +51,7 @@ class EnvSetting:
     description: str
     required: bool = False
     default: str | None = None
-    kind: Literal["str", "float", "seconds", "list", "path"] = "str"
+    kind: Literal["str", "int", "float", "seconds", "list", "path"] = "str"
 
 
 def env_key(name: str, setting: str) -> str:
@@ -71,6 +71,8 @@ def read_setting(name: str, setting: EnvSetting) -> Any:
             raise MissingSettingError(f"{key} is required to configure {name!r}")
         return None
     try:
+        if setting.kind == "int":
+            return int(raw)
         if setting.kind == "float":
             return float(raw)
         if setting.kind == "seconds":
