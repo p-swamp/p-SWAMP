@@ -6,20 +6,31 @@ import asyncio
 from datetime import datetime, timedelta, timezone
 
 import pytest
+from pmu_test_streamer.excursion_module import AutoPauseCommand, ExcursionModule
 from pmu_test_streamer.live_client import LIVE_STREAM_ID, LiveSyntheticClient
 from pmu_test_streamer.pipeline import PIPELINE, gateway
 from pmu_test_streamer.sample_client import DEFAULT_PATH, EPOCH, STREAM_ID, SampleRecordingClient, load_sample
-from pmu_test_streamer.stats_module import FrameStatsModule, FrameStatsResult
+from pmu_test_streamer.range_summary_module import RangeSummaryModule, SummarizeRangeCommand
+from pmu_test_streamer.stats_module import FrameStats, FrameStatsModule, FrameStatsResult
 
+from pswamp_core.command_routing import CommandRefused
 from pswamp_core.datagateway import TimeRange
 from pswamp_core.host import ModuleHost, serve_hosts
-from pswamp_core.messages import PlayCommand, PmuFrame, PmuHeader, SpeedCommand
+from pswamp_core.messages import PauseCommand, PlayCommand, PmuFrame, PmuHeader, SpeedCommand
 from pswamp_core.pipeline import PipelineRun
 from pswamp_core.testing import DataClientConformance
 from pswamp_core.transport import InMemoryTransport
 from pswamp_core.util.tasks import cancel_and_wait
 
 T0 = datetime(2026, 1, 1, tzinfo=timezone.utc)
+
+
+class Recorder:
+    def __init__(self) -> None:
+        self.published: list = []
+
+    def publish(self, message) -> None:
+        self.published.append(message)
 
 TWO_STATIONS = PmuHeader(
     station=["A", "A", "A", "B", "B", "B"],
@@ -259,3 +270,66 @@ def test_two_clients_on_live_see_one_shared_stream(server):
         first_seen = {next_state(first)["frame"]["timestamp"] for _ in range(20)}
         second_seen = {next_state(second)["frame"]["timestamp"] for _ in range(20)}
         assert first_seen & second_seen  # the same frames, stamped once by the shared run
+
+
+# --- the module chain, a module commanding the player, a batch query --------------------
+
+
+def stats_at(mean: float, seconds: float = 0.0) -> FrameStatsResult:
+    body = FrameStats(n_stations=5, mean_frequency_hz=mean, min_frequency_hz=mean, max_frequency_hz=mean,
+                      angle_spread_deg=0.0, mean_voltage_kv=400.0)
+    return FrameStatsResult(timestamp=T0 + timedelta(seconds=seconds), app={"name": "frame-stats", "uuid": "u"}, result=body)
+
+
+async def test_the_excursion_module_counts_excursions_and_can_pause_the_player():
+    module, out = ExcursionModule(), Recorder()
+    await module.setup(out)
+    assert (await module.process(stats_at(50.001))).in_band
+    await module.handle(AutoPauseCommand(enabled=True))
+    left = await module.process(stats_at(50.008))
+    assert (left.in_band, left.excursions, left.auto_pause) == (False, 1, True)
+    await module.process(stats_at(50.009))  # still out: no second excursion
+    assert [type(m) for m in out.published] == [PauseCommand]
+    await module.handle(AutoPauseCommand(enabled=False))
+    await module.process(stats_at(50.0))
+    assert (await module.process(stats_at(49.99))).excursions == 2 and len(out.published) == 1
+
+
+async def test_the_range_summary_reads_its_own_gateway():
+    module = RangeSummaryModule()
+    module.gateway = gateway()
+    summary = await module.handle(SummarizeRangeCommand(source="sample", offset_s=1.0, end_offset_s=2.0))
+    assert summary.frames == 20 and summary.max_frequency_hz > 50.005
+    for refused in (
+        SummarizeRangeCommand(source="live", offset_s=0, end_offset_s=1),
+        SummarizeRangeCommand(source="nope", offset_s=0, end_offset_s=1),
+        SummarizeRangeCommand(source="sample", offset_s=2, end_offset_s=1),
+    ):
+        with pytest.raises(CommandRefused):
+            module.validate(refused)
+    with pytest.raises(CommandRefused, match="nothing"):
+        await module.handle(SummarizeRangeCommand(source="sample", offset_s=10, end_offset_s=11))
+
+
+def test_auto_pause_stops_the_replay_at_the_excursion(server):
+    with server.websocket_connect("/api/pmu-test-streamer/ws?client_id=301") as ws:
+        ws.receive_json()
+        server.post("/api/pmu-test-streamer/excursion/auto-pause?client_id=301", json={"enabled": True})
+        next_state(ws, lambda s: s["excursion"] is not None and s["excursion"]["result"]["auto_pause"])
+        server.post("/api/pmu-test-streamer/playback/speed?client_id=301", json={"speed": 5})
+        server.post("/api/pmu-test-streamer/playback/play?client_id=301")
+        next_state(ws, lambda s: not s["player"]["paused"])
+        paused = next_state(ws, lambda s: s["player"]["paused"], limit=2000)
+        assert 20 <= paused["frame_index"] <= 30  # the trip, about 1.3 s in
+        assert paused["excursion"]["result"]["excursions"] >= 1
+
+
+def test_a_range_summary_arrives_on_the_socket_and_a_refusal_as_an_error(server):
+    with server.websocket_connect("/api/pmu-test-streamer/ws?client_id=302") as ws:
+        ws.receive_json()
+        body = {"source": "sample", "offset_s": 1.0, "end_offset_s": 2.0}
+        assert server.post("/api/pmu-test-streamer/summary?client_id=302", json=body).status_code == 200
+        state = next_state(ws, lambda s: s["summary"] is not None)
+        assert state["summary"]["result"]["frames"] == 20
+        live = {"source": "live", "offset_s": 0, "end_offset_s": 1}
+        assert server.post("/api/pmu-test-streamer/summary?client_id=302", json=live).status_code == 200  # checked where it runs

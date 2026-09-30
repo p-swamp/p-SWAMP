@@ -14,6 +14,9 @@ dropped when its run publishes ``PipelineClosed``, or, if that was lost, after
 
 With the in-memory transport the server runs the hosts itself; with a broker a
 worker does (``pswamp_core.worker``). The module cannot tell the difference.
+
+A module that ``reads_gateway`` gets a gateway of its own per instance, built
+by the pipeline's factory from the same configuration the server reads.
 """
 
 from __future__ import annotations
@@ -31,6 +34,7 @@ from .transport import Outbox
 from .util.tasks import cancel_and_wait, finish
 
 if TYPE_CHECKING:
+    from .datagateway import DataGateway
     from .modules import Module
     from .transport import Transport, TransportSubscription
 
@@ -78,6 +82,7 @@ class ModuleHost:
         app: The app whose topics the module is reached on.
         idle_seconds: How long a key may go without a message before its
             instance is dropped, in case its ``PipelineClosed`` never arrives.
+        gateway: Builds a gateway for an instance that ``reads_gateway``.
     """
 
     def __init__(
@@ -87,8 +92,10 @@ class ModuleHost:
         *,
         app: str,
         idle_seconds: float = DEFAULT_IDLE_SECONDS,
+        gateway: Callable[[], DataGateway] | None = None,
     ) -> None:
         self._factory = module
+        self._gateway = gateway
         self.transport = transport
         self.app = app
         self.idle_seconds = idle_seconds
@@ -148,6 +155,8 @@ class ModuleHost:
     async def _start(self, slot: _Slot) -> None:
         module = slot.module
         slot.out.start()
+        if module.reads_gateway and self._gateway is not None:
+            module.gateway = self._gateway()
         await module.setup(slot.out)
         if module.commands:
             slot.inbox = module.command_inbox(slot.commands, slot.out)
@@ -176,6 +185,8 @@ class ModuleHost:
         slot.inputs.close()
         slot.commands.close()
         await slot.out.close()
+        if slot.module.gateway is not None:
+            await slot.module.gateway.close()
         logger.info("%s: instance dropped for key %s (%s), %d running", self.name, slot.key, reason, len(self._slots))
 
 

@@ -128,7 +128,7 @@ class Pipeline:
     ) -> list[ModuleHost]:
         """One host per module, or per module named in ``only``."""
         return [
-            ModuleHost(module, transport, app=self.app, idle_seconds=idle_seconds)
+            ModuleHost(module, transport, app=self.app, idle_seconds=idle_seconds, gateway=self.gateway)
             for module in self.modules
             if only is None or module.name in only
         ]

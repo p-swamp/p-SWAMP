@@ -110,11 +110,12 @@ services:
     environment:
       <<: *transport
       PSWAMP_WORKER_PIPELINES: "pmu_test_streamer.pipeline:PIPELINE"
+      PSWAMP_WORKER_MODULES: "frame-stats,excursion"
     depends_on:
       kafka:
         condition: service_healthy
     restart: unless-stopped
-    develop:
+    develop: &worker-watch
       watch:
         - path: app/server-python/src
           action: sync+restart
@@ -124,6 +125,25 @@ services:
           target: /workspace/p-SWAMP/core/src
         - path: core/pyproject.toml
           action: rebuild
+
+  # The range summary in a worker of its own: a batch query over a recording,
+  # with its own CPU budget, so a heavy one cannot slow the frame-rate modules.
+  # It reads the recording itself, so it needs the same <APP>_DATA_CLIENTS as
+  # the server (here the in-image defaults).
+  batch-worker:
+    build: .
+    image: p-swamp:latest
+    command: ["python", "-m", "pswamp_core.worker"]
+    environment:
+      <<: *transport
+      PSWAMP_WORKER_PIPELINES: "pmu_test_streamer.pipeline:PIPELINE"
+      PSWAMP_WORKER_MODULES: "range-summary"
+    depends_on:
+      kafka:
+        condition: service_healthy
+    restart: unless-stopped
+    cpus: 1.0
+    develop: *worker-watch
 
   # The broker for PSWAMP_TRANSPORT=kafka: Apache Kafka's own image (Apache
   # 2.0), one node in KRaft mode. No volume: every topic is a live hop, and a

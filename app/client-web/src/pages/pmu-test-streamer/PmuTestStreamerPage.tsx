@@ -24,8 +24,20 @@ function secondsBetween(from?: string | null, to?: string | null): number | null
  * control that does not apply (any of them, while live) is disabled.
  */
 export function PmuTestStreamerPage() {
-  const { state, header, status, connected, play, pause, step, seek, setSpeed, switchSource } =
-    usePmuStreamSocket()
+  const {
+    state,
+    header,
+    status,
+    connected,
+    play,
+    pause,
+    step,
+    seek,
+    setSpeed,
+    switchSource,
+    setAutoPause,
+    summarize,
+  } = usePmuStreamSocket()
 
   // The slider position while dragged; null when it follows the cursor. One
   // seek on release, listened for on the window so a release anywhere counts.
@@ -55,14 +67,16 @@ export function PmuTestStreamerPage() {
   const controls = connected && !live
   const canSeek = controls && player?.can_seek === true
   const stats = state?.stats?.result
+  const excursion = state?.excursion?.result
+  const summary = state?.summary?.result
 
   return (
     <Card className="w-full max-w-xl gap-0">
       <CardHeader className="border-b">
         <CardTitle className="text-lg">PMU Test Streamer</CardTitle>
         <span className="text-gray-500">
-          A PMU source through the core pipeline: provider → gateway → player → topic → frame
-          statistics module, and its result back to this page.
+          A PMU source through the core pipeline: provider → gateway → player → frame
+          statistics → excursion, with a range summary on request.
         </span>
         <CardAction className="self-center">
           {connected && live ? (
@@ -135,6 +149,44 @@ export function PmuTestStreamerPage() {
             {stats?.mean_frequency_hz != null
               ? `mean f ${stats.mean_frequency_hz.toFixed(4)} Hz · spread ${stats.angle_spread_deg?.toFixed(2) ?? '—'}° · ${stats.n_stations} stations`
               : '—'}
+          </span>
+          <span className="text-right text-muted-foreground">Excursion</span>
+          <span className="flex items-center gap-3 tabular-nums" data-testid="excursion-readout">
+            {excursion ? (
+              <>
+                <Badge variant={excursion.in_band ? 'secondary' : 'destructive'}>
+                  {excursion.in_band ? 'in band' : 'out of band'}
+                </Badge>
+                ±{(excursion.band_hz * 1000).toFixed(0)} mHz · {excursion.excursions} so far
+              </>
+            ) : (
+              '—'
+            )}
+            <label className="ml-auto flex items-center gap-1 text-xs">
+              <input
+                type="checkbox"
+                aria-label="Pause on excursion"
+                checked={excursion?.auto_pause ?? false}
+                disabled={!controls}
+                onChange={(event) => setAutoPause(event.target.checked)}
+              />
+              pause on excursion
+            </label>
+          </span>
+          <span className="text-right text-muted-foreground">Summary</span>
+          <span className="flex items-center gap-3 tabular-nums" data-testid="summary-readout">
+            {summary
+              ? `${summary.source} [${summary.offset_s.toFixed(2)}, ${summary.end_offset_s.toFixed(2)}) s · ${summary.frames} frames · f ${summary.min_frequency_hz.toFixed(4)}–${summary.max_frequency_hz.toFixed(4)} Hz`
+              : '—'}
+            <Button
+              variant="outline"
+              size="sm"
+              className="ml-auto"
+              disabled={!connected || !player}
+              onClick={() => player && summarize(player.source, offset, offset + 1)}
+            >
+              Summarize next 1 s
+            </Button>
           </span>
         </div>
 
