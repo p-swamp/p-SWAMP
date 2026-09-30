@@ -1,0 +1,47 @@
+"""Helpers shared by the core's tests."""
+
+from __future__ import annotations
+
+from datetime import datetime, timedelta, timezone
+from typing import Literal
+
+from pydantic import BaseModel
+
+from pswamp_core.messages import DataModel, PmuFrame, PmuHeader, ResultEnvelope
+
+T0 = datetime(2026, 1, 1, tzinfo=timezone.utc)
+
+
+def at(seconds: float) -> datetime:
+    """``seconds`` after ``T0``."""
+    return T0 + timedelta(seconds=seconds)
+
+
+HEADER = PmuHeader(
+    station=["A", "A", "B", "B"],
+    channel=["V", "f", "V", "f"],
+    measurement=["V_Magnitude", "f", "V_Magnitude", "f"],
+    units=["kV", "Hz", "kV", "Hz"],
+    data_rate=20.0,
+)
+
+
+def frame(seconds: float, f: float = 50.0, header: PmuHeader = HEADER) -> PmuFrame:
+    """A frame at ``at(seconds)`` with every frequency column at ``f``."""
+    values = [f if m == "f" else 400.0 for m in header.measurement]
+    return PmuFrame(timestamp=at(seconds), mRID="test", header=header, values=values)
+
+
+class Measurement(DataModel):
+    """A minimal message for tests."""
+
+    version: Literal["v1"] = "v1"
+    value: float = 0.0
+
+
+class Number(BaseModel):
+    value: float
+
+
+class NumberResult(ResultEnvelope[Number]):
+    version: Literal["v1"] = "v1"
