@@ -59,3 +59,37 @@ async def take(subscription, n: int, timeout: float = 5.0) -> list:
         return [await subscription.get() for _ in range(n)]
 
     return await asyncio.wait_for(read(), timeout)
+
+
+class Recorder:
+    """A sink that keeps what is published into it."""
+
+    def __init__(self) -> None:
+        self.published: list = []
+
+    def publish(self, message) -> None:
+        self.published.append(message)
+
+    def of(self, cls) -> list:
+        return [m for m in self.published if isinstance(m, cls)]
+
+    async def wait_for(self, cls, n: int = 1, timeout: float = 5.0) -> list:
+        """The first ``n`` messages of ``cls``, waiting up to ``timeout``."""
+        async def poll():
+            while len(self.of(cls)) < n:
+                await asyncio.sleep(0.005)
+            return self.of(cls)[:n]
+
+        return await asyncio.wait_for(poll(), timeout)
+
+
+class _NoOwner:
+    def _detach(self, subscription) -> None:
+        return
+
+
+def queue(*models, overflow=None, maxsize: int = 64):
+    """A free-standing subscription to feed a module or an inbox by hand."""
+    from pswamp_core.subscription import Overflow, Subscription
+
+    return Subscription(_NoOwner(), models, overflow or Overflow.GROW, maxsize)
