@@ -7,13 +7,14 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 from pmu_test_streamer.live_client import LIVE_STREAM_ID, LiveSyntheticClient
-from pmu_test_streamer.pipeline import gateway
+from pmu_test_streamer.pipeline import PIPELINE, gateway
 from pmu_test_streamer.sample_client import DEFAULT_PATH, EPOCH, STREAM_ID, SampleRecordingClient, load_sample
 from pmu_test_streamer.stats_module import FrameStatsModule, FrameStatsResult
 
 from pswamp_core.datagateway import TimeRange
-from pswamp_core.host import ModuleHost
-from pswamp_core.messages import PmuFrame, PmuHeader
+from pswamp_core.host import ModuleHost, serve_hosts
+from pswamp_core.messages import PlayCommand, PmuFrame, PmuHeader, SpeedCommand
+from pswamp_core.pipeline import PipelineRun
 from pswamp_core.testing import DataClientConformance
 from pswamp_core.transport import InMemoryTransport
 from pswamp_core.util.tasks import cancel_and_wait
@@ -126,3 +127,27 @@ async def test_the_streamer_s_frames_carry_the_cim_reference(monkeypatch):
     assert first.header.cimReferenceId == "n44-cim-stub"
     monkeypatch.setenv("PMU_TEST_STREAMER_CIM_REFERENCE", "none")
     assert (await anext(await gateway().consume())).header.cimReferenceId is None
+
+
+# --- the pipeline ---------------------------------------------------------------------
+
+
+async def test_a_streamer_run_plays_the_sample_through_frame_stats():
+    transport = InMemoryTransport()
+    hosts = asyncio.create_task(serve_hosts(PIPELINE.hosts(transport)))
+    run = PipelineRun("client-1", PIPELINE, transport)
+    await run.start()
+    try:
+        assert run.player.status().sources == ["sample", "live"]
+        assert run.latest.get(PmuFrame).timestamp == EPOCH + timedelta(seconds=0.05)  # shown while paused
+        run.dispatch(SpeedCommand(speed=10))
+        run.dispatch(PlayCommand())
+        for _ in range(200):
+            stats = run.latest.get(FrameStatsResult)
+            if stats is not None and stats.result.n_stations == 5:
+                break
+            await asyncio.sleep(0.01)
+        assert stats.result.n_stations == 5 and 49 < stats.result.mean_frequency_hz < 51
+    finally:
+        await run.stop()
+        await cancel_and_wait(hosts)
