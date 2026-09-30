@@ -114,8 +114,35 @@ same in both; only the transport differs.
 Each piece gets its Why and Where when its code lands.
 
 ### Messages
-What every arrow carries: `PmuFrame`, the commands, `PlayerStatus`, the result
-envelope a module publishes, and `ErrorEvent`.
+*What.* Every message is a `DataModel`: a pydantic model with a pinned schema
+`version`, an optional `mRID` and a UTC `timestamp`. Its topic is its class
+name (`PmuFrame` → `pmu.frame`).
+
+```python
+class FrameStats(BaseModel):
+    mean_hz: float
+
+class FrameStatsResult(ResultEnvelope[FrameStats]):   # topic frame.stats.result
+    version: Literal["v1"] = "v1"
+
+FrameStatsResult.model_validate_json(text)           # the whole codec
+```
+
+| Message | Carries |
+|---|---|
+| `PmuFrame` | One instant of every channel, with its `PmuHeader` (station, channel, measurement and unit per column, data rate, `cimReferenceId`, `header_id`). |
+| `Command` | An upstream action. The player's are `Play`, `Pause`, `Step`, `Seek`, `Speed` and `SwitchSource`; a module declares its own. |
+| `PlayerStatus` | The player's mode, source, cursor, speed and what it can do. |
+| `ResultEnvelope[T]` | A module's result body `T`, with the module's identity and the command it answers, if any. |
+| `ErrorEvent` | An operational failure, for the person using the run. |
+| `PipelineClosed` | A run stopped; hosts drop its module instances. |
+
+*Why.* One codec from provider to browser. A message can be logged,
+validated on receipt, and published in the browser's api contract without an
+adapter. A pinned version makes an incompatible payload fail loudly. Every
+frame carries its layout, so a module needs nothing but the frame in hand.
+
+*Where.* `core/src/pswamp_core/messages/`.
 
 ### Transport
 Keyed publish/subscribe with one topic per message class per app. In-memory
