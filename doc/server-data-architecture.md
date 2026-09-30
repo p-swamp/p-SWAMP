@@ -436,8 +436,22 @@ types are generated from the same classes.
 `app/client-web/src/pages/pmu-test-streamer/`.
 
 ### Errors
-`ErrorEvent`: an operational failure (a provider, a module, a refused module
-command), shown on every page's error tray.
+*What.* `ErrorEvent` is what a pipeline publishes when something *operational*
+fails: the player's provider raised, a module's `process` raised, or a module
+refused a command. Every one goes on the app's error topic
+(`<app>.error.event`) under its run's key. `serve_pipeline` forwards that
+topic to the `errors` app's hub. Each notice goes to the clients watching that
+run: its own client, or every client following a shared live run. The
+layout's `<ErrorTray>` shows them on every page, from `/api/errors/ws`.
+
+*Why.* The log line stays the source of truth; the notice is a copy addressed
+to the person whose run it was. It is how a module command's refusal reaches
+the browser, since that command was accepted with a 200 before the module saw
+it. It is not a grid alarm: an alarm is a module's normal result.
+
+*Where.* `core/src/pswamp_core/messages/errors.py`;
+`app/server-python/src/errors/`, `shared._forward_errors`;
+`app/client-web/src/components/ErrorTray.tsx`, `hooks/useErrorFeed.ts`.
 
 ### Keeping up
 A module or publisher that falls behind reports it instead of dropping data

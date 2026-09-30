@@ -32,6 +32,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.types import Scope
 
 import api_contract
+import errors
 import pmu_test_streamer
 import pswamp_web
 import reference_subapp
@@ -121,6 +122,11 @@ APPS = [
         "reference-subapp",
         reference_subapp,
         "The reference example: a per-client counter over the whole stack.",
+    ),
+    AppEntry(
+        "errors",
+        errors,
+        "Operational errors from any of a client's pipeline runs, for the layout's error tray.",
     ),
 ]
 
