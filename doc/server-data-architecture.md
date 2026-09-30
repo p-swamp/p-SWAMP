@@ -232,6 +232,16 @@ topics for every key, and builds one instance per run key on that key's first
 message. It drops the instance when the run publishes `PipelineClosed`, or
 after five minutes with nothing for it.
 
+**A pipeline of modules.** A module may read another module's result class,
+which chains them: in the streamer, `PmuFrame` → `FrameStatsModule` →
+`FrameStatsResult` → `ExcursionModule` → `ExcursionResult`. A module may
+publish a command into its sink too: `ExcursionModule` publishes
+`PauseCommand` when the frequency leaves its band and auto-pause is on, and
+the player applies it exactly as one from the edge. A module that sets
+`reads_gateway = True` gets its own gateway over the pipeline's sources
+(`self.gateway`). `RangeSummaryModule` answers `SummarizeRangeCommand` with it:
+a batch query that runs in a worker of its own.
+
 *Why.* A contributor writes the analysis and three class attributes. The
 module never sees the transport: it reads a queue and publishes into a sink.
 That lets the same module run in the server or in a worker. Reading the layout
@@ -239,7 +249,8 @@ off `frame.header` means it needs no configuration. `process` runs on the
 event loop; a CPU-heavy module runs its analysis in a thread or process pool.
 
 *Where.* `core/src/pswamp_core/modules.py`, `host.py`, `command_routing.py`;
-the example is `app/server-python/src/pmu_test_streamer/stats_module.py`.
+the examples are `stats_module.py`, `excursion_module.py` and
+`range_summary_module.py` in `app/server-python/src/pmu_test_streamer/`.
 
 ### Gateway and providers
 *What.* A provider implements `DataClient`: it is a `history` (it holds a
