@@ -22,6 +22,13 @@ The run keeps the newest message of each class (``latest``) and wakes readers
 on every change (``changes()``). That is what the edge builds its socket
 message from: however much arrived meanwhile, it sends one message.
 
+**Live is shared.** A recording is replayed per client, each with its own
+cursor. A live source has one run of its own, keyed ``live.<source>``, started
+with the app and running until shutdown (``start_live_runs``), so its modules
+run once however many people watch. A client's run switched to a live source
+opens no stream: it *follows* the live run, taking that key's frames and
+results off the transport into its own ``latest``.
+
 A **``PipelineRegistry``** keeps one run per key: it builds a run on first
 ``acquire``, keeps it through a reload, evicts it when idle or, at the cap,
 the least recently used one nobody is watching.
@@ -40,7 +47,7 @@ from .command_routing import CommandInbox, NoReceiver, concrete_commands
 from .host import DEFAULT_IDLE_SECONDS, ModuleHost
 from .log import get_logger
 from .messages.commands import Command
-from .messages.control import PipelineClosed
+from .messages.control import PipelineClosed, PlayerStatus
 from .messages.errors import ErrorEvent
 from .player import PLAYER_COMMANDS, Player
 from .subscription import Overflow
@@ -55,7 +62,15 @@ if TYPE_CHECKING:
     from .modules import Module
     from .transport import Transport, TransportSubscription
 
-__all__ = ["CapacityError", "Latest", "Pipeline", "PipelineRegistry", "PipelineRun"]
+__all__ = [
+    "CapacityError",
+    "Latest",
+    "Pipeline",
+    "PipelineRegistry",
+    "PipelineRun",
+    "live_key",
+    "start_live_runs",
+]
 
 logger = get_logger("pswamp_core.pipeline")
 
@@ -100,6 +115,11 @@ class Pipeline:
         """What the modules publish: what a run listens for."""
         return tuple(dict.fromkeys(m.output_model for m in self.modules))
 
+    def live_sources(self) -> list[str]:
+        """The sources that are live feeds, each of which gets a shared run."""
+        gateway = self.gateway()
+        return [name for name in gateway.sources if gateway.kind(name) == "live"]
+
     def module_for(self, command: type[Command]) -> type[Module] | None:
         return next((m for m in self.modules if command in m.commands), None)
 
@@ -112,6 +132,11 @@ class Pipeline:
             for module in self.modules
             if only is None or module.name in only
         ]
+
+
+def live_key(source: str) -> str:
+    """The key of the shared run of a live source."""
+    return f"live.{source}"
 
 
 class Latest:
@@ -162,16 +187,27 @@ class PipelineRun:
         pipeline: What it is made of.
         transport: The process's transport.
         loop: The player starts a recording over at its end.
+        live_source: Make this the shared run of that live source, instead of
+            a client's run.
     """
 
-    def __init__(self, key: str, pipeline: Pipeline, transport: Transport, *, loop: bool = True) -> None:
+    def __init__(
+        self, key: str, pipeline: Pipeline, transport: Transport, *, loop: bool = True, live_source: str | None = None
+    ) -> None:
         self.key = key
         self.pipeline = pipeline
         self.transport = transport
         self.gateway = pipeline.gateway()
+        self.shared = live_source is not None
+        if live_source is not None:
+            self.gateway.switch(live_source)
         self.latest = Latest()
         self.outbox = Outbox(transport, app=pipeline.app, key=key)
-        self.player = Player(self.gateway, self, loop=loop)
+        # A client's run leaves live sources to their shared runs.
+        self.player = Player(self.gateway, self, loop=loop, follow_live=not self.shared)
+        #: The frame at the cursor: the player's, or the live run's while following it.
+        self.frame: DataModel | None = None
+        self._following: TransportSubscription | None = None
         self._waiters: set[asyncio.Event] = set()
         self._inbox: CommandInbox | None = None
         self._subscriptions: list[TransportSubscription] = []
@@ -182,9 +218,14 @@ class PipelineRun:
 
     def publish(self, message: DataModel) -> None:
         """What the player publishes: remembered here, and put on the transport
-        when a module reads it or it is an error."""
+        when a module reads it, it is an error, or it is a shared run's frame."""
+        if isinstance(message, PlayerStatus):
+            self._follow(message)
+        elif message is self.player.last_frame:
+            self.frame = message
         self._remember(message)
-        if type(message) in self.pipeline.inputs or isinstance(message, ErrorEvent):
+        frame = self.shared and message is self.player.last_frame
+        if frame or type(message) in self.pipeline.inputs or isinstance(message, ErrorEvent):
             self.outbox.publish(message)
 
     def changes(self) -> Changes:
@@ -195,6 +236,25 @@ class PipelineRun:
         self.latest.remember(message)
         for event in self._waiters:
             event.set()
+
+    def _follow(self, status: PlayerStatus) -> None:
+        """Follow the shared run of the live source the player is on; stop
+        following when it leaves it."""
+        key = live_key(status.source) if status.mode == "live" and not self.shared else None
+        if self._following is not None and self._following.key == key:
+            return
+        self._unfollow()
+        if key is None:
+            return
+        model = self.gateway.active.model
+        self.frame = None
+        self._following = self.transport.subscribe(model, *self.pipeline.results, app=self.pipeline.app, key=key)
+        self._tasks.append(asyncio.create_task(self._receive_followed(self._following, model), name=f"{self.key}.follow"))
+
+    def _unfollow(self) -> None:
+        if self._following is not None:
+            self._following.close()  # ends its _receive task
+            self._following = None
 
     # -- commands -------------------------------------------------------------------
 
@@ -246,6 +306,7 @@ class PipelineRun:
         if self._inbox is not None:
             await self._inbox.stop()
         await self.player.stop()
+        self._unfollow()
         await cancel_and_wait(*self._tasks)
         for subscription in self._subscriptions:
             subscription.close()
@@ -256,6 +317,26 @@ class PipelineRun:
     async def _receive(self, results: TransportSubscription) -> None:
         async for _, result in results:
             self._remember(result)
+
+    async def _receive_followed(self, messages: TransportSubscription, frames: type[DataModel]) -> None:
+        async for _, message in messages:
+            if messages is not self._following:
+                return  # unfollowed: what is still queued belongs to the live run
+            if type(message) is frames:
+                self.frame = message
+            self._remember(message)
+
+
+async def start_live_runs(pipeline: Pipeline, transport: Transport) -> list[PipelineRun]:
+    """One started shared run per live source of ``pipeline``."""
+    runs = [
+        PipelineRun(live_key(source), pipeline, transport, live_source=source)
+        for source in pipeline.live_sources()
+    ]
+    for run in runs:
+        await run.start()
+        logger.info("shared live run started for %s", run.key)
+    return runs
 
 
 class CapacityError(RuntimeError):

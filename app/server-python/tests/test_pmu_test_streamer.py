@@ -242,3 +242,20 @@ def test_a_socket_without_a_client_id_is_refused(server):
         with server.websocket_connect("/api/pmu-test-streamer/ws") as ws:
             ws.receive_json()
     assert closed.value.code == 1008
+
+
+def test_two_clients_on_live_see_one_shared_stream(server):
+    with (
+        server.websocket_connect("/api/pmu-test-streamer/ws?client_id=201") as first,
+        server.websocket_connect("/api/pmu-test-streamer/ws?client_id=202") as second,
+    ):
+        first.receive_json()
+        second.receive_json()
+        for client in ("201", "202"):
+            server.post(f"/api/pmu-test-streamer/playback/source?client_id={client}", json={"name": "live"})
+        a = next_state(first, lambda s: s["player"]["mode"] == "live" and s["stats"] is not None)
+        b = next_state(second, lambda s: s["player"]["mode"] == "live" and s["stats"] is not None)
+        assert a["stats"]["app"]["uuid"] == b["stats"]["app"]["uuid"]  # one module instance for both
+        first_seen = {next_state(first)["frame"]["timestamp"] for _ in range(20)}
+        second_seen = {next_state(second)["frame"]["timestamp"] for _ in range(20)}
+        assert first_seen & second_seen  # the same frames, stamped once by the shared run

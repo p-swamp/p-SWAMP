@@ -33,8 +33,9 @@ edge of the server data architecture (doc/server-data-architecture.md), which
 every app over a core pipeline uses:
 
     transport()           the process's transport, from PSWAMP_TRANSPORT
-    serve_pipeline(...)   an app's lifespan: its runs stopped on the way out, and
-                          its modules hosted here when the transport is in-memory
+    serve_pipeline(...)   an app's lifespan: its shared live runs, its modules
+                          hosted here when the transport is in-memory, and every
+                          run stopped on the way out
     connected_pipeline    a socket's handshake: its client's run, or a close code
     push_changes          one state message on connect and one per change
     dispatch_command      a POST's command into its client's run: 404, 409 or an ack
@@ -51,7 +52,7 @@ from pydantic import BaseModel
 from pswamp_core.command_routing import CommandRefused
 from pswamp_core.host import serve_hosts
 from pswamp_core.messages import Command
-from pswamp_core.pipeline import CapacityError, Pipeline, PipelineRegistry, PipelineRun
+from pswamp_core.pipeline import CapacityError, Pipeline, PipelineRegistry, PipelineRun, start_live_runs
 from pswamp_core.transport import Transport, transport_from_env
 from pswamp_core.util.tasks import cancel_and_wait
 
@@ -172,16 +173,21 @@ async def lifespan(app: FastAPI):
 
 @contextlib.asynccontextmanager
 async def serve_pipeline(pipeline: Pipeline, registry: PipelineRegistry) -> AsyncIterator[None]:
-    """An app's lifespan: with the in-memory transport, its modules hosted in
-    this process; on the way out, every run stopped (each says ``PipelineClosed``)."""
+    """An app's lifespan. With the in-memory transport, its modules are hosted
+    in this process. Each live source gets its shared run, running until
+    shutdown. On the way out every run stops (each says ``PipelineClosed``)."""
     link = transport()
     tasks = []
     if link.in_process:
         tasks.append(asyncio.create_task(serve_hosts(pipeline.hosts(link)), name=f"{pipeline.app}.hosts"))
+        await asyncio.sleep(0)  # the hosts subscribe before the live runs publish
+    live_runs = await start_live_runs(pipeline, link)
     try:
         yield
     finally:
         await registry.stop_all()
+        for run in live_runs:
+            await run.stop("shutdown")
         await cancel_and_wait(*tasks, ignore=(Exception,))
 
 
