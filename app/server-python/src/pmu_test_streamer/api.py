@@ -82,28 +82,30 @@ class PmuStreamState(BaseModel):
 def state_message(run: PipelineRun) -> PmuStreamState:
     status = run.player.status()
     frame = run.frame if isinstance(run.frame, PmuFrame) else None
-    stats = run.latest.get(FrameStatsResult)
     index = count = None
-    if frame is not None:
+    if frame is not None and status.mode == "replay" and status.coverage_start and status.coverage_end:
         interval = 1.0 / frame.header.data_rate
-        # A result comes back over the transport a little after its frame, so
-        # one up to two frames old still counts; one from another stream does not.
-        if stats is not None and not 0 <= (frame.timestamp - stats.timestamp).total_seconds() <= 2 * interval:
-            stats = None
-        if status.mode == "replay" and status.coverage_start and status.coverage_end:
-            index = round((frame.timestamp - status.coverage_start).total_seconds() / interval)
-            count = round((status.coverage_end - status.coverage_start).total_seconds() / interval)
-    else:
-        stats = None
+        index = round((frame.timestamp - status.coverage_start).total_seconds() / interval)
+        count = round((status.coverage_end - status.coverage_start).total_seconds() / interval)
     return PmuStreamState(
         frame=frame,
         player=status,
-        stats=stats,
+        stats=_about(run.latest.get(FrameStatsResult), frame),
         frame_index=index,
         frame_count=count,
         excursion=run.latest.get(ExcursionResult),
         summary=run.latest.get(RangeSummaryResult),
     )
+
+
+def _about(result, frame: PmuFrame | None):
+    """``result`` if it is about ``frame``, else ``None``. A result comes back
+    over the transport a little after its frame, so one up to two frames older
+    still counts; one from another stream (before a seek or a switch) does not."""
+    if result is None or frame is None:
+        return None
+    behind = (frame.timestamp - result.timestamp).total_seconds()
+    return result if 0 <= behind <= 2 / frame.header.data_rate else None
 
 
 # --- commands ------------------------------------------------------------------------

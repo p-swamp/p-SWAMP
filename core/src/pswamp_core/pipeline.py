@@ -152,6 +152,10 @@ class Latest:
     def get(self, model: type[M]) -> M | None:
         return self._by_class.get(model)  # type: ignore[return-value]
 
+    def forget(self, *models: type[DataModel]) -> None:
+        for model in models:
+            self._by_class.pop(model, None)
+
 
 class Changes:
     """Wake-ups for one reader. Each step of ``async for`` means "something
@@ -249,9 +253,13 @@ class PipelineRun:
         """Follow the shared run of the live source the player is on; stop
         following when it leaves it."""
         key = live_key(status.source) if status.mode == "live" and not self.shared else None
-        if self._following is not None and self._following.key == key:
+        following = None if self._following is None else self._following.key
+        if following == key:
             return
         self._unfollow()
+        # Results from the other side of the switch (this run's own, or the
+        # live run's) are not about what comes next.
+        self.latest.forget(*self.pipeline.results)
         if key is None:
             return
         model = self.gateway.active.model
