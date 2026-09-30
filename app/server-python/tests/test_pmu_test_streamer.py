@@ -333,3 +333,23 @@ def test_a_range_summary_arrives_on_the_socket_and_a_refusal_as_an_error(server)
         assert state["summary"]["result"]["frames"] == 20
         live = {"source": "live", "offset_s": 0, "end_offset_s": 1}
         assert server.post("/api/pmu-test-streamer/summary?client_id=302", json=live).status_code == 200  # checked where it runs
+
+
+# --- the same recording, from the remote data stub ----------------------------------------
+
+
+class TestTheSampleFromTheRemoteDataStub(DataClientConformance):
+    @pytest.fixture
+    def client_under_test(self):
+        import httpx
+        from remote_data_stub import create_app
+
+        from pswamp_core.datagateway.clients.remote_data import RemoteDataClient
+
+        transport = httpx.ASGITransport(app=create_app(SampleRecordingClient()))
+        http = httpx.AsyncClient(transport=transport, base_url="http://stub")
+        return RemoteDataClient("remote", "http://stub", http_client=http)
+
+    @pytest.fixture
+    def conformance_records(self):
+        return list(load_sample().frames)

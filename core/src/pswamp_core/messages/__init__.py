@@ -8,6 +8,7 @@
 - ``control``: ``PlayerStatus`` and ``PipelineClosed``.
 - ``results``: ``ResultEnvelope``, what a module publishes.
 - ``errors``: ``ErrorEvent``.
+- ``remote_data``: the request and response lines of the remote data contract.
 """
 
 from .commands import (
@@ -24,6 +25,7 @@ from .control import PipelineClosed, PlayerStatus
 from .data_model import DataModel, sent_at, stamp_sent_at, topic_from_name
 from .errors import ErrorEvent
 from .pmu import PmuFrame, PmuHeader
+from .remote_data import RemoteDataQuery, RemoteDataResult
 from .results import AppIdentity, ResultEnvelope
 
 __all__ = [
@@ -38,6 +40,8 @@ __all__ = [
     "PlayerStatus",
     "PmuFrame",
     "PmuHeader",
+    "RemoteDataQuery",
+    "RemoteDataResult",
     "ResultEnvelope",
     "SeekCommand",
     "SpeedCommand",
