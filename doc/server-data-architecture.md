@@ -280,8 +280,34 @@ the grid data itself, which would cost kilobytes per frame.
 `pmu_test_streamer/pipeline.py`.
 
 ### Player
-Paces the active source. Checks its commands before they are published, so a
-refusal is the POST's 409.
+*What.* Paces the run's active source and owns the transport controls.
+
+```python
+player = Player(gateway, sink, loop=True)
+await player.start()        # a recording: paused at its start; a live feed: followed from now
+player.validate(command)    # raises CommandRefused: the edge's 409
+await player.handle(command)
+player.status()             # PlayerStatus: mode, source, cursor, speed, can_seek, error, ...
+```
+
+*Why.* A provider yields as fast as it reads, but a person watching a
+disturbance needs real time and needs to scrub. The rules:
+
+- **Mode is the active source's kind.** A recording is replayed: paced, seekable,
+  looping at its end. A live feed is followed, with no transport controls. The
+  status carries `mode`, `sources` and `can_seek`, so a page shows no dead
+  buttons.
+- **Paused, it shows the frame at its cursor.** Start, seek, step and a switch
+  to a recording each publish the frame there.
+- **A seek is a new stream.** A seek with `end_offset_s` plays that chunk and
+  stops, paused.
+- **Pacing drops time rather than bursting** when it falls behind.
+- **A provider failure stops the stream loudly**: paused, `error` set, an
+  `ErrorEvent` published. Play tries again.
+- **One task** reads the stream, paces, and applies the commands `handle`
+  queues for it. No locks, and a quiet live feed never delays a command.
+
+*Where.* `core/src/pswamp_core/player.py`.
 
 ### Pipelines and runs
 The declaration of an app's sources and modules, the run built from it per

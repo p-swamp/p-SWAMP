@@ -84,7 +84,7 @@ class SeekCommand(PlayerCommand):
     end_offset_s: float | None = Field(
         default=None, gt=0, description="Stop here instead of running on: seconds from the start."
     )
-    play: bool = Field(default=False, description="Play from there rather than land paused.")
+    play: bool = Field(default=False, description="Also start playing, if paused.")
 
     @model_validator(mode="after")
     def _end_after_start(self) -> SeekCommand:
