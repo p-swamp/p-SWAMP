@@ -335,6 +335,78 @@
         "title": "CommandAck",
         "type": "object"
       },
+      "ErrorNotice": {
+        "description": "An ``ErrorEvent`` from one of the client's runs, with the app it came from.",
+        "properties": {
+          "app": {
+            "description": "The app whose pipeline it came from, e.g. 'pmu-test-streamer'.",
+            "title": "App",
+            "type": "string"
+          },
+          "detail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "The cause, e.g. 'Type: text'.",
+            "title": "Detail"
+          },
+          "id": {
+            "description": "Unique per notice: the tray dismisses and de-duplicates by it.",
+            "title": "Id",
+            "type": "string"
+          },
+          "message": {
+            "description": "One line for a person.",
+            "title": "Message",
+            "type": "string"
+          },
+          "request_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "The command it answers, if any.",
+            "title": "Request Id"
+          },
+          "source": {
+            "description": "Who saw it: 'player', or a module's name.",
+            "title": "Source",
+            "type": "string"
+          },
+          "timestamp": {
+            "description": "When the failure was seen.",
+            "format": "date-time",
+            "title": "Timestamp",
+            "type": "string"
+          },
+          "type": {
+            "const": "state",
+            "default": "state",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "app",
+          "source",
+          "message",
+          "timestamp"
+        ],
+        "title": "ErrorNotice",
+        "type": "object"
+      },
       "Excursion": {
         "properties": {
           "auto_pause": {
@@ -2854,6 +2926,10 @@
     {
       "description": "The reference example: a per-client counter over the whole stack.",
       "name": "reference-subapp"
+    },
+    {
+      "description": "Operational errors from any of a client's pipeline runs, for the layout's error tray.",
+      "name": "errors"
     }
   ],
   "x-websocket-channels": [
@@ -2912,6 +2988,14 @@
         "$ref": "#/components/schemas/ReferenceSubappState"
       },
       "path": "/api/reference-subapp/ws"
+    },
+    {
+      "app": "errors",
+      "direction": "server-to-client",
+      "message": {
+        "$ref": "#/components/schemas/ErrorNotice"
+      },
+      "path": "/api/errors/ws"
     }
   ]
 }
