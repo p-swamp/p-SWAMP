@@ -2,6 +2,13 @@ import { defineConfig, devices } from '@playwright/test';
 import path from 'node:path';
 
 /**
+ * E2E_BASE_URL runs the suite against a server that is already up (a bare
+ * `docker run`, a minikube port-forward) and starts nothing. Unset, the suite
+ * brings the compose stack up itself on :8000.
+ */
+const external = process.env.E2E_BASE_URL;
+
+/**
  * Read environment variables from file.
  * https://github.com/motdotla/dotenv
  */
@@ -27,7 +34,7 @@ export default defineConfig({
   use: {
 
     /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
-    baseURL: 'http://127.0.0.1:8000',
+    baseURL: external ?? 'http://127.0.0.1:8000',
     trace: 'on-first-retry',
   },
 
@@ -70,7 +77,7 @@ export default defineConfig({
   ],
 
   /* Start the real server (built client baked in) before running tests. */
-  webServer: {
+  webServer: external ? undefined : {
     command: 'docker compose up --build',
     // This config lives in e2e/, but docker-compose.yml is at the repo root —
     // Playwright's default cwd for the spawned process is the config's own
