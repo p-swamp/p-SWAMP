@@ -15,6 +15,7 @@ services:
     ports:
       - "8000:8000"
     environment:
+      <<: *transport
       HOST: "0.0.0.0"
       PORT: "8000"
       # Compose sync writes may not always emit inotify events in-container;
@@ -43,6 +44,9 @@ services:
     # The server has no external dependencies, so "is the process serving?" is
     # the whole health story — /healthz covers it. curl returns non-zero if the
     # endpoint doesn't answer.
+    depends_on:
+      kafka:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8000/healthz"]
       interval: 10s

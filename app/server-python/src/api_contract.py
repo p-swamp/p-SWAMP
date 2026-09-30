@@ -106,7 +106,7 @@ API_TITLE = "p-SWAMP api"
 # Not read from pyproject.toml on purpose: this project is `package = false`, so
 # there is no installed distribution to read a version from, and the api's
 # compatibility is not the same fact as the server's release number anyway.
-API_VERSION = "1.0.0"
+API_VERSION = "2.0.0"
 
 API_DESCRIPTION = """\
 The api between the p-SWAMP web client and its state server.

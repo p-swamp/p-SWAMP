@@ -35,6 +35,7 @@ import api_contract
 import pmu_test_streamer
 import pswamp_web
 import reference_subapp
+import shared
 import pswamp_web.app_status
 import pswamp_web.grid
 import pswamp_web.islanding
@@ -49,12 +50,16 @@ from api_contract import AppEntry
 # before any app package handles a request. Entered before everything in APPS and
 # exited after it, so a websocket handler can assume its dependencies are up.
 #
-# pswamp_web is the one: it owns the registry of per-client PMU pipelines that
-# its page packages all draw theirs from. Its lifespan starts no pipeline — those
-# are built on a client's first connect and evicted when idle — it only binds the
+# pswamp_web owns the registry of per-client PMU pipelines that its page
+# packages all draw theirs from. Its lifespan starts no pipeline — those are
+# built on a client's first connect and evicted when idle — it only binds the
 # registry to this event loop and drains it on shutdown.
+#
+# shared owns the process's transport (PSWAMP_TRANSPORT) for the apps over a
+# core pipeline. Entered first and exited last, it closes the transport once
+# they are done with it.
 
-SERVICES = [pswamp_web]
+SERVICES = [shared, pswamp_web]
 
 # --- the app registry -------------------------------------------------------
 #
@@ -76,7 +81,8 @@ APPS = [
     AppEntry(
         "pmu-test-streamer",
         pmu_test_streamer,
-        "Scaffold demo: replays sample PMU records line by line.",
+        "The server data architecture's worked example: a recorded and a live PMU "
+        "feed through a core pipeline per client, with player commands and a stats module.",
     ),
     AppEntry(
         "app-status",

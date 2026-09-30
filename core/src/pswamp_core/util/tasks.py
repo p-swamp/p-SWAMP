@@ -24,16 +24,18 @@ async def finish(awaitable: Awaitable[T]) -> T:
     """Run ``awaitable`` to its end even if the caller is cancelled meanwhile;
     then re-raise that cancellation, or return the result."""
     task = asyncio.ensure_future(awaitable)
-    interrupted = False
+    interrupted: asyncio.CancelledError | None = None
     while not task.done():
         try:
             await asyncio.wait([task])
-        except asyncio.CancelledError:
-            interrupted = True
-    if interrupted:
+        except asyncio.CancelledError as cancelled:
+            interrupted = cancelled
+    if interrupted is not None:
         if not task.cancelled():
             task.exception()  # retrieved; the cancellation wins
-        raise asyncio.CancelledError
+        # The caller's own CancelledError, not a new one: a cancel scope (anyio,
+        # asyncio.timeout) recognises its cancellation by it.
+        raise interrupted
     return task.result()
 
 

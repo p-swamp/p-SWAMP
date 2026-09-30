@@ -375,8 +375,41 @@ so a module can command the player exactly as the edge does.
 `pipeline.py` (`dispatch`).
 
 ### The edge
-What an app's `api.py` keeps once the core does the rest: the state message it
-pushes, and the POSTs that build commands.
+*What.* What an app's `api.py` keeps once the core does the rest: the state
+message it pushes, and the POSTs that build commands.
+
+```python
+REGISTRY = PipelineRegistry(lambda client_id: PipelineRun(client_id, PIPELINE, transport()))
+
+@router.post("/playback/seek", responses=COMMAND_RESPONSES)
+async def seek(client_id: ClientId, body: SeekBody) -> CommandAck:
+    return dispatch_command(REGISTRY, SeekCommand(client_id=client_id, **body.model_dump()), logger)
+
+@router.websocket("/ws")
+async def ws_endpoint(ws: WebSocket) -> None:
+    async with connected_pipeline(ws, REGISTRY) as run:
+        if run is not None:
+            await push_changes(ws, run, lambda: state_message(run))
+```
+
+*Why.* The shared pieces are in `shared.py`:
+- `transport()`: one per process, from `PSWAMP_TRANSPORT`.
+- `serve_pipeline`: the app's lifespan. It hosts the modules in the server
+  when the transport is in-memory, and stops every run on the way out.
+- `connected_pipeline`: the socket's handshake, with close codes 1008 (no
+  client id), 1013 (at capacity) and 1011 (the run failed to start).
+- `push_changes`: one message on connect and one per change, coalesced.
+- `dispatch_command`: 404 without a run, 409 when the player refuses, else a
+  `CommandAck` meaning *published*.
+
+The browser contract is unchanged: commands up as POSTs, state down one
+socket, the acknowledgement never carries state, and all of it is generated
+into `doc/api/openapi.json`. The state message carries core messages
+(`PmuFrame`, `PlayerStatus`, a `ResultEnvelope`) as they are, so the page's
+types are generated from the same classes.
+
+*Where.* `app/server-python/src/shared.py`, `pmu_test_streamer/api.py`;
+`app/client-web/src/pages/pmu-test-streamer/`.
 
 ### Errors
 `ErrorEvent`: an operational failure (a provider, a module, a refused module
