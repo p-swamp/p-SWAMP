@@ -491,7 +491,48 @@ like anyone else (the range summary).
 `core/tests/test_remote_data.py` runs the conformance suite over the stub.
 
 ### Deployment
-Compose, minikube, and what a cloud cluster changes.
+*What.* One image, several roles, configured by environment:
+
+| Role | Command | Configured by |
+|---|---|---|
+| server | the image's default (`python server.py`) | `PSWAMP_TRANSPORT`, `<APP>_DATA_CLIENTS` and their `{NAME}_*` blocks |
+| worker | `python -m pswamp_core.worker` | the same transport, `PSWAMP_WORKER_PIPELINES`, `PSWAMP_WORKER_MODULES`; a module that reads the gateway also needs `<APP>_DATA_CLIENTS` |
+| remote data stub | `python -m remote_data_stub` | `REMOTE_DATA_STUB_CLIENT` (and `core/examples` on `PYTHONPATH`) |
+| broker | `apache/kafka` | one KRaft node, topic auto-creation off, 10 s retention checks |
+
+- **Bare `docker run`** (CI's e2e): no transport set, so it is in-memory. The
+  server hosts every module; the sources are sample and live.
+- **Compose** (`docker-compose.yml`): `server`, `module-worker`
+  (frame-stats, excursion), `batch-worker` (range-summary, one CPU),
+  `remote-data-stub`, `kafka`.
+- **Minikube** (`k8s/p-swamp-local.yaml`, via
+  `scripts/start-pswamp-in-local-minikube-cluster.sh`): the same five, and the
+  live feed reads a file from a ConfigMap.
+
+**A cloud cluster** starts from `k8s/p-swamp-local.yaml` and changes:
+- **Image**: pushed to the deployment's registry at an immutable tag
+  (`imagePullPolicy: IfNotPresent`), built from this repo's Dockerfile; this
+  repo publishes no image.
+- **Ingress**: an Ingress or LoadBalancer in place of the NodePort. The web
+  client works under a path prefix (`/p-swamp/`) as it is.
+- **Kafka**: the deployment's own broker. Set `KAFKA_BOOTSTRAP_SERVERS` and
+  `KAFKA_REPLICATION_FACTOR`, and apply the retention settings the transport
+  asks for (`LIVE_TOPIC_CONFIGS`) or an equivalent broker policy. Drop the
+  `p-swamp-kafka` Deployment.
+- **Data**: the deployment's remote data service in `REMOTE_URL`, its live
+  feed as a `DataClient` class in `<APP>_DATA_CLIENTS` (an image layered on
+  this one), and no stub.
+- **Resources**: CPU limits per worker, sized by what each module costs.
+- **Replicas stay at 1** for the server and each worker, until topics are
+  partitioned and workers join consumer groups ("Not here yet").
+
+*Why.* Where a module runs is configuration, not code, so a heavy module gets
+its own pod and CPU limit without touching its code or its page. The repo
+holds no deployment-specific configuration: the local manifests are examples,
+and a deployment's own sources and broker come in through the same variables.
+
+*Where.* `Dockerfile`, `docker-compose.yml`, `k8s/`,
+`scripts/start-pswamp-in-local-minikube-cluster.sh`.
 
 ## Not here yet
 

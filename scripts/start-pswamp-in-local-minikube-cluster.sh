@@ -65,17 +65,39 @@ fi
 # Build inside minikube's runtime so the image lands where the kubelet looks (and
 # the arch matches the node — matters on arm64).
 echo "Building p-swamp:latest into minikube..."
-minikube image build -t p-swamp:latest .
+# `minikube image build` exits 0 even when the build fails (minikube#12986), so
+# check its log for BuildKit's failure line, and that the image is there.
+BUILD_LOG="$(mktemp)"
+minikube image build -t p-swamp:latest . 2>&1 | tee "$BUILD_LOG"
+if grep -q '^ERROR: failed to' "$BUILD_LOG"; then
+  rm -f "$BUILD_LOG"
+  echo "Refusing to deploy: the image build failed (see the error above)." >&2
+  exit 1
+fi
+rm -f "$BUILD_LOG"
+if ! minikube image ls | grep -q '/p-swamp:latest$'; then
+  echo "Refusing to deploy: p-swamp:latest is not in minikube's image store." >&2
+  exit 1
+fi
 
 # --- Apply manifests and roll out ------------------------------------------
+# The live feed's data file first, as the ConfigMap the server mounts. Built
+# from the file so the example data stays a plain text file; idempotent.
 echo "Applying manifests..."
+kubectl create configmap p-swamp-pmu-data \
+  --from-file=k8s/deployment_pmu_data_file_example.txt \
+  --dry-run=client -o yaml | kubectl apply -f -
 kubectl apply -f k8s/p-swamp-local.yaml
 
 # `kubectl apply` won't restart pods if the manifest text is unchanged, even
-# though we just rebuilt :latest. Force a new pod so the fresh image is used.
+# though we just rebuilt :latest. Force new pods so the fresh image is used.
+# Kafka first and never restarted: it is not built here, and a restart would
+# empty its topics for nothing.
 echo "Rolling out..."
-kubectl rollout restart deployment/p-swamp
-kubectl rollout status deployment/p-swamp --timeout=120s
+BUILT="p-swamp-remote-data-stub p-swamp-module-worker p-swamp-batch-worker p-swamp"
+kubectl rollout status deployment/p-swamp-kafka --timeout=300s
+for name in $BUILT; do kubectl rollout restart "deployment/$name"; done
+for name in $BUILT; do kubectl rollout status "deployment/$name" --timeout=120s; done
 
 # --- Reach the Service ------------------------------------------------------
 # The nodePort is fixed at 30080 and must stay in sync with k8s/p-swamp-local.yaml.
