@@ -246,8 +246,21 @@ behind it. "Jump to a time" and "query a chunk" are the same call. The gateway
 opens a client on first use, so a source nobody reads costs nothing. History
 lives with the provider: the repo stores nothing.
 
-*Where.* `core/src/pswamp_core/datagateway/`, `testing.py`; the example is
-`app/server-python/src/pmu_test_streamer/sample_client.py`.
+**Configured, not coded.** An app's sources come from `<APP>_DATA_CLIENTS`,
+with a default in the app's `pipeline.py`. Each client reads its own
+`{NAME}_{SETTING}` variables:
+
+```
+PMU_TEST_STREAMER_DATA_CLIENTS=sample:pmu_test_streamer.sample_client:SampleRecordingClient,live:acme.pmu:KafkaFeed
+LIVE_BOOTSTRAP_SERVERS=kafka.acme:9092
+```
+
+A deployment plugs in its own provider with one package in the image and one
+variable.
+
+*Where.* `core/src/pswamp_core/datagateway/`, `settings.py`, `testing.py`;
+the examples are `app/server-python/src/pmu_test_streamer/sample_client.py`
+(history) and `live_client.py` (live: the sample re-stamped on the wall clock).
 
 ### CIM reference
 The gateway stamps each frame's layout with a reference to the grid (CIM) data
