@@ -27,8 +27,10 @@
 #   5. a missing asset still 404s      — that fallback isn't swallowing everything
 #   6. /openapi.json has the commands  — the api describes itself
 #   7. the counter flow                — POST commands in, state down the socket
+#   8. the PMU test streamer           — the server data architecture: a run, its
+#                                        player, a module (wherever it is hosted)
 #
-# Steps 1-6 are curl; step 7 is tools/smoketest_reference_subapp.py, since bash
+# Steps 1-6 are curl; steps 7-8 are tools/smoketest_*.py, since bash
 # can't speak a WebSocket (websockets is already in the server's env via
 # uvicorn[standard]). Every step runs even if one fails; exits non-zero if any did.
 set -uo pipefail
@@ -210,6 +212,12 @@ section "Reference example (commands up, state down)"
 uv run --project app/server-python \
   python app/server-python/tools/smoketest_reference_subapp.py "$BASE_URL" \
   || FAILURES+=("counter flow")
+
+# --- 8: the streamer, over its pipeline ----------------------------------------
+section "PMU test streamer (the server data architecture)"
+uv run --project app/server-python \
+  python app/server-python/tools/smoketest_pmu_test_streamer.py "$BASE_URL" \
+  || FAILURES+=("streamer flow")
 
 # --- Report ------------------------------------------------------------------
 if [ "${#FAILURES[@]}" -ne 0 ]; then
