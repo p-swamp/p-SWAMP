@@ -1,0 +1,47 @@
+"""The __LABEL__ app's edge: a run of its pipeline per client, and a socket
+pushing the module's latest result. server.py mounts ``router`` under /api/__SLUG__."""
+
+import contextlib
+from typing import Literal
+
+from fastapi import APIRouter, FastAPI, WebSocket
+from pydantic import BaseModel, Field
+from shared import connected_pipeline, push_changes, serve_pipeline, transport
+
+from pswamp_core.messages import PlayerStatus
+from pswamp_core.pipeline import PipelineRegistry, PipelineRun
+
+from .__PKG___module import __NAME__Result
+from .pipeline import PIPELINE
+
+REGISTRY: PipelineRegistry[PipelineRun] = PipelineRegistry(
+    lambda client_id: PipelineRun(client_id, PIPELINE, transport())
+)
+
+
+@contextlib.asynccontextmanager
+async def lifespan(app: FastAPI):
+    async with serve_pipeline(PIPELINE, REGISTRY):
+        yield
+
+
+class __NAME__State(BaseModel):
+    """Pushed on connect and after every change."""
+
+    type: Literal["state"] = "state"
+    player: PlayerStatus = Field(description="Which source is open, and where it is.")
+    result: __NAME__Result | None = Field(description="The module's latest result; null until the first.")
+
+
+def state_message(run: PipelineRun) -> __NAME__State:
+    return __NAME__State(player=run.player.status(), result=run.latest.get(__NAME__Result))
+
+
+router = APIRouter()
+
+
+@router.websocket("/ws")
+async def ws_endpoint(ws: WebSocket) -> None:
+    async with connected_pipeline(ws, REGISTRY) as run:
+        if run is not None:
+            await push_changes(ws, run, lambda: state_message(run))
