@@ -30,6 +30,8 @@ services:
         "/workspace/p-SWAMP/app/server-python/src",
         "--reload-dir",
         "/workspace/p-SWAMP/src",
+        "--reload-dir",
+        "/workspace/p-SWAMP/core/src",
       ]
     # The server has no external dependencies, so "is the process serving?" is
     # the whole health story — /healthz covers it. curl returns non-zero if the
@@ -72,6 +74,10 @@ services:
         - path: src
           action: sync
           target: /workspace/p-SWAMP/src
+        # The shared core, installed editable in the image like root src/.
+        - path: core/src
+          action: sync
+          target: /workspace/p-SWAMP/core/src
         # Dependency changes are the exception: new packages have to be
         # installed, which a file sync can't do. These rebuild the image and
         # recreate the container instead — slower, on purpose. Without this,
@@ -79,4 +85,6 @@ services:
         - path: app/server-python/pyproject.toml
           action: rebuild
         - path: app/server-python/uv.lock
+          action: rebuild
+        - path: core/pyproject.toml
           action: rebuild
