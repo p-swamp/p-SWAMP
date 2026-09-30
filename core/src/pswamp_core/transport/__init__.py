@@ -36,13 +36,16 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import os
+import time
 from abc import ABC, abstractmethod
 from collections import deque
 from typing import TYPE_CHECKING, ClassVar
 
+from ..keep_up import KeepUp, KeepUpMonitor
 from ..log import get_logger
 from ..messages.commands import Command
 from ..messages.control import PipelineClosed
+from ..messages.data_model import stamp_sent_at
 from ..messages.errors import ErrorEvent
 from ..settings import Configurable, MissingSettingError, load_class, parse_specs
 from ..subscription import Overflow, Subscription
@@ -165,8 +168,8 @@ class InMemoryTransport(Transport):
     """A broker with no port: publishing delivers on the same loop.
 
     It behaves as a broker does, so a hermetic test catches what a deployment
-    would: every message goes through JSON (subscribers get an equal copy), and
-    reaches only the exact topic of its class.
+    would: every message goes through JSON (subscribers get an equal copy),
+    reaches only the exact topic of its class, and is stamped with its send time.
     """
 
     in_process = True
@@ -179,6 +182,7 @@ class InMemoryTransport(Transport):
         wanted = [s for s in self._subscriptions if s.wants(topic, key)]
         if wanted:
             received = type(message).model_validate_json(message.model_dump_json())
+            stamp_sent_at(received, time.time())
             for subscription in wanted:
                 subscription.offer((key, received))
 
@@ -192,11 +196,20 @@ class Outbox:
 
     ``publish`` queues and returns; a task sends in order. When more than
     ``maxsize`` data messages wait, the oldest is dropped (a live stream would
-    rather lose a stale frame than fall further behind). Commands, errors and
-    ``PipelineClosed`` are never dropped.
+    rather lose a stale frame than fall further behind), and reported under
+    ``keep_up``. Commands, errors and ``PipelineClosed`` are never dropped.
     """
 
-    def __init__(self, transport: Transport, *, app: str, key: str, maxsize: int = 64) -> None:
+    def __init__(
+        self,
+        transport: Transport,
+        *,
+        app: str,
+        key: str,
+        maxsize: int = 64,
+        keep_up: KeepUp | None = None,
+        label: str | None = None,
+    ) -> None:
         self.transport = transport
         self.app = app
         self.key = key
@@ -206,6 +219,7 @@ class Outbox:
         self._wake = asyncio.Event()
         self._task: asyncio.Task | None = None
         self.published = self.failed = self.dropped = 0
+        self.monitor = KeepUpMonitor(app, "cannot publish as fast as it produces", keep_up, label=label)
 
     def publish(self, message: DataModel) -> None:
         """Queue ``message``. Never blocks."""
@@ -236,8 +250,7 @@ class Outbox:
                 del self._queue[i]
                 self._data -= 1
                 self.dropped += 1
-                if self.dropped % 50 == 1:
-                    logger.warning("%s@%s: outbox full, %d dropped", self.app, self.key, self.dropped)
+                self.monitor.note(self, 1)
                 return
 
     def _pop(self) -> DataModel:

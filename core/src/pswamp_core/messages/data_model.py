@@ -19,6 +19,10 @@ Every message has:
 - ``topic``: derived from the class name (``PmuFrame`` → ``pmu.frame``), so
   the message classes are the topic catalogue.
 
+One thing it carries that is not a field: when a transport delivered it, the
+wall-clock time it was sent (``sent_at``). It never serialises; a consumer
+uses it to tell how far behind its input it runs (``pswamp_core.keep_up``).
+
 Adapted from Louis Pauchet's test_pswamp draft (``core/models/data_model.py``).
 """
 
@@ -28,11 +32,11 @@ import re
 from datetime import datetime
 from typing import ClassVar
 
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, PrivateAttr, field_validator
 
 from ..util.time import ensure_utc
 
-__all__ = ["DataModel", "topic_from_name"]
+__all__ = ["DataModel", "sent_at", "stamp_sent_at", "topic_from_name"]
 
 # One word per run of capitals ending a word (an acronym), capitalised word, or
 # digit run.
@@ -62,6 +66,8 @@ class DataModel(BaseModel):
     #: This class's topic. A subclass may override it with a ``ClassVar[str]``.
     topic: ClassVar[_Topic] = _Topic()
 
+    _sent_at: float | None = PrivateAttr(default=None)
+
     @field_validator("timestamp")
     @classmethod
     def _utc(cls, value: datetime | None) -> datetime | None:
@@ -77,3 +83,14 @@ class DataModel(BaseModel):
             if isinstance(candidate, _Topic):
                 break
         return topic_from_name(cls.__name__)
+
+
+def sent_at(message: DataModel) -> float | None:
+    """When a transport's producer sent ``message`` (epoch seconds); ``None``
+    for a message that did not cross a transport."""
+    return message._sent_at
+
+
+def stamp_sent_at(message: DataModel, when: float) -> None:
+    """Record when ``message`` was sent; transports call it on receipt."""
+    message._sent_at = when

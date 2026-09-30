@@ -454,8 +454,19 @@ it. It is not a grid alarm: an alarm is a module's normal result.
 `app/client-web/src/components/ErrorTray.tsx`, `hooks/useErrorFeed.ts`.
 
 ### Keeping up
-A module or publisher that falls behind reports it instead of dropping data
-silently.
+*What.* A module that falls behind its input reports it. Its `KeepUpMonitor`
+watches its input queue: input the `DROP_OLDEST` queue discarded, and how long
+each input had been in flight when read (transports stamp the send time,
+`messages.sent_at`, never on the wire). Past the module's `keep_up` policy (by
+default any drop, or input older than 2 s), it reports once on falling behind,
+at most every 5 s while behind, and once on catching up. A run's outbox does
+the same when it has to drop what it cannot publish.
+
+*Why.* Dropping stale frames is right for a live stream, and silent. Under
+load, that silence hides exactly what an operator needs to know. The reports
+are `ErrorEvent`s, so they reach the error tray.
+
+*Where.* `core/src/pswamp_core/keep_up.py`; `Module.run`, `Outbox`.
 
 ### Remote data
 A REST contract a deployment implements in front of its own store; p-SWAMP

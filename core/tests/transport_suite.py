@@ -7,7 +7,7 @@ import math
 
 from support import HEADER, Measurement, Number, NumberResult, at, measurement, take
 
-from pswamp_core.messages import PmuFrame, ResultEnvelope
+from pswamp_core.messages import PmuFrame, ResultEnvelope, sent_at
 from pswamp_core.subscription import Overflow
 
 
@@ -20,6 +20,7 @@ class TransportSuite:
             ((key, got),) = await take(feed, 1)
         assert key == "k"
         assert got.model_dump() == sent.model_dump() and got is not sent
+        assert sent_at(got) is not None  # stamped on receipt, for the keep-up monitor
 
     async def test_nan_arrives_as_null(self, transport, app):
         frame = PmuFrame(timestamp=at(0), mRID="s", header=HEADER, values=[50.0, math.nan, 1.0, 2.0])

@@ -21,7 +21,7 @@ from .commands import (
     SwitchSourceCommand,
 )
 from .control import PipelineClosed, PlayerStatus
-from .data_model import DataModel, topic_from_name
+from .data_model import DataModel, sent_at, stamp_sent_at, topic_from_name
 from .errors import ErrorEvent
 from .pmu import PmuFrame, PmuHeader
 from .results import AppIdentity, ResultEnvelope
@@ -43,5 +43,7 @@ __all__ = [
     "SpeedCommand",
     "StepCommand",
     "SwitchSourceCommand",
+    "sent_at",
+    "stamp_sent_at",
     "topic_from_name",
 ]

@@ -45,6 +45,7 @@ from typing import TYPE_CHECKING, Generic, TypeVar
 
 from .command_routing import CommandInbox, NoReceiver, concrete_commands
 from .host import DEFAULT_IDLE_SECONDS, ModuleHost
+from .keep_up import KeepUp
 from .log import get_logger
 from .messages.commands import Command
 from .messages.control import PipelineClosed, PlayerStatus
@@ -202,7 +203,9 @@ class PipelineRun:
         if live_source is not None:
             self.gateway.switch(live_source)
         self.latest = Latest()
-        self.outbox = Outbox(transport, app=pipeline.app, key=key)
+        self.outbox = Outbox(
+            transport, app=pipeline.app, key=key, keep_up=KeepUp(), label=f"the server-side publisher for {key}"
+        )
         # A client's run leaves live sources to their shared runs.
         self.player = Player(self.gateway, self, loop=loop, follow_live=not self.shared)
         #: The frame at the cursor: the player's, or the live run's while following it.
