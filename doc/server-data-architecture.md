@@ -5,6 +5,12 @@ how a command gets back up. The shared pieces live in `core/` (the
 `pswamp_core` package). The PMU test streamer (`/pmu-test-streamer`) is the
 worked example of every piece.
 
+| If you want to… | Read |
+|---|---|
+| add a module and its page | `doc/module-cookbook.md` |
+| serve a deployment's history to p-SWAMP | `doc/remote-data-integration-contract.md` |
+| understand a piece | "The pieces" below, then the class docstrings |
+
 ## What it has to do
 
 - Take PMU data from several kinds of source: a recording, a live feed, or a
@@ -134,8 +140,6 @@ So a heavy module gets a process, and a CPU limit, of its own without touching
 its code or its page.
 
 ## The pieces
-
-Each piece gets its Why and Where when its code lands.
 
 ### Messages
 *What.* Every message is a `DataModel`: a pydantic model with a pinned schema
@@ -418,8 +422,9 @@ async def ws_endpoint(ws: WebSocket) -> None:
 
 *Why.* The shared pieces are in `shared.py`:
 - `transport()`: one per process, from `PSWAMP_TRANSPORT`.
-- `serve_pipeline`: the app's lifespan. It hosts the modules in the server
-  when the transport is in-memory, and stops every run on the way out.
+- `serve_pipeline`: the app's lifespan. It starts the shared live runs,
+  forwards the error topic to the tray, hosts the modules in the server when
+  the transport is in-memory, and stops every run on the way out.
 - `connected_pipeline`: the socket's handshake, with close codes 1008 (no
   client id), 1013 (at capacity) and 1011 (the run failed to start).
 - `push_changes`: one message on connect and one per change, coalesced.
@@ -534,10 +539,28 @@ and a deployment's own sources and broker come in through the same variables.
 *Where.* `Dockerfile`, `docker-compose.yml`, `k8s/`,
 `scripts/start-pswamp-in-local-minikube-cluster.sh`.
 
+## Adding a module
+
+`./scripts/generate-new-module-with-frontend.sh <slug> "<Label>"` writes a
+working module, its pipeline, api, page and tests, and adds it to the
+module-worker. Then replace the placeholder analysis.
+`doc/module-cookbook.md` covers the rest: tests, logs, commands, chaining,
+batch queries, a worker of its own, CPU-heavy modules, and data sources.
+
 ## Not here yet
 
-- The grid monitor on the core (it still runs its own `Hub`/`Bus` in
-  `pswamp_web/`).
-- More than one replica of a worker.
-- A NATS transport.
-- A live run over a real feed.
+- **The grid monitor on the core.** It still runs its own thread-based
+  `Hub`/`Bus` in `pswamp_web/`, beside this architecture.
+- **More than one replica** of the server or a worker. Topics have one
+  partition and workers no consumer group, so a second worker replica would
+  answer every frame twice.
+- **A NATS transport**: a `Transport` subclass passing
+  `core/tests/transport_suite.py`.
+- **A live source over a real feed**, such as a broker's topic read as a
+  `DataClient`.
+- **Cheaper frames**: the header serialised once per layout, and producer
+  batching.
+- **`request_id` in the browser's acknowledgement**, so a page can match a
+  refusal on the tray to the click that caused it.
+- **Security** between p-SWAMP and a remote data service, and limits on
+  queries (see the contract's "Not settled yet").
