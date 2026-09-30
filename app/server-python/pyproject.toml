@@ -87,7 +87,8 @@ package = false
 # treat the file as config; only a [tool.ruff] section would, and there
 # deliberately isn't one (see the note above).
 [tool.pytest.ini_options]
-pythonpath = ["src"]
+# core/examples holds the remote data stub, which the tests run in-process.
+pythonpath = ["src", "../../core/examples"]
 # core/tests runs here too: one runner and one CI job cover both suites.
 testpaths = ["tests", "../../core/tests"]
 asyncio_mode = "auto"

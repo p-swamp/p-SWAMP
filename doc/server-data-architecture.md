@@ -469,8 +469,26 @@ are `ErrorEvent`s, so they reach the error tray.
 *Where.* `core/src/pswamp_core/keep_up.py`; `Module.run`, `Outbox`.
 
 ### Remote data
-A REST contract a deployment implements in front of its own store; p-SWAMP
-reads it as one more provider.
+*What.* `RemoteDataClient` is a history data client over a deployment's own
+remote data service: a small REST api in front of whatever store holds its
+history. Coverage is `GET /v1/coverage`. A range is `POST /v1/queries`, and its
+records come back as that call's streamed response, one NDJSON line each,
+closed by an `end` line. **The contract is
+`doc/remote-data-integration-contract.md`**, in HTTP terms alone. In compose
+and k8s, `remote-data-stub` serves the streamer's sample recording over it,
+and the streamer lists it as its third source, `remote`.
+
+*Why.* p-SWAMP asks for a range and gets it back; which store answers is the
+deployment's choice, and the repo stores nothing. The answer comes on the
+connection that asked, so the contract has no correlation ids, no second
+channel and no cancel route: closing the connection cancels. It also gives
+backpressure for free. A command never reaches the service. It stops at the
+player, which seeks, or at a module, which reads a range from its gateway
+like anyone else (the range summary).
+
+*Where.* `core/src/pswamp_core/datagateway/clients/remote_data.py`,
+`messages/remote_data.py`, `core/examples/remote_data_stub/`;
+`core/tests/test_remote_data.py` runs the conformance suite over the stub.
 
 ### Deployment
 Compose, minikube, and what a cloud cluster changes.
