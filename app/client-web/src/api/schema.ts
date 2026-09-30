@@ -89,6 +89,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/pmu-test-streamer/excursion/auto-pause": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Auto Pause
+         * @description Tell the excursion module whether to pause the player on an excursion.
+         */
+        post: operations["pmu_test_streamer_auto_pause"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/pmu-test-streamer/playback/pause": {
         parameters: {
             query?: never;
@@ -204,6 +224,27 @@ export interface paths {
          * @description Step ``n`` frames, forward or back.
          */
         post: operations["pmu_test_streamer_step"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/pmu-test-streamer/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Summary
+         * @description Ask the range summary module to summarize a range of a recording. The
+         *     answer arrives on the socket as ``summary``.
+         */
+        post: operations["pmu_test_streamer_summary"];
         delete?: never;
         options?: never;
         head?: never;
@@ -447,6 +488,14 @@ export interface components {
              */
             type: "state";
         };
+        /** AutoPauseBody */
+        AutoPauseBody: {
+            /**
+             * Enabled
+             * @description Pause the player when the frequency leaves the band.
+             */
+            enabled: boolean;
+        };
         /**
          * Channel
          * @description One column of a labelled time window.
@@ -514,6 +563,69 @@ export interface components {
              * @constant
              */
             status: "ok";
+        };
+        /** Excursion */
+        Excursion: {
+            /**
+             * Auto Pause
+             * @description The player is paused when the frequency leaves the band.
+             */
+            auto_pause: boolean;
+            /**
+             * Band Hz
+             * @description How far from nominal still counts as in band.
+             */
+            band_hz: number;
+            /**
+             * Deviation Hz
+             * @description Mean frequency minus nominal.
+             */
+            deviation_hz: number | null;
+            /**
+             * Excursions
+             * @description Excursions out of the band seen so far.
+             */
+            excursions: number;
+            /**
+             * In Band
+             * @description The mean frequency is within the band.
+             */
+            in_band: boolean;
+        };
+        /** ExcursionResult */
+        ExcursionResult: {
+            app: components["schemas"]["AppIdentity"];
+            /**
+             * Mrid
+             * @default null
+             */
+            mRID: string | null;
+            /**
+             * Parameters
+             * @description The module's settings.
+             */
+            parameters?: {
+                [key: string]: unknown;
+            };
+            /**
+             * Request Id
+             * @description Set when this result answers a command.
+             * @default null
+             */
+            request_id: string | null;
+            result: components["schemas"]["Excursion"];
+            /**
+             * Timestamp
+             * Format: date-time
+             * @description The instant the result is about.
+             */
+            timestamp: string;
+            /**
+             * Version
+             * @default v1
+             * @constant
+             */
+            version: "v1";
         };
         /**
          * FrameStats
@@ -984,6 +1096,8 @@ export interface components {
          *     from the same classes.
          */
         PmuStreamState: {
+            /** @description The excursion module's latest result. */
+            excursion: components["schemas"]["ExcursionResult"] | null;
             /** @description The frame at the cursor, with its layout. */
             frame: components["schemas"]["PmuFrame"] | null;
             /**
@@ -1000,12 +1114,69 @@ export interface components {
             player: components["schemas"]["PlayerStatus"];
             /** @description The frame statistics for (about) that frame. */
             stats: components["schemas"]["FrameStatsResult"] | null;
+            /** @description The answer to this client's last range summary. */
+            summary: components["schemas"]["RangeSummaryResult"] | null;
             /**
              * Type
              * @default state
              * @constant
              */
             type: "state";
+        };
+        /** RangeSummary */
+        RangeSummary: {
+            /** End Offset S */
+            end_offset_s: number;
+            /**
+             * Frames
+             * @description Frames in the range.
+             */
+            frames: number;
+            /** Max Frequency Hz */
+            max_frequency_hz: number;
+            /** Mean Frequency Hz */
+            mean_frequency_hz: number;
+            /** Min Frequency Hz */
+            min_frequency_hz: number;
+            /** Offset S */
+            offset_s: number;
+            /** Source */
+            source: string;
+        };
+        /** RangeSummaryResult */
+        RangeSummaryResult: {
+            app: components["schemas"]["AppIdentity"];
+            /**
+             * Mrid
+             * @default null
+             */
+            mRID: string | null;
+            /**
+             * Parameters
+             * @description The module's settings.
+             */
+            parameters?: {
+                [key: string]: unknown;
+            };
+            /**
+             * Request Id
+             * @description Set when this result answers a command.
+             * @default null
+             */
+            request_id: string | null;
+            result: components["schemas"]["RangeSummary"];
+            /**
+             * Timestamp
+             * Format: date-time
+             * @description The instant the result is about.
+             */
+            timestamp: string;
+            /**
+             * Version
+             * @default v1
+             * @constant
+             */
+            version: "v1";
         };
         /**
          * ReferenceSubappState
@@ -1091,6 +1262,24 @@ export interface components {
              * @description Frames to step; negative steps back.
              */
             n: number;
+        };
+        /** SummaryBody */
+        SummaryBody: {
+            /**
+             * End Offset S
+             * @description Exclusive end, in seconds from the start.
+             */
+            end_offset_s: number;
+            /**
+             * Offset S
+             * @description Seconds from the start of the recording.
+             */
+            offset_s: number;
+            /**
+             * Source
+             * @description The recording to read: one of PlayerStatus.sources.
+             */
+            source: string;
         };
         /**
          * TimeWindowSlice
@@ -1277,6 +1466,56 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["CommandAck"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    pmu_test_streamer_auto_pause: {
+        parameters: {
+            query: {
+                /** @description The browser's client id -- the same value its WebSockets send, which is what makes a command apply to the pipeline the page is watching. */
+                client_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AutoPauseBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandAck"];
+                };
+            };
+            /** @description The client has no running pipeline: its page is not open. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The command does not apply in the pipeline's current state. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {
@@ -1544,6 +1783,56 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["StepBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandAck"];
+                };
+            };
+            /** @description The client has no running pipeline: its page is not open. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The command does not apply in the pipeline's current state. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    pmu_test_streamer_summary: {
+        parameters: {
+            query: {
+                /** @description The browser's client id -- the same value its WebSockets send, which is what makes a command apply to the pipeline the page is watching. */
+                client_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SummaryBody"];
             };
         };
         responses: {
