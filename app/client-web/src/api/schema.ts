@@ -564,6 +564,56 @@ export interface components {
              */
             status: "ok";
         };
+        /**
+         * ErrorNotice
+         * @description An ``ErrorEvent`` from one of the client's runs, with the app it came from.
+         */
+        ErrorNotice: {
+            /**
+             * App
+             * @description The app whose pipeline it came from, e.g. 'pmu-test-streamer'.
+             */
+            app: string;
+            /**
+             * Detail
+             * @description The cause, e.g. 'Type: text'.
+             * @default null
+             */
+            detail: string | null;
+            /**
+             * Id
+             * @description Unique per notice: the tray dismisses and de-duplicates by it.
+             */
+            id: string;
+            /**
+             * Message
+             * @description One line for a person.
+             */
+            message: string;
+            /**
+             * Request Id
+             * @description The command it answers, if any.
+             * @default null
+             */
+            request_id: string | null;
+            /**
+             * Source
+             * @description Who saw it: 'player', or a module's name.
+             */
+            source: string;
+            /**
+             * Timestamp
+             * Format: date-time
+             * @description When the failure was seen.
+             */
+            timestamp: string;
+            /**
+             * Type
+             * @default state
+             * @constant
+             */
+            type: "state";
+        };
         /** Excursion */
         Excursion: {
             /**
