@@ -1,6 +1,7 @@
 import { ExternalLinkIcon } from 'lucide-react'
 import { NavLink, Outlet } from 'react-router'
 
+import { ErrorTray } from '@/components/ErrorTray'
 import { CLIENT_ID } from '@/lib/clientId'
 import { BASE_PATH } from '@/lib/basePath'
 import { cn } from '@/lib/utils'
@@ -87,6 +88,9 @@ export function AppLayout({
           )}
         </nav>
       </header>
+
+      {/* Outside the outlet, so it survives navigation. */}
+      <ErrorTray />
 
       <main
         className={cn(

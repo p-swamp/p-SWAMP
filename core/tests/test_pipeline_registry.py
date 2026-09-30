@@ -14,6 +14,7 @@ class FakeRun:
     def __init__(self, key: str) -> None:
         self.key = key
         self.stopped = False
+        self.following = None
 
     async def start(self) -> None:
         await asyncio.sleep(0)  # yield, as a real start does
@@ -103,3 +104,12 @@ async def test_a_session_holds_the_run_for_one_connection(registry):
     async with reg.session("c9") as run:
         assert run.key == "c9" and reg.watchers("c9") == 1
     assert reg.watchers("c9") == 0
+
+
+async def test_what_a_key_publishes_is_watched_by_its_run_or_the_runs_following_it(registry):
+    reg = registry()
+    a, b, _ = [await reg.acquire(key) for key in ("a", "b", "c")]
+    a.following = b.following = "live.feed"
+    assert reg.watching("c") == ["c"]
+    assert sorted(reg.watching("live.feed")) == ["a", "b"]
+    assert reg.watching("gone") == []

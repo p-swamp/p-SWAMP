@@ -232,6 +232,11 @@ class PipelineRun:
         """Wake-ups on every change; close it (or use ``with``) when done."""
         return Changes(self._waiters)
 
+    @property
+    def following(self) -> str | None:
+        """The key of the shared live run this run follows, if any."""
+        return None if self._following is None else self._following.key
+
     def _remember(self, message: DataModel) -> None:
         self.latest.remember(message)
         for event in self._waiters:
@@ -388,6 +393,13 @@ class PipelineRegistry(Generic[R]):
     def watchers(self, key: str) -> int:
         entry = self._entries.get(key)
         return 0 if entry is None else entry.sockets
+
+    def watching(self, key: str) -> list[str]:
+        """The keys of the runs that show what is published under ``key``: the
+        run itself, or every run following the shared live run ``key``."""
+        if key in self._entries:
+            return [key]
+        return [k for k, entry in self._entries.items() if entry.run.following == key]
 
     def peek(self, key: str) -> R | None:
         """The key's run if it has one. Never builds: what a command uses."""

@@ -31,6 +31,8 @@ export const ISLANDING_WS_PATH = '/api/islanding/ws'
 export const PHASORS_WS_PATH = '/api/phasors/ws'
 export const LINE_OUTAGE_WS_PATH = '/api/line-outage/ws'
 export const REFERENCE_SUBAPP_WS_PATH = '/api/reference-subapp/ws'
+// Not a page's: the layout opens this one, for the error tray.
+export const ERRORS_WS_PATH = '/api/errors/ws'
 
 // Each app's REST prefix — where its commands are POSTed. Same value as the app's
 // mount prefix in APPS (app/server-python/src/server.py); an endpoint path is
