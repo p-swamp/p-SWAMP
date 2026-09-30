@@ -5,10 +5,13 @@ from __future__ import annotations
 import asyncio
 from datetime import datetime, timedelta, timezone
 
+import pytest
+from pmu_test_streamer.sample_client import EPOCH, STREAM_ID, SampleRecordingClient, load_sample
 from pmu_test_streamer.stats_module import FrameStatsModule, FrameStatsResult
 
 from pswamp_core.host import ModuleHost
 from pswamp_core.messages import PmuFrame, PmuHeader
+from pswamp_core.testing import DataClientConformance
 from pswamp_core.transport import InMemoryTransport
 from pswamp_core.util.tasks import cancel_and_wait
 
@@ -56,3 +59,26 @@ async def test_frame_stats_hosted_over_the_transport():
     await cancel_and_wait(task)
     assert key == "client-1" and result.timestamp == frame.timestamp
     assert result.result.mean_frequency_hz == 50.1 and result.app.name == "frame-stats"
+
+
+# --- the sample recording ---------------------------------------------------------
+
+
+def test_the_sample_is_sixty_frames_of_five_stations_at_20_hz():
+    recording = load_sample()
+    assert len(recording.frames) == 60
+    assert recording.header.stations == ["3000", "3245", "5100", "6500", "7000"]
+    assert recording.header.data_rate == 20.0 and recording.header.n_columns == 15
+    first = recording.frames[0]
+    assert first.timestamp == EPOCH + timedelta(seconds=0.05) and first.mRID == STREAM_ID
+    assert recording.coverage.end == EPOCH + timedelta(seconds=3.05)
+
+
+class TestSampleRecordingClient(DataClientConformance):
+    @pytest.fixture
+    def client_under_test(self):
+        return SampleRecordingClient()
+
+    @pytest.fixture
+    def conformance_records(self):
+        return list(load_sample().frames)

@@ -218,8 +218,36 @@ event loop; a CPU-heavy module runs its analysis in a thread or process pool.
 the example is `app/server-python/src/pmu_test_streamer/stats_module.py`.
 
 ### Gateway and providers
-The provider contract a data source implements, and the gateway that holds a
-run's providers as named sources.
+*What.* A provider implements `DataClient`: it is a `history` (it holds a
+range, reports it as `coverage`, and yields any part of it) or a `live` feed
+(it yields records as they arrive). A `DataGateway` holds a run's providers as
+named sources, one of them active.
+
+```python
+class SampleRecordingClient(DataClient):
+    kind = "history"
+    async def coverage(self): return self.recording.coverage          # [first, end)
+    async def consume(self, time_range):
+        for frame in self.recording.frames:
+            if time_range.contains(frame.timestamp):
+                yield frame
+
+gateway = DataGateway([SampleRecordingClient("sample"), LiveClient("live")])
+gateway.switch("live")                            # only an explicit switch changes the source
+stream = await gateway.consume(start=t0)          # a seek
+chunk = await gateway.consume(start=t0, end=t1)   # exactly [t0, t1)
+```
+
+*Why.* A provider is written against the contract alone, so a deployment can
+write its own outside this repo. `pswamp_core.testing.DataClientConformance`
+is the executable contract: inherit it, supply the client, and pytest checks
+it. With one source active at a time, a stream always has exactly one provider
+behind it. "Jump to a time" and "query a chunk" are the same call. The gateway
+opens a client on first use, so a source nobody reads costs nothing. History
+lives with the provider: the repo stores nothing.
+
+*Where.* `core/src/pswamp_core/datagateway/`, `testing.py`; the example is
+`app/server-python/src/pmu_test_streamer/sample_client.py`.
 
 ### CIM reference
 The gateway stamps each frame's layout with a reference to the grid (CIM) data
