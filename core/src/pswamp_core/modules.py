@@ -29,6 +29,9 @@ A module never sees the transport. A ``ModuleHost`` feeds it one run's input
 and publishes what it emits (``pswamp_core.host``); whether the host is in the
 server or in a worker is the deployment's choice. ``process`` runs on the
 event loop: a module whose analysis blocks runs it in a thread or process pool.
+
+**A module that falls behind says so.** Its ``KeepUpMonitor`` watches its
+input queue, and past its ``keep_up`` policy reports an ``ErrorEvent``.
 """
 
 from __future__ import annotations
@@ -42,6 +45,7 @@ from uuid import uuid4
 from pydantic import BaseModel
 
 from .command_routing import CommandInbox
+from .keep_up import KeepUp, KeepUpMonitor
 from .log import get_logger
 from .messages.errors import ErrorEvent
 from .messages.results import AppIdentity, ResultEnvelope
@@ -70,6 +74,7 @@ class Module(ABC):
         overflow, maxsize: Its input queue. ``DROP_OLDEST`` by default: a
             module that falls behind a live stream analyses the newest frame.
         reads_gateway: Its host sets ``self.gateway`` before ``setup``.
+        keep_up: When falling behind its input is reported; ``None`` never.
     """
 
     name: ClassVar[str] = "module"
@@ -79,6 +84,7 @@ class Module(ABC):
     overflow: ClassVar[Overflow] = Overflow.DROP_OLDEST
     maxsize: ClassVar[int] = 64
     reads_gateway: ClassVar[bool] = False
+    keep_up: ClassVar[KeepUp | None] = KeepUp()
 
     def __init__(self) -> None:
         self.identity = AppIdentity(name=self.name, uuid=uuid4().hex)
@@ -86,6 +92,8 @@ class Module(ABC):
         self.parameters: dict[str, Any] = {}
         #: The pipeline's sources, for a module that ``reads_gateway``.
         self.gateway: DataGateway | None = None
+        what = f"is not keeping up with {self.input_model.topic}" if self.input_model else ""
+        self.monitor = KeepUpMonitor(self.name, what, self.keep_up if self.input_model else None)
 
     async def setup(self, out: Sink) -> None:
         """Called once before ``run``. ``out`` is where to publish anything
@@ -122,6 +130,7 @@ class Module(ABC):
         if self.input_model is None:
             return
         async for message in inputs:
+            self.monitor.observe(inputs, message, out)
             try:
                 result = await self.process(message)
             except Exception as error:
