@@ -5,6 +5,13 @@ x-transport: &transport
   PSWAMP_TRANSPORT: "kafka:pswamp_core.transport.kafka:KafkaTransport"
   KAFKA_BOOTSTRAP_SERVERS: "kafka:9092"
 
+# The streamer's sources: the in-image recording, the synthetic live feed, and
+# the same recording from the remote data service below. Whoever reads the
+# gateway (the server, and the worker hosting the range summary) gets these.
+x-streamer-sources: &streamer-sources
+  PMU_TEST_STREAMER_DATA_CLIENTS: "sample:pmu_test_streamer.sample_client:SampleRecordingClient,live:pmu_test_streamer.live_client:LiveSyntheticClient,remote:pswamp_core.datagateway.clients.remote_data:RemoteDataClient"
+  REMOTE_URL: "http://remote-data-stub:8100"
+
 services:
   # Just "server": Compose prefixes containers with the project name, which is
   # already the repo directory (p-SWAMP), so this comes up as p-swamp-server-1
@@ -15,7 +22,7 @@ services:
     ports:
       - "8000:8000"
     environment:
-      <<: *transport
+      <<: [*transport, *streamer-sources]
       HOST: "0.0.0.0"
       PORT: "8000"
       # Compose sync writes may not always emit inotify events in-container;
@@ -46,6 +53,8 @@ services:
     # endpoint doesn't answer.
     depends_on:
       kafka:
+        condition: service_healthy
+      remote-data-stub:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8000/healthz"]
@@ -135,7 +144,7 @@ services:
     image: p-swamp:latest
     command: ["python", "-m", "pswamp_core.worker"]
     environment:
-      <<: *transport
+      <<: [*transport, *streamer-sources]
       PSWAMP_WORKER_PIPELINES: "pmu_test_streamer.pipeline:PIPELINE"
       PSWAMP_WORKER_MODULES: "range-summary"
     depends_on:
@@ -144,6 +153,24 @@ services:
     restart: unless-stopped
     cpus: 1.0
     develop: *worker-watch
+
+  # A dummy remote data service (core/examples/remote_data_stub): the sample
+  # recording served over the remote data contract, standing where a
+  # deployment's own service in front of its store would. Same image; the
+  # server's src/ is its working directory, so the sample client imports.
+  remote-data-stub:
+    build: .
+    image: p-swamp:latest
+    command: ["python", "-m", "remote_data_stub"]
+    environment:
+      PYTHONPATH: "/workspace/p-SWAMP/core/examples"
+      REMOTE_DATA_STUB_CLIENT: "sample:pmu_test_streamer.sample_client:SampleRecordingClient"
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8100/healthz"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
 
   # The broker for PSWAMP_TRANSPORT=kafka: Apache Kafka's own image (Apache
   # 2.0), one node in KRaft mode. No volume: every topic is a live hop, and a
