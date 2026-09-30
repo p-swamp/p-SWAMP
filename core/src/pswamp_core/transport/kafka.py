@@ -31,6 +31,7 @@ from collections.abc import Sequence
 from typing import TYPE_CHECKING, Any
 
 from ..log import get_logger
+from ..messages.data_model import stamp_sent_at
 from ..settings import EnvSetting
 from . import Transport
 
@@ -220,6 +221,8 @@ class KafkaTransport(Transport):
             except Exception as error:
                 logger.warning("%s: dropping an undecodable record on %s: %s", self.name, topic, error)
                 continue
+            if record.timestamp is not None and record.timestamp >= 0:
+                stamp_sent_at(message, record.timestamp / 1000.0)  # the producer's CreateTime
             self._deliver(topic, record.key.decode() if record.key else "", message)
 
 
