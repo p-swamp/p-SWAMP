@@ -279,7 +279,8 @@ __all__ = ["WS_MESSAGE", "ReferenceSubappState", "router"]
 ```
 
 An app that also needs startup/shutdown work exports a `lifespan` beside those —
-`pmu_test_streamer` (a playback ticker) and `pswamp_web` (the pipeline registry) do.
+`pmu_test_streamer` (its pipeline runs and modules) and `pswamp_web` (the pipeline
+registry) do.
 
 `api_contract.py` walks the same `APPS` list `server.py` mounts and collects
 whatever each package exports under that name. An app with no socket
@@ -416,11 +417,12 @@ From there the two families of app part ways.
 - a command handler that mutates one client's state and pushes it, and a socket
   handler that pushes on connect and then only waits.
 
-`pmu_test_streamer/` (the older demo, on its way out) adds the one thing the
-reference app has no need of: a `ticker()` task, started by the package's `lifespan`,
-advancing every playing client each tick and sending each its own `state_message()`.
-Copy that pair when an app must push on its own clock rather than only in response to
-a command.
+`pmu_test_streamer/` is the same seam over the server data architecture
+(`doc/server-data-architecture.md`): its state is a pipeline run per client, its
+commands go to that run's player or modules through `shared.dispatch_command`, and
+`shared.push_changes` sends a state message after every change in the run. Copy it
+(or run `generate-new-module-with-frontend.sh`) when an app's data comes from PMU
+sources and modules.
 
 A client id may briefly hold several sockets — a reconnect overlapping the dying one
 — which is why it is a set. `send_to_client` iterates a snapshot and drops any socket
@@ -569,8 +571,9 @@ Every handler then does two things: change the right state, and get that change 
 the screen. The state lives in three different places, so there are three
 arrangements.
 
-**1. State in a module dict** — `reference_subapp`, `pmu_test_streamer`, anything the
-scaffold generates. The simplest case, needing no new plumbing: `SocketRegistry`
+**1. State in a module dict** — `reference_subapp`, and anything the subapp
+scaffold generates. (An app over the server data architecture keeps its state in a
+pipeline run instead; see `doc/server-data-architecture.md`.) The simplest case, needing no new plumbing: `SocketRegistry`
 already addresses a client id and runs on this same event loop.
 
 ```
