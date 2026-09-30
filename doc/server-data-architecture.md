@@ -145,8 +145,36 @@ frame carries its layout, so a module needs nothing but the frame in hand.
 *Where.* `core/src/pswamp_core/messages/`.
 
 ### Transport
-Keyed publish/subscribe with one topic per message class per app. In-memory
-and Kafka implementations pass the same tests.
+*What.* Keyed publish/subscribe: **one topic per message class, per app, and
+the run's key on every record**.
+
+```python
+await transport.publish(frame, app="pmu-test-streamer", key="42")   # topic pmu-test-streamer.pmu.frame
+with transport.subscribe(FrameStatsResult, app="pmu-test-streamer", key="42") as results:
+    async for key, result in results: ...                          # key "42" only
+with transport.subscribe(PmuFrame, app="pmu-test-streamer") as frames:
+    async for key, frame in frames: ...                            # every key: a module host's view
+```
+
+The deployment picks the implementation with `PSWAMP_TRANSPORT`
+(`name:module.path:Class`, plus that name's `{NAME}_{SETTING}` variables).
+Unset, it is the `InMemoryTransport`. The player and modules publish
+synchronously into an `Outbox`, which sends in order and, when full, drops the
+oldest data message, but never a command or an error.
+
+*Why.*
+- **One mechanism.** A module is always reached over the transport, so "in
+  the server" and "in a worker" are two transports, not two code paths.
+- **The in-memory transport behaves like a broker.** Every message goes
+  through JSON, and a topic carries one exact class. A message that would not
+  survive Kafka fails in a unit test.
+- **Replaceable.** A new transport implements `publish` (and `_watch` for
+  incoming topics) and passes `core/tests/transport_suite.py`.
+- **A transport is not a data source.** It carries what is published, in
+  order, and keeps nothing for late subscribers.
+
+*Where.* `core/src/pswamp_core/transport/`, `subscription.py`, `settings.py`
+(spec loading, shared with the data providers).
 
 ### Modules
 A module declares its input class, its result class and any commands it
