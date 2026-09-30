@@ -6,9 +6,12 @@ import asyncio
 from datetime import datetime, timedelta, timezone
 
 import pytest
-from pmu_test_streamer.sample_client import EPOCH, STREAM_ID, SampleRecordingClient, load_sample
+from pmu_test_streamer.live_client import LIVE_STREAM_ID, LiveSyntheticClient
+from pmu_test_streamer.pipeline import gateway
+from pmu_test_streamer.sample_client import DEFAULT_PATH, EPOCH, STREAM_ID, SampleRecordingClient, load_sample
 from pmu_test_streamer.stats_module import FrameStatsModule, FrameStatsResult
 
+from pswamp_core.datagateway import TimeRange
 from pswamp_core.host import ModuleHost
 from pswamp_core.messages import PmuFrame, PmuHeader
 from pswamp_core.testing import DataClientConformance
@@ -82,3 +85,36 @@ class TestSampleRecordingClient(DataClientConformance):
     @pytest.fixture
     def conformance_records(self):
         return list(load_sample().frames)
+
+
+# --- the live feed and the configured sources -------------------------------------
+
+
+class TestLiveSyntheticClient(DataClientConformance):
+    @pytest.fixture
+    async def client_under_test(self):
+        client = LiveSyntheticClient()
+        yield client
+        await client.close()
+
+
+async def test_the_live_feed_ticks_the_sample_s_frames_stamped_now():
+    client = LiveSyntheticClient()
+    await client.open()
+    stream = client.consume(TimeRange(None, None))
+    first, second = await anext(stream), await anext(stream)
+    await stream.aclose()
+    await client.close()
+    assert first.mRID == LIVE_STREAM_ID and first.header == load_sample().header
+    assert 0.02 < (second.timestamp - first.timestamp).total_seconds() < 0.2
+
+
+def test_the_streamer_s_sources_are_the_sample_and_the_live_feed(monkeypatch, tmp_path):
+    monkeypatch.delenv("PMU_TEST_STREAMER_DATA_CLIENTS", raising=False)
+    assert gateway().sources == ["sample", "live"]
+    short = tmp_path / "short.txt"
+    short.write_text("\n".join(DEFAULT_PATH.read_text().splitlines()[:10]))
+    monkeypatch.setenv("PMU_TEST_STREAMER_DATA_CLIENTS", "rec:pmu_test_streamer.sample_client:SampleRecordingClient")
+    monkeypatch.setenv("REC_PATH", str(short))
+    configured = gateway()
+    assert configured.sources == ["rec"] and len(configured.active.recording.frames) == 2
