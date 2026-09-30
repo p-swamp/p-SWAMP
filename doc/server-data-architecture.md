@@ -263,8 +263,21 @@ the examples are `app/server-python/src/pmu_test_streamer/sample_client.py`
 (history) and `live_client.py` (live: the sample re-stamped on the wall clock).
 
 ### CIM reference
-The gateway stamps each frame's layout with a reference to the grid (CIM) data
-that applies to it.
+*What.* The gateway sets an optional `PmuHeader.cimReferenceId` on every
+frame: an id for the grid (CIM) data that applies to it. Enrichers passed to a
+`DataGateway` run on every record its streams yield. `CimReferenceEnricher`
+decides the reference once per layout. **It is a stub**: it returns one
+configured id (`PMU_TEST_STREAMER_CIM_REFERENCE`, default `n44-cim-stub`,
+`none` for none). A lookup against a CIM model overrides `reference_for` and
+nothing else changes.
+
+*Why.* Every reader's frames pass through the gateway, so every module sees
+the same reference, decided once, early. It travels with the frame, so a module
+in a worker gets it with no configuration of its own. It is a reference, not
+the grid data itself, which would cost kilobytes per frame.
+
+*Where.* `core/src/pswamp_core/datagateway/enrich.py`; wired in
+`pmu_test_streamer/pipeline.py`.
 
 ### Player
 Paces the active source. Checks its commands before they are published, so a
