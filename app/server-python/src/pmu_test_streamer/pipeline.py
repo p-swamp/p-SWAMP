@@ -3,6 +3,11 @@
 
 """What the PMU test streamer's pipeline is made of.
 
+The server builds one run per client from ``PIPELINE``; whoever hosts the
+modules (the server with the in-memory transport, a worker with Kafka:
+``PSWAMP_WORKER_PIPELINES=pmu_test_streamer.pipeline:PIPELINE``) hosts them
+from it too.
+
 Its sources come from ``PMU_TEST_STREAMER_DATA_CLIENTS``, by default the
 sample recording (the source a run starts on) and the synthetic live feed.
 Every frame gets the CIM reference ``PMU_TEST_STREAMER_CIM_REFERENCE``
@@ -14,6 +19,9 @@ from __future__ import annotations
 import os
 
 from pswamp_core.datagateway import CimReferenceEnricher, DataGateway, gateway_from_env
+from pswamp_core.pipeline import Pipeline
+
+from .stats_module import FrameStatsModule
 
 APP = "pmu-test-streamer"
 
@@ -31,3 +39,6 @@ def gateway() -> DataGateway:
     reference = os.environ.get(CIM_REFERENCE_VARIABLE, "").strip() or DEFAULT_CIM_REFERENCE
     cim = CimReferenceEnricher(None if reference == "none" else reference)
     return gateway_from_env(DATA_CLIENTS_VARIABLE, DEFAULT_DATA_CLIENTS, enrichers=[cim])
+
+
+PIPELINE = Pipeline(APP, gateway, modules=(FrameStatsModule,))

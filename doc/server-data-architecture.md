@@ -109,6 +109,17 @@ mode. In compose and k8s, the server and one or more workers share a Kafka
 broker, and each worker hosts the modules it is told to. The code path is the
 same in both; only the transport differs.
 
+A worker is the same image running `python -m pswamp_core.worker`, configured
+by the same transport variables as the server plus:
+
+```
+PSWAMP_WORKER_PIPELINES=pmu_test_streamer.pipeline:PIPELINE   # whose modules to host
+PSWAMP_WORKER_MODULES=range-summary                           # optional: only these
+```
+
+So a heavy module gets a process, and a CPU limit, of its own without touching
+its code or its page.
+
 ## The pieces
 
 Each piece gets its Why and Where when its code lands.
@@ -310,12 +321,58 @@ disturbance needs real time and needs to scrub. The rules:
 *Where.* `core/src/pswamp_core/player.py`.
 
 ### Pipelines and runs
-The declaration of an app's sources and modules, the run built from it per
-key, and the registry that caps and evicts runs.
+*What.* A `Pipeline` declares an app's pipeline once: the app name (its topic
+namespace), its sources and its modules. A `PipelineRun` is one running
+instance under one key. A `PipelineRegistry` keeps one run per key.
+
+```python
+PIPELINE = Pipeline("pmu-test-streamer", gateway, modules=(FrameStatsModule,))   # <app>/pipeline.py
+
+REGISTRY = PipelineRegistry(lambda key: PipelineRun(key, PIPELINE, transport))
+run = await REGISTRY.acquire(client_id)       # built on first connect
+run.latest.get(FrameStatsResult)              # the newest result: what the edge renders
+with run.changes() as changes: ...            # a wake-up per change, coalesced
+REGISTRY.peek(client_id)                      # a command's view: never builds
+```
+
+*Why.* The declaration is what both sides share. The server builds runs from
+it, and a module host, in the server or a worker, hosts its modules from it
+(`PIPELINE.hosts(transport)`). A run holds a gateway and a player, publishes
+the player's frames to the modules, and keeps the newest message of each class
+it sees. That view is not a bus: the edge builds its message from current
+state, so however much arrived meanwhile, it sends one. The registry lets a
+run outlive its sockets for five minutes, so a reload rejoins it. At its cap
+(8) it evicts the least recently used idle run, and refuses when every run is
+watched.
+
+*Where.* `core/src/pswamp_core/pipeline.py`, `worker.py`;
+`app/server-python/src/pmu_test_streamer/pipeline.py`.
 
 ### Commands
-A command's class is its address; exactly one part declares it. Anyone may
-publish it; anyone may subscribe to watch it.
+*What.* A command's class is its address. Exactly one part of a pipeline
+declares that it handles it: the player, or one module. The command travels on
+its own topic, `<app>.<command>`, under the run's key.
+
+```python
+run.dispatch(SeekCommand(client_id=id, offset_s=12))
+#   a player command?  player.validate(cmd)    raises CommandRefused: the POST's 409
+#   a module command?  published as it is       the module validates it where it runs
+#   nobody takes it?   NoReceiver
+#   then               topic pmu-test-streamer.seek.command, key = the run's key
+# the receiver's CommandInbox: validate again, then handle; a refusal is an ErrorEvent(request_id)
+```
+
+*Why.* The mental model is one sentence: **anyone may publish a command, its
+one declared receiver applies it, anyone may subscribe to watch it.** The
+arguments are validated fields, not a verb and a dict. `Pipeline` refuses two
+receivers of one class. The player lives with the edge, so its commands are
+checked before they are published, and a refusal is an honest 409. A module
+may run in another process, so its commands are checked where it runs, and a
+refusal comes back as an `ErrorEvent`. Player commands also travel on topics,
+so a module can command the player exactly as the edge does.
+
+*Where.* `core/src/pswamp_core/command_routing.py`, `messages/commands.py`,
+`pipeline.py` (`dispatch`).
 
 ### The edge
 What an app's `api.py` keeps once the core does the rest: the state message it
