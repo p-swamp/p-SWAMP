@@ -23,6 +23,7 @@ from datetime import datetime
 
 from ..log import get_logger
 from .data_client import DataClient
+from .enrich import Enricher
 from .stream import DataStream
 from .time_range import TimeRange
 
@@ -37,12 +38,15 @@ class DataGateway:
     Args:
         clients: The sources, in order. The first is active unless ``active``
             names another.
+        enrichers: Applied, in order, to every record a stream yields.
 
     Raises:
         ValueError: No clients, two with one name, or ``active`` names none.
     """
 
-    def __init__(self, clients: Sequence[DataClient], *, active: str | None = None) -> None:
+    def __init__(
+        self, clients: Sequence[DataClient], *, active: str | None = None, enrichers: Sequence[Enricher] = ()
+    ) -> None:
         if not clients:
             raise ValueError("a gateway needs at least one data client")
         self.clients: dict[str, DataClient] = {}
@@ -51,6 +55,7 @@ class DataGateway:
                 raise ValueError(f"two data clients are named {client.name!r}")
             self.clients[client.name] = client
         self._active = self._named(active) if active is not None else clients[0]
+        self.enrichers = tuple(enrichers)
         self._opened: set[str] = set()
 
     @property
@@ -89,7 +94,7 @@ class DataGateway:
     async def consume(self, start: datetime | None = None, end: datetime | None = None) -> DataStream:
         """A stream over ``[start, end)`` of the active source."""
         await self._open(self._active)
-        return DataStream(self._active, TimeRange(start, end))
+        return DataStream(self._active, TimeRange(start, end), self.enrichers)
 
     async def close(self) -> None:
         """Close every client that was opened."""

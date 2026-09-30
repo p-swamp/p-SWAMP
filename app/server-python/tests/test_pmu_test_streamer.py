@@ -118,3 +118,11 @@ def test_the_streamer_s_sources_are_the_sample_and_the_live_feed(monkeypatch, tm
     monkeypatch.setenv("REC_PATH", str(short))
     configured = gateway()
     assert configured.sources == ["rec"] and len(configured.active.recording.frames) == 2
+
+
+async def test_the_streamer_s_frames_carry_the_cim_reference(monkeypatch):
+    monkeypatch.delenv("PMU_TEST_STREAMER_CIM_REFERENCE", raising=False)
+    first = await anext(await gateway().consume())
+    assert first.header.cimReferenceId == "n44-cim-stub"
+    monkeypatch.setenv("PMU_TEST_STREAMER_CIM_REFERENCE", "none")
+    assert (await anext(await gateway().consume())).header.cimReferenceId is None

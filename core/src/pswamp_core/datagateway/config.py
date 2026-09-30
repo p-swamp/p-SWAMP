@@ -17,10 +17,12 @@ package in the image and one variable, and no change to this repo.
 from __future__ import annotations
 
 import os
+from collections.abc import Sequence
 
 from ..settings import MissingSettingError, load_class, parse_specs
 from .data_client import DataClient
 from .data_gateway import DataGateway
+from .enrich import Enricher
 
 __all__ = ["clients_from_env", "gateway_from_env"]
 
@@ -37,6 +39,6 @@ def clients_from_env(variable: str, default: str) -> list[DataClient]:
     ]
 
 
-def gateway_from_env(variable: str, default: str) -> DataGateway:
+def gateway_from_env(variable: str, default: str, *, enrichers: Sequence[Enricher] = ()) -> DataGateway:
     """A ``DataGateway`` over ``clients_from_env(variable, default)``."""
-    return DataGateway(clients_from_env(variable, default))
+    return DataGateway(clients_from_env(variable, default), enrichers=enrichers)
