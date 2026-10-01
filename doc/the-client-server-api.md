@@ -556,7 +556,9 @@ async def bump(client_id: ClientId) -> CommandAck:
 
 - **`ClientId`** — an annotated query parameter, validated before any handler runs;
   missing or non-numeric returns a 422.
-- **`CommandAck`** — `{status, applied}`. Deliberately not the new state.
+- **`CommandAck`** — `{status, applied, request_id}`. Deliberately not the new state.
+  `request_id` is set when the command is handed on to a pipeline; what answers or
+  refuses it carries the same id.
 - **`operation_id`** — an explicit, readable name per operation.
 - Bodies are pydantic models (`ChannelSelection`, `AlarmNote`), so a malformed
   command returns a 422 instead of crashing a handler.

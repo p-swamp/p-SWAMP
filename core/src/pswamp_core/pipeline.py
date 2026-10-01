@@ -91,7 +91,9 @@ class Pipeline:
         modules: The module classes, hosted wherever the transport says.
 
     Raises ``ValueError`` when two receivers (the player, a module) take the
-    same command class: a command class is an address.
+    same command class: a command class is an address. Also when two classes
+    of the pipeline have the same topic, as two of the same name do: a topic
+    carries one class.
     """
 
     app: str
@@ -105,6 +107,14 @@ class Pipeline:
                 if command in taken:
                     raise ValueError(f"{self.app}: {module.__name__} and {taken[command]} both take {command.__name__}")
                 taken[command] = module.__name__
+        on_topic: dict[str, type[DataModel]] = {}
+        for model in (ErrorEvent, PipelineClosed, *taken, *self.inputs, *self.results):
+            other = on_topic.setdefault(model.topic, model)
+            if other is not model:
+                raise ValueError(
+                    f"{self.app}: {other.__module__}.{other.__qualname__} and {model.__module__}.{model.__qualname__} "
+                    f"are both on topic {model.topic}; rename one, or give it a topic of its own (topic: ClassVar[str])"
+                )
 
     @property
     def inputs(self) -> frozenset[type[DataModel]]:

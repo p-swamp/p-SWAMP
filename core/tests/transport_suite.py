@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import math
 
+import pytest
 from support import HEADER, Measurement, Number, NumberResult, at, measurement, take
 
 from pswamp_core.messages import PmuFrame, ResultEnvelope, sent_at
@@ -38,6 +39,15 @@ class TransportSuite:
             await transport.publish(result, app=app, key="k")
             await take(exact, 1)
         assert base.get_nowait() is None
+
+    async def test_two_classes_of_one_name_cannot_share_a_topic(self, transport, app):
+        other = type("Measurement", (Measurement,), {})
+        assert other.topic == Measurement.topic and other is not Measurement
+        with transport.subscribe(Measurement, app=app):
+            with pytest.raises(ValueError, match="cannot share"):
+                transport.subscribe(other, app=app)
+            with transport.subscribe(other, app=app + "x"):  # another app: another topic
+                pass
 
     async def test_apps_are_apart_and_the_key_filters(self, transport, app):
         other = app + "x"

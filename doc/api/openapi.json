@@ -316,11 +316,23 @@
         "type": "object"
       },
       "CommandAck": {
-        "description": "The reply to every command POST.\n\nDeliberately NOT the resulting state. That arrives on whichever socket the\npage has open, on the server's own schedule, so state has exactly one path\nand there is no ordering for a client to reconcile between two of them. What\nthis carries is only \"the command was understood and applied, and here is\nwhat it was\" -- enough to log and to assert on, and nothing a page renders.",
+        "description": "The reply to every command POST.\n\nDeliberately NOT the resulting state. That arrives on whichever socket the\npage has open, on the server's own schedule, so state has exactly one path\nand there is no ordering for a client to reconcile between two of them. What\nthis carries is only \"the command was accepted, and here is what it was\" --\nenough to log and to assert on, and nothing a page renders.\n\n*Accepted* is all it promises. A handler that applies the command itself\nhas applied it by now. A handler that hands it on (to a pipeline's player\nor module) has checked what it can and queued it for its receiver: the\noutcome arrives on the socket, or as an error notice carrying this\n``request_id``.",
         "properties": {
           "applied": {
             "title": "Applied",
             "type": "string"
+          },
+          "request_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Set when the command was handed on to a receiver: what answers or refuses it carries the same id.",
+            "title": "Request Id"
           },
           "status": {
             "const": "ok",

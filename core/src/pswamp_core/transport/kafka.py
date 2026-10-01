@@ -81,8 +81,6 @@ class KafkaTransport(Transport):
         self._admin: Any | None = None
         self._open_lock = asyncio.Lock()
         self._created: set[str] = set()
-        #: Every topic this process listens to, and the class it carries.
-        self._models: dict[str, type[DataModel]] = {}
         #: Topics listened to but not yet assigned to the consumer.
         self._unassigned: set[str] = set()
         self._consumer_task: asyncio.Task | None = None
@@ -149,9 +147,8 @@ class KafkaTransport(Transport):
         self._created.add(topic)
 
     def _watch(self, topic: str, model: type[DataModel]) -> None:
-        if topic in self._models:
+        if topic in self._ready:
             return
-        self._models[topic] = model
         self._ready[topic] = asyncio.Event()
         self._unassigned.add(topic)
         if self._consumer_task is None or self._consumer_task.done():
@@ -171,7 +168,7 @@ class KafkaTransport(Transport):
             )
             try:
                 await consumer.start()
-                self._unassigned |= set(self._models)  # a fresh consumer holds nothing
+                self._unassigned |= set(self._ready)  # a fresh consumer holds nothing
                 while True:
                     if self._unassigned:
                         await self._assign(consumer)

@@ -42,7 +42,7 @@ def test_a_refused_module_command_reaches_the_client_s_tray(server):
     ):
         page.receive_json()
         body = {"source": "live", "offset_s": 0, "end_offset_s": 1}
-        server.post("/api/pmu-test-streamer/summary?client_id=401", json=body)
+        ack = server.post("/api/pmu-test-streamer/summary?client_id=401", json=body).json()
         notice = tray.receive_json()
     assert (notice["app"], notice["source"]) == ("pmu-test-streamer", "range-summary")
-    assert "live" in notice["detail"] and notice["request_id"]
+    assert "live" in notice["detail"] and notice["request_id"] == ack["request_id"]

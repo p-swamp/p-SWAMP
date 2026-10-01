@@ -185,6 +185,8 @@ async def serve_pipeline(pipeline: Pipeline, registry: PipelineRegistry) -> Asyn
     if link.in_process:
         tasks.append(asyncio.create_task(serve_hosts(pipeline.hosts(link)), name=f"{pipeline.app}.hosts"))
         await asyncio.sleep(0)  # the hosts subscribe before the live runs publish
+    for task in tasks:
+        task.add_done_callback(_log_a_failure)
     live_runs = await start_live_runs(pipeline, link)
     try:
         yield
@@ -193,6 +195,13 @@ async def serve_pipeline(pipeline: Pipeline, registry: PipelineRegistry) -> Asyn
         for run in live_runs:
             await run.stop("shutdown")
         await cancel_and_wait(*tasks, ignore=(Exception,))
+
+
+def _log_a_failure(task: asyncio.Task) -> None:
+    """Say so when a task meant to run until shutdown fails. Nobody awaits it
+    before then, so the failure would otherwise be seen only at shutdown."""
+    if not task.cancelled() and task.exception() is not None:
+        logger.error("%s failed and is not restarted; restart the server", task.get_name(), exc_info=task.exception())
 
 
 async def _forward_errors(link: Transport, app: str, registry: PipelineRegistry) -> None:
@@ -269,7 +278,10 @@ def dispatch_command(registry: PipelineRegistry, command: Command, log: logging.
 
     404 when the client has no run (a command never builds one); 409 when the
     player refuses it now, with the reason as the detail. The ack means
-    *published*: the effect arrives on the socket.
+    *accepted*: the command is queued for its receiver, and its effect arrives
+    on the socket, or a refusal or failure on the error tray, carrying the
+    ack's ``request_id``. Nothing reports a command that never reaches its
+    receiver (a worker that is not running, say).
     """
     client_id = command.client_id or ""
     run = registry.peek(client_id)
@@ -281,4 +293,4 @@ def dispatch_command(registry: PipelineRegistry, command: Command, log: logging.
         log.info("client %s: %s refused: %s", client_id, command.name, refused)
         raise HTTPException(409, str(refused)) from refused
     log.info("client %s: %s (request %s)", client_id, command.name, command.request_id)
-    return CommandAck(applied=command.name)
+    return CommandAck(applied=command.name, request_id=command.request_id)

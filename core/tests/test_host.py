@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 
-from support import Measurement, NumberResult, measurement, take
+from support import Measurement, Number, NumberResult, measurement, take
 from test_modules import Doubler, HalveCommand, Halver
 
 from pswamp_core.host import ModuleHost
@@ -75,6 +75,55 @@ async def test_commands_reach_the_instance_for_their_key_and_refusals_come_back(
         (_, result), (_, error) = await take(answers, 2)
     assert result.result.value == 5 and result.request_id == ok.request_id
     assert error.request_id == refused.request_id
+    await cancel_and_wait(task)
+
+
+async def test_an_instance_that_fails_is_reported_and_dropped_and_built_again_later():
+    class Flaky(Doubler):
+        setups = 0
+
+        async def setup(self, out) -> None:
+            Flaky.setups += 1
+            if Flaky.setups == 1:
+                raise RuntimeError("no source")
+
+    broker = InMemoryTransport()
+    host = ModuleHost(Flaky, broker, app="a", retry_seconds=0.1)
+    task = asyncio.create_task(host.serve())
+    await settle()
+    with broker.subscribe(NumberResult, ErrorEvent, app="a", key="k", overflow=Overflow.GROW) as answers:
+        await broker.publish(measurement(1), app="a", key="k")
+        ((_, error),) = await take(answers, 1)
+        await settle()
+        assert error.source == "doubler" and error.detail == "RuntimeError: no source"
+        assert host.keys() == []
+        await broker.publish(measurement(2), app="a", key="k")  # too soon: the key is left alone
+        await settle()
+        assert host.keys() == [] and Flaky.setups == 1
+        await asyncio.sleep(0.15)
+        await broker.publish(measurement(3), app="a", key="k")
+        ((_, result),) = await take(answers, 1)
+    assert result.result.value == 6.0 and host.keys() == ["k"]
+    await cancel_and_wait(task)
+
+
+async def test_a_bad_answer_for_one_key_does_not_end_the_host():
+    class Misanswering(Halver):
+        async def handle(self, command: HalveCommand):
+            return Measurement() if command.value == 1 else Number(value=command.value / 2)
+
+    broker = InMemoryTransport()
+    task = asyncio.create_task(ModuleHost(Misanswering, broker, app="a").serve())
+    await settle()
+    with broker.subscribe(NumberResult, ErrorEvent, app="a", overflow=Overflow.GROW) as answers:
+        await broker.publish(HalveCommand(value=1), app="a", key="k1")
+        ((key, error),) = await take(answers, 1)
+        assert key == "k1" and isinstance(error, ErrorEvent)
+        await broker.publish(PipelineClosed(timestamp=utcnow(), reason="idle"), app="a", key="k1")
+        await broker.publish(HalveCommand(value=8), app="a", key="k2")
+        ((key, result),) = await take(answers, 1)
+    assert key == "k2" and result.result.value == 4
+    assert not task.done()
     await cancel_and_wait(task)
 
 

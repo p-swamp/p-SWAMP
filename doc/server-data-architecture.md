@@ -188,7 +188,11 @@ The deployment picks the implementation with `PSWAMP_TRANSPORT`
 (`name:module.path:Class`, plus that name's `{NAME}_{SETTING}` variables).
 Unset, it is the `InMemoryTransport`. The player and modules publish
 synchronously into an `Outbox`, which sends in order and, when full, drops the
-oldest data message, but never a command or an error.
+oldest data message, but never a command, an answer to one, or an error.
+
+Two classes of one name have the same topic. `subscribe` refuses the second
+class on a topic, and `Pipeline` refuses to declare both. Rename one, or give
+it a topic of its own (`topic: ClassVar[str]`).
 
 *Why.*
 - **One mechanism.** A module is always reached over the transport, so "in
@@ -235,6 +239,12 @@ A `ModuleHost` runs a module. It subscribes to the module's input and command
 topics for every key, and builds one instance per run key on that key's first
 message. It drops the instance when the run publishes `PipelineClosed`, or
 after five minutes with nothing for it.
+
+An instance that fails (its `setup` raises, say) is logged, reported as an
+`ErrorEvent` under its key, and dropped. The first message for that key five
+seconds later builds a new one; what arrives before is ignored. A `process`
+that raises, or returns a body that does not fit the envelope, costs only that
+input: it is reported and the next one is read.
 
 **A pipeline of modules.** A module may read another module's result class,
 which chains them: in the streamer, `PmuFrame` → `FrameStatsModule` →
@@ -429,7 +439,9 @@ async def ws_endpoint(ws: WebSocket) -> None:
   client id), 1013 (at capacity) and 1011 (the run failed to start).
 - `push_changes`: one message on connect and one per change, coalesced.
 - `dispatch_command`: 404 without a run, 409 when the player refuses, else a
-  `CommandAck` meaning *published*.
+  `CommandAck` meaning *accepted*: the command is queued for its receiver. The
+  ack carries the command's `request_id`, as does whatever answers or refuses
+  it.
 
 The browser contract is unchanged: commands up as POSTs, state down one
 socket, the acknowledgement never carries state, and all of it is generated
@@ -442,8 +454,8 @@ types are generated from the same classes.
 
 ### Errors
 *What.* `ErrorEvent` is what a pipeline publishes when something *operational*
-fails: the player's provider raised, a module's `process` raised, or a module
-refused a command. Every one goes on the app's error topic
+fails: the player's provider raised, a module's `process` raised, a module
+instance failed, or a module refused a command. Every one goes on the app's error topic
 (`<app>.error.event`) under its run's key. `serve_pipeline` forwards that
 topic to the `errors` app's hub. Each notice goes to the clients watching that
 run: its own client, or every client following a shared live run. The
@@ -560,7 +572,9 @@ batch queries, a worker of its own, CPU-heavy modules, and data sources.
   `DataClient`.
 - **Cheaper frames**: the header serialised once per layout, and producer
   batching.
-- **`request_id` in the browser's acknowledgement**, so a page can match a
-  refusal on the tray to the click that caused it.
+- **A notice when nothing answers a command.** The acknowledgement means
+  accepted. A command that never reaches its receiver (its worker is not
+  running, the broker is down) is lost with only a log line. The ack and every
+  answer carry the `request_id` a watchdog would match on.
 - **Security** between p-SWAMP and a remote data service, and limits on
   queries (see the contract's "Not settled yet").

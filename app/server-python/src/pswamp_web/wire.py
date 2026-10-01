@@ -43,7 +43,7 @@ import re
 from typing import Annotated, Literal
 
 from fastapi import Query, WebSocket
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 # A measurement that may be missing. NaN and infinities become null on the wire.
 Sample = float | None
@@ -150,12 +150,22 @@ class CommandAck(BaseModel):
     Deliberately NOT the resulting state. That arrives on whichever socket the
     page has open, on the server's own schedule, so state has exactly one path
     and there is no ordering for a client to reconcile between two of them. What
-    this carries is only "the command was understood and applied, and here is
-    what it was" -- enough to log and to assert on, and nothing a page renders.
+    this carries is only "the command was accepted, and here is what it was" --
+    enough to log and to assert on, and nothing a page renders.
+
+    *Accepted* is all it promises. A handler that applies the command itself
+    has applied it by now. A handler that hands it on (to a pipeline's player
+    or module) has checked what it can and queued it for its receiver: the
+    outcome arrives on the socket, or as an error notice carrying this
+    ``request_id``.
     """
 
     status: Literal["ok"] = "ok"
     applied: str
+    request_id: str | None = Field(
+        default=None,
+        description="Set when the command was handed on to a receiver: what answers or refuses it carries the same id.",
+    )
 
 
 async def send_state(ws: WebSocket, message: BaseModel) -> None:

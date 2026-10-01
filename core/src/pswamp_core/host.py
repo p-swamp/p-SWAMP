@@ -12,6 +12,10 @@ costs one instance per client, and a shared live run one in total. It is
 dropped when its run publishes ``PipelineClosed``, or, if that was lost, after
 ``idle_seconds`` with nothing for it.
 
+An instance that fails (its ``setup`` raises, say) is logged, reported as an
+``ErrorEvent`` under its key, and dropped. The first message for that key
+after ``retry_seconds`` builds a new one; what arrives before is ignored.
+
 With the in-memory transport the server runs the hosts itself; with a broker a
 worker does (``pswamp_core.worker``). The module cannot tell the difference.
 
@@ -29,20 +33,26 @@ from typing import TYPE_CHECKING
 from .command_routing import CommandInbox, concrete_commands
 from .log import get_logger
 from .messages.control import PipelineClosed
+from .messages.errors import ErrorEvent
 from .subscription import Overflow, Subscription
 from .transport import Outbox
 from .util.tasks import cancel_and_wait, finish
+from .util.time import utcnow
 
 if TYPE_CHECKING:
     from .datagateway import DataGateway
     from .modules import Module
     from .transport import Transport, TransportSubscription
 
-__all__ = ["DEFAULT_IDLE_SECONDS", "ModuleHost", "serve_hosts"]
+__all__ = ["DEFAULT_IDLE_SECONDS", "DEFAULT_RETRY_SECONDS", "ModuleHost", "serve_hosts"]
 
 logger = get_logger("pswamp_core.host")
 
 DEFAULT_IDLE_SECONDS = 300.0
+
+#: How long a key is left alone after its instance failed. Without it a
+#: ``setup`` that always fails would be rebuilt for every frame.
+DEFAULT_RETRY_SECONDS = 5.0
 
 #: The shared feed of one topic, across keys: only a hand-off to each key's
 #: own queue, which applies the module's overflow policy.
@@ -82,6 +92,7 @@ class ModuleHost:
         app: The app whose topics the module is reached on.
         idle_seconds: How long a key may go without a message before its
             instance is dropped, in case its ``PipelineClosed`` never arrives.
+        retry_seconds: How long a key is left alone after its instance failed.
         gateway: Builds a gateway for an instance that ``reads_gateway``.
     """
 
@@ -92,6 +103,7 @@ class ModuleHost:
         *,
         app: str,
         idle_seconds: float = DEFAULT_IDLE_SECONDS,
+        retry_seconds: float = DEFAULT_RETRY_SECONDS,
         gateway: Callable[[], DataGateway] | None = None,
     ) -> None:
         self._factory = module
@@ -99,12 +111,17 @@ class ModuleHost:
         self.transport = transport
         self.app = app
         self.idle_seconds = idle_seconds
+        self.retry_seconds = retry_seconds
         template = module()
         self.name = template.name
         self.input_model = template.input_model
         self.output_model = template.output_model
         self.commands = concrete_commands(type(template).__name__, template.commands)
         self._slots: dict[str, _Slot] = {}
+        #: The instances that failed, for ``_reap`` to drop.
+        self._failed: asyncio.Queue[_Slot] = asyncio.Queue()
+        #: Per key whose instance failed: when (monotonic) it may be rebuilt.
+        self._retry_at: dict[str, float] = {}
 
     def keys(self) -> list[str]:
         """The keys with a running instance."""
@@ -121,6 +138,7 @@ class ModuleHost:
             feeds.append(self._feed(subscribe(*self.commands, app=self.app, overflow=Overflow.GROW), "commands"))
         tasks = [asyncio.create_task(feed, name=f"{self.name}.host") for feed in feeds]
         tasks.append(asyncio.create_task(self._sweep(), name=f"{self.name}.host.sweep"))
+        tasks.append(asyncio.create_task(self._reap(), name=f"{self.name}.host.reap"))
         logger.info(
             "hosting %s for %s: reads %s, publishes %s, commands %s, over %s",
             self.name, self.app, self.input_model.topic if self.input_model else "nothing",
@@ -137,6 +155,8 @@ class ModuleHost:
         with feed:
             async for key, message in feed:
                 slot = self._slot(key)
+                if slot is None:
+                    continue
                 slot.seen = time.monotonic()
                 getattr(slot, queue).offer(message)
 
@@ -145,12 +165,36 @@ class ModuleHost:
             async for key, closed in feed:
                 await self._evict(key, closed.reason)
 
-    def _slot(self, key: str) -> _Slot:
+    def _slot(self, key: str) -> _Slot | None:
+        """The key's slot, built if it has none; ``None`` while the key is
+        left alone after its instance failed."""
         slot = self._slots.get(key)
         if slot is None:
+            if time.monotonic() < self._retry_at.get(key, 0.0):
+                return None
+            self._retry_at.pop(key, None)
             slot = self._slots[key] = _Slot(key, self._factory(), self.transport, self.app)
-            slot.tasks.append(asyncio.create_task(self._start(slot), name=f"{self.name}@{key}.start"))
+            slot.tasks.append(asyncio.create_task(self._run(slot), name=f"{self.name}@{key}"))
         return slot
+
+    async def _run(self, slot: _Slot) -> None:
+        """One instance from setup until its ``run`` ends. A failure on the
+        way is logged, reported under the key, and handed to ``_reap``."""
+        try:
+            await self._start(slot)
+            await slot.module.run(slot.inputs, slot.out)
+        except Exception as error:
+            logger.exception("%s: the instance for key %s failed", self.name, slot.key)
+            slot.out.publish(
+                ErrorEvent(
+                    timestamp=utcnow(),
+                    source=self.name,
+                    message=f"module {self.name} stopped; it starts again in {self.retry_seconds:g} s at the earliest",
+                    detail=f"{type(error).__name__}: {error}",
+                )
+            )
+            self._retry_at[slot.key] = time.monotonic() + self.retry_seconds
+            self._failed.put_nowait(slot)
 
     async def _start(self, slot: _Slot) -> None:
         module = slot.module
@@ -161,16 +205,25 @@ class ModuleHost:
         if module.commands:
             slot.inbox = module.command_inbox(slot.commands, slot.out)
             slot.inbox.start()
-        slot.tasks.append(asyncio.create_task(module.run(slot.inputs, slot.out), name=f"{self.name}@{slot.key}.run"))
         logger.info("%s: instance started for key %s (%d running)", self.name, slot.key, len(self._slots))
+
+    async def _reap(self) -> None:
+        """Drop the instances that failed. Here and not in the instance's own
+        task, which cannot wait for its own end."""
+        while True:
+            slot = await self._failed.get()
+            if self._slots.get(slot.key) is slot:
+                await self._evict(slot.key, "failed")
 
     async def _sweep(self) -> None:
         interval = max(0.05, min(self.idle_seconds / 2, 5.0))
         while True:
             await asyncio.sleep(interval)
-            cutoff = time.monotonic() - self.idle_seconds
-            for key in [k for k, s in self._slots.items() if s.seen < cutoff]:
+            now = time.monotonic()
+            for key in [k for k, s in self._slots.items() if s.seen < now - self.idle_seconds]:
                 await self._evict(key, "idle")
+            for key in [k for k, retry_at in self._retry_at.items() if retry_at <= now]:
+                del self._retry_at[key]
 
     async def _evict(self, key: str, reason: str) -> None:
         slot = self._slots.pop(key, None)
@@ -186,7 +239,10 @@ class ModuleHost:
         slot.commands.close()
         await slot.out.close()
         if slot.module.gateway is not None:
-            await slot.module.gateway.close()
+            try:
+                await slot.module.gateway.close()
+            except Exception:  # one instance's gateway must not end the host's feeds
+                logger.exception("%s: closing the gateway for key %s failed", self.name, slot.key)
         logger.info("%s: instance dropped for key %s (%s), %d running", self.name, slot.key, reason, len(self._slots))
 
 

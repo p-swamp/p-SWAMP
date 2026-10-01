@@ -7,6 +7,7 @@ import asyncio
 from typing import Literal
 
 import pytest
+from pydantic import BaseModel
 from support import Measurement, Number, NumberResult, Recorder, at, measurement, queue
 
 from pswamp_core.command_routing import CommandRefused, concrete_commands
@@ -85,6 +86,36 @@ async def test_a_refused_or_failed_command_is_an_error_event_with_its_request_id
     assert (first.message, first.detail, first.request_id) == ("halver refused halve", "no negatives", refused.request_id)
     assert (second.detail, second.request_id) == ("RuntimeError: cannot halve zero", failing.request_id)
     assert out.of(NumberResult) == []
+
+
+async def test_a_result_that_does_not_fit_the_envelope_is_reported_and_the_next_input_is_read():
+    inputs, out = queue(Measurement), Recorder()
+    task = asyncio.create_task(Doubler().run(inputs, out))
+    inputs.offer(Measurement(value=1))  # no timestamp, which the envelope requires
+    inputs.offer(measurement(3))
+    (failure,) = await out.wait_for(ErrorEvent)
+    (result,) = await out.wait_for(NumberResult)
+    await cancel_and_wait(task)
+    assert failure.source == "doubler" and failure.detail.startswith("ValidationError")
+    assert result.result.value == 6.0
+
+
+async def test_an_answer_that_does_not_fit_the_envelope_is_reported_and_the_next_command_is_handled():
+    class Misanswering(Halver):
+        async def handle(self, command: HalveCommand) -> BaseModel:
+            return Measurement() if command.value == 1 else Number(value=command.value / 2)
+
+    commands, out = queue(HalveCommand), Recorder()
+    inbox = Misanswering().command_inbox(commands, out)
+    inbox.start()
+    bad, good = HalveCommand(value=1), HalveCommand(value=8)
+    commands.offer(bad)
+    commands.offer(good)
+    (failure,) = await out.wait_for(ErrorEvent)
+    (result,) = await out.wait_for(NumberResult)
+    await inbox.stop()
+    assert (failure.message, failure.request_id) == ("halver applied halve but could not answer it", bad.request_id)
+    assert (result.result.value, result.request_id) == (4, good.request_id)
 
 
 def test_a_module_lists_concrete_command_classes_only():
