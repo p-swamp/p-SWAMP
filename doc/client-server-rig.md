@@ -278,10 +278,11 @@ reference_subapp/ one package per api — the thing you add
   __init__.py     what the package exposes: router (+ lifespan if it needs one)
   api.py          the endpoints: the /ws websocket and the POST commands
   model.py        the app's own domain logic
-pmu_test_streamer/  the server data architecture's worked example (a pipeline,
-                    its modules and data clients, and its web API in api.py)
-  sample_data.txt  the recording — 300 lines of *simulated* PMU data
-                   from the Nordic 44 sim, committed as a static test fixture
+pmu_test_streamer/  the web API (api.py) of the server data architecture's
+                    worked example. Its pipeline, modules and data clients are
+                    in modules/pswamp_modules/, with the recording
+                    (sources/sample_data.txt: 300 lines of *simulated* PMU data
+                    from the Nordic 44 sim, committed as a static test fixture)
 errors/           the error tray's backend
 pswamp_web/       the p-SWAMP web layer: a package of page packages
 ```

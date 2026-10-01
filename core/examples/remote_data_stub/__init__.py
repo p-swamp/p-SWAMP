@@ -10,7 +10,7 @@ contract, in any language.
 
     python -m remote_data_stub      # core/examples on PYTHONPATH
 
-    REMOTE_DATA_STUB_CLIENT=sample:pmu_test_streamer.sample_client:SampleRecordingClient
+    REMOTE_DATA_STUB_CLIENT=sample:pswamp_modules.sources.sample_client:SampleRecordingClient
     REMOTE_DATA_STUB_PORT=8100
 """
 

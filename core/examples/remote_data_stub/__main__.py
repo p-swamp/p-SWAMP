@@ -14,7 +14,7 @@ from pswamp_core.datagateway import clients_from_env
 
 from .app import create_app
 
-DEFAULT_CLIENT = "sample:pmu_test_streamer.sample_client:SampleRecordingClient"
+DEFAULT_CLIENT = "sample:pswamp_modules.sources.sample_client:SampleRecordingClient"
 
 
 def main() -> int:

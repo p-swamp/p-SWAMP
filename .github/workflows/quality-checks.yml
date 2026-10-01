@@ -128,9 +128,9 @@ jobs:
           cache-dependency-glob: app/server-python/uv.lock
       - run: uv python install 3.11
 
-      # The server's and the core's suites; hermetic but for the Kafka half,
-      # which uses the service container above.
-      - name: Server and core unit tests
+      # The server's, the core's and the modules' suites; hermetic but for the
+      # Kafka half, which uses the service container above.
+      - name: Server, core and modules unit tests
         env:
           KAFKA_TEST_BOOTSTRAP_SERVERS: localhost:9092
         run: ./scripts/run-python-server-tests.sh

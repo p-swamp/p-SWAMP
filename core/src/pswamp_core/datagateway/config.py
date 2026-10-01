@@ -6,7 +6,7 @@
 Each app reads its own variable, ``<APP>_DATA_CLIENTS``, a comma-separated
 list of ``name:module.path:Class`` specs, falling back to a default in code::
 
-    PMU_TEST_STREAMER_DATA_CLIENTS=sample:pmu_test_streamer.sample_client:SampleRecordingClient,live:acme.pmu:KafkaFeed
+    PMU_TEST_STREAMER_DATA_CLIENTS=sample:pswamp_modules.sources.sample_client:SampleRecordingClient,live:acme.pmu:KafkaFeed
     LIVE_BOOTSTRAP_SERVERS=kafka.acme:9092
 
 Each client is built with ``from_env(name)``, so it reads its own

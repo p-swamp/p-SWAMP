@@ -43,10 +43,10 @@ from pswamp_core.messages import (
 )
 from pswamp_core.pipeline import PipelineRegistry, PipelineRun
 
-from .excursion_module import AutoPauseCommand, ExcursionResult
-from .pipeline import PIPELINE
-from .range_summary_module import RangeSummaryResult, SummarizeRangeCommand
-from .stats_module import FrameStatsResult
+from pswamp_modules.excursion import AutoPauseCommand, ExcursionResult
+from pswamp_modules.frame_stats import FrameStatsResult
+from pswamp_modules.pipelines.pmu_test_streamer import PIPELINE
+from pswamp_modules.range_summary import RangeSummaryResult, SummarizeRangeCommand
 
 logger = get_logger("pmu")
 

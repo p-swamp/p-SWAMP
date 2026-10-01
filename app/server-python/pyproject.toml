@@ -19,6 +19,8 @@ dependencies = [
     # The server data architecture (core/). The extras bring the Kafka transport
     # and the remote data client.
     "pswamp-core[kafka,remote-data]",
+    # The modules, their pipelines and the example sources (modules/).
+    "pswamp-modules",
 ]
 
 # p-swamp is the desktop package at the repo root (root pyproject.toml, root
@@ -49,6 +51,10 @@ p-swamp = { path = "../../", editable = true }
 # app/. After editing core/pyproject.toml, run
 # `uv lock --upgrade-package pswamp-core`.
 pswamp-core = { path = "../../core", editable = true }
+# The modules at modules/, which depend on the core only. Nothing under
+# modules/ imports from app/. After editing modules/pyproject.toml, run
+# `uv lock --upgrade-package pswamp-modules`.
+pswamp-modules = { path = "../../modules", editable = true }
 
 # Tooling that must never ship in the image — the Dockerfile installs with
 # --no-dev. Declared here so the versions are locked and hash-verified like
@@ -89,6 +95,9 @@ package = false
 [tool.pytest.ini_options]
 # core/examples holds the remote data stub, which the tests run in-process.
 pythonpath = ["src", "../../core/examples"]
-# core/tests runs here too: one runner and one CI job cover both suites.
-testpaths = ["tests", "../../core/tests"]
+# core/tests and the modules' tests run here too: one runner and one CI job
+# cover all three suites. Each module carries its tests in a tests/ package
+# beside its code, so those are found under modules/. Test file names must
+# be unique across tests/ and core/tests, which are not packages.
+testpaths = ["tests", "../../core/tests", "../../modules"]
 asyncio_mode = "auto"

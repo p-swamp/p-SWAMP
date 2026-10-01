@@ -9,9 +9,12 @@
 #   1. run generate-new-subapp.sh (a counter) and
 #      generate-new-module-with-frontend.sh (a module and its page);
 #   2. error_check.sh over the result;
-#   3. the generated module's tests, which drive its page's socket in-process;
+#   3. the generated module's tests (the module's own tests/ folder, its
+#      page's socket in the server's tests/), and the layering test over the
+#      result;
 #   4. import the module-worker's pipelines and modules as patched into
-#      docker-compose.yml and k8s/p-swamp-local.yaml.
+#      docker-compose.yml and k8s/p-swamp-local.yaml, from outside the server
+#      tree, as a worker does.
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
@@ -59,10 +62,13 @@ section "Static checks over the generated tree"
 scripts/error_check.sh
 
 section "The generated module's tests"
-scripts/run-python-server-tests.sh -q "tests/test_${MODULE//-/_}.py"
+MODULE_PKG="$(printf '%s' "$MODULE" | tr - _)"
+scripts/run-python-server-tests.sh -q "tests/test_${MODULE_PKG}.py" \
+  "../../modules/pswamp_modules/${MODULE_PKG}/tests" \
+  ../../modules/pswamp_modules/tests/test_layering.py
 
 section "The module-worker hosts it, as patched"
-(cd app/server-python/src && MODULE="$MODULE" uv run --project .. python - <<'PY'
+(cd modules && MODULE="$MODULE" uv run --project ../app/server-python python - <<'PY'
 import os
 import re
 from pathlib import Path
@@ -74,7 +80,7 @@ for path, prefix in (
     ("docker-compose.yml", r'^  module-worker:\n(?:.*\n)*?\s*{var}: "?([^"\n]*)'),
     ("k8s/p-swamp-local.yaml", r'name: p-swamp-module-worker\n(?:.*\n)*?\s*- name: {var}\n\s*value: "?([^"\n]*)'),
 ):
-    text = (Path("../../..") / path).read_text()
+    text = (Path("..") / path).read_text()
     lists = {var: re.search(prefix.format(var=var), text, re.M).group(1)
              for var in ("PSWAMP_WORKER_PIPELINES", "PSWAMP_WORKER_MODULES")}
     names = set(lists["PSWAMP_WORKER_MODULES"].split(","))
