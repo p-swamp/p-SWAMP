@@ -7,7 +7,7 @@ registries. Two sets:
 - `subapp/`, for `../generate-new-subapp.sh`: a per-client counter, like the
   checked-in reference subapp (`app/server-python/src/reference_subapp/`).
 - `module/`, for `../generate-new-module-with-frontend.sh`: a module over the
-  core pipeline, its `pipeline.py` and `api.py`, a page showing its latest
+  core pipeline, its pipeline and its web API, a page showing its latest
   result, and unit tests. It is also added to the module-worker in compose and
   k8s. `doc/module-cookbook.md` walks through it.
 
@@ -15,7 +15,19 @@ In each set:
 
 - `server-python/` → `app/server-python/src/<pkg>/`
 - `client-web/` → `app/client-web/src/pages/<slug>/`
-- `tests/` (module set) → `app/server-python/tests/`
+
+The module set has four more folders. The module, its tests and its pipeline
+go to `modules/`, which depends on the core only, so nothing rendered there may
+import from the web backend; only the web API goes into the server:
+
+- `module/` → `modules/pswamp_modules/<pkg>/`
+- `module-tests/` → `modules/pswamp_modules/<pkg>/tests/`
+- `pipeline/` → `modules/pswamp_modules/pipelines/`
+- `tests/` → `app/server-python/tests/`
+
+A module carries its tests in a `tests/` package beside its code, so
+`module-tests/` holds an (empty) `__init__.py` as well as `test_module.py`.
+That file is what lets every module name its test file the same.
 
 What the script writes is then yours: change it freely. The rest of this file
 describes the `subapp` set; the module set follows the same rules.

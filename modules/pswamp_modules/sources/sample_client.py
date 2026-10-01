@@ -6,7 +6,7 @@
 Written as a deployment's own provider would be: it imports ``pswamp_core``
 and nothing else.
 
-``sample_data.txt`` holds 300 simulated PMU records from the Nordic 44
+``sample_data.txt``, beside this file, holds 300 simulated PMU records from the Nordic 44
 simulation: five stations at 20 Hz for three seconds, one line per station per
 instant::
 

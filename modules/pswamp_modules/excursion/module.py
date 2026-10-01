@@ -23,7 +23,7 @@ from pswamp_core.messages import Command, PauseCommand, ResultEnvelope
 from pswamp_core.modules import Module
 from pswamp_core.subscription import Sink
 
-from .stats_module import FrameStatsResult
+from ..frame_stats import FrameStatsResult
 
 __all__ = ["AutoPauseCommand", "Excursion", "ExcursionModule", "ExcursionResult"]
 

@@ -1,0 +1,25 @@
+"""The __LABEL__ module, bottom up: the analysis, then the module around it."""
+
+from datetime import datetime, timezone
+
+from pswamp_core.messages import PmuFrame, PmuHeader
+from pswamp_modules.__PKG__ import __NAME__Module, highest_frequency
+
+
+def test_picks_the_station_with_the_highest_frequency():
+    assert highest_frequency(["a", "b", "c"], [49.9, 50.1, 50.0]) == ("b", 50.1)
+    assert highest_frequency(["a", "b"], [None, 49.8]) == ("b", 49.8)
+    assert highest_frequency(["a"], [None]) is None
+
+
+def frame(values: list[float | None]) -> PmuFrame:
+    n = len(values)
+    header = PmuHeader(station=[f"s{i}" for i in range(n)], channel=["f"] * n, measurement=["f"] * n,
+                       units=["Hz"] * n, data_rate=50.0)
+    return PmuFrame(mRID="test", timestamp=datetime.now(timezone.utc), header=header, values=values)
+
+
+async def test_the_module_reads_the_frequency_columns():
+    body = await __NAME__Module().process(frame([49.9, 50.1, None]))
+    assert (body.station, body.frequency_hz) == ("s1", 50.1)
+    assert await __NAME__Module().process(frame([None])) is None

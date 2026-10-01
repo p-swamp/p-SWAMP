@@ -53,7 +53,8 @@ worked example of every piece.
 
 The PMU test streamer (`/pmu-test-streamer`) is the app every example below
 is taken from. It is not part of the core: it is one pipeline built on it,
-kept complete so each piece has a working instance to read. Its parts:
+kept complete so each piece has a working instance to read. Its pipeline,
+modules and sources are in `modules/pswamp_modules/`. Its parts:
 
 | Part | What it is |
 |---|---|
@@ -61,7 +62,7 @@ kept complete so each piece has a working instance to read. Its parts:
 | `FrameStatsModule` (`frame-stats`) | Reads every `PmuFrame`. Publishes a `FrameStatsResult`: the mean, lowest and highest frequency across the stations at that instant, the voltage angle spread and the mean voltage. |
 | `ExcursionModule` (`excursion`) | Reads every `FrameStatsResult`, so it is chained onto the module above. Publishes an `ExcursionResult`: whether the mean frequency is within ±0.005 Hz of 50 Hz, and how many times it has left that band. After an `AutoPauseCommand` it pauses the player when the frequency leaves the band. |
 | `RangeSummaryModule` (`range-summary`) | Reads no stream. On a `SummarizeRangeCommand` it reads a time range of a recording itself and publishes a `RangeSummaryResult`: the frames in the range and their lowest, highest and mean frequency. |
-| web API and page | `pmu_test_streamer/api.py` and the page at `/pmu-test-streamer`: the player's controls, the three results, and a control for each module command. |
+| web API and page | `app/server-python/src/pmu_test_streamer/api.py` and the page at `/pmu-test-streamer`: the player's controls, the three results, and a control for each module command. |
 
 ## The picture
 
@@ -146,13 +147,28 @@ A worker is the same image running `python -m pswamp_core.worker`, configured
 by the same transport variables as the server plus:
 
 ```
-PSWAMP_WORKER_PIPELINES=pmu_test_streamer.pipeline:PIPELINE   # whose modules to host
-PSWAMP_WORKER_MODULES=range-summary                           # optional: only these
+PSWAMP_WORKER_PIPELINES=pswamp_modules.pipelines.pmu_test_streamer:PIPELINE   # whose modules to host
+PSWAMP_WORKER_MODULES=range-summary                                           # optional: only these
 ```
 
 So a heavy module gets a process, with CPU and memory limits of its own,
 without touching its code or its page. "A module in a worker of its own",
 under Deployment, shows the change in compose and in k8s.
+
+**The code is layered so a worker needs no web backend:**
+
+```
+core/     pswamp-core      messages, transport, module contract, gateway, player, pipelines
+modules/  pswamp-modules   the modules, the pipeline declarations, the example sources
+app/server-python          the web API of each app, and the server
+```
+
+Each depends only on those above it. A module, its pipeline and its sources
+import the core and nothing else, so a worker imports core and modules, from
+any working directory. An app's web API imports its pipeline, results and
+commands from `pswamp_modules`. A module is one folder there, holding its code
+and its tests (`<module>/tests/`).
+`modules/pswamp_modules/tests/test_layering.py` checks the layering.
 
 ## The pieces
 
@@ -286,8 +302,8 @@ off `frame.header` means it needs no configuration. `process` runs on the
 event loop; a CPU-heavy module runs its analysis in a thread or process pool.
 
 *Where.* `core/src/pswamp_core/modules.py`, `host.py`, `command_routing.py`;
-the streamer's modules are `stats_module.py`, `excursion_module.py` and
-`range_summary_module.py` in `app/server-python/src/pmu_test_streamer/`.
+a module is a package under `modules/pswamp_modules/`, and the
+streamer's are `frame_stats/`, `excursion/` and `range_summary/`.
 
 ### Gateway and providers
 *What.* A provider implements `DataClient`: it is a `history` (it holds a
@@ -319,11 +335,11 @@ opens a client on first use, so a source nobody reads costs nothing. History
 lives with the provider: the repo stores nothing.
 
 **Configured, not coded.** An app's sources come from `<APP>_DATA_CLIENTS`,
-with a default in the app's `pipeline.py`. Each client reads its own
+with a default in the app's pipeline file. Each client reads its own
 `{NAME}_{SETTING}` variables:
 
 ```
-PMU_TEST_STREAMER_DATA_CLIENTS=sample:pmu_test_streamer.sample_client:SampleRecordingClient,live:acme.pmu:KafkaFeed
+PMU_TEST_STREAMER_DATA_CLIENTS=sample:pswamp_modules.sources.sample_client:SampleRecordingClient,live:acme.pmu:KafkaFeed
 LIVE_BOOTSTRAP_SERVERS=kafka.acme:9092
 ```
 
@@ -331,7 +347,7 @@ A deployment plugs in its own provider with one package in the image and one
 variable.
 
 *Where.* `core/src/pswamp_core/datagateway/`, `settings.py`, `testing.py`;
-the examples are `app/server-python/src/pmu_test_streamer/sample_client.py`
+the examples are `modules/pswamp_modules/sources/sample_client.py`
 (history) and `live_client.py` (live: the sample re-stamped on the wall clock).
 
 ### CIM reference
@@ -349,7 +365,7 @@ in a worker gets it with no configuration of its own. It is a reference, not
 the grid data itself, which would cost kilobytes per frame.
 
 *Where.* `core/src/pswamp_core/datagateway/enrich.py`; wired in
-`pmu_test_streamer/pipeline.py`.
+`modules/pswamp_modules/pipelines/pmu_test_streamer.py`.
 
 ### Player
 *What.* Paces the run's active source and owns the transport controls.
@@ -387,7 +403,7 @@ namespace), its sources and its modules. A `PipelineRun` is one running
 instance under one key. A `PipelineRegistry` keeps one run per key.
 
 ```python
-PIPELINE = Pipeline("pmu-test-streamer", gateway, modules=(FrameStatsModule,))   # <app>/pipeline.py
+PIPELINE = Pipeline("pmu-test-streamer", gateway, modules=(FrameStatsModule,))   # pswamp_modules/pipelines/<app>.py
 
 REGISTRY = PipelineRegistry(lambda key: PipelineRun(key, PIPELINE, transport))
 run = await REGISTRY.acquire(client_id)       # built on first connect
@@ -407,7 +423,7 @@ run outlive its sockets for five minutes, so a reload rejoins it. At its cap
 watched.
 
 *Where.* `core/src/pswamp_core/pipeline.py`, `worker.py`;
-`app/server-python/src/pmu_test_streamer/pipeline.py`.
+`modules/pswamp_modules/pipelines/pmu_test_streamer.py`.
 
 ### Commands
 *What.* A command's class is its address. Exactly one part of a pipeline
@@ -543,7 +559,7 @@ like anyone else (the range summary).
 | Role | Command | Configured by |
 |---|---|---|
 | server | the image's default (`python server.py`) | `PSWAMP_TRANSPORT`, `<APP>_DATA_CLIENTS` and their `{NAME}_*` blocks |
-| worker | `python -m pswamp_core.worker` | the same transport, `PSWAMP_WORKER_PIPELINES`, `PSWAMP_WORKER_MODULES`; a module that reads the gateway also needs `<APP>_DATA_CLIENTS` |
+| worker | `python -m pswamp_core.worker`, run from `modules/` | the same transport, `PSWAMP_WORKER_PIPELINES`, `PSWAMP_WORKER_MODULES`; a module that reads the gateway also needs `<APP>_DATA_CLIENTS` |
 | remote data stub | `python -m remote_data_stub` | `REMOTE_DATA_STUB_CLIENT` (and `core/examples` on `PYTHONPATH`) |
 | broker | `apache/kafka` | one KRaft node, topic auto-creation off, 10 s retention checks |
 
@@ -601,9 +617,10 @@ In compose (`docker-compose.yml`):
     build: .
     image: p-swamp:latest                  # the same image as the server
     command: ["python", "-m", "pswamp_core.worker"]
+    working_dir: /workspace/p-SWAMP/modules   # outside the server's src/
     environment:
       <<: *transport                       # the same broker as the server
-      PSWAMP_WORKER_PIPELINES: "pmu_test_streamer.pipeline:PIPELINE"
+      PSWAMP_WORKER_PIPELINES: "pswamp_modules.pipelines.pmu_test_streamer:PIPELINE"
       PSWAMP_WORKER_MODULES: "excursion"   # 1. only this module
     depends_on:
       kafka:
@@ -647,13 +664,14 @@ spec:
           image: p-swamp:latest            # the same image as the server
           imagePullPolicy: Never           # IfNotPresent with an image from a registry
           command: ["python", "-m", "pswamp_core.worker"]
+          workingDir: /workspace/p-SWAMP/modules   # outside the server's src/
           env:
             - name: PSWAMP_TRANSPORT
               value: kafka:pswamp_core.transport.kafka:KafkaTransport
             - name: KAFKA_BOOTSTRAP_SERVERS
               value: p-swamp-kafka:9092
             - name: PSWAMP_WORKER_PIPELINES
-              value: pmu_test_streamer.pipeline:PIPELINE
+              value: pswamp_modules.pipelines.pmu_test_streamer:PIPELINE
             - name: PSWAMP_WORKER_MODULES
               value: excursion             # 1. only this module
           resources:                       # 3. its own CPU and memory
@@ -673,7 +691,7 @@ becomes `frame-stats` (step 2).
   `batch-worker` has for the range summary.
 - **What it gives.** The module has its own process, so a slow or crashing
   one cannot stall the modules in other workers, and its own limits, so it can be given more
-  memory or CPU alone. A worker rests at about 70 MB before its module holds
+  memory or CPU alone. A worker rests at about 30 MB before its module holds
   anything; a module's own state is per run key, one instance per client on a
   recording and one in total on a live source.
 - **What it does not give.** More replicas of one module. Each topic has one
@@ -695,8 +713,9 @@ deployment's own sources and broker come in through the same variables.
 ## Adding a module
 
 `./scripts/generate-new-module-with-frontend.sh <slug> "<Label>"` writes a
-working module, its pipeline, api, page and tests, and adds it to the
-module-worker. Then replace the placeholder analysis.
+working module (code and tests in one folder) and its pipeline in `modules/`,
+its web API and page in `app/`, and adds it to the module-worker. Then replace the placeholder
+analysis.
 `doc/module-cookbook.md` covers the rest: tests, logs, commands, chaining,
 batch queries, a worker of its own, scaling, CPU-heavy modules, and data
 sources.
@@ -710,12 +729,10 @@ sources.
   answer every frame twice.
 - **A NATS transport**: a `Transport` subclass passing
   `core/tests/transport_suite.py`.
-- **Modules outside the server tree.** A module's code lives in its app's
-  package under `app/server-python/src/`, so a worker loads the server's
-  Python packages to host it: on a development machine, importing the
-  streamer's pipeline peaks at 92 MB, against 36 MB for the core alone.
-  Modules, pipelines and example sources in a project of their own, depending
-  only on the core, would let a worker carry just those.
+- **A worker image of its own.** A worker imports only `pswamp-core` and
+  `pswamp-modules`, but runs the server's image, which also carries the web
+  backend, the web client and the desktop package's dependencies. A deployment
+  may build a slimmer image from `core/` and `modules/` alone.
 - **A live source over a real feed**, such as a broker's topic read as a
   `DataClient`.
 - **Cheaper frames**: the header serialised once per layout, and producer

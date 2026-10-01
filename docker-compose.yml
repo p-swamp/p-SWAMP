@@ -9,7 +9,7 @@ x-transport: &transport
 # the same recording from the remote data service below. Whoever reads the
 # gateway (the server, and the worker hosting the range summary) gets these.
 x-streamer-sources: &streamer-sources
-  PMU_TEST_STREAMER_DATA_CLIENTS: "sample:pmu_test_streamer.sample_client:SampleRecordingClient,live:pmu_test_streamer.live_client:LiveSyntheticClient,remote:pswamp_core.datagateway.clients.remote_data:RemoteDataClient"
+  PMU_TEST_STREAMER_DATA_CLIENTS: "sample:pswamp_modules.sources.sample_client:SampleRecordingClient,live:pswamp_modules.sources.live_client:LiveSyntheticClient,remote:pswamp_core.datagateway.clients.remote_data:RemoteDataClient"
   REMOTE_URL: "http://remote-data-stub:8100"
 
 services:
@@ -47,6 +47,8 @@ services:
         "/workspace/p-SWAMP/src",
         "--reload-dir",
         "/workspace/p-SWAMP/core/src",
+        "--reload-dir",
+        "/workspace/p-SWAMP/modules/pswamp_modules",
       ]
     # The server has no external dependencies, so "is the process serving?" is
     # the whole health story — /healthz covers it. curl returns non-zero if the
@@ -98,6 +100,10 @@ services:
         - path: core/src
           action: sync
           target: /workspace/p-SWAMP/core/src
+        # The modules, their pipelines and the example sources, likewise.
+        - path: modules/pswamp_modules
+          action: sync
+          target: /workspace/p-SWAMP/modules/pswamp_modules
         # Dependency changes are the exception: new packages have to be
         # installed, which a file sync can't do. These rebuild the image and
         # recreate the container instead — slower, on purpose. Without this,
@@ -108,17 +114,22 @@ services:
           action: rebuild
         - path: core/pyproject.toml
           action: rebuild
+        - path: modules/pyproject.toml
+          action: rebuild
 
   # Hosts the pipelines' modules, off Kafka: the same image (the second
   # `build: .` is a cache hit), running pswamp_core.worker instead of the
   # server. A plain process with no reloader, so compose watch restarts it.
+  # It runs from modules/, outside the server's src/: a worker needs core and
+  # modules only, and a module reaching for the web backend fails at start.
   module-worker:
     build: .
     image: p-swamp:latest
     command: ["python", "-m", "pswamp_core.worker"]
+    working_dir: /workspace/p-SWAMP/modules
     environment:
       <<: *transport
-      PSWAMP_WORKER_PIPELINES: "pmu_test_streamer.pipeline:PIPELINE"
+      PSWAMP_WORKER_PIPELINES: "pswamp_modules.pipelines.pmu_test_streamer:PIPELINE"
       PSWAMP_WORKER_MODULES: "frame-stats,excursion"
     depends_on:
       kafka:
@@ -126,13 +137,15 @@ services:
     restart: unless-stopped
     develop: &worker-watch
       watch:
-        - path: app/server-python/src
+        - path: modules/pswamp_modules
           action: sync+restart
-          target: /workspace/p-SWAMP/app/server-python/src
+          target: /workspace/p-SWAMP/modules/pswamp_modules
         - path: core/src
           action: sync+restart
           target: /workspace/p-SWAMP/core/src
         - path: core/pyproject.toml
+          action: rebuild
+        - path: modules/pyproject.toml
           action: rebuild
 
   # The range summary in a worker of its own: a batch query over a recording,
@@ -143,9 +156,10 @@ services:
     build: .
     image: p-swamp:latest
     command: ["python", "-m", "pswamp_core.worker"]
+    working_dir: /workspace/p-SWAMP/modules
     environment:
       <<: [*transport, *streamer-sources]
-      PSWAMP_WORKER_PIPELINES: "pmu_test_streamer.pipeline:PIPELINE"
+      PSWAMP_WORKER_PIPELINES: "pswamp_modules.pipelines.pmu_test_streamer:PIPELINE"
       PSWAMP_WORKER_MODULES: "range-summary"
     depends_on:
       kafka:
@@ -156,15 +170,16 @@ services:
 
   # A dummy remote data service (core/examples/remote_data_stub): the sample
   # recording served over the remote data contract, standing where a
-  # deployment's own service in front of its store would. Same image; the
-  # server's src/ is its working directory, so the sample client imports.
+  # deployment's own service in front of its store would. Same image, run
+  # from modules/ like the workers: the sample client is an installed package.
   remote-data-stub:
     build: .
     image: p-swamp:latest
     command: ["python", "-m", "remote_data_stub"]
+    working_dir: /workspace/p-SWAMP/modules
     environment:
       PYTHONPATH: "/workspace/p-SWAMP/core/examples"
-      REMOTE_DATA_STUB_CLIENT: "sample:pmu_test_streamer.sample_client:SampleRecordingClient"
+      REMOTE_DATA_STUB_CLIENT: "sample:pswamp_modules.sources.sample_client:SampleRecordingClient"
     healthcheck:
       test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8100/healthz"]
       interval: 5s

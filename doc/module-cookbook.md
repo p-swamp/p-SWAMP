@@ -6,8 +6,10 @@ results on a page, send it commands, and run it in a process of its own.
 
 The examples come from two apps:
 - **`peak-frequency`**: what the generator writes below. One module, one page.
-- **The PMU test streamer** (`app/server-python/src/pmu_test_streamer/`): the
-  reference example, with three modules. `FrameStatsModule` computes each
+- **The PMU test streamer** (`frame_stats/`, `excursion/`, `range_summary/`
+  and `pipelines/pmu_test_streamer.py` in `modules/pswamp_modules/`; its
+  web API in `app/server-python/src/pmu_test_streamer/`): the reference
+  example, with three modules. `FrameStatsModule` computes each
   frame's statistics, `ExcursionModule` watches those statistics for the
   frequency leaving its band, and `RangeSummaryModule` summarizes a time range
   of a recording on command.
@@ -16,12 +18,19 @@ The examples come from two apps:
 
 | File | What it holds |
 |---|---|
-| `<pkg>/<pkg>_module.py` | the module: what it reads, what it publishes, `process` (and `handle`) |
-| `<pkg>/pipeline.py` | the pipeline: the app's name, its sources, its modules |
-| `<pkg>/api.py` | the web API: the run registry, the socket's state message, the POSTs |
+| `modules/pswamp_modules/<pkg>/module.py` | the module: what it reads, what it publishes, `process` (and `handle`) |
+| `modules/pswamp_modules/pipelines/<pkg>.py` | the pipeline: the app's name, its sources, its modules |
+| `modules/pswamp_modules/<pkg>/tests/test_module.py` | the module's tests, beside its code |
+| `app/server-python/src/<pkg>/api.py` | the web API: the run registry, the socket's state message, the POSTs |
+| `app/server-python/tests/test_<pkg>.py` | the web API's tests |
 | `app/client-web/src/pages/<slug>/` | the page and its socket hook |
-| `app/server-python/tests/test_<pkg>.py` | the tests |
 | `docker-compose.yml`, `k8s/p-swamp-local.yaml` | which worker hosts the module |
+
+A module is one folder, `modules/pswamp_modules/<pkg>/`, holding its code
+and its tests. It and its pipeline import the core only: never the web backend (`shared`, `fastapi`, `pswamp_web`). A
+worker then hosts the module without loading the server.
+`pswamp_modules/tests/test_layering.py` fails if one does. The web API imports the
+pipeline and the result classes from `pswamp_modules`.
 
 ## Add a module and its page
 
@@ -34,9 +43,9 @@ The examples come from two apps:
 This writes a working app and registers it everywhere:
 - a module over PMU frames with a placeholder analysis: the station with the
   highest frequency;
-- its `pipeline.py` (sources: the synthetic live feed) and `api.py`;
+- its pipeline (sources: the synthetic live feed) and its `api.py`;
 - a page at `/peak-frequency` showing the latest result;
-- unit tests;
+- unit tests, for the module and for the web API;
 - entries in `server.py`, the route table, the nav, `lib/servers.ts`, and the
   module-worker's lists in compose and k8s.
 
@@ -45,7 +54,8 @@ It regenerates the api contract and runs `error_check.sh`. Restart
 rebuild) and open the page: results arrive at once, from the one shared live
 run.
 
-**2. Write the analysis.** In `peak_frequency_module.py`, replace
+**2. Write the analysis.** In
+`modules/pswamp_modules/peak_frequency/module.py`, replace
 `highest_frequency` and the result body it fills. Keep the analysis a plain
 function and `process` a thin adapter: the function is then testable with plain
 values.
@@ -63,23 +73,23 @@ class PeakFrequencyModule(Module):
 
 - The layout is in `frame.header`. A module that derives something from it
   (column indexes) re-derives it when `frame.header.header_id` changes; the
-  streamer's `stats_module.py` does.
+  streamer's `frame_stats/module.py` does.
 - The CIM reference for the frame is `frame.header.cimReferenceId`.
 - A result class is a `ResultEnvelope[Body]` subclass with
   `version: Literal["v1"] = "v1"`. Its name is its topic
   (`PeakFrequencyResult` → `peak.frequency.result`), and the browser's type is
   generated from it.
 
-**3. Choose its sources.** `pipeline.py` names them in
-`<APP>_DATA_CLIENTS`, with a default:
+**3. Choose its sources.** `pswamp_modules/pipelines/peak_frequency.py` names
+them in `<APP>_DATA_CLIENTS`, with a default:
 
 ```python
-DEFAULT_DATA_CLIENTS = "live:pmu_test_streamer.live_client:LiveSyntheticClient"
+DEFAULT_DATA_CLIENTS = "live:pswamp_modules.sources.live_client:LiveSyntheticClient"
 ```
 
 - A **live** source is shared: one run, one module instance, results for
   everyone.
-- A **recording** (`sample:pmu_test_streamer.sample_client:SampleRecordingClient`)
+- A **recording** (`sample:pswamp_modules.sources.sample_client:SampleRecordingClient`)
   gets a run per client, starting paused, so the page needs the player's
   controls. Copy them from the streamer's page and api.
 
@@ -94,16 +104,22 @@ all.
 ./scripts/run-python-server-tests.sh -k peak_frequency
 ```
 
-The generated tests show the three levels:
+The generated tests show the three levels. The first two are in the module's
+own folder, `pswamp_modules/peak_frequency/tests/test_module.py`, the third in
+`app/server-python/tests/test_peak_frequency.py`; `-k peak_frequency` selects
+both:
 1. **the analysis**: call the function with plain values;
 2. **the module**: `await PeakFrequencyModule().process(frame)` with a
    hand-made `PmuFrame`;
 3. **the page's socket**: the whole server in-process (`TestClient`, in-memory
    transport, the module hosted in the server), a result arriving on the socket.
 
-For more, see `app/server-python/tests/test_pmu_test_streamer.py`: POSTs, 409s,
-seek and step, two clients on live, a module command, and its refusal on the
-error tray.
+For more, see the streamer's tests. Beside each module, under
+`modules/pswamp_modules/`: a module hosted over the transport
+(`frame_stats/tests/`), a chained module (`excursion/tests/`), a batch query
+(`range_summary/tests/`), the sources (`sources/tests/`).
+`app/server-python/tests/test_pmu_test_streamer.py`: POSTs, 409s, seek and
+step, two clients on live, a module command, and its refusal on the error tray.
 
 ## See what it is doing
 
@@ -230,9 +246,10 @@ own:
     build: .
     image: p-swamp:latest
     command: ["python", "-m", "pswamp_core.worker"]
+    working_dir: /workspace/p-SWAMP/modules      # outside the server's src/
     environment:
       <<: *transport
-      PSWAMP_WORKER_PIPELINES: "peak_frequency.pipeline:PIPELINE"
+      PSWAMP_WORKER_PIPELINES: "pswamp_modules.pipelines.peak_frequency:PIPELINE"
       PSWAMP_WORKER_MODULES: "peak-frequency"
     depends_on:
       kafka:
@@ -254,7 +271,7 @@ same two variables:
             - name: KAFKA_BOOTSTRAP_SERVERS
               value: p-swamp-kafka:9092
             - name: PSWAMP_WORKER_PIPELINES
-              value: peak_frequency.pipeline:PIPELINE
+              value: pswamp_modules.pipelines.peak_frequency:PIPELINE
             - name: PSWAMP_WORKER_MODULES
               value: peak-frequency
           resources:
@@ -288,7 +305,7 @@ A module that reads the gateway also needs its sources there: the app's
 What a worker of its own lets you change, for that module alone:
 
 - **More memory.** Raise `resources.limits.memory` (k8s) or `mem_limit`
-  (compose). A worker rests at about 70 MB. On top of that comes the module's
+  (compose). A worker rests at about 30 MB. On top of that comes the module's
   own state, once per run key: one instance per client on a recording, one in
   total on a live source. A pod that passes its limit is killed and restarted;
   its instances are rebuilt on the next input, without what they had counted.
@@ -326,7 +343,7 @@ module in that process.
   `coverage`, `consume`, `env_settings`), prove it with
   `pswamp_core.testing.DataClientConformance`, put the package in the image,
   and name it in `<APP>_DATA_CLIENTS`. `sample_client.py` and `live_client.py`
-  are the examples.
+  in `modules/pswamp_modules/sources/` are the examples.
 
 ## When it does not work
 

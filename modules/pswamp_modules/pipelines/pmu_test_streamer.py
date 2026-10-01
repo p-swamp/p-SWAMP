@@ -4,9 +4,10 @@
 """What the PMU test streamer's pipeline is made of.
 
 The server builds one run per client from ``PIPELINE``; whoever hosts the
-modules (the server with the in-memory transport, a worker with Kafka:
-``PSWAMP_WORKER_PIPELINES=pmu_test_streamer.pipeline:PIPELINE``) hosts them
-from it too.
+modules hosts them from it too: the server with the in-memory transport, a
+worker with Kafka
+(``PSWAMP_WORKER_PIPELINES=pswamp_modules.pipelines.pmu_test_streamer:PIPELINE``).
+The streamer's web API is ``app/server-python/src/pmu_test_streamer/api.py``.
 
 Its sources come from ``PMU_TEST_STREAMER_DATA_CLIENTS``, by default the
 sample recording (the source a run starts on) and the synthetic live feed.
@@ -21,16 +22,16 @@ import os
 from pswamp_core.datagateway import CimReferenceEnricher, DataGateway, gateway_from_env
 from pswamp_core.pipeline import Pipeline
 
-from .excursion_module import ExcursionModule
-from .range_summary_module import RangeSummaryModule
-from .stats_module import FrameStatsModule
+from ..excursion import ExcursionModule
+from ..frame_stats import FrameStatsModule
+from ..range_summary import RangeSummaryModule
 
 APP = "pmu-test-streamer"
 
 DATA_CLIENTS_VARIABLE = "PMU_TEST_STREAMER_DATA_CLIENTS"
 DEFAULT_DATA_CLIENTS = (
-    "sample:pmu_test_streamer.sample_client:SampleRecordingClient,"
-    "live:pmu_test_streamer.live_client:LiveSyntheticClient"
+    "sample:pswamp_modules.sources.sample_client:SampleRecordingClient,"
+    "live:pswamp_modules.sources.live_client:LiveSyntheticClient"
 )
 
 CIM_REFERENCE_VARIABLE = "PMU_TEST_STREAMER_CIM_REFERENCE"

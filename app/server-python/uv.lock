@@ -549,6 +549,17 @@ requires-dist = [
 ]
 
 [[package]]
+name = "pswamp-modules"
+version = "0.1.0"
+source = { editable = "../../modules" }
+dependencies = [
+    { name = "pswamp-core" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "pswamp-core", editable = "../../core" }]
+
+[[package]]
 name = "pswamp-server"
 version = "0.1.0"
 source = { virtual = "." }
@@ -556,6 +567,7 @@ dependencies = [
     { name = "fastapi" },
     { name = "p-swamp" },
     { name = "pswamp-core", extra = ["kafka", "remote-data"] },
+    { name = "pswamp-modules" },
     { name = "uvicorn", extra = ["standard"] },
 ]
 
@@ -571,6 +583,7 @@ requires-dist = [
     { name = "fastapi", specifier = ">=0.141.1,<0.142" },
     { name = "p-swamp", editable = "../../" },
     { name = "pswamp-core", extras = ["kafka", "remote-data"], editable = "../../core" },
+    { name = "pswamp-modules", editable = "../../modules" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.52.4,<0.53" },
 ]
 

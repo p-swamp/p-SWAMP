@@ -8,7 +8,8 @@
 #   p-swamp-remote-data-stub  the sample recording behind the remote data contract
 #   p-swamp-kafka             the broker between the server and the workers
 #
-# All the same image except Kafka. Every Deployment has one replica and the
+# All the same image except Kafka. The workers and the stub run from modules/,
+# not the server's src/. Every Deployment has one replica and the
 # Recreate strategy: the server holds its runs in memory, and a worker has no
 # consumer group, so a second replica would split clients or answer every
 # frame twice. Nothing is persisted: the ConfigMap is configuration, Kafka's
@@ -56,7 +57,7 @@ spec:
             - name: KAFKA_BOOTSTRAP_SERVERS
               value: p-swamp-kafka:9092
             - name: PMU_TEST_STREAMER_DATA_CLIENTS
-              value: sample:pmu_test_streamer.sample_client:SampleRecordingClient,live:pmu_test_streamer.live_client:LiveSyntheticClient,remote:pswamp_core.datagateway.clients.remote_data:RemoteDataClient
+              value: sample:pswamp_modules.sources.sample_client:SampleRecordingClient,live:pswamp_modules.sources.live_client:LiveSyntheticClient,remote:pswamp_core.datagateway.clients.remote_data:RemoteDataClient
             - name: LIVE_PATH
               value: /etc/p-swamp/pmu/deployment_pmu_data_file_example.txt
             - name: REMOTE_URL
@@ -136,13 +137,15 @@ spec:
           image: p-swamp:latest
           imagePullPolicy: Never
           command: ["python", "-m", "pswamp_core.worker"]
+          # Outside the server's src/: a worker needs core and modules only.
+          workingDir: /workspace/p-SWAMP/modules
           env:
             - name: PSWAMP_TRANSPORT
               value: kafka:pswamp_core.transport.kafka:KafkaTransport
             - name: KAFKA_BOOTSTRAP_SERVERS
               value: p-swamp-kafka:9092
             - name: PSWAMP_WORKER_PIPELINES
-              value: pmu_test_streamer.pipeline:PIPELINE
+              value: pswamp_modules.pipelines.pmu_test_streamer:PIPELINE
             - name: PSWAMP_WORKER_MODULES
               value: frame-stats,excursion
           resources:
@@ -181,17 +184,18 @@ spec:
           image: p-swamp:latest
           imagePullPolicy: Never
           command: ["python", "-m", "pswamp_core.worker"]
+          workingDir: /workspace/p-SWAMP/modules
           env:
             - name: PSWAMP_TRANSPORT
               value: kafka:pswamp_core.transport.kafka:KafkaTransport
             - name: KAFKA_BOOTSTRAP_SERVERS
               value: p-swamp-kafka:9092
             - name: PSWAMP_WORKER_PIPELINES
-              value: pmu_test_streamer.pipeline:PIPELINE
+              value: pswamp_modules.pipelines.pmu_test_streamer:PIPELINE
             - name: PSWAMP_WORKER_MODULES
               value: range-summary
             - name: PMU_TEST_STREAMER_DATA_CLIENTS
-              value: sample:pmu_test_streamer.sample_client:SampleRecordingClient,live:pmu_test_streamer.live_client:LiveSyntheticClient,remote:pswamp_core.datagateway.clients.remote_data:RemoteDataClient
+              value: sample:pswamp_modules.sources.sample_client:SampleRecordingClient,live:pswamp_modules.sources.live_client:LiveSyntheticClient,remote:pswamp_core.datagateway.clients.remote_data:RemoteDataClient
             - name: REMOTE_URL
               value: http://p-swamp-remote-data-stub:8100
           resources:
@@ -228,11 +232,12 @@ spec:
           image: p-swamp:latest
           imagePullPolicy: Never
           command: ["python", "-m", "remote_data_stub"]
+          workingDir: /workspace/p-SWAMP/modules
           env:
             - name: PYTHONPATH
               value: /workspace/p-SWAMP/core/examples
             - name: REMOTE_DATA_STUB_CLIENT
-              value: sample:pmu_test_streamer.sample_client:SampleRecordingClient
+              value: sample:pswamp_modules.sources.sample_client:SampleRecordingClient
           ports:
             - name: http
               containerPort: 8100
