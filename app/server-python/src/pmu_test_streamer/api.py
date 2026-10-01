@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright Contributors to the p-SWAMP Project.
 
-"""The PMU test streamer's edge: one POST per command, one socket for state.
+"""The PMU test streamer's web API: one POST per command, one socket for state.
 
 Each client gets its own run of ``PIPELINE``: a gateway over the sample
 recording and the live feed, a player, and the modules wherever the deployment

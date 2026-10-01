@@ -158,7 +158,7 @@ Two deployables, one wire protocol:
   architecture: its `pipeline.py` declares the pipeline, its modules
   (`stats_module.py`, `excursion_module.py`, `range_summary_module.py`) and data
   clients (`sample_client.py`, `live_client.py`) sit beside it, and `api.py` is
-  the edge. See "The server data architecture" below.
+  its web API. See "The server data architecture" below.
   Its `sample_data.txt` is a **one-off sample committed for testing**: 300
   *simulated* PMU records extracted by hand from the Nordic 44 simulation in
   `examples/nordic44_rtsim/` (voltage phasor + measured frequency, five stations
@@ -168,7 +168,7 @@ Two deployables, one wire protocol:
   package imports its domain-free helpers from — `SocketRegistry`, plus
   `ClientId`, `CommandAck`, `read_client_id`, `get_logger` re-exported from
   `pswamp_web/` (see "The p-SWAMP web layer" for why the definitions live down
-  there and the import runs inward), and the edge of the server data
+  there and the import runs inward), and the web API side of the server data
   architecture (`transport()`, `serve_pipeline`, `connected_pipeline`,
   `push_changes`, `dispatch_command`); it is *not* an app package and never
   appears in `APPS`.
@@ -413,7 +413,7 @@ follows `doc/remote-data-integration-contract.md`. The rules to keep:
 - **Every message is a `DataModel`** with a pinned `version`; its topic is its
   class name. No dicts, numpy or pickle on a topic or a socket.
 - **A command's class is its address.** One receiver per class in a pipeline
-  (the player or one module). Player commands are validated at the edge (409);
+  (the player or one module). Player commands are validated in the web API (409);
   module commands where the module runs (an `ErrorEvent` on refusal).
 - **A module never sees the transport.** It reads a queue and publishes into a
   sink; a `ModuleHost` runs it, in the server with the in-memory transport or in
@@ -1148,9 +1148,11 @@ mind when editing that script:
 
 - **`quality-checks.yml`** runs on every pull request (and from the Actions tab):
   four independent merge gates, `dependency-review`, `static-errorcheck`,
-  `unit-tests` and `e2e-smoke-test`, plus the initial `playwright-e2e` job. It
-  publishes nothing. `dependency-review` checks only dependency changes between
-  the pull request's base and head, using
+  `unit-tests` and `e2e-smoke-test`, and a fifth job, `playwright-e2e`, which
+  runs once the last two pass: the Playwright specs against the compose stack
+  (the server, Kafka and both workers). It is not yet a required check. The
+  workflow publishes nothing. `dependency-review` checks only dependency changes
+  between the pull request's base and head, using
   `.github/dependency-review-config.yml`; it is not an all-branch push scan.
   Manual dispatch can compare a selected branch with a configurable base ref
   after the workflow exists on the default branch. It requires **Dependency

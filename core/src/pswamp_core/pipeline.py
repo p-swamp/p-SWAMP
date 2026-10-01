@@ -19,7 +19,7 @@ the run and the hosts meet only on the transport::
     COMMANDS UP  run.dispatch(cmd) → topic <app>.<command>, key → player | module
 
 The run keeps the newest message of each class (``latest``) and wakes readers
-on every change (``changes()``). That is what the edge builds its socket
+on every change (``changes()``). That is what the web API builds its socket
 message from: however much arrived meanwhile, it sends one message.
 
 **Live is shared.** A recording is replayed per client, each with its own
@@ -288,7 +288,7 @@ class PipelineRun:
         """Publish ``command`` on its topic, under this run's key.
 
         A player command is validated first, so a refusal raises
-        ``CommandRefused`` here (the edge's 409) and nothing is published. A
+        ``CommandRefused`` here (the web API's 409) and nothing is published. A
         module command is published as it is: the module validates it where
         it runs, and a refusal comes back as an ``ErrorEvent``. A command
         nothing takes raises ``NoReceiver``.
@@ -308,7 +308,7 @@ class PipelineRun:
         app, key, subscribe = self.pipeline.app, self.key, self.transport.subscribe
         await self.transport.open()
         # The player takes its commands off their topics, so a module can
-        # command it exactly as the edge does.
+        # command it exactly as the web API does.
         commands = subscribe(*PLAYER_COMMANDS, app=app, key=key, overflow=Overflow.GROW)
         self._subscriptions.append(commands)
         if self.pipeline.results:

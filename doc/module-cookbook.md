@@ -2,9 +2,15 @@
 
 How to add an analysis module to the server data architecture, show its
 results on a page, send it commands, and run it in a process of its own.
-`doc/server-data-architecture.md` explains the pieces; this is the recipe. The
-PMU test streamer (`app/server-python/src/pmu_test_streamer/`) is the worked
-example of every step.
+`doc/server-data-architecture.md` explains the pieces; this is the recipe.
+
+The examples come from two apps:
+- **`peak-frequency`**: what the generator writes below. One module, one page.
+- **The PMU test streamer** (`app/server-python/src/pmu_test_streamer/`): the
+  reference example, with three modules. `FrameStatsModule` computes each
+  frame's statistics, `ExcursionModule` watches those statistics for the
+  frequency leaving its band, and `RangeSummaryModule` summarizes a time range
+  of a recording on command.
 
 ## The pieces you touch
 
@@ -12,7 +18,7 @@ example of every step.
 |---|---|
 | `<pkg>/<pkg>_module.py` | the module: what it reads, what it publishes, `process` (and `handle`) |
 | `<pkg>/pipeline.py` | the pipeline: the app's name, its sources, its modules |
-| `<pkg>/api.py` | the edge: the run registry, the socket's state message, the POSTs |
+| `<pkg>/api.py` | the web API: the run registry, the socket's state message, the POSTs |
 | `app/client-web/src/pages/<slug>/` | the page and its socket hook |
 | `app/server-python/tests/test_<pkg>.py` | the tests |
 | `docker-compose.yml`, `k8s/p-swamp-local.yaml` | which worker hosts the module |
@@ -56,8 +62,8 @@ class PeakFrequencyModule(Module):
 ```
 
 - The layout is in `frame.header`. A module that derives something from it
-  (column indexes) re-derives it when `frame.header.header_id` changes;
-  `stats_module.py` does.
+  (column indexes) re-derives it when `frame.header.header_id` changes; the
+  streamer's `stats_module.py` does.
 - The CIM reference for the frame is `frame.header.cimReferenceId`.
 - A result class is a `ResultEnvelope[Body]` subclass with
   `version: Literal["v1"] = "v1"`. Its name is its topic
@@ -118,7 +124,8 @@ error tray.
 ## Send it commands
 
 A command is a class beside the module, listed in `commands`, and applied in
-`handle`:
+`handle`. The streamer's `ExcursionModule` takes one, which turns its
+auto-pause on or off:
 
 ```python
 class AutoPauseCommand(Command):
@@ -156,10 +163,43 @@ async def auto_pause(client_id: ClientId, body: AutoPauseBody) -> CommandAck:
 
 ## Chain it onto another module
 
-Set `input_model` to another module's result class. `ExcursionModule` reads
-`FrameStatsResult`, so the streamer's pipeline is frame → frame stats →
-excursion. List both modules in the pipeline. Each is hosted on its own, in
-any worker.
+A chained module reads another module's results instead of raw frames. Set
+its `input_model` to that module's result class, and list both modules in the
+pipeline.
+
+The streamer's two frame-rate modules are the example:
+
+- `FrameStatsModule` reads each `PmuFrame` and publishes a `FrameStatsResult`:
+  the mean, lowest and highest frequency across the stations at that instant.
+- `ExcursionModule` reads each `FrameStatsResult`. It checks whether the mean
+  frequency is within ±0.005 Hz of 50 Hz, counts each time it leaves that
+  band, and publishes both as an `ExcursionResult`.
+
+```python
+class ExcursionModule(Module):
+    name = "excursion"
+    input_model = FrameStatsResult          # what FrameStatsModule publishes
+    output_model = ExcursionResult
+
+    async def process(self, stats: FrameStatsResult) -> Excursion | None:
+        mean = stats.result.mean_frequency_hz
+        ...
+
+PIPELINE = Pipeline(APP, gateway, modules=(FrameStatsModule, ExcursionModule, ...))
+```
+
+So the streamer's data runs frame → frame stats → excursion.
+
+- **The link is a topic.** `FrameStatsModule` publishes on
+  `pmu-test-streamer.frame.stats.result`, and `ExcursionModule`'s host reads
+  that topic. Neither module holds a reference to the other.
+- **So they can run apart**: in one worker, or each in its own.
+- **The run key carries through.** A result computed from client 42's frame
+  is published under key 42, and the chained module's instance for that
+  client reads it.
+- **The order in `modules=` does not matter.**
+- **Each link is a hop over the transport**, so a chained module sees an
+  instant a little later than the module before it.
 
 ## Read data yourself: a batch query
 
@@ -177,21 +217,94 @@ the clients that names (`REMOTE_URL`, ...), since it builds the gateway itself.
 
 ## Run it in its own worker
 
-A worker is the image running `python -m pswamp_core.worker`:
+A worker is the server's image running `python -m pswamp_core.worker`. It
+hosts the modules named in `PSWAMP_WORKER_MODULES`, from the pipelines named
+in `PSWAMP_WORKER_PIPELINES`. The generator put `peak-frequency` in the shared
+`module-worker`, beside the streamer's modules. To give it a process of its
+own:
+
+**1. Add a worker that hosts only it.** In `docker-compose.yml`:
 
 ```yaml
-batch-worker:                       # docker-compose.yml
-  command: ["python", "-m", "pswamp_core.worker"]
-  environment:
-    <<: [*transport, *streamer-sources]
-    PSWAMP_WORKER_PIPELINES: "pmu_test_streamer.pipeline:PIPELINE"
-    PSWAMP_WORKER_MODULES: "range-summary"      # only these; unset hosts every module
-  cpus: 1.0
+  peak-frequency-worker:
+    build: .
+    image: p-swamp:latest
+    command: ["python", "-m", "pswamp_core.worker"]
+    environment:
+      <<: *transport
+      PSWAMP_WORKER_PIPELINES: "peak_frequency.pipeline:PIPELINE"
+      PSWAMP_WORKER_MODULES: "peak-frequency"
+    depends_on:
+      kafka:
+        condition: service_healthy
+    restart: unless-stopped
+    cpus: 1.0
+    mem_limit: 512m
+    develop: *worker-watch       # defined on module-worker, so place this after it
 ```
 
-The k8s equivalent is `p-swamp-batch-worker` in `k8s/p-swamp-local.yaml`. Take
-the module's name out of the other workers' `PSWAMP_WORKER_MODULES`, or two
-workers answer each frame. Nothing in the module or the page changes.
+In `k8s/p-swamp-local.yaml`, copy the `p-swamp-module-worker` Deployment,
+rename it (`metadata.name`, every `app:` label, the container), and set the
+same two variables:
+
+```yaml
+          env:
+            - name: PSWAMP_TRANSPORT
+              value: kafka:pswamp_core.transport.kafka:KafkaTransport
+            - name: KAFKA_BOOTSTRAP_SERVERS
+              value: p-swamp-kafka:9092
+            - name: PSWAMP_WORKER_PIPELINES
+              value: peak_frequency.pipeline:PIPELINE
+            - name: PSWAMP_WORKER_MODULES
+              value: peak-frequency
+          resources:
+            requests:              # what the scheduler reserves for the pod
+              cpu: "100m"
+              memory: "192Mi"
+            limits:                # the most it may use
+              cpu: "1"
+              memory: "512Mi"
+```
+
+`doc/server-data-architecture.md` ("A module in a worker of its own") has a
+whole Deployment to copy.
+
+**2. Take it out of the shared worker.** Remove `peak-frequency` from
+`module-worker`'s `PSWAMP_WORKER_MODULES` (and its pipeline from
+`PSWAMP_WORKER_PIPELINES`), in compose and in k8s. A module named in two
+workers is run by both: every result arrives twice.
+
+**3. Apply it.** `docker compose up -d` (or restart
+`./scripts/start-local-hotloaded-pswamp-server.sh`), or `kubectl apply -f
+k8s/p-swamp-local.yaml`. The image, the module, its web API and its page are
+unchanged. The new worker logs `hosting peak-frequency for peak-frequency: …`.
+
+A module that reads the gateway also needs its sources there: the app's
+`<APP>_DATA_CLIENTS` and the settings of the clients it names. The streamer's
+`batch-worker`, which hosts `range-summary`, is the example.
+
+## Scale it
+
+What a worker of its own lets you change, for that module alone:
+
+- **More memory.** Raise `resources.limits.memory` (k8s) or `mem_limit`
+  (compose). A worker rests at about 70 MB. On top of that comes the module's
+  own state, once per run key: one instance per client on a recording, one in
+  total on a live source. A pod that passes its limit is killed and restarted;
+  its instances are rebuilt on the next input, without what they had counted.
+- **More CPU.** Raise `resources.limits.cpu` or `cpus`. A module's `process`
+  runs on one event loop, so more than one core helps only an analysis moved
+  off the loop ("A CPU-heavy module", below).
+- **Isolation.** A slow or crashing module stalls or restarts its own worker
+  and nothing else. The server, the pages and every module not chained onto
+  it carry on; its own results stop until it is back.
+- **Its own node or schedule.** It is an ordinary Deployment, so
+  `nodeSelector`, priorities and the rest apply to it alone.
+
+What it does not let you change yet: **the number of replicas**. Keep
+`replicas: 1` for each worker. Topics have one partition and workers no
+consumer group, so two replicas would each read every input and publish every
+result twice. A module scales up, not out.
 
 ## A CPU-heavy module
 

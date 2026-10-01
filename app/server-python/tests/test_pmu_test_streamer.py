@@ -1,4 +1,4 @@
-"""The PMU test streamer: its modules, providers, pipeline and edge."""
+"""The PMU test streamer: its modules, providers, pipeline and web API."""
 
 from __future__ import annotations
 
@@ -164,7 +164,7 @@ async def test_a_streamer_run_plays_the_sample_through_frame_stats():
         await cancel_and_wait(hosts)
 
 
-# --- the edge: the socket and the POSTs, in-process ----------------------------------
+# --- the web API: the socket and the POSTs, in-process -------------------------------
 
 
 @pytest.fixture
