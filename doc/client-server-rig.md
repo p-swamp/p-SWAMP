@@ -279,7 +279,7 @@ reference_subapp/ one package per api — the thing you add
   api.py          the endpoints: the /ws websocket and the POST commands
   model.py        the app's own domain logic
 pmu_test_streamer/  the server data architecture's worked example (a pipeline,
-                    its modules and data clients, and its edge in api.py)
+                    its modules and data clients, and its web API in api.py)
   sample_data.txt  the recording — 300 lines of *simulated* PMU data
                    from the Nordic 44 sim, committed as a static test fixture
 errors/           the error tray's backend

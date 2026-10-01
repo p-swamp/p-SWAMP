@@ -29,8 +29,8 @@ So an app package imports from here and needs to know nothing about the layout:
 What is genuinely defined here is `SocketRegistry` — the scaffold apps' socket
 bookkeeping, which `pswamp_web/` has no use for because its pages push from their
 own per-connection task rather than fanning out to a client's sockets — and the
-edge of the server data architecture (doc/server-data-architecture.md), which
-every app over a core pipeline uses:
+web API side of the server data architecture (doc/server-data-architecture.md),
+which every app over a core pipeline uses:
 
     transport()           the process's transport, from PSWAMP_TRANSPORT
     serve_pipeline(...)   an app's lifespan: its shared live runs, its errors
@@ -146,7 +146,7 @@ class SocketRegistry(SessionRegistry[WebSocket]):
                 await send_state(ws, message)
 
 
-# --- the edge of the server data architecture ---------------------------------------
+# --- the web API side of the server data architecture -------------------------------
 
 _TRANSPORT: Transport | None = None
 

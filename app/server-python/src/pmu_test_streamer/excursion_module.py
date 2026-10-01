@@ -10,7 +10,7 @@ frequency is outside a band around 50 Hz, and counts excursions.
 Two commands go through it. ``AutoPauseCommand`` (from the page) turns
 pausing on excursion on or off for this run. When it is on and the frequency
 leaves the band, the module publishes a ``PauseCommand`` itself: a module
-commanding the player, exactly as the edge does.
+commanding the player, exactly as the web API does.
 """
 
 from __future__ import annotations
