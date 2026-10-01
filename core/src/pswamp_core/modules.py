@@ -125,14 +125,17 @@ class Module(ABC):
         return CommandInbox(commands, self, out, on_result=answer)
 
     async def run(self, inputs: Subscription, out: Sink) -> None:
-        """Read and process until cancelled. A failing ``process`` is logged,
-        reported as an ``ErrorEvent``, and the next input is read."""
+        """Read and process until cancelled. A failing ``process``, or a result
+        that does not fit the envelope, is logged, reported as an
+        ``ErrorEvent``, and the next input is read."""
         if self.input_model is None:
             return
         async for message in inputs:
-            self.monitor.observe(inputs, message, out)
             try:
+                self.monitor.observe(inputs, message, out)
                 result = await self.process(message)
+                if result is not None:
+                    out.publish(self.wrap(result, timestamp=message.timestamp))
             except Exception as error:
                 logger.exception("module %s failed on %s", self.name, type(message).__name__)
                 out.publish(
@@ -143,6 +146,3 @@ class Module(ABC):
                         detail=f"{type(error).__name__}: {error}",
                     )
                 )
-                continue
-            if result is not None:
-                out.publish(self.wrap(result, timestamp=message.timestamp))

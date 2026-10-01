@@ -18,6 +18,7 @@ from pswamp_core.messages import (
     PauseCommand,
     PlayCommand,
     PmuFrame,
+    ResultEnvelope,
     SeekCommand,
     SwitchSourceCommand,
 )
@@ -93,6 +94,21 @@ def test_a_command_class_has_one_receiver():
         Pipeline("app", gateway, modules=(Seeker,))
     with pytest.raises(ValueError, match="both take"):
         Pipeline("app", gateway, modules=(Halver, Halver))
+
+
+def test_two_classes_of_one_name_cannot_share_a_topic():
+    class Pauser(Halver):
+        commands = (type("PauseCommand", (Command,), {}),)  # the player's command's name, so its topic
+
+    with pytest.raises(ValueError, match="both on topic pause.command"):
+        Pipeline("app", gateway, modules=(Pauser,))
+
+    class AlsoNumberResult(Halver):
+        commands = ()
+        output_model = type("NumberResult", (ResultEnvelope[Number],), {})
+
+    with pytest.raises(ValueError, match="both on topic number.result"):
+        Pipeline("app", gateway, modules=(FrameCounter, AlsoNumberResult))
 
 
 async def test_frames_reach_the_module_and_its_results_come_back(hosted):

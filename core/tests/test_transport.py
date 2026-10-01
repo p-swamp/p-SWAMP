@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 
 import pytest
-from support import Measurement, measurement, take
+from support import Measurement, Number, NumberResult, at, measurement, take
 from transport_suite import TransportSuite
 
 from pswamp_core.messages import PauseCommand
@@ -65,6 +65,22 @@ async def test_a_full_outbox_drops_old_data_but_never_a_command():
     assert isinstance(got[0][1], PauseCommand)
     assert [m.mRID for _, m in got[1:]] == ["m2", "m3"]
     assert outbox.dropped == 2
+
+
+async def test_a_full_outbox_never_drops_an_answer_to_a_command():
+    def result(value: float, request_id: str | None = None) -> NumberResult:
+        return NumberResult(timestamp=at(0), app={"name": "n", "uuid": "u"}, result=Number(value=value), request_id=request_id)
+
+    broker = InMemoryTransport()
+    outbox = Outbox(broker, app="a", key="k", maxsize=2)
+    with broker.subscribe(NumberResult, app="a", overflow=Overflow.GROW) as feed:
+        outbox.publish(result(0, request_id="asked"))
+        for i in range(1, 5):
+            outbox.publish(result(i))  # not started: everything waits
+        outbox.start()
+        got = await take(feed, 3)
+        await outbox.close()
+    assert [(r.result.value, r.request_id) for _, r in got] == [(0, "asked"), (3, None), (4, None)]
 
 
 async def test_closing_the_outbox_flushes_it():

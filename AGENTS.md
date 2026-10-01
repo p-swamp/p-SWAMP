@@ -292,7 +292,7 @@ Key invariants to preserve:
   OpenAPI has no notion of a socket. See the contract commands under "Common
   commands" below, and `doc/the-client-server-api.md` for the whole account.
   - **A command never answers with state.** It returns a small `CommandAck`
-    (`{status, applied}`) and the resulting state arrives on the socket like any
+    (`{status, applied, request_id}`) and the resulting state arrives on the socket like any
     other change — so there is exactly one path for state and no ordering to
     reconcile between two of them. Don't be tempted to return the new state
     "to save a round trip": that is the whole design being undone.
