@@ -16,7 +16,8 @@
 - The app is part of the topic, so two apps reading the same class under the
   same key never hear each other.
 - A topic carries exactly one class: a subscriber to ``ResultEnvelope`` hears
-  no subclass, as on a broker.
+  no subclass, as on a broker. Two classes of one name have the same topic, so
+  ``subscribe`` refuses the second (and ``Pipeline`` refuses to declare both).
 - A subscriber hears only what is published after it subscribes. Nothing is
   replayed; a frame carries its own layout, so a late subscriber needs nothing
   more.
@@ -47,6 +48,7 @@ from ..messages.commands import Command
 from ..messages.control import PipelineClosed
 from ..messages.data_model import stamp_sent_at
 from ..messages.errors import ErrorEvent
+from ..messages.results import ResultEnvelope
 from ..settings import Configurable, MissingSettingError, load_class, parse_specs
 from ..subscription import Overflow, Subscription
 from ..util.tasks import cancel_and_wait
@@ -111,6 +113,8 @@ class Transport(Configurable, ABC):
     def __init__(self, name: str = "transport") -> None:
         self.name = name
         self._subscriptions: list[TransportSubscription] = []
+        #: Every topic this process has subscribed to, and the class it carries.
+        self._models: dict[str, type[DataModel]] = {}
         #: Set per topic once this process is receiving it.
         self._ready: dict[str, asyncio.Event] = {}
 
@@ -140,10 +144,23 @@ class Transport(Configurable, ABC):
         overflow: Overflow = Overflow.DROP_OLDEST,
         maxsize: int = 256,
     ) -> TransportSubscription:
-        """A queue over the topics of ``models`` in ``app``, for ``key`` or every key."""
+        """A queue over the topics of ``models`` in ``app``, for ``key`` or every key.
+
+        Raises ``ValueError`` for a class whose topic already carries another
+        class (two classes of one name): a topic carries one class.
+        """
         if not models:
             raise ValueError("subscribe needs at least one message class")
-        topics = {self.topic(model, app): model for model in models}
+        topics: dict[str, type[DataModel]] = {}
+        for model in models:
+            topic = self.topic(model, app)
+            carried = self._models.setdefault(topic, model)
+            if carried is not model:
+                raise ValueError(
+                    f"topic {topic} carries {carried.__module__}.{carried.__qualname__}; "
+                    f"{model.__module__}.{model.__qualname__} cannot share it"
+                )
+            topics[topic] = model
         subscription = TransportSubscription(self, topics, key, overflow, maxsize)
         self._subscriptions.append(subscription)
         for topic, model in topics.items():
@@ -168,8 +185,9 @@ class InMemoryTransport(Transport):
     """A broker with no port: publishing delivers on the same loop.
 
     It behaves as a broker does, so a hermetic test catches what a deployment
-    would: every message goes through JSON (subscribers get an equal copy),
-    reaches only the exact topic of its class, and is stamped with its send time.
+    would: every message goes through JSON (subscribers get an equal copy, of
+    the class they subscribed with), reaches only the exact topic of its
+    class, and is stamped with its send time.
     """
 
     in_process = True
@@ -181,7 +199,7 @@ class InMemoryTransport(Transport):
         topic = self.topic(type(message), app)
         wanted = [s for s in self._subscriptions if s.wants(topic, key)]
         if wanted:
-            received = type(message).model_validate_json(message.model_dump_json())
+            received = self._models[topic].model_validate_json(message.model_dump_json())
             stamp_sent_at(received, time.time())
             for subscription in wanted:
                 subscription.offer((key, received))
@@ -191,13 +209,19 @@ class InMemoryTransport(Transport):
 _CONTROL = (Command, ErrorEvent, PipelineClosed)
 
 
+def _is_control(message: DataModel) -> bool:
+    """``_CONTROL``, or a result that answers a command: someone asked for it."""
+    return isinstance(message, _CONTROL) or (isinstance(message, ResultEnvelope) and message.request_id is not None)
+
+
 class Outbox:
     """A synchronous sink onto the transport, for one app and key.
 
     ``publish`` queues and returns; a task sends in order. When more than
     ``maxsize`` data messages wait, the oldest is dropped (a live stream would
     rather lose a stale frame than fall further behind), and reported under
-    ``keep_up``. Commands, errors and ``PipelineClosed`` are never dropped.
+    ``keep_up``. Commands, answers to commands, errors and ``PipelineClosed``
+    are never dropped.
     """
 
     def __init__(
@@ -223,7 +247,7 @@ class Outbox:
 
     def publish(self, message: DataModel) -> None:
         """Queue ``message``. Never blocks."""
-        control = isinstance(message, _CONTROL)
+        control = _is_control(message)
         if not control and self._data >= self.maxsize:
             self._drop_oldest_data()
         self._queue.append(message)
@@ -246,7 +270,7 @@ class Outbox:
 
     def _drop_oldest_data(self) -> None:
         for i, queued in enumerate(self._queue):
-            if not isinstance(queued, _CONTROL):
+            if not _is_control(queued):
                 del self._queue[i]
                 self._data -= 1
                 self.dropped += 1
@@ -255,7 +279,7 @@ class Outbox:
 
     def _pop(self) -> DataModel:
         message = self._queue.popleft()
-        self._data -= 0 if isinstance(message, _CONTROL) else 1
+        self._data -= 0 if _is_control(message) else 1
         return message
 
     async def _run(self) -> None:

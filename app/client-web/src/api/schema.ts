@@ -551,12 +551,23 @@ export interface components {
          *     Deliberately NOT the resulting state. That arrives on whichever socket the
          *     page has open, on the server's own schedule, so state has exactly one path
          *     and there is no ordering for a client to reconcile between two of them. What
-         *     this carries is only "the command was understood and applied, and here is
-         *     what it was" -- enough to log and to assert on, and nothing a page renders.
+         *     this carries is only "the command was accepted, and here is what it was" --
+         *     enough to log and to assert on, and nothing a page renders.
+         *
+         *     *Accepted* is all it promises. A handler that applies the command itself
+         *     has applied it by now. A handler that hands it on (to a pipeline's player
+         *     or module) has checked what it can and queued it for its receiver: the
+         *     outcome arrives on the socket, or as an error notice carrying this
+         *     ``request_id``.
          */
         CommandAck: {
             /** Applied */
             applied: string;
+            /**
+             * Request Id
+             * @description Set when the command was handed on to a receiver: what answers or refuses it carries the same id.
+             */
+            request_id?: string | null;
             /**
              * Status
              * @default ok

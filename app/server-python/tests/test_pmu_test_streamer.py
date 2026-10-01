@@ -199,9 +199,8 @@ def test_the_socket_opens_on_the_paused_recording(server):
 def test_play_brings_frames_and_their_stats(server):
     with server.websocket_connect("/api/pmu-test-streamer/ws?client_id=102") as ws:
         ws.receive_json()
-        assert server.post("/api/pmu-test-streamer/playback/speed?client_id=102", json={"speed": 5}).json() == {
-            "status": "ok", "applied": "speed"
-        }
+        ack = server.post("/api/pmu-test-streamer/playback/speed?client_id=102", json={"speed": 5}).json()
+        assert (ack["status"], ack["applied"]) == ("ok", "speed") and ack["request_id"]
         server.post("/api/pmu-test-streamer/playback/play?client_id=102")
         state = next_state(ws, lambda s: s["stats"] is not None and s["frame_index"] >= 3)
         assert state["stats"]["result"]["n_stations"] == 5 and not state["player"]["paused"]

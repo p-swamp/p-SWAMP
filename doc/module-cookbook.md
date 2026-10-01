@@ -107,7 +107,8 @@ error tray.
   `docker compose logs module-worker`; in one process, in the server's.
 - **The error tray.** A `process` that raises is logged, and an `ErrorEvent`
   goes to the tray of every client watching that run. The module carries on
-  with the next input.
+  with the next input. A `setup` that raises is reported the same way; the
+  instance is dropped, and the first input five seconds later builds a new one.
 - **Falling behind.** When the module's input queue drops frames, or frames
   arrive more than 2 s after they were sent, it reports on the tray: once on
   falling behind, every 5 s while behind, once on catching up. Tune it with
@@ -146,7 +147,8 @@ async def auto_pause(client_id: ClientId, body: AutoPauseBody) -> CommandAck:
 
 - The page calls it with `postCommand` from its hook.
 - A module command is checked where the module runs, so the POST answers 200
-  when it is published. A refusal comes back as an `ErrorEvent` on the tray.
+  when it is accepted, with the command's `request_id`. A refusal comes back
+  as an `ErrorEvent` on the tray, carrying that id.
   Player commands are checked before publishing, and a refusal is a 409.
 - **A module can command the player** by publishing a player command into the
   sink `setup` gave it. `ExcursionModule` publishes `PauseCommand` when the

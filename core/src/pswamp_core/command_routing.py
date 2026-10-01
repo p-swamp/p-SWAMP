@@ -95,14 +95,19 @@ class CommandInbox:
     async def stop(self) -> None:
         task, self._task = self._task, None
         if task is not None:
-            await cancel_and_wait(task)
+            await cancel_and_wait(task, ignore=(Exception,))  # a failure was logged in _serve
 
     async def _serve(self) -> None:
-        async for command in self._commands:
-            await self.apply(command)
+        try:
+            async for command in self._commands:
+                await self.apply(command)
+        except Exception:
+            logger.exception("%s stopped taking commands", self.receiver.name)
+            raise
 
     async def apply(self, command: Command) -> None:
-        """Validate and apply one command; report a refusal or failure."""
+        """Validate and apply one command; report a refusal, a failure, or an
+        answer that could not be published."""
         name = self.receiver.name
         try:
             self.receiver.validate(command)
@@ -116,8 +121,15 @@ class CommandInbox:
             self._report(command, f"{name} failed to apply {command.name}", f"{type(error).__name__}: {error}")
             return
         logger.info("%s applied %s (request %s)", name, command.name, command.request_id)
-        if result is not None and self._on_result is not None:
+        if result is None or self._on_result is None:
+            return
+        try:
             self._on_result(command, result)
+        except Exception as error:
+            logger.exception("%s could not answer %s (request %s)", name, command.name, command.request_id)
+            self._report(
+                command, f"{name} applied {command.name} but could not answer it", f"{type(error).__name__}: {error}"
+            )
 
     def _report(self, command: Command, message: str, detail: str) -> None:
         self._out.publish(
