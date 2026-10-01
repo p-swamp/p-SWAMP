@@ -1,4 +1,4 @@
-"""The __LABEL__ app's edge: a run of its pipeline per client, and a socket
+"""The __LABEL__ app's web API: a run of its pipeline per client, and a socket
 pushing the module's latest result. server.py mounts ``router`` under /api/__SLUG__."""
 
 import contextlib

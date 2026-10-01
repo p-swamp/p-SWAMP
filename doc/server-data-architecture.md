@@ -42,19 +42,33 @@ worked example of every piece.
 | transport | Keyed publish/subscribe: in-memory in one process, or Kafka between processes. |
 | topic | `<app>.<message class>`, e.g. `pmu-test-streamer.pmu.frame`. One class per topic. |
 | key | Which pipeline run a record belongs to: a client id, or `live.<source>`. |
-| module | Reads one message class, publishes a result class, and may answer commands. |
+| module | p-SWAMP's microservice: one analysis that reads one message class, publishes a result class, may answer commands, and can run in a process of its own. |
 | host / worker | A host runs one module instance per key. A worker is a process that runs hosts. |
 | pipeline | The declaration: an app's sources and modules. |
 | run | One running pipeline under one key: a gateway, a player, and the latest message of each class. |
-| edge | The app's FastAPI package: POSTs become commands, and the socket pushes state. |
+| web API | An app's FastAPI package under `/api/<app>/`, which the browser talks to: POSTs become commands, and the socket pushes state. `doc/the-client-server-api.md` describes the convention. |
 | command | A typed message going upstream. Its class decides who handles it. |
+
+## The reference example
+
+The PMU test streamer (`/pmu-test-streamer`) is the app every example below
+is taken from. It is not part of the core: it is one pipeline built on it,
+kept complete so each piece has a working instance to read. Its parts:
+
+| Part | What it is |
+|---|---|
+| sources | `sample`: a 3 s recording of five stations at 20 Hz, spanning a line trip. `live`: the same frames stamped now, as a live feed. `remote` (compose and k8s): the recording again, served by the remote data stub. |
+| `FrameStatsModule` (`frame-stats`) | Reads every `PmuFrame`. Publishes a `FrameStatsResult`: the mean, lowest and highest frequency across the stations at that instant, the voltage angle spread and the mean voltage. |
+| `ExcursionModule` (`excursion`) | Reads every `FrameStatsResult`, so it is chained onto the module above. Publishes an `ExcursionResult`: whether the mean frequency is within ±0.005 Hz of 50 Hz, and how many times it has left that band. After an `AutoPauseCommand` it pauses the player when the frequency leaves the band. |
+| `RangeSummaryModule` (`range-summary`) | Reads no stream. On a `SummarizeRangeCommand` it reads a time range of a recording itself and publishes a `RangeSummaryResult`: the frames in the range and their lowest, highest and mean frequency. |
+| web API and page | `pmu_test_streamer/api.py` and the page at `/pmu-test-streamer`: the player's controls, the three results, and a control for each module command. |
 
 ## The picture
 
 ```
 DATA DOWN    provider → gateway (enrich) → player → topic <app>.pmu.frame → module → topic <app>.<result>
-             → the run's latest → edge → socket → browser
-COMMANDS UP  browser → POST → edge → topic <app>.<command> → player | module
+             → the run's latest → web API → socket → browser
+COMMANDS UP  browser → POST → web API → topic <app>.<command> → player | module
              a module may publish a command too
 WHERE        in-memory transport: modules hosted in the server; Kafka: modules in workers
 ```
@@ -62,7 +76,7 @@ WHERE        in-memory transport: modules hosted in the server; Kafka: modules i
 ```mermaid
 flowchart TB
     classDef data fill:#e8f1fb,stroke:#3b6ea5,color:#000
-    classDef edge fill:#eeeeee,stroke:#555,color:#000
+    classDef web fill:#eeeeee,stroke:#555,color:#000
 
     sources["Providers<br/>recording · live feed · remote data service"]:::data
     subgraph run["Run: one per client for a recording, one per live source"]
@@ -78,13 +92,13 @@ flowchart TB
         commands[["&lt;app&gt;.&lt;command&gt;"]]
     end
     host["Module host<br/>one instance per key<br/>in the server or a worker"]:::data
-    edge["Edge (FastAPI)"]:::edge
-    browser(["Browser"]):::edge
+    api["Web API (FastAPI)"]:::web
+    browser(["Browser"]):::web
 
     sources ==> gw ==> player ==> frames ==> host ==> results ==> latest
-    player ==> latest ==> edge ==>|"state"| browser
+    player ==> latest ==> api ==>|"state"| browser
 
-    browser -.->|"POST"| edge -.-> commands
+    browser -.->|"POST"| api -.-> commands
     host -.->|"a module may command"| commands
     commands -.-> player
     commands -.-> host
@@ -109,7 +123,7 @@ live source has one shared run, keyed `live.<source>`, which `serve_pipeline`
 starts with the app (`start_live_runs`) and stops at shutdown. A client's run
 switched to a live source opens no stream: its player reports "live", and the
 run follows the shared run's frame and result topics into its own `latest`.
-The edge reads a client's run the same way in both cases.
+The web API reads a client's run the same way in both cases.
 
 *Why.* Everyone watching live must see the same instant, and its analysis
 should run once, however many people watch. A visitor exploring recorded data
@@ -136,8 +150,9 @@ PSWAMP_WORKER_PIPELINES=pmu_test_streamer.pipeline:PIPELINE   # whose modules to
 PSWAMP_WORKER_MODULES=range-summary                           # optional: only these
 ```
 
-So a heavy module gets a process, and a CPU limit, of its own without touching
-its code or its page.
+So a heavy module gets a process, with CPU and memory limits of its own,
+without touching its code or its page. "A module in a worker of its own",
+under Deployment, shows the change in compose and in k8s.
 
 ## The pieces
 
@@ -217,8 +232,9 @@ broker as `kafka` (Apache Kafka, one KRaft node, no volume).
 `KAFKA_TEST_BOOTSTRAP_SERVERS=127.0.0.1:19092`).
 
 ### Modules
-*What.* A module reads one message class and publishes a result class; it may
-also answer commands.
+*What.* A module is p-SWAMP's microservice: one analysis with a declared input
+and output, which runs inside the server or in a process of its own. It reads
+one message class and publishes a result class; it may also answer commands.
 
 ```python
 class FrameStatsModule(Module):
@@ -246,15 +262,22 @@ seconds later builds a new one; what arrives before is ignored. A `process`
 that raises, or returns a body that does not fit the envelope, costs only that
 input: it is reported and the next one is read.
 
-**A pipeline of modules.** A module may read another module's result class,
-which chains them: in the streamer, `PmuFrame` → `FrameStatsModule` →
-`FrameStatsResult` → `ExcursionModule` → `ExcursionResult`. A module may
-publish a command into its sink too: `ExcursionModule` publishes
-`PauseCommand` when the frequency leaves its band and auto-pause is on, and
-the player applies it exactly as one from the edge. A module that sets
-`reads_gateway = True` gets its own gateway over the pipeline's sources
-(`self.gateway`). `RangeSummaryModule` answers `SummarizeRangeCommand` with it:
-a batch query that runs in a worker of its own.
+**A pipeline of modules.** The streamer's three modules ("The reference
+example") show the three things a module can do beyond reading frames:
+
+- **Read another module's results.** Setting `input_model` to another
+  module's result class chains them. The streamer's `ExcursionModule` reads
+  what its `FrameStatsModule` publishes: `PmuFrame` → `FrameStatsModule` →
+  `FrameStatsResult` → `ExcursionModule` → `ExcursionResult`. The link is the
+  topic, so the two may run in different workers.
+- **Command the player.** A module may publish a command into its sink.
+  `ExcursionModule` publishes `PauseCommand` when the frequency leaves its
+  band and auto-pause is on, and the player applies it exactly as one from
+  the web API.
+- **Read data itself.** A module that sets `reads_gateway = True` gets its
+  own gateway over the pipeline's sources (`self.gateway`). The streamer's
+  `RangeSummaryModule` answers `SummarizeRangeCommand` with it: a batch query,
+  which compose and k8s run in a worker of its own.
 
 *Why.* A contributor writes the analysis and three class attributes. The
 module never sees the transport: it reads a queue and publishes into a sink.
@@ -263,7 +286,7 @@ off `frame.header` means it needs no configuration. `process` runs on the
 event loop; a CPU-heavy module runs its analysis in a thread or process pool.
 
 *Where.* `core/src/pswamp_core/modules.py`, `host.py`, `command_routing.py`;
-the examples are `stats_module.py`, `excursion_module.py` and
+the streamer's modules are `stats_module.py`, `excursion_module.py` and
 `range_summary_module.py` in `app/server-python/src/pmu_test_streamer/`.
 
 ### Gateway and providers
@@ -334,7 +357,7 @@ the grid data itself, which would cost kilobytes per frame.
 ```python
 player = Player(gateway, sink, loop=True)
 await player.start()        # a recording: paused at its start; a live feed: followed from now
-player.validate(command)    # raises CommandRefused: the edge's 409
+player.validate(command)    # raises CommandRefused: the web API's 409
 await player.handle(command)
 player.status()             # PlayerStatus: mode, source, cursor, speed, can_seek, error, ...
 ```
@@ -368,7 +391,7 @@ PIPELINE = Pipeline("pmu-test-streamer", gateway, modules=(FrameStatsModule,))  
 
 REGISTRY = PipelineRegistry(lambda key: PipelineRun(key, PIPELINE, transport))
 run = await REGISTRY.acquire(client_id)       # built on first connect
-run.latest.get(FrameStatsResult)              # the newest result: what the edge renders
+run.latest.get(FrameStatsResult)              # the newest result: what the web API sends
 with run.changes() as changes: ...            # a wake-up per change, coalesced
 REGISTRY.peek(client_id)                      # a command's view: never builds
 ```
@@ -377,7 +400,7 @@ REGISTRY.peek(client_id)                      # a command's view: never builds
 it, and a module host, in the server or a worker, hosts its modules from it
 (`PIPELINE.hosts(transport)`). A run holds a gateway and a player, publishes
 the player's frames to the modules, and keeps the newest message of each class
-it sees. That view is not a bus: the edge builds its message from current
+it sees. That view is not a bus: the web API builds its message from current
 state, so however much arrived meanwhile, it sends one. The registry lets a
 run outlive its sockets for five minutes, so a reload rejoins it. At its cap
 (8) it evicts the least recently used idle run, and refuses when every run is
@@ -403,18 +426,23 @@ run.dispatch(SeekCommand(client_id=id, offset_s=12))
 *Why.* The mental model is one sentence: **anyone may publish a command, its
 one declared receiver applies it, anyone may subscribe to watch it.** The
 arguments are validated fields, not a verb and a dict. `Pipeline` refuses two
-receivers of one class. The player lives with the edge, so its commands are
-checked before they are published, and a refusal is an honest 409. A module
-may run in another process, so its commands are checked where it runs, and a
-refusal comes back as an `ErrorEvent`. Player commands also travel on topics,
-so a module can command the player exactly as the edge does.
+receivers of one class. The player lives in the server, beside the web API,
+so its commands are checked before they are published, and a refusal is an
+honest 409. A module may run in another process, so its commands are checked
+where it runs, and a refusal comes back as an `ErrorEvent`. Player commands
+also travel on topics, so a module can command the player exactly as the web
+API does.
 
 *Where.* `core/src/pswamp_core/command_routing.py`, `messages/commands.py`,
 `pipeline.py` (`dispatch`).
 
-### The edge
-*What.* What an app's `api.py` keeps once the core does the rest: the state
-message it pushes, and the POSTs that build commands.
+### The web API
+*What.* The app's FastAPI package (`api.py`), mounted under `/api/<app>/`:
+what the browser talks to. It is an app like any other in this server and
+follows the same convention, described in `doc/the-client-server-api.md`:
+commands up as POSTs, state down one socket. Over a pipeline it keeps only
+what the core does not do: the state message it pushes, and the POSTs that
+build commands.
 
 ```python
 REGISTRY = PipelineRegistry(lambda client_id: PipelineRun(client_id, PIPELINE, transport()))
@@ -443,11 +471,12 @@ async def ws_endpoint(ws: WebSocket) -> None:
   ack carries the command's `request_id`, as does whatever answers or refuses
   it.
 
-The browser contract is unchanged: commands up as POSTs, state down one
-socket, the acknowledgement never carries state, and all of it is generated
-into `doc/api/openapi.json`. The state message carries core messages
-(`PmuFrame`, `PlayerStatus`, a `ResultEnvelope`) as they are, so the page's
-types are generated from the same classes.
+The browser contract is the one `doc/the-client-server-api.md` describes,
+unchanged: commands up as POSTs, state down one socket, the acknowledgement
+never carries state, and all of it is generated into `doc/api/openapi.json`.
+The state message carries core messages (`PmuFrame`, `PlayerStatus`, a
+`ResultEnvelope`) as they are, so the page's types are generated from the
+same classes.
 
 *Where.* `app/server-python/src/shared.py`, `pmu_test_streamer/api.py`;
 `app/client-web/src/pages/pmu-test-streamer/`.
@@ -455,11 +484,12 @@ types are generated from the same classes.
 ### Errors
 *What.* `ErrorEvent` is what a pipeline publishes when something *operational*
 fails: the player's provider raised, a module's `process` raised, a module
-instance failed, or a module refused a command. Every one goes on the app's error topic
-(`<app>.error.event`) under its run's key. `serve_pipeline` forwards that
-topic to the `errors` app's hub. Each notice goes to the clients watching that
-run: its own client, or every client following a shared live run. The
-layout's `<ErrorTray>` shows them on every page, from `/api/errors/ws`.
+instance failed, or a module refused a command. Every one goes on the app's
+error topic (`<app>.error.event`) under its run's key. `serve_pipeline`
+forwards that topic to the `errors` app's hub. Each notice goes to the clients
+watching that run: its own client, or every client following a shared live
+run. The layout's `<ErrorTray>` shows them on every page, from
+`/api/errors/ws`.
 
 *Why.* The log line stays the source of truth; the notice is a copy addressed
 to the person whose run it was. It is how a module command's refusal reaches
@@ -517,6 +547,13 @@ like anyone else (the range summary).
 | remote data stub | `python -m remote_data_stub` | `REMOTE_DATA_STUB_CLIENT` (and `core/examples` on `PYTHONPATH`) |
 | broker | `apache/kafka` | one KRaft node, topic auto-creation off, 10 s retention checks |
 
+**The broker is replaceable.** Only `KafkaTransport` knows the broker is
+Kafka. The server and every worker take their transport from
+`PSWAMP_TRANSPORT`, so another broker (NATS, say) is one `Transport` subclass
+that passes `core/tests/transport_suite.py`, named in that variable, with its
+container in place of `kafka`. No module, pipeline, web API or page changes.
+Kafka is the only broker transport in the repo today.
+
 - **Bare `docker run`** (CI's e2e): no transport set, so it is in-memory. The
   server hosts every module; the sources are sample and live.
 - **Compose** (`docker-compose.yml`): `server`, `module-worker`
@@ -532,21 +569,125 @@ like anyone else (the range summary).
   repo publishes no image.
 - **Ingress**: an Ingress or LoadBalancer in place of the NodePort. The web
   client works under a path prefix (`/p-swamp/`) as it is.
-- **Kafka**: the deployment's own broker. Set `KAFKA_BOOTSTRAP_SERVERS` and
-  `KAFKA_REPLICATION_FACTOR`, and apply the retention settings the transport
-  asks for (`LIVE_TOPIC_CONFIGS`) or an equivalent broker policy. Drop the
-  `p-swamp-kafka` Deployment.
+- **Broker**: the organisation's own Kafka, not one run for p-SWAMP. The
+  local manifest holds a one-node Kafka (the `p-swamp-kafka` Deployment and
+  its Service) only because a laptop cluster has no broker: delete those two
+  objects from the manifest. Point `KAFKA_BOOTSTRAP_SERVERS` at the real
+  broker in the server and every worker, set `KAFKA_REPLICATION_FACTOR`, and
+  apply the retention settings the transport asks for (`LIVE_TOPIC_CONFIGS`)
+  or an equivalent broker policy.
 - **Data**: the deployment's remote data service in `REMOTE_URL`, its live
   feed as a `DataClient` class in `<APP>_DATA_CLIENTS` (an image layered on
   this one), and no stub.
-- **Resources**: CPU limits per worker, sized by what each module costs.
+- **Resources**: CPU and memory limits per worker, sized by what its modules
+  cost (below).
 - **Replicas stay at 1** for the server and each worker, until topics are
   partitioned and workers join consumer groups ("Not here yet").
 
+**A module in a worker of its own.** A worker hosts the modules named in its
+`PSWAMP_WORKER_MODULES`. Moving a module to a dedicated worker is three edits
+to the deployment and none to the code. Here the streamer's `excursion` module
+leaves the shared `module-worker`:
+
+1. Add a worker that hosts only that module.
+2. Take the module's name out of the worker that hosted it. Otherwise both
+   read every input, and every result is published twice.
+3. Give the new worker the CPU and memory the module needs.
+
+In compose (`docker-compose.yml`):
+
+```yaml
+  excursion-worker:
+    build: .
+    image: p-swamp:latest                  # the same image as the server
+    command: ["python", "-m", "pswamp_core.worker"]
+    environment:
+      <<: *transport                       # the same broker as the server
+      PSWAMP_WORKER_PIPELINES: "pmu_test_streamer.pipeline:PIPELINE"
+      PSWAMP_WORKER_MODULES: "excursion"   # 1. only this module
+    depends_on:
+      kafka:
+        condition: service_healthy
+    restart: unless-stopped
+    cpus: 1.0                              # 3. its own CPU budget
+    mem_limit: 512m                        #    and memory
+    develop: *worker-watch                 # defined on module-worker, so place this after it
+
+  module-worker:
+    environment:
+      PSWAMP_WORKER_MODULES: "frame-stats"   # 2. was "frame-stats,excursion"
+```
+
+In k8s (`k8s/p-swamp-local.yaml`), a Deployment beside the other workers:
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: p-swamp-excursion-worker
+  labels:
+    app: p-swamp-excursion-worker
+spec:
+  replicas: 1                              # one per module: see below
+  strategy:
+    type: Recreate                         # the old pod is gone before the new one reads
+  selector:
+    matchLabels:
+      app: p-swamp-excursion-worker
+  template:
+    metadata:
+      labels:
+        app: p-swamp-excursion-worker
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+      containers:
+        - name: excursion-worker
+          image: p-swamp:latest            # the same image as the server
+          imagePullPolicy: Never           # IfNotPresent with an image from a registry
+          command: ["python", "-m", "pswamp_core.worker"]
+          env:
+            - name: PSWAMP_TRANSPORT
+              value: kafka:pswamp_core.transport.kafka:KafkaTransport
+            - name: KAFKA_BOOTSTRAP_SERVERS
+              value: p-swamp-kafka:9092
+            - name: PSWAMP_WORKER_PIPELINES
+              value: pmu_test_streamer.pipeline:PIPELINE
+            - name: PSWAMP_WORKER_MODULES
+              value: excursion             # 1. only this module
+          resources:                       # 3. its own CPU and memory
+            requests:
+              cpu: "100m"
+              memory: "192Mi"
+            limits:
+              cpu: "1"
+              memory: "512Mi"
+```
+
+and, in the `p-swamp-module-worker` Deployment, `PSWAMP_WORKER_MODULES`
+becomes `frame-stats` (step 2).
+
+- **A module that reads the gateway** also needs the app's
+  `<APP>_DATA_CLIENTS` and the settings of the clients it names, as the
+  `batch-worker` has for the range summary.
+- **What it gives.** The module has its own process, so a slow or crashing
+  one cannot stall the modules in other workers, and its own limits, so it can be given more
+  memory or CPU alone. A worker rests at about 70 MB before its module holds
+  anything; a module's own state is per run key, one instance per client on a
+  recording and one in total on a live source.
+- **What it does not give.** More replicas of one module. Each topic has one
+  partition and workers have no consumer group, so two replicas of a worker
+  would each read every input and publish every result twice. A module scales
+  up (bigger limits), not out, until that changes.
+- **Check it.** The new worker logs `hosting excursion for pmu-test-streamer:
+  reads frame.stats.result, publishes excursion.result, …`, and the old one
+  logs only `hosting frame-stats …`.
+
 *Why.* Where a module runs is configuration, not code, so a heavy module gets
-its own pod and CPU limit without touching its code or its page. The repo
-holds no deployment-specific configuration: the local manifests are examples,
-and a deployment's own sources and broker come in through the same variables.
+its own pod and limits without touching its code or its page. The repo holds
+no deployment-specific configuration: the local manifests are examples, and a
+deployment's own sources and broker come in through the same variables.
 
 *Where.* `Dockerfile`, `docker-compose.yml`, `k8s/`,
 `scripts/start-pswamp-in-local-minikube-cluster.sh`.
@@ -557,7 +698,8 @@ and a deployment's own sources and broker come in through the same variables.
 working module, its pipeline, api, page and tests, and adds it to the
 module-worker. Then replace the placeholder analysis.
 `doc/module-cookbook.md` covers the rest: tests, logs, commands, chaining,
-batch queries, a worker of its own, CPU-heavy modules, and data sources.
+batch queries, a worker of its own, scaling, CPU-heavy modules, and data
+sources.
 
 ## Not here yet
 
@@ -568,6 +710,12 @@ batch queries, a worker of its own, CPU-heavy modules, and data sources.
   answer every frame twice.
 - **A NATS transport**: a `Transport` subclass passing
   `core/tests/transport_suite.py`.
+- **Modules outside the server tree.** A module's code lives in its app's
+  package under `app/server-python/src/`, so a worker loads the server's
+  Python packages to host it: on a development machine, importing the
+  streamer's pipeline peaks at 92 MB, against 36 MB for the core alone.
+  Modules, pipelines and example sources in a project of their own, depending
+  only on the core, would let a worker carry just those.
 - **A live source over a real feed**, such as a broker's topic read as a
   `DataClient`.
 - **Cheaper frames**: the header serialised once per layout, and producer

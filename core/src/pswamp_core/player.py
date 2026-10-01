@@ -170,7 +170,7 @@ class Player:
 
     def validate(self, command: Command) -> None:
         """Raise ``CommandRefused`` if ``command`` does not apply now. The
-        edge calls this before publishing a command: a refusal is its 409."""
+        web API calls this before publishing a command: a refusal is its 409."""
         if isinstance(command, SwitchSourceCommand):
             if command.source not in self._gateway.sources:
                 raise CommandRefused(f"no source named {command.source!r}; the sources are {self._gateway.sources}")

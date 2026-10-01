@@ -3,7 +3,7 @@
 
 """The PMU test streamer: the worked example of the server data architecture
 (doc/server-data-architecture.md). Its pipeline is in ``pipeline.py``, its
-edge in ``api.py``.
+web API in ``api.py``.
 
   router      the endpoints, mounted by server.py under /api/pmu-test-streamer
   lifespan    hosts the module in-process when there is no broker; stops the runs

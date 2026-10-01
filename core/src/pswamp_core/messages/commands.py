@@ -6,7 +6,7 @@
 **A command's class is its address.** Each class travels on its own topic
 (``SeekCommand`` → ``<app>.seek.command``), and exactly one part of a pipeline
 declares that it handles it: the player, or one module. Anyone may publish a
-command (the edge, a module); anyone may subscribe to its topic to watch. The
+command (the web API, a module); anyone may subscribe to its topic to watch. The
 fields are the arguments, validated where the command is built.
 
 The player's commands are here because the player is core. A module's own
