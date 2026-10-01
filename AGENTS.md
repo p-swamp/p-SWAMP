@@ -114,10 +114,33 @@ Consequences worth knowing before touching anything:
   the desktop package. After editing `core/pyproject.toml`, run
   `(cd app/server-python && uv lock --upgrade-package pswamp-core)`.
   `error_check.sh` gates it fully, like `app/`.
-- **`./scripts/error_check.sh` gates `app/` and `core/` fully; root `src/` only for syntax.**
-  ruff, `tsc` and the lockfile check are scoped to `app/`. Root `src/` now gets a
+- **A fourth project, `modules/` (`pswamp-modules`)**, holds the analysis
+  modules (`pswamp_modules/<module>/`), the pipeline declarations
+  (`pipelines/<app>.py`) and the example data sources (`sources/`). **Each
+  module is one folder that carries its own tests**, in a `tests/` package
+  beside its code (`<module>/tests/test_module.py`); `pipelines/` and
+  `sources/` do the same, so there is no `modules/tests/`. The project is
+  laid out flat: the package sits directly in `modules/`, with no `src/` level
+  (unlike `core/`; `module-root = ""` in its manifest). The
+  layering runs one way: **`core` ← `modules` ← the web backend.** `modules/`
+  depends on `pswamp-core` only and imports nothing from `app/` or the desktop
+  package; `core/` imports nothing from `modules/`; an app's `api.py` in the
+  server imports its pipeline, results and commands from `pswamp_modules`.
+  `pswamp_modules/tests/test_layering.py` checks both rules. Why: a worker hosting
+  modules then loads core and modules alone, no FastAPI and no `pswamp_web`.
+  Like core it is an editable path dependency of the web backend with no
+  lockfile of its own, its tests run through `run-python-server-tests.sh`
+  (found under `modules/`; `-k <module>` selects one module's), and
+  `error_check.sh` gates it fully. `.dockerignore` keeps the `tests/` folders
+  out of the image. After editing `modules/pyproject.toml`, run
+  `(cd app/server-python && uv lock --upgrade-package pswamp-modules)`. Test
+  file names must be unique across `app/server-python/tests/` and
+  `core/tests/`, which run in the same pytest session and are not packages; a
+  module's tests are a package, so they cannot clash.
+- **`./scripts/error_check.sh` gates `app/`, `core/` and `modules/` fully; root `src/` only for syntax.**
+  ruff, `tsc` and the lockfile check are scoped to those three. Root `src/` now gets a
   **syntax-only** `py_compile` gate (it ships in the image, so it must at least
-  parse) — but it is *not* lint-gated: `ruff check` deliberately stays `app/`-only,
+  parse) — but it is *not* lint-gated: `ruff check` deliberately leaves it out,
   with a `TODO` beside the src/ step in the script. Widening ruff to `src/` means
   first dealing with the existing desktop code's lint state (~334 pyflakes
   findings), which is a real piece of work and not a one-line scope change.
@@ -154,12 +177,13 @@ Two deployables, one wire protocol:
   imports **relatively** (`from .model import ...`). It is the smallest complete
   subapp: no ticker, no data file, no lifespan, so what remains is exactly the
   wiring every app needs.
-  **`src/pmu_test_streamer/`** is the worked example of the server data
-  architecture: its `pipeline.py` declares the pipeline, its modules
-  (`stats_module.py`, `excursion_module.py`, `range_summary_module.py`) and data
-  clients (`sample_client.py`, `live_client.py`) sit beside it, and `api.py` is
-  its web API. See "The server data architecture" below.
-  Its `sample_data.txt` is a **one-off sample committed for testing**: 300
+  **`src/pmu_test_streamer/`** is the web API (`api.py`) of the worked example
+  of the server data architecture. The rest of the example is in
+  `modules/pswamp_modules/`: its pipeline (`pipelines/pmu_test_streamer.py`),
+  its modules (`frame_stats/`, `excursion/`, `range_summary/`) and its data
+  clients (`sources/sample_client.py`, `sources/live_client.py`). See "The
+  server data architecture" below.
+  `sources/sample_data.txt` is a **one-off sample committed for testing**: 300
   *simulated* PMU records extracted by hand from the Nordic 44 simulation in
   `examples/nordic44_rtsim/` (voltage phasor + measured frequency, five stations
   at 20 Hz, spanning a line trip). Nothing generates it; don't add tooling to
@@ -406,7 +430,8 @@ Key invariants to preserve:
 
 `doc/server-data-architecture.md` is the account: how PMU data flows from a
 source through modules to the browser, and how commands flow back. The code is
-`core/src/pswamp_core/`; the worked example is the PMU test streamer; the recipe
+`core/src/pswamp_core/`; the modules, pipelines and example sources built on it
+are `modules/pswamp_modules/`; the worked example is the PMU test streamer; the recipe
 for a new module is `doc/module-cookbook.md`; a deployment's history service
 follows `doc/remote-data-integration-contract.md`. The rules to keep:
 
@@ -420,6 +445,11 @@ follows `doc/remote-data-integration-contract.md`. The rules to keep:
   a worker with Kafka. Where a module runs is configuration
   (`PSWAMP_TRANSPORT`, `PSWAMP_WORKER_PIPELINES`, `PSWAMP_WORKER_MODULES`), never
   code.
+- **A module lives in `modules/`, its web API in the server.** The module, its
+  pipeline and its tests go under `modules/` and import the core only; the
+  app's `api.py` and its page stay under `app/`. A worker runs from `modules/`,
+  not the server's `src/`, so a module that imports the web backend fails at
+  start.
 - **Recordings are per client, live is shared.** A client's run is keyed by its
   client id; each live source has one always-on run keyed `live.<source>`, which
   client runs follow.
@@ -757,8 +787,9 @@ socket — `pswamp_web/grid/` — just omits the name.
 `src/reference_subapp/` is the one to copy: the smallest complete api, and
 nothing in it is there for a reason peculiar to itself. If the app ships a **data
 file** beside its code, that needs no Dockerfile change either — read it once at
-import off `Path(__file__).parent`, as `pmu_test_streamer/sample_client.py` and
-`pswamp_web/data/` both do, since `COPY src/ ./src/` takes the whole tree. Put
+import off `Path(__file__).parent`, as `pswamp_web/data/` does (and
+`pswamp_modules/sources/sample_client.py`, in `modules/`), since `COPY src/ ./src/`
+takes the whole tree. Put
 anything a second app would otherwise duplicate in `src/shared.py`; the per-app
 `states` dict, `state_message`, any ticker, and command dispatch deliberately
 stay per-package, so each api reads top-to-bottom.
@@ -871,15 +902,15 @@ Quality checks (cover both halves of the codebase):
 
 ```
 ./scripts/error_check.sh             # READ-ONLY static gate, NO test suites: uv lock --check + py_compile + ruff check F (python), tsc -b + eslint (web), api contract vs code. Runs all checks even if one fails, exits non-zero on any failure.
-./scripts/run-python-server-tests.sh # the server unit tests (app/server-python/tests/), fast + hermetic; args pass through to pytest (-k, -v, a node id).
+./scripts/run-python-server-tests.sh # the server, core and modules unit tests (app/server-python/tests/, core/tests/, each module's tests/ under modules/), fast + hermetic; args pass through to pytest (-k, -v, a node id).
 ./scripts/run-core-python-tests.sh   # the desktop "core" tests (repo-root tests/) in the [full] env; needs Kafka/NQKafka/MQTT/Qt infra — run deliberately, not in CI.
 ./scripts/check-generators.sh        # both generators, in a throwaway worktree: their output passes error_check and its tests
 KAFKA_TEST_BOOTSTRAP_SERVERS=127.0.0.1:19092 ./scripts/run-python-server-tests.sh -k kafka   # the transport suite against the compose broker (docker compose up -d kafka)
 ```
 
 Note the naming clash: `run-core-python-tests.sh` runs the *desktop* package's
-tests. The server data architecture's `core/tests/` run with the server's, in
-`run-python-server-tests.sh`.
+tests. The server data architecture's `core/tests/` and the modules' own
+`tests/` folders run with the server's, in `run-python-server-tests.sh`.
 
 Test suites are their own step, **not** part of `error_check.sh` — that gate is
 strictly static (lockfile / AST / lint / api contract) and starts nothing. Two

@@ -5,12 +5,12 @@
 
     python -m pswamp_core.worker
 
-run from where the pipelines import (the image's server ``src/``), with the
-transport the server uses::
+run from anywhere the pipelines import (``pswamp_modules`` is installed, so
+any working directory), with the transport the server uses::
 
     PSWAMP_TRANSPORT=kafka:pswamp_core.transport.kafka:KafkaTransport
     KAFKA_BOOTSTRAP_SERVERS=kafka:9092
-    PSWAMP_WORKER_PIPELINES=pmu_test_streamer.pipeline:PIPELINE
+    PSWAMP_WORKER_PIPELINES=pswamp_modules.pipelines.pmu_test_streamer:PIPELINE
     PSWAMP_WORKER_MODULES=range-summary        # optional: only these modules
 
 One worker may host every module, or a heavy module gets a worker (and a CPU
@@ -77,7 +77,7 @@ def main() -> int:
     hosts = [host for pipeline in pipelines for host in pipeline.hosts(transport, only=only)]
     if not hosts:
         print(f"{PIPELINES_VARIABLE} (and {MODULES_VARIABLE}) name no module to host, e.g.", file=sys.stderr)
-        print(f"  {PIPELINES_VARIABLE}=pmu_test_streamer.pipeline:PIPELINE", file=sys.stderr)
+        print(f"  {PIPELINES_VARIABLE}=pswamp_modules.pipelines.pmu_test_streamer:PIPELINE", file=sys.stderr)
         return 2
 
     async def run() -> None:

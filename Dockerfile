@@ -84,6 +84,9 @@ COPY pyproject.toml README.md ${REPO_DIR}/
 # now, for resolving; its source further down.
 COPY core/pyproject.toml core/README.md ${REPO_DIR}/core/
 
+# The modules (modules/), the third: same again.
+COPY modules/pyproject.toml modules/README.md ${REPO_DIR}/modules/
+
 # pyproject.toml declares the direct dependencies; uv.lock pins the whole
 # transitive closure resolved from it. Install system-wide at build time, so
 # container startup needs no network and no runtime resolution.
@@ -111,6 +114,7 @@ COPY core/pyproject.toml core/README.md ${REPO_DIR}/core/
 # what keeps that a checked decision rather than a hopeful one.
 RUN uv export --locked --no-emit-project --no-dev \
       --no-emit-package p-swamp --no-emit-package pswamp-core \
+      --no-emit-package pswamp-modules \
       --no-emit-package synchrophasor \
       -o /tmp/requirements.txt \
     && uv pip install --system -r /tmp/requirements.txt \
@@ -143,6 +147,12 @@ RUN uv pip install --system --no-deps -e ${REPO_DIR}
 # can sync edits in. core/tests/ is kept out by .dockerignore.
 COPY core/ ${REPO_DIR}/core/
 RUN uv pip install --system --no-deps -e ${REPO_DIR}/core
+
+# The modules, their pipelines and the example sources, installed the same
+# way. They depend on the core only, so a worker imports them from any working
+# directory. Each module's tests/ folder is kept out by .dockerignore.
+COPY modules/ ${REPO_DIR}/modules/
+RUN uv pip install --system --no-deps -e ${REPO_DIR}/modules
 
 # Server source last, so editing it doesn't invalidate the dependency layer
 # above. The image mirrors the repo, so server.py and the app packages beside it
