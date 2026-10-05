@@ -657,6 +657,14 @@ Notes that matter when touching routing:
   sends `no-cache` itself, so dev never shows it. A consequence: any *new* HTTP route
   must be registered **above** the greedy `/` mount at the bottom of that file,
   which the `APPS` loop already is.
+- **A route with a trailing slash is redirected, not served.** `SPAStaticFiles`
+  answers `/phasors/` with a 307 to `../phasors`. The shell's asset urls are
+  relative, so at `/phasors/` the browser asks for `/phasors/assets/…`, gets the
+  shell back as `text/html`, and renders a blank page — in the shipped image
+  only, since the Vite dev shell uses absolute urls. The `Location` is relative
+  because the server does not know the reverse proxy's prefix. The mount root is
+  the mirror case and is the proxy's to handle: `/p-swamp/` works, `/p-swamp`
+  resolves assets outside the prefix.
 - Because that fallback answers every unknown path, `App.tsx` keeps a catch-all
   `*` route redirecting to `/`; without it a typo'd URL renders the nav over an
   empty outlet. Keep it pointed at whichever page `<Route index>` renders.

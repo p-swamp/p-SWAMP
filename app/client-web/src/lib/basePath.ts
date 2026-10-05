@@ -31,6 +31,8 @@
 //      `/prefix/phasors/detail` would resolve it to `/prefix/phasors/assets/…`
 //      — wrong. If nested routes are ever needed, this approach has to be
 //      replaced by a build-time `--base` or a server-injected `<base href>`.
+//      A trailing slash is the same failure (`/prefix/phasors/` is a directory
+//      deeper), so `SPAStaticFiles` redirects it to the bare route.
 
 const ASSETS_MARKER = '/assets/'
 

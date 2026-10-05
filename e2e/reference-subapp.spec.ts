@@ -8,6 +8,14 @@ test.describe('Reference example', () => {
         await expect(page.getByRole('status', { name: 'Bump count' })).toHaveText('0')
     })
 
+    test('a trailing slash lands on the same page', async ({ page }) => {
+        // Served at /reference-subapp/ the shell cannot find its assets and
+        // renders blank; the server redirects to the bare route.
+        await page.goto('/reference-subapp/')
+        await expect(page).toHaveURL(/\/reference-subapp$/)
+        await expect(page.getByRole('status', { name: 'Bump count' })).toHaveText('0')
+    })
+
     test('bump increments, reset returns to zero', async ({ page }) => {
         await page.goto('/reference-subapp')
 

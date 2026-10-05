@@ -23,11 +23,12 @@
 #   1. /healthz answers                — the process is serving
 #   2. / serves the built web client   — the client is baked into the image
 #   3. a deep link serves the shell    — SPAStaticFiles' history fallback
-#   4. a missing asset still 404s      — that fallback isn't swallowing everything
-#   5. /openapi.json has the commands  — the api describes itself
-#   6. the counter flow                — POST commands in, state down the socket
+#   4. a trailing slash redirects      — the shell only works at the bare route
+#   5. a missing asset still 404s      — that fallback isn't swallowing everything
+#   6. /openapi.json has the commands  — the api describes itself
+#   7. the counter flow                — POST commands in, state down the socket
 #
-# Steps 1-5 are curl; step 6 is tools/smoketest_reference_subapp.py, since bash
+# Steps 1-6 are curl; step 7 is tools/smoketest_reference_subapp.py, since bash
 # can't speak a WebSocket (websockets is already in the server's env via
 # uvicorn[standard]). Every step runs even if one fails; exits non-zero if any did.
 set -uo pipefail
@@ -159,7 +160,7 @@ else
   echo "    Server up at $BASE_URL"
 fi
 
-# --- 1-5: the HTTP surface ---------------------------------------------------
+# --- 1-6: the HTTP surface ---------------------------------------------------
 section "HTTP surface"
 
 wait_for_healthz
@@ -169,6 +170,10 @@ wait_for_healthz
 body_matches() { curl -fsS -m 5 "$BASE_URL$1" | grep -q "$2"; }
 status_is() {
   [ "$(curl -s -o /dev/null -w '%{http_code}' --connect-timeout 2 -m 5 "$BASE_URL$1")" = "$2" ]
+}
+# Where a browser ends up after following redirects from $1.
+lands_on() {
+  [ "$(curl -s -o /dev/null -L -w '%{url_effective}' --connect-timeout 2 -m 5 "$BASE_URL$1")" = "$BASE_URL$2" ]
 }
 
 # `id="root"` is the mount point in index.html; an /assets/ reference proves this
@@ -185,6 +190,12 @@ check "GET / serves the built web client" serves_built_client "/"
 check "GET /reference-subapp serves the shell (deep link)" \
   body_matches "/reference-subapp" 'id="root"'
 
+# The shell's asset urls are relative, so served at /reference-subapp/ it would
+# look for them under /reference-subapp/assets/ and render blank. The server
+# redirects to the bare route instead.
+check "GET /reference-subapp/ redirects to /reference-subapp" \
+  lands_on "/reference-subapp/" "/reference-subapp"
+
 # …but that fallback must not answer for everything, or a wrong asset/endpoint URL
 # would return HTML instead of failing loudly.
 check "GET /assets/does-not-exist.js still 404s" \
@@ -194,7 +205,7 @@ check "GET /assets/does-not-exist.js still 404s" \
 check "GET /openapi.json describes the Reference example's commands" \
   body_matches "/openapi.json" 'reference_subapp_bump'
 
-# --- 6: the counter flow, over the socket ------------------------------------
+# --- 7: the counter flow, over the socket ------------------------------------
 section "Reference example (commands up, state down)"
 uv run --project app/server-python \
   python app/server-python/tools/smoketest_reference_subapp.py "$BASE_URL" \

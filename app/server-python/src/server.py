@@ -24,11 +24,13 @@ container can publish on 0.0.0.0 without code changes; see Dockerfile.
 import os
 from contextlib import AsyncExitStack, asynccontextmanager
 from pathlib import Path
+from urllib.parse import quote
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException as StarletteHTTPException
+from starlette.responses import RedirectResponse
 from starlette.types import Scope
 
 import api_contract
@@ -243,6 +245,14 @@ class SPAStaticFiles(StaticFiles):
     look wrong to a JSON caller, and an api 404 is never a navigation route).
     Everything else, i.e. the client's own routes, falls through to the shell.
 
+    A route asked for with a trailing slash (/phasors/) is redirected to the bare
+    route instead of being handed the shell. The shell references its assets
+    relatively (vite.config.ts, `base: './'`), so served at /phasors/ it would
+    look for them under /phasors/assets/, get the shell back as text/html, and
+    render a blank page. The redirect is itself relative (`../phasors`): the
+    server does not know the prefix a reverse proxy mounts it under, and the
+    browser resolves a relative Location against the url it actually asked for.
+
     It also sets Cache-Control, which StaticFiles does not. Without it a browser
     may apply heuristic freshness and serve the shell from cache unvalidated —
     and since asset filenames are content-hashed, a cached shell pins the previous
@@ -265,6 +275,9 @@ class SPAStaticFiles(StaticFiles):
             response = await super().get_response(path, scope)
         except StarletteHTTPException as exc:
             if exc.status_code == 404 and not path.startswith(self._NO_FALLBACK):
+                redirect = self._bare_route_redirect(scope)
+                if redirect is not None:
+                    return redirect
                 response = await super().get_response("index.html", scope)
                 response.headers["cache-control"] = self._REVALIDATE
                 return response
@@ -276,6 +289,23 @@ class SPAStaticFiles(StaticFiles):
             self._IMMUTABLE if cacheable else self._REVALIDATE
         )
         return response
+
+    @staticmethod
+    def _bare_route_redirect(scope: Scope) -> RedirectResponse | None:
+        """A redirect to the same route without its trailing slash(es), or None
+        if the request has none. `path` as get_response receives it is already
+        normalised, so the slash is only visible on the scope."""
+        requested = scope["path"]
+        bare = requested.rstrip("/")
+        if not bare or bare == requested:
+            return None
+        # One `..` per stripped slash: each is a directory level of the document.
+        target = "../" * (len(requested) - len(bare)) + quote(
+            bare.rsplit("/", 1)[-1], safe=""
+        )
+        if scope.get("query_string"):
+            target += "?" + scope["query_string"].decode("latin-1")
+        return RedirectResponse(target, status_code=307)
 
 
 STATIC_DIR = Path(__file__).parent / "static"
