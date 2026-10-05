@@ -108,12 +108,21 @@ The Linux Foundation Energy hosts our project and requires the developers to sig
 Signing off commits in this manner is a way to declare that your contribution complies with the points laid out in
 https://developercertificate.org/
 
+Sign off as you commit with `git commit -s`, which adds the `Signed-off-by:` line for you.
+
 The repo has a DCO check on PRs. If it finds commits with missing signature in your PR, you can amend it on your branch 
 like this:
 
 `git rebase --signoff $(git merge-base HEAD main)`
 
 Then force push, this should fix the issue.
+
+To catch it before the PR does, turn on the repo's pre-push hook, once per clone:
+
+`git config core.hooksPath .githooks`
+
+It refuses a push that contains a commit without your sign-off, lists the commits, and prints the rebase command to run.
+It then runs `scripts/error_check.sh`, the same static checks CI runs.
 
 ## Write down the decisions that shape the system
 

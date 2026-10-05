@@ -60,7 +60,8 @@ scripts/      the stable developer interface — start the server, start the web
 .github/      CI: workflows/quality-checks.yml (checks + tests on pull requests) and
               workflows/build-container.yml (checks the image still builds on main;
               publishes nothing)
-.githooks/    pre-push hook running scripts/error_check.sh. Opt in per clone with
+.githooks/    pre-push hook: checks every pushed commit is signed off (DCO), then
+              runs scripts/error_check.sh. Opt in per clone with
               `git config core.hooksPath .githooks`.
 ```
 

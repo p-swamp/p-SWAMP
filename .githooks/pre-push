@@ -1,11 +1,74 @@
 #!/usr/bin/env bash
-# Run the static error checks before every push, so broken code doesn't reach
-# main. CI runs the same script after the push, but this hook is the fast gate:
-# it fails in seconds on your machine instead of minutes into a pipeline.
+# Two checks before every push, cheapest first:
+#
+#   1. Every commit being pushed is signed off. The DCO check on the pull
+#      request rejects a commit that is not, and by then the fix is a rebase
+#      plus a force-push of a branch others may already have looked at.
+#   2. The static error checks. CI runs the same script after the push, but this
+#      hook is the fast gate: it fails in seconds on your machine instead of
+#      minutes into a pipeline.
 #
 # Activate once per clone:  git config core.hooksPath .githooks
 # Bypass for a single push: git push --no-verify
 set -euo pipefail
 
 cd "$(git rev-parse --show-toplevel)"
+
+# `main` as this clone knows it — the local branch and every remote's. A commit
+# on any of them is already merged and is not this push's to sign off, which is
+# what keeps a stale local `main` from dragging other people's commits in.
+MAINS=$(git for-each-ref --format='%(refname)' refs/heads/main 'refs/remotes/*/main')
+
+# Print the commits reachable from $1, and from no `main`, that the DCO check
+# would reject. Its rule: a "Signed-off-by:" line anywhere in the message naming
+# the commit's author or its committer, compared case-insensitively. Merge
+# commits are exempt.
+commits_missing_signoff() {
+    local commits sha message accepted
+    # Assigned on its own line so a failing rev-list fails the hook, rather than
+    # reading as "nothing to check".
+    commits=$(git rev-list --no-merges "$1" --not $MAINS) || return 1
+    for sha in $commits; do
+        message=$(git show -s --format=%B "$sha")
+        accepted=$(git show -s \
+            --format='Signed-off-by: %an <%ae>%nSigned-off-by: %cn <%ce>' "$sha")
+        grep -qixF -e "$accepted" <<<"$message" ||
+            git show -s --format='  %h %s' "$sha"
+    done
+}
+
+if [ -z "$MAINS" ]; then
+    echo "pre-push: no main branch in this clone, skipping the sign-off check." >&2
+else
+    unsigned=0
+    # One line per ref being pushed: <local ref> <local sha> <remote ref> <remote sha>
+    while read -r local_ref local_sha _; do
+        [[ $local_sha =~ ^0+$ ]] && continue    # deleting a remote branch
+        missing=$(commits_missing_signoff "$local_sha")
+        [ -z "$missing" ] && continue
+        unsigned=1
+
+        # Resolved here rather than printed as $(git merge-base HEAD main): that
+        # form trusts the local main, and against a stale one it would re-sign
+        # commits that are already merged.
+        base=$(git rev-parse --short "$(git merge-base "$local_sha" $MAINS)" 2>/dev/null || true)
+        {
+            echo
+            echo "pre-push: these commits on ${local_ref#refs/heads/} are not signed off, and the"
+            echo "DCO check on the pull request will reject them:"
+            echo
+            echo "$missing"
+            echo
+            echo "Sign them off, then push again (with --force-with-lease if the"
+            echo "branch is already on the remote):"
+            echo
+            echo "  git rebase --signoff ${base:-\$(git merge-base HEAD main)}"
+            echo
+            echo "'git commit -s' signs off as you commit, so this does not come up."
+            echo
+        } >&2
+    done
+    [ "$unsigned" -eq 0 ] || exit 1
+fi
+
 exec ./scripts/error_check.sh

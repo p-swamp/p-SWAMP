@@ -893,7 +893,9 @@ numpy/scipy/pandas. Warm it is ~0.6 s: importing the app touches neither the
 recorded dataset nor the grid model, both of which are lazy. It starts no server
 and binds no port. Everything else stays offline.
 
-A **pre-push hook** (`.githooks/pre-push`) runs `error_check.sh`. Activate once
+A **pre-push hook** (`.githooks/pre-push`) runs `error_check.sh`, after first
+refusing a push that carries a commit the PR's DCO check would reject (no
+`Signed-off-by:` naming its author or committer). Activate once
 per clone with `git config core.hooksPath .githooks`. Bypass with
 `git push --no-verify`. Run `error_check.sh` before finishing any change — CI
 runs the same script (see "CI" below), so skipping it locally just moves the
