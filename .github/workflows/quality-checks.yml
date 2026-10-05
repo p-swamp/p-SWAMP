@@ -4,12 +4,13 @@
 #
 # Four independent merge gates:
 #   dependency-review — rejects unsafe dependency changes in this pull request
-#   static-errorcheck — scripts/error_check.sh, the same gate .githooks/pre-push runs
-#   unit-tests        — the Python test suites via their runner scripts
-#   e2e-smoke-test    — builds the image, runs it, drives the Reference example
+#   static-errorcheck — scripts/error_check.sh, the same gate .githooks/pre-push runs, and scripts/check-generators.sh
+#   unit-tests        — the Python test suites via their runner scripts, the
+#                       transport suite against a real Kafka broker included
+#   e2e-smoke-test    — builds the image, runs it, drives the Reference example and the PMU test streamer
 # The provisional playwright-e2e job is present too, but is not yet a required
 # branch-protection check.
-#
+
 # Making these block a merge is a repo setting: Settings → Branches → protection
 # for main → "Require status checks to pass", selecting the four JOB names above.
 # Renaming a job here silently un-requires it there — rename both together.
@@ -79,28 +80,59 @@ jobs:
           enable-cache: true
           cache-dependency-glob: app/server-python/uv.lock
 
-      # `uv lock --check` runs --offline and needs a real 3.11 (per
-      # app/server-python/.python-version); the runner's newer python3 won't do.
-      - name: Install Python 3.11 for uv
-        run: uv python install 3.11
+      # `uv lock --check` runs --offline and needs a real 3.14.8 (per
+      # app/server-python/.python-version); the runner's own python3 won't do.
+      - name: Install Python 3.14.8 for uv
+        run: uv python install 3.14.8
 
       # Installs node_modules and syncs the server env itself (the api-contract
       # check imports the FastAPI app), so there is no separate install step.
       - name: Static checks (tsc, eslint, uv lock --check, py_compile, ruff, api contract)
         run: ./scripts/error_check.sh
 
+      # Both generators, in a throwaway worktree: their output passes the same
+      # checks and the generated module's tests.
+      - name: The generators produce working apps
+        run: ./scripts/check-generators.sh
+
   unit-tests:
     runs-on: ubuntu-latest
+    # One Kafka node, as in docker-compose.yml, for the transport suite's Kafka
+    # half (core/tests/test_kafka_transport.py), which is skipped without one.
+    services:
+      kafka:
+        image: apache/kafka:4.3.1
+        ports: ["9092:9092"]
+        env:
+          KAFKA_NODE_ID: "1"
+          KAFKA_PROCESS_ROLES: broker,controller
+          KAFKA_CONTROLLER_QUORUM_VOTERS: 1@localhost:9093
+          KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
+          KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+          KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+          KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+          KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+          KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: "1"
+          KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: "1"
+          KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: "1"
+          KAFKA_SHARE_COORDINATOR_STATE_TOPIC_REPLICATION_FACTOR: "1"
+          KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+        options: >-
+          --health-cmd "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092"
+          --health-interval 10s --health-timeout 10s --health-retries 12
     steps:
       - uses: actions/checkout@v5
       - uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
           cache-dependency-glob: app/server-python/uv.lock
-      - run: uv python install 3.11
+      - run: uv python install 3.14.8
 
-      # Hermetic: HubRegistry is driven with a stubbed Hub, nothing binds a port.
-      - name: Server unit tests
+      # The server's, the core's and the modules' suites; hermetic but for the
+      # Kafka half, which uses the service container above.
+      - name: Server, core and modules unit tests
+        env:
+          KAFKA_TEST_BOOTSTRAP_SERVERS: localhost:9092
         run: ./scripts/run-python-server-tests.sh
 
       # TODO Re-enable once the desktop suite (repo-root tests/) collects again:
@@ -112,8 +144,9 @@ jobs:
       #   run: ./scripts/run-core-python-tests.sh
 
   # error_check.sh never starts the app; this job only starts it. It runs the
-  # image as a cluster would (the Dockerfile's own CMD, no compose dev overrides)
-  # and drives the Reference example end to end. See scripts/e2e-smoke-test.sh.
+  # image as a cluster would (the Dockerfile's own CMD, no compose dev overrides,
+  # no broker: the in-memory transport) and drives the Reference example and the
+  # PMU test streamer end to end. See scripts/e2e-smoke-test.sh.
   e2e-smoke-test:
     runs-on: ubuntu-latest
     steps:
@@ -125,7 +158,7 @@ jobs:
         with:
           enable-cache: true
           cache-dependency-glob: app/server-python/uv.lock
-      - run: uv python install 3.11
+      - run: uv python install 3.14.8
 
       # Shares the type=gha layer cache with build-container.yml, so this build
       # is mostly a cache hit. `load: true` puts the image in the runner's daemon.

@@ -28,14 +28,35 @@ So an app package imports from here and needs to know nothing about the layout:
 
 What is genuinely defined here is `SocketRegistry` — the scaffold apps' socket
 bookkeeping, which `pswamp_web/` has no use for because its pages push from their
-own per-connection task rather than fanning out to a client's sockets.
+own per-connection task rather than fanning out to a client's sockets — and the
+web API side of the server data architecture (doc/server-data-architecture.md),
+which every app over a core pipeline uses:
+
+    transport()           the process's transport, from PSWAMP_TRANSPORT
+    serve_pipeline(...)   an app's lifespan: its shared live runs, its errors
+                          forwarded to the tray, its modules hosted here when the
+                          transport is in-memory, and every run stopped on the way out
+    connected_pipeline    a socket's handshake: its client's run, or a close code
+    push_changes          one state message on connect and one per change
+    dispatch_command      a POST's command into its client's run: 404, 409 or an ack
 """
 
+import asyncio
 import contextlib
-from collections.abc import AsyncIterator
+import logging
+from collections.abc import AsyncIterator, Callable
 
-from fastapi import WebSocket
+from errors import HUB
+from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel
+
+from pswamp_core.command_routing import CommandRefused
+from pswamp_core.host import serve_hosts
+from pswamp_core.messages import Command, ErrorEvent
+from pswamp_core.pipeline import CapacityError, Pipeline, PipelineRegistry, PipelineRun, start_live_runs
+from pswamp_core.subscription import Overflow
+from pswamp_core.transport import Transport, transport_from_env
+from pswamp_core.util.tasks import cancel_and_wait
 
 from pswamp_web.log import get_logger
 from pswamp_web.pump import wait_for_disconnect
@@ -50,14 +71,22 @@ from pswamp_web.wire import (
 
 __all__ = [
     "CLIENT_ID_PATTERN",
+    "COMMAND_RESPONSES",
     "ClientId",
     "CommandAck",
     "SocketRegistry",
+    "connected_pipeline",
+    "dispatch_command",
     "get_logger",
+    "push_changes",
     "read_client_id",
     "send_state",
+    "serve_pipeline",
+    "transport",
     "wait_for_disconnect",
 ]
+
+logger = get_logger("shared")
 
 
 class SocketRegistry(SessionRegistry[WebSocket]):
@@ -115,3 +144,153 @@ class SocketRegistry(SessionRegistry[WebSocket]):
         for ws in self.of(client_id):
             with contextlib.suppress(Exception):
                 await send_state(ws, message)
+
+
+# --- the web API side of the server data architecture -------------------------------
+
+_TRANSPORT: Transport | None = None
+
+
+def transport() -> Transport:
+    """The process's one transport, built on first use from ``PSWAMP_TRANSPORT``."""
+    global _TRANSPORT
+    if _TRANSPORT is None:
+        _TRANSPORT = transport_from_env()
+        where = "in this process" if _TRANSPORT.in_process else "in workers"
+        logger.info("transport: %s; modules are hosted %s", _TRANSPORT.name, where)
+    return _TRANSPORT
+
+
+@contextlib.asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Close the transport once every app is done with it (a SERVICES entry)."""
+    global _TRANSPORT
+    try:
+        yield
+    finally:
+        closing, _TRANSPORT = _TRANSPORT, None
+        if closing is not None:
+            await closing.close()
+
+
+@contextlib.asynccontextmanager
+async def serve_pipeline(pipeline: Pipeline, registry: PipelineRegistry) -> AsyncIterator[None]:
+    """An app's lifespan. With the in-memory transport, its modules are hosted
+    in this process. Each live source gets its shared run, running until
+    shutdown. Its error topic is forwarded to the tray of each client whose run
+    an error came from. On the way out every run stops (each says
+    ``PipelineClosed``)."""
+    link = transport()
+    tasks = [asyncio.create_task(_forward_errors(link, pipeline.app, registry), name=f"{pipeline.app}.errors")]
+    if link.in_process:
+        tasks.append(asyncio.create_task(serve_hosts(pipeline.hosts(link)), name=f"{pipeline.app}.hosts"))
+        await asyncio.sleep(0)  # the hosts subscribe before the live runs publish
+    for task in tasks:
+        task.add_done_callback(_log_a_failure)
+    live_runs = await start_live_runs(pipeline, link)
+    try:
+        yield
+    finally:
+        await registry.stop_all()
+        for run in live_runs:
+            await run.stop("shutdown")
+        await cancel_and_wait(*tasks, ignore=(Exception,))
+
+
+def _log_a_failure(task: asyncio.Task) -> None:
+    """Say so when a task meant to run until shutdown fails. Nobody awaits it
+    before then, so the failure would otherwise be seen only at shutdown."""
+    if not task.cancelled() and task.exception() is not None:
+        logger.error("%s failed and is not restarted; restart the server", task.get_name(), exc_info=task.exception())
+
+
+async def _forward_errors(link: Transport, app: str, registry: PipelineRegistry) -> None:
+    """Every ``ErrorEvent`` on ``app``'s error topic, to the tray of each client
+    watching the run it came from."""
+    with link.subscribe(ErrorEvent, app=app, overflow=Overflow.GROW) as errors:
+        async for key, event in errors:
+            for client_id in registry.watching(key):
+                HUB.publish(client_id, app, event)
+
+
+@contextlib.asynccontextmanager
+async def connected_pipeline(ws: WebSocket, registry: PipelineRegistry) -> AsyncIterator[PipelineRun | None]:
+    """Accept a socket and hold its client's run while it lives; ``None`` when refused.
+
+    No usable client id: closed before accepting (1008). At capacity: accepted,
+    then closed with 1013, since a close code only reaches the browser on an
+    established connection. A run that fails to start: 1011.
+    """
+    client_id = read_client_id(ws)
+    if client_id is None:
+        await ws.close(code=1008)
+        yield None
+        return
+    await ws.accept()
+    try:
+        run = await registry.acquire(client_id)
+    except CapacityError:
+        logger.warning("refused client %s: all %d runs are in use", client_id, registry.max_runs)
+        await ws.close(code=1013)
+        yield None
+        return
+    except Exception:
+        logger.exception("the run for client %s failed to start", client_id)
+        await ws.close(code=1011)
+        yield None
+        return
+    try:
+        yield run
+    finally:
+        registry.release(client_id)
+
+
+async def push_changes(ws: WebSocket, run: PipelineRun, build: Callable[[], BaseModel]) -> None:
+    """Send ``build()`` now and after every change of ``run``, until the client
+    disconnects. A change is a wake-up and the message is built from current
+    state, so however much changed meanwhile, one message goes."""
+    with run.changes() as changes:
+        try:
+            await send_state(ws, build())
+        except WebSocketDisconnect:
+            return
+
+        async def push() -> None:
+            async for _ in changes:
+                await send_state(ws, build())
+
+        pusher = asyncio.create_task(push())
+        try:
+            await wait_for_disconnect(ws)
+        finally:
+            await cancel_and_wait(pusher, ignore=(WebSocketDisconnect,))
+
+
+#: A command route's answers besides its ack; pass as ``responses=``.
+COMMAND_RESPONSES: dict[int | str, dict] = {
+    404: {"description": "The client has no running pipeline: its page is not open."},
+    409: {"description": "The command does not apply in the pipeline's current state."},
+}
+
+
+def dispatch_command(registry: PipelineRegistry, command: Command, log: logging.Logger) -> CommandAck:
+    """Dispatch ``command`` into its client's run and acknowledge it.
+
+    404 when the client has no run (a command never builds one); 409 when the
+    player refuses it now, with the reason as the detail. The ack means
+    *accepted*: the command is queued for its receiver, and its effect arrives
+    on the socket, or a refusal or failure on the error tray, carrying the
+    ack's ``request_id``. Nothing reports a command that never reaches its
+    receiver (a worker that is not running, say).
+    """
+    client_id = command.client_id or ""
+    run = registry.peek(client_id)
+    if run is None:
+        raise HTTPException(404, f"no running pipeline for client {client_id}; open the page first")
+    try:
+        run.dispatch(command)
+    except CommandRefused as refused:
+        log.info("client %s: %s refused: %s", client_id, command.name, refused)
+        raise HTTPException(409, str(refused)) from refused
+    log.info("client %s: %s (request %s)", client_id, command.name, command.request_id)
+    return CommandAck(applied=command.name, request_id=command.request_id)

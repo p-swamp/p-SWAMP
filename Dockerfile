@@ -32,16 +32,21 @@ RUN npm run build
 
 # --- server stage -----------------------------------------------------------
 #
-# Base: Astral's official uv image (Python 3.11 on Debian 12 "bookworm" slim).
+# Base: Astral's official uv image (Python 3.14.8 on Debian 13 "trixie" slim).
 # Pinned to a digest for reproducible builds — the readable tag is kept as
 # documentation, but Docker enforces the @sha256. This is the multi-arch OCI
 # index digest, so arm64/amd64 still resolve automatically.
-# Resolved 2026-06-06 from tag python3.11-bookworm-slim. To refresh:
+# The tag names only the minor version, so the digest is what fixes the patch:
+# after a refresh, check `python --version` in the image and keep
+# app/server-python/.python-version in step with it.
+# trixie, not bookworm: the python3.14-bookworm-slim tag is no longer updated
+# (Python 3.14.2 and uv 0.9.30 when checked on 2026-10-05).
+# Resolved 2026-10-05 from tag python3.14-trixie-slim. To refresh:
 #   curl -s "https://ghcr.io/token?scope=repository:astral-sh/uv:pull" | ...
 #   curl -sI -H "Authorization: Bearer <token>" \
 #     -H "Accept: application/vnd.oci.image.index.v1+json" \
-#     https://ghcr.io/v2/astral-sh/uv/manifests/python3.11-bookworm-slim
-FROM ghcr.io/astral-sh/uv:python3.11-bookworm-slim@sha256:4f5d923c9dcea037f57bda425dd209f3ec643da2f0b74227f68d09dab0b3bb36
+#     https://ghcr.io/v2/astral-sh/uv/manifests/python3.14-trixie-slim
+FROM ghcr.io/astral-sh/uv:python3.14-trixie-slim@sha256:8e88a074b0969bdc461f681727238e109438d70771828909f9ef19cfcc96c43a
 
 # The image mirrors the *whole repo* at its real depth, not just the server dir
 # flattened to /app. The depth is required for the build to work at all, not a
@@ -80,6 +85,13 @@ COPY app/server-python/pyproject.toml app/server-python/uv.lock ./
 # root src/pswamp/ does not invalidate.
 COPY pyproject.toml README.md ${REPO_DIR}/
 
+# The shared core (core/), the second editable path dependency: its manifest
+# now, for resolving; its source further down.
+COPY core/pyproject.toml core/README.md ${REPO_DIR}/core/
+
+# The modules (modules/), the third: same again.
+COPY modules/pyproject.toml modules/README.md ${REPO_DIR}/modules/
+
 # pyproject.toml declares the direct dependencies; uv.lock pins the whole
 # transitive closure resolved from it. Install system-wide at build time, so
 # container startup needs no network and no runtime resolution.
@@ -106,7 +118,9 @@ COPY pyproject.toml README.md ${REPO_DIR}/
 # fully hash-verified packages. The import check after the source copy below is
 # what keeps that a checked decision rather than a hopeful one.
 RUN uv export --locked --no-emit-project --no-dev \
-      --no-emit-package p-swamp --no-emit-package synchrophasor \
+      --no-emit-package p-swamp --no-emit-package pswamp-core \
+      --no-emit-package pswamp-modules \
+      --no-emit-package synchrophasor \
       -o /tmp/requirements.txt \
     && uv pip install --system -r /tmp/requirements.txt \
     && rm /tmp/requirements.txt
@@ -133,6 +147,17 @@ RUN uv export --locked --no-emit-project --no-dev \
 # is published from here, so an editable install in the image costs nothing.
 COPY src/ ${REPO_DIR}/src/
 RUN uv pip install --system --no-deps -e ${REPO_DIR}
+
+# The shared core, installed editable like the desktop package so compose watch
+# can sync edits in. core/tests/ is kept out by .dockerignore.
+COPY core/ ${REPO_DIR}/core/
+RUN uv pip install --system --no-deps -e ${REPO_DIR}/core
+
+# The modules, their pipelines and the example sources, installed the same
+# way. They depend on the core only, so a worker imports them from any working
+# directory. Each module's tests/ folder is kept out by .dockerignore.
+COPY modules/ ${REPO_DIR}/modules/
+RUN uv pip install --system --no-deps -e ${REPO_DIR}/modules
 
 # Server source last, so editing it doesn't invalidate the dependency layer
 # above. The image mirrors the repo, so server.py and the app packages beside it

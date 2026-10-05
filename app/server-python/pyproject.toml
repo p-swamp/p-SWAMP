@@ -16,6 +16,11 @@ dependencies = [
     "fastapi>=0.141.1,<0.142",
     "uvicorn[standard]>=0.52.4,<0.53",
     "p-swamp",
+    # The server data architecture (core/). The extras bring the Kafka transport
+    # and the remote data client.
+    "pswamp-core[kafka,remote-data]",
+    # The modules, their pipelines and the example sources (modules/).
+    "pswamp-modules",
 ]
 
 # p-swamp is the desktop package at the repo root (root pyproject.toml, root
@@ -42,6 +47,14 @@ dependencies = [
 # Dockerfile.
 [tool.uv.sources]
 p-swamp = { path = "../../", editable = true }
+# The shared core at core/. Same one-way rule: nothing under core/ imports from
+# app/. After editing core/pyproject.toml, run
+# `uv lock --upgrade-package pswamp-core`.
+pswamp-core = { path = "../../core", editable = true }
+# The modules at modules/, which depend on the core only. Nothing under
+# modules/ imports from app/. After editing modules/pyproject.toml, run
+# `uv lock --upgrade-package pswamp-modules`.
+pswamp-modules = { path = "../../modules", editable = true }
 
 # Tooling that must never ship in the image — the Dockerfile installs with
 # --no-dev. Declared here so the versions are locked and hash-verified like
@@ -80,6 +93,11 @@ package = false
 # treat the file as config; only a [tool.ruff] section would, and there
 # deliberately isn't one (see the note above).
 [tool.pytest.ini_options]
-pythonpath = ["src"]
-testpaths = ["tests"]
+# core/examples holds the remote data stub, which the tests run in-process.
+pythonpath = ["src", "../../core/examples"]
+# core/tests and the modules' tests run here too: one runner and one CI job
+# cover all three suites. Each module carries its tests in a tests/ package
+# beside its code, so those are found under modules/. Test file names must
+# be unique across tests/ and core/tests, which are not packages.
+testpaths = ["tests", "../../core/tests", "../../modules"]
 asyncio_mode = "auto"

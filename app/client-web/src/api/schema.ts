@@ -89,7 +89,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/pmu-test-streamer/playback/back": {
+    "/api/pmu-test-streamer/excursion/auto-pause": {
         parameters: {
             query?: never;
             header?: never;
@@ -99,17 +99,17 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Back
-         * @description Step one record back, independently of the play/pause flag.
+         * Auto Pause
+         * @description Tell the excursion module whether to pause the player on an excursion.
          */
-        post: operations["pmu_test_streamer_back"];
+        post: operations["pmu_test_streamer_auto_pause"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/pmu-test-streamer/playback/forward": {
+    "/api/pmu-test-streamer/playback/pause": {
         parameters: {
             query?: never;
             header?: never;
@@ -119,10 +119,10 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Forward
-         * @description Step one record forward, independently of the play/pause flag.
+         * Pause
+         * @description Pause the recording at the cursor.
          */
-        post: operations["pmu_test_streamer_forward"];
+        post: operations["pmu_test_streamer_pause"];
         delete?: never;
         options?: never;
         head?: never;
@@ -140,7 +140,7 @@ export interface paths {
         put?: never;
         /**
          * Play
-         * @description Start advancing this client through the recorded stream.
+         * @description Play the recording from the cursor.
          */
         post: operations["pmu_test_streamer_play"];
         delete?: never;
@@ -149,7 +149,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/pmu-test-streamer/playback/stop": {
+    "/api/pmu-test-streamer/playback/seek": {
         parameters: {
             query?: never;
             header?: never;
@@ -159,10 +159,92 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Stop
-         * @description Pause this client where it is in the stream.
+         * Seek
+         * @description Move to an offset into the recording; with an end, play only that chunk.
          */
-        post: operations["pmu_test_streamer_stop"];
+        post: operations["pmu_test_streamer_seek"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/pmu-test-streamer/playback/source": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Source
+         * @description Read another source: a recording lands paused at its start, a live feed
+         *     is followed from now.
+         */
+        post: operations["pmu_test_streamer_source"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/pmu-test-streamer/playback/speed": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Speed
+         * @description Change the replay speed.
+         */
+        post: operations["pmu_test_streamer_speed"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/pmu-test-streamer/playback/step": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Step
+         * @description Step ``n`` frames, forward or back.
+         */
+        post: operations["pmu_test_streamer_step"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/pmu-test-streamer/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Summary
+         * @description Ask the range summary module to summarize a range of a recording. The
+         *     answer arrives on the socket as ``summary``.
+         */
+        post: operations["pmu_test_streamer_summary"];
         delete?: never;
         options?: never;
         head?: never;
@@ -358,6 +440,22 @@ export interface components {
              */
             message: string;
         };
+        /**
+         * AppIdentity
+         * @description Which module instance produced a result.
+         */
+        AppIdentity: {
+            /**
+             * Name
+             * @description The module's name.
+             */
+            name: string;
+            /**
+             * Uuid
+             * @description This instance's id.
+             */
+            uuid: string;
+        };
         /** AppStatus */
         AppStatus: {
             /** App Name */
@@ -389,6 +487,14 @@ export interface components {
              * @constant
              */
             type: "state";
+        };
+        /** AutoPauseBody */
+        AutoPauseBody: {
+            /**
+             * Enabled
+             * @description Pause the player when the frequency leaves the band.
+             */
+            enabled: boolean;
         };
         /**
          * Channel
@@ -445,18 +551,204 @@ export interface components {
          *     Deliberately NOT the resulting state. That arrives on whichever socket the
          *     page has open, on the server's own schedule, so state has exactly one path
          *     and there is no ordering for a client to reconcile between two of them. What
-         *     this carries is only "the command was understood and applied, and here is
-         *     what it was" -- enough to log and to assert on, and nothing a page renders.
+         *     this carries is only "the command was accepted, and here is what it was" --
+         *     enough to log and to assert on, and nothing a page renders.
+         *
+         *     *Accepted* is all it promises. A handler that applies the command itself
+         *     has applied it by now. A handler that hands it on (to a pipeline's player
+         *     or module) has checked what it can and queued it for its receiver: the
+         *     outcome arrives on the socket, or as an error notice carrying this
+         *     ``request_id``.
          */
         CommandAck: {
             /** Applied */
             applied: string;
+            /**
+             * Request Id
+             * @description Set when the command was handed on to a receiver: what answers or refuses it carries the same id.
+             */
+            request_id?: string | null;
             /**
              * Status
              * @default ok
              * @constant
              */
             status: "ok";
+        };
+        /**
+         * ErrorNotice
+         * @description An ``ErrorEvent`` from one of the client's runs, with the app it came from.
+         */
+        ErrorNotice: {
+            /**
+             * App
+             * @description The app whose pipeline it came from, e.g. 'pmu-test-streamer'.
+             */
+            app: string;
+            /**
+             * Detail
+             * @description The cause, e.g. 'Type: text'.
+             * @default null
+             */
+            detail: string | null;
+            /**
+             * Id
+             * @description Unique per notice: the tray dismisses and de-duplicates by it.
+             */
+            id: string;
+            /**
+             * Message
+             * @description One line for a person.
+             */
+            message: string;
+            /**
+             * Request Id
+             * @description The command it answers, if any.
+             * @default null
+             */
+            request_id: string | null;
+            /**
+             * Source
+             * @description Who saw it: 'player', or a module's name.
+             */
+            source: string;
+            /**
+             * Timestamp
+             * Format: date-time
+             * @description When the failure was seen.
+             */
+            timestamp: string;
+            /**
+             * Type
+             * @default state
+             * @constant
+             */
+            type: "state";
+        };
+        /** Excursion */
+        Excursion: {
+            /**
+             * Auto Pause
+             * @description The player is paused when the frequency leaves the band.
+             */
+            auto_pause: boolean;
+            /**
+             * Band Hz
+             * @description How far from nominal still counts as in band.
+             */
+            band_hz: number;
+            /**
+             * Deviation Hz
+             * @description Mean frequency minus nominal.
+             */
+            deviation_hz: number | null;
+            /**
+             * Excursions
+             * @description Excursions out of the band seen so far.
+             */
+            excursions: number;
+            /**
+             * In Band
+             * @description The mean frequency is within the band.
+             */
+            in_band: boolean;
+        };
+        /** ExcursionResult */
+        ExcursionResult: {
+            app: components["schemas"]["AppIdentity"];
+            /**
+             * Mrid
+             * @default null
+             */
+            mRID: string | null;
+            /**
+             * Parameters
+             * @description The module's settings.
+             */
+            parameters?: {
+                [key: string]: unknown;
+            };
+            /**
+             * Request Id
+             * @description Set when this result answers a command.
+             * @default null
+             */
+            request_id: string | null;
+            result: components["schemas"]["Excursion"];
+            /**
+             * Timestamp
+             * Format: date-time
+             * @description The instant the result is about.
+             */
+            timestamp: string;
+            /**
+             * Version
+             * @default v1
+             * @constant
+             */
+            version: "v1";
+        };
+        /**
+         * FrameStats
+         * @description The statistics of one instant.
+         */
+        FrameStats: {
+            /**
+             * Angle Spread Deg
+             * @description Largest minus smallest voltage angle.
+             */
+            angle_spread_deg: number | null;
+            /** Max Frequency Hz */
+            max_frequency_hz: number | null;
+            /**
+             * Mean Frequency Hz
+             * @description Mean of the stations' frequencies.
+             */
+            mean_frequency_hz: number | null;
+            /** Mean Voltage Kv */
+            mean_voltage_kv: number | null;
+            /** Min Frequency Hz */
+            min_frequency_hz: number | null;
+            /**
+             * N Stations
+             * @description Stations with a frequency value in this frame.
+             */
+            n_stations: number;
+        };
+        /** FrameStatsResult */
+        FrameStatsResult: {
+            app: components["schemas"]["AppIdentity"];
+            /**
+             * Mrid
+             * @default null
+             */
+            mRID: string | null;
+            /**
+             * Parameters
+             * @description The module's settings.
+             */
+            parameters?: {
+                [key: string]: unknown;
+            };
+            /**
+             * Request Id
+             * @description Set when this result answers a command.
+             * @default null
+             */
+            request_id: string | null;
+            result: components["schemas"]["FrameStats"];
+            /**
+             * Timestamp
+             * Format: date-time
+             * @description The instant the result is about.
+             */
+            timestamp: string;
+            /**
+             * Version
+             * @default v1
+             * @constant
+             */
+            version: "v1";
         };
         /** GridBranch */
         GridBranch: {
@@ -687,20 +979,167 @@ export interface components {
             type: "state";
         };
         /**
-         * PmuRecord
-         * @description One record in the visible window: a 1-based line number and its text.
+         * PlayerStatus
+         * @description Where a run's player is and what it can do. A page renders its controls
+         *     from this, so it never shows a button that would be refused.
          */
-        PmuRecord: {
+        PlayerStatus: {
             /**
-             * Line Number
-             * @description 1-based, matching how `wc -l` counts.
+             * Can Seek
+             * @description Seek, step and speed apply (replay mode).
              */
-            line_number: number;
+            can_seek: boolean;
             /**
-             * Text
-             * @description The raw record, verbatim from sample_data.txt.
+             * Coverage End
+             * @description Exclusive end of the recording; null when live.
              */
-            text: string;
+            coverage_end: string | null;
+            /**
+             * Coverage Start
+             * @description Start of the recording; null when live.
+             */
+            coverage_start: string | null;
+            /**
+             * Cursor
+             * @description The instant of the last frame played.
+             */
+            cursor: string | null;
+            /**
+             * Ended
+             * @description The replay reached its end and stopped.
+             */
+            ended: boolean;
+            /**
+             * Error
+             * @description Why the stream stopped, when a provider failed; null otherwise.
+             * @default null
+             */
+            error: string | null;
+            /**
+             * Loop
+             * @description The replay starts over at the end of the recording.
+             */
+            loop: boolean;
+            /**
+             * Mrid
+             * @default null
+             */
+            mRID: string | null;
+            /**
+             * Mode
+             * @description 'replay' paces a recording; 'live' follows a live source and has no controls.
+             * @enum {string}
+             */
+            mode: "live" | "replay";
+            /** Paused */
+            paused: boolean;
+            /**
+             * Range End
+             * @description Exclusive end of a chunk being played; null otherwise.
+             * @default null
+             */
+            range_end: string | null;
+            /**
+             * Source
+             * @description The active source.
+             */
+            source: string;
+            /**
+             * Sources
+             * @description Every source the player can switch to, in declared order.
+             */
+            sources: string[];
+            /**
+             * Speed
+             * @description Speed multiplier; 1 is real time.
+             */
+            speed: number;
+            /**
+             * Timestamp
+             * Format: date-time
+             */
+            timestamp: string;
+            /**
+             * Version
+             * @default v1
+             * @constant
+             */
+            version: "v1";
+        };
+        /**
+         * PmuFrame
+         * @description One instant of every channel in a stream.
+         */
+        PmuFrame: {
+            /** @description The channel layout; `values` follows its column order. */
+            header: components["schemas"]["PmuHeader"];
+            /**
+             * Mrid
+             * @description The stream (a PDC, a recording).
+             */
+            mRID: string;
+            /**
+             * Timestamp
+             * Format: date-time
+             * @description The PMU time of this instant.
+             */
+            timestamp: string;
+            /**
+             * Values
+             * @description One value per header column; null where NaN.
+             */
+            values: (number | null)[];
+            /**
+             * Version
+             * @default v1
+             * @constant
+             */
+            version: "v1";
+        };
+        /**
+         * PmuHeader
+         * @description The channel layout of a stream: one entry per column of a frame.
+         *
+         *     The label rows are the ones p-SWAMP's ``Indexer`` queries, so
+         *     ``columns(measurement="f")`` selects inputs the same way here.
+         */
+        PmuHeader: {
+            /**
+             * Channel
+             * @description Per column: the phasor or signal name.
+             */
+            channel: string[];
+            /**
+             * Cimreferenceid
+             * @description The grid (CIM) data that applies to this layout. Set by the gateway, never by a provider.
+             * @default null
+             */
+            cimReferenceId: string | null;
+            /**
+             * Data Rate
+             * @description Frames per second.
+             */
+            data_rate: number;
+            /**
+             * Header Id
+             * @description Content hash of the layout; equal layouts share it.
+             */
+            readonly header_id: string;
+            /**
+             * Measurement
+             * @description Per column: "f", "df", "<name>_Magnitude" or "<name>_Angle".
+             */
+            measurement: string[];
+            /**
+             * Station
+             * @description Per column: the station (PMU) the value is from.
+             */
+            station: string[];
+            /**
+             * Units
+             * @description Per column: the unit of the value.
+             */
+            units: string[];
         };
         /** PmuSite */
         PmuSite: {
@@ -713,42 +1152,92 @@ export interface components {
         };
         /**
          * PmuStreamState
-         * @description The single message shape pushed to a client on connect and every change.
-         *
-         *     A declared model rather than a loose dict, because this IS the downstream half
-         *     of the published contract: api_contract.py collects it via this package's
-         *     WS_MESSAGE export, and a bare dict would silently drop the app out of it.
-         *
-         *     `total_lines` lets the client show "record N of M" — which is also how the
-         *     wrap-around at the end of the file becomes visible in the UI.
+         * @description What the page renders, pushed on connect and after every change. Its parts
+         *     are the core's messages as they are, so the browser's types are generated
+         *     from the same classes.
          */
         PmuStreamState: {
+            /** @description The excursion module's latest result. */
+            excursion: components["schemas"]["ExcursionResult"] | null;
+            /** @description The frame at the cursor, with its layout. */
+            frame: components["schemas"]["PmuFrame"] | null;
             /**
-             * Index
-             * @description 0-based cursor into the sample file.
+             * Frame Count
+             * @description Frames in the recording; null when live.
              */
-            index: number;
+            frame_count: number | null;
             /**
-             * Playing
-             * @description Whether the server is advancing this client.
+             * Frame Index
+             * @description 0-based position of the frame in the recording; null when live.
              */
-            playing: boolean;
-            /**
-             * Total Lines
-             * @description How many records the sample file holds.
-             */
-            total_lines: number;
+            frame_index: number | null;
+            /** @description Where the player is and which controls apply. */
+            player: components["schemas"]["PlayerStatus"];
+            /** @description The frame statistics for (about) that frame. */
+            stats: components["schemas"]["FrameStatsResult"] | null;
+            /** @description The answer to this client's last range summary. */
+            summary: components["schemas"]["RangeSummaryResult"] | null;
             /**
              * Type
              * @default state
              * @constant
              */
             type: "state";
+        };
+        /** RangeSummary */
+        RangeSummary: {
+            /** End Offset S */
+            end_offset_s: number;
             /**
-             * Window
-             * @description Records around the cursor; null where it runs off an end.
+             * Frames
+             * @description Frames in the range.
              */
-            window: (components["schemas"]["PmuRecord"] | null)[];
+            frames: number;
+            /** Max Frequency Hz */
+            max_frequency_hz: number;
+            /** Mean Frequency Hz */
+            mean_frequency_hz: number;
+            /** Min Frequency Hz */
+            min_frequency_hz: number;
+            /** Offset S */
+            offset_s: number;
+            /** Source */
+            source: string;
+        };
+        /** RangeSummaryResult */
+        RangeSummaryResult: {
+            app: components["schemas"]["AppIdentity"];
+            /**
+             * Mrid
+             * @default null
+             */
+            mRID: string | null;
+            /**
+             * Parameters
+             * @description The module's settings.
+             */
+            parameters?: {
+                [key: string]: unknown;
+            };
+            /**
+             * Request Id
+             * @description Set when this result answers a command.
+             * @default null
+             */
+            request_id: string | null;
+            result: components["schemas"]["RangeSummary"];
+            /**
+             * Timestamp
+             * Format: date-time
+             * @description The instant the result is about.
+             */
+            timestamp: string;
+            /**
+             * Version
+             * @default v1
+             * @constant
+             */
+            version: "v1";
         };
         /**
          * ReferenceSubappState
@@ -790,6 +1279,67 @@ export interface components {
             /** Position */
             position: number;
             /** Source */
+            source: string;
+        };
+        /** SeekBody */
+        SeekBody: {
+            /**
+             * End Offset S
+             * @description Stop here: play a chunk.
+             */
+            end_offset_s?: number | null;
+            /**
+             * Offset S
+             * @description Seconds from the start of the recording.
+             */
+            offset_s: number;
+            /**
+             * Play
+             * @description Also start playing.
+             * @default false
+             */
+            play: boolean;
+        };
+        /** SourceBody */
+        SourceBody: {
+            /**
+             * Name
+             * @description One of PlayerStatus.sources.
+             */
+            name: string;
+        };
+        /** SpeedBody */
+        SpeedBody: {
+            /**
+             * Speed
+             * @description Speed multiplier; 1 is real time.
+             */
+            speed: number;
+        };
+        /** StepBody */
+        StepBody: {
+            /**
+             * N
+             * @description Frames to step; negative steps back.
+             */
+            n: number;
+        };
+        /** SummaryBody */
+        SummaryBody: {
+            /**
+             * End Offset S
+             * @description Exclusive end, in seconds from the start.
+             */
+            end_offset_s: number;
+            /**
+             * Offset S
+             * @description Seconds from the start of the recording.
+             */
+            offset_s: number;
+            /**
+             * Source
+             * @description The recording to read: one of PlayerStatus.sources.
+             */
             source: string;
         };
         /**
@@ -989,7 +1539,7 @@ export interface operations {
             };
         };
     };
-    pmu_test_streamer_back: {
+    pmu_test_streamer_auto_pause: {
         parameters: {
             query: {
                 /** @description The browser's client id -- the same value its WebSockets send, which is what makes a command apply to the pipeline the page is watching. */
@@ -999,7 +1549,11 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AutoPauseBody"];
+            };
+        };
         responses: {
             /** @description Successful Response */
             200: {
@@ -1009,6 +1563,20 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["CommandAck"];
                 };
+            };
+            /** @description The client has no running pipeline: its page is not open. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The command does not apply in the pipeline's current state. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {
@@ -1021,7 +1589,7 @@ export interface operations {
             };
         };
     };
-    pmu_test_streamer_forward: {
+    pmu_test_streamer_pause: {
         parameters: {
             query: {
                 /** @description The browser's client id -- the same value its WebSockets send, which is what makes a command apply to the pipeline the page is watching. */
@@ -1041,6 +1609,20 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["CommandAck"];
                 };
+            };
+            /** @description The client has no running pipeline: its page is not open. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The command does not apply in the pipeline's current state. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {
@@ -1074,6 +1656,20 @@ export interface operations {
                     "application/json": components["schemas"]["CommandAck"];
                 };
             };
+            /** @description The client has no running pipeline: its page is not open. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The command does not apply in the pipeline's current state. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             /** @description Validation Error */
             422: {
                 headers: {
@@ -1085,7 +1681,7 @@ export interface operations {
             };
         };
     };
-    pmu_test_streamer_stop: {
+    pmu_test_streamer_seek: {
         parameters: {
             query: {
                 /** @description The browser's client id -- the same value its WebSockets send, which is what makes a command apply to the pipeline the page is watching. */
@@ -1095,7 +1691,11 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SeekBody"];
+            };
+        };
         responses: {
             /** @description Successful Response */
             200: {
@@ -1105,6 +1705,220 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["CommandAck"];
                 };
+            };
+            /** @description The client has no running pipeline: its page is not open. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The command does not apply in the pipeline's current state. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    pmu_test_streamer_source: {
+        parameters: {
+            query: {
+                /** @description The browser's client id -- the same value its WebSockets send, which is what makes a command apply to the pipeline the page is watching. */
+                client_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SourceBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandAck"];
+                };
+            };
+            /** @description The client has no running pipeline: its page is not open. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The command does not apply in the pipeline's current state. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    pmu_test_streamer_speed: {
+        parameters: {
+            query: {
+                /** @description The browser's client id -- the same value its WebSockets send, which is what makes a command apply to the pipeline the page is watching. */
+                client_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SpeedBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandAck"];
+                };
+            };
+            /** @description The client has no running pipeline: its page is not open. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The command does not apply in the pipeline's current state. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    pmu_test_streamer_step: {
+        parameters: {
+            query: {
+                /** @description The browser's client id -- the same value its WebSockets send, which is what makes a command apply to the pipeline the page is watching. */
+                client_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StepBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandAck"];
+                };
+            };
+            /** @description The client has no running pipeline: its page is not open. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The command does not apply in the pipeline's current state. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    pmu_test_streamer_summary: {
+        parameters: {
+            query: {
+                /** @description The browser's client id -- the same value its WebSockets send, which is what makes a command apply to the pipeline the page is watching. */
+                client_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SummaryBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandAck"];
+                };
+            };
+            /** @description The client has no running pipeline: its page is not open. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The command does not apply in the pipeline's current state. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {

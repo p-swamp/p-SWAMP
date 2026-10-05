@@ -4,7 +4,7 @@
   "features": {
     "ghcr.io/devcontainers/features/docker-in-docker:2": {},
     "ghcr.io/devcontainers/features/node:1": { "version": "22" },
-    "ghcr.io/devcontainers/features/python:1": { "version": "3.11" }
+    "ghcr.io/devcontainers/features/python:1": { "version": "3.14.8" }
   },
   // installs the 4th tool that error_check.sh preflights (node/npx/python3 come from features)
   "postCreateCommand": "curl -LsSf https://astral.sh/uv/install.sh | sh",

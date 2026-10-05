@@ -1,0 +1,42 @@
+# pswamp-core: the shared pieces of the server data architecture (messages,
+# transport, modules, gateway, player, pipelines). See
+# doc/server-data-architecture.md.
+#
+# The third Python project in the repo, beside the desktop package (root
+# pyproject.toml) and the web backend (app/server-python/pyproject.toml). The
+# web backend takes it as an editable path dependency, and its tests run in the
+# web backend's locked environment, so there is no lockfile here. The fourth,
+# modules/ (pswamp-modules), depends on this one; this one imports nothing
+# from it.
+#
+# pydantic is the only required dependency, so a data provider written outside
+# this repo can depend on the core alone. The extras are imported lazily:
+#   [kafka]        aiokafka, for pswamp_core.transport.kafka
+#   [remote-data]  httpx, for the remote data client
+
+[project]
+name = "pswamp-core"
+version = "0.1.0"
+description = "p-SWAMP server data architecture: messages, transport, modules, gateway, player, pipelines."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = ["pydantic>=2.12"]
+
+[project.optional-dependencies]
+kafka = ["aiokafka>=0.14,<1"]
+remote-data = ["httpx>=0.28,<1"]
+
+[build-system]
+requires = ["uv_build"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-name = "pswamp_core"
+
+# No [tool.ruff] section: scripts/error_check.sh passes `--select F` explicitly.
+
+# Used when pytest is pointed at core/tests directly; the usual runner is
+# scripts/run-python-server-tests.sh, which takes the server's config.
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"

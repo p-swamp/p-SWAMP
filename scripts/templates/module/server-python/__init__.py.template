@@ -1,0 +1,14 @@
+"""The __LABEL__ app's web API, and the page that shows its module's results.
+The module is ``pswamp_modules.__PKG__``; its pipeline is
+``pswamp_modules.pipelines.__PKG__``.
+
+  router      the endpoints, mounted under /api/__SLUG__
+  lifespan    the shared live run, the module hosted here when there is no broker
+  WS_MESSAGE  the model pushed down the socket
+"""
+
+from .api import __NAME__State, lifespan, router
+
+WS_MESSAGE = __NAME__State
+
+__all__ = ["WS_MESSAGE", "__NAME__State", "lifespan", "router"]

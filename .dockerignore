@@ -37,3 +37,7 @@ tests/
 .pytest_cache/
 .ruff_cache/
 .idea/
+# The core's tests (the `tests/` rule above is anchored to the root), and each
+# module's own tests/ folder beside its code.
+core/tests/
+modules/**/tests/

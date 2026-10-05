@@ -1,16 +1,36 @@
-# Subapp templates
+# Subapp and module templates
 
-What `../generate-new-subapp.sh` copies into a new subapp. Edit these to change
-what every new page/api starts life as; the script itself only derives names and
-patches the registries.
+What the generators copy into a new app. Edit these to change what every new
+page/api starts life as; the scripts only derive names and patch the
+registries. Two sets:
+
+- `subapp/`, for `../generate-new-subapp.sh`: a per-client counter, like the
+  checked-in reference subapp (`app/server-python/src/reference_subapp/`).
+- `module/`, for `../generate-new-module-with-frontend.sh`: a module over the
+  core pipeline, its pipeline and its web API, a page showing its latest
+  result, and unit tests. It is also added to the module-worker in compose and
+  k8s. `doc/module-cookbook.md` walks through it.
+
+In each set:
 
 - `server-python/` → `app/server-python/src/<pkg>/`
 - `client-web/` → `app/client-web/src/pages/<slug>/`
 
-A generated subapp comes out looking like the checked-in reference subapp
-(`app/server-python/src/reference_subapp/`,
-`app/client-web/src/pages/reference-subapp/`) — that is the worked example to
-read. What the script writes is then yours: change it freely.
+The module set has four more folders. The module, its tests and its pipeline
+go to `modules/`, which depends on the core only, so nothing rendered there may
+import from the web backend; only the web API goes into the server:
+
+- `module/` → `modules/pswamp_modules/<pkg>/`
+- `module-tests/` → `modules/pswamp_modules/<pkg>/tests/`
+- `pipeline/` → `modules/pswamp_modules/pipelines/`
+- `tests/` → `app/server-python/tests/`
+
+A module carries its tests in a `tests/` package beside its code, so
+`module-tests/` holds an (empty) `__init__.py` as well as `test_module.py`.
+That file is what lets every module name its test file the same.
+
+What the script writes is then yours: change it freely. The rest of this file
+describes the `subapp` set; the module set follows the same rules.
 
 **This file is where the scaffolding is explained.** The templates themselves
 carry only the comments a real subapp would carry, because every generated subapp
@@ -40,6 +60,7 @@ called `use__NAME__Socket.ts.template`. The tokens, for the example name
 | `__NAME__` | `GridOverview` | the React component, the hook, the model class |
 | `__WS_PATH_CONST__` | `GRID_OVERVIEW_WS_PATH` | the ws path const in `lib/servers.ts` |
 | `__API_PATH_CONST__` | `GRID_OVERVIEW_API_PATH` | the REST prefix const, same file |
+| `__UPPER__` | `GRID_OVERVIEW` | the environment variable prefix (`<APP>_DATA_CLIENTS`) |
 | `__LABEL__` | `Grid Overview` | the nav entry and page title |
 
 The rendered Python has to pass `scripts/error_check.sh` — pyflakes lint plus a

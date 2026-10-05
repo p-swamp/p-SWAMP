@@ -128,6 +128,27 @@
         "title": "AlarmNote",
         "type": "object"
       },
+      "AppIdentity": {
+        "description": "Which module instance produced a result.",
+        "properties": {
+          "name": {
+            "description": "The module's name.",
+            "title": "Name",
+            "type": "string"
+          },
+          "uuid": {
+            "description": "This instance's id.",
+            "title": "Uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "uuid"
+        ],
+        "title": "AppIdentity",
+        "type": "object"
+      },
       "AppStatus": {
         "properties": {
           "app_name": {
@@ -202,6 +223,20 @@
           "replay"
         ],
         "title": "AppStatusTable",
+        "type": "object"
+      },
+      "AutoPauseBody": {
+        "properties": {
+          "enabled": {
+            "description": "Pause the player when the frequency leaves the band.",
+            "title": "Enabled",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "enabled"
+        ],
+        "title": "AutoPauseBody",
         "type": "object"
       },
       "Channel": {
@@ -281,11 +316,23 @@
         "type": "object"
       },
       "CommandAck": {
-        "description": "The reply to every command POST.\n\nDeliberately NOT the resulting state. That arrives on whichever socket the\npage has open, on the server's own schedule, so state has exactly one path\nand there is no ordering for a client to reconcile between two of them. What\nthis carries is only \"the command was understood and applied, and here is\nwhat it was\" -- enough to log and to assert on, and nothing a page renders.",
+        "description": "The reply to every command POST.\n\nDeliberately NOT the resulting state. That arrives on whichever socket the\npage has open, on the server's own schedule, so state has exactly one path\nand there is no ordering for a client to reconcile between two of them. What\nthis carries is only \"the command was accepted, and here is what it was\" --\nenough to log and to assert on, and nothing a page renders.\n\n*Accepted* is all it promises. A handler that applies the command itself\nhas applied it by now. A handler that hands it on (to a pipeline's player\nor module) has checked what it can and queued it for its receiver: the\noutcome arrives on the socket, or as an error notice carrying this\n``request_id``.",
         "properties": {
           "applied": {
             "title": "Applied",
             "type": "string"
+          },
+          "request_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Set when the command was handed on to a receiver: what answers or refuses it carries the same id.",
+            "title": "Request Id"
           },
           "status": {
             "const": "ok",
@@ -298,6 +345,320 @@
           "applied"
         ],
         "title": "CommandAck",
+        "type": "object"
+      },
+      "ErrorNotice": {
+        "description": "An ``ErrorEvent`` from one of the client's runs, with the app it came from.",
+        "properties": {
+          "app": {
+            "description": "The app whose pipeline it came from, e.g. 'pmu-test-streamer'.",
+            "title": "App",
+            "type": "string"
+          },
+          "detail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "The cause, e.g. 'Type: text'.",
+            "title": "Detail"
+          },
+          "id": {
+            "description": "Unique per notice: the tray dismisses and de-duplicates by it.",
+            "title": "Id",
+            "type": "string"
+          },
+          "message": {
+            "description": "One line for a person.",
+            "title": "Message",
+            "type": "string"
+          },
+          "request_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "The command it answers, if any.",
+            "title": "Request Id"
+          },
+          "source": {
+            "description": "Who saw it: 'player', or a module's name.",
+            "title": "Source",
+            "type": "string"
+          },
+          "timestamp": {
+            "description": "When the failure was seen.",
+            "format": "date-time",
+            "title": "Timestamp",
+            "type": "string"
+          },
+          "type": {
+            "const": "state",
+            "default": "state",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "app",
+          "source",
+          "message",
+          "timestamp"
+        ],
+        "title": "ErrorNotice",
+        "type": "object"
+      },
+      "Excursion": {
+        "properties": {
+          "auto_pause": {
+            "description": "The player is paused when the frequency leaves the band.",
+            "title": "Auto Pause",
+            "type": "boolean"
+          },
+          "band_hz": {
+            "description": "How far from nominal still counts as in band.",
+            "title": "Band Hz",
+            "type": "number"
+          },
+          "deviation_hz": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Mean frequency minus nominal.",
+            "title": "Deviation Hz"
+          },
+          "excursions": {
+            "description": "Excursions out of the band seen so far.",
+            "title": "Excursions",
+            "type": "integer"
+          },
+          "in_band": {
+            "description": "The mean frequency is within the band.",
+            "title": "In Band",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "in_band",
+          "deviation_hz",
+          "band_hz",
+          "excursions",
+          "auto_pause"
+        ],
+        "title": "Excursion",
+        "type": "object"
+      },
+      "ExcursionResult": {
+        "properties": {
+          "app": {
+            "$ref": "#/components/schemas/AppIdentity"
+          },
+          "mRID": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Mrid"
+          },
+          "parameters": {
+            "additionalProperties": true,
+            "description": "The module's settings.",
+            "title": "Parameters",
+            "type": "object"
+          },
+          "request_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Set when this result answers a command.",
+            "title": "Request Id"
+          },
+          "result": {
+            "$ref": "#/components/schemas/Excursion"
+          },
+          "timestamp": {
+            "description": "The instant the result is about.",
+            "format": "date-time",
+            "title": "Timestamp",
+            "type": "string"
+          },
+          "version": {
+            "const": "v1",
+            "default": "v1",
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "timestamp",
+          "app",
+          "result"
+        ],
+        "title": "ExcursionResult",
+        "type": "object"
+      },
+      "FrameStats": {
+        "description": "The statistics of one instant.",
+        "properties": {
+          "angle_spread_deg": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Largest minus smallest voltage angle.",
+            "title": "Angle Spread Deg"
+          },
+          "max_frequency_hz": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Frequency Hz"
+          },
+          "mean_frequency_hz": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Mean of the stations' frequencies.",
+            "title": "Mean Frequency Hz"
+          },
+          "mean_voltage_kv": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mean Voltage Kv"
+          },
+          "min_frequency_hz": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Min Frequency Hz"
+          },
+          "n_stations": {
+            "description": "Stations with a frequency value in this frame.",
+            "title": "N Stations",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "n_stations",
+          "mean_frequency_hz",
+          "min_frequency_hz",
+          "max_frequency_hz",
+          "angle_spread_deg",
+          "mean_voltage_kv"
+        ],
+        "title": "FrameStats",
+        "type": "object"
+      },
+      "FrameStatsResult": {
+        "properties": {
+          "app": {
+            "$ref": "#/components/schemas/AppIdentity"
+          },
+          "mRID": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Mrid"
+          },
+          "parameters": {
+            "additionalProperties": true,
+            "description": "The module's settings.",
+            "title": "Parameters",
+            "type": "object"
+          },
+          "request_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Set when this result answers a command.",
+            "title": "Request Id"
+          },
+          "result": {
+            "$ref": "#/components/schemas/FrameStats"
+          },
+          "timestamp": {
+            "description": "The instant the result is about.",
+            "format": "date-time",
+            "title": "Timestamp",
+            "type": "string"
+          },
+          "version": {
+            "const": "v1",
+            "default": "v1",
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "timestamp",
+          "app",
+          "result"
+        ],
+        "title": "FrameStatsResult",
         "type": "object"
       },
       "GridBranch": {
@@ -812,25 +1173,281 @@
         "title": "PhasorSnapshot",
         "type": "object"
       },
-      "PmuRecord": {
-        "description": "One record in the visible window: a 1-based line number and its text.",
+      "PlayerStatus": {
+        "description": "Where a run's player is and what it can do. A page renders its controls\nfrom this, so it never shows a button that would be refused.",
         "properties": {
-          "line_number": {
-            "description": "1-based, matching how `wc -l` counts.",
-            "title": "Line Number",
-            "type": "integer"
+          "can_seek": {
+            "description": "Seek, step and speed apply (replay mode).",
+            "title": "Can Seek",
+            "type": "boolean"
           },
-          "text": {
-            "description": "The raw record, verbatim from sample_data.txt.",
-            "title": "Text",
+          "coverage_end": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Exclusive end of the recording; null when live.",
+            "title": "Coverage End"
+          },
+          "coverage_start": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Start of the recording; null when live.",
+            "title": "Coverage Start"
+          },
+          "cursor": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The instant of the last frame played.",
+            "title": "Cursor"
+          },
+          "ended": {
+            "description": "The replay reached its end and stopped.",
+            "title": "Ended",
+            "type": "boolean"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Why the stream stopped, when a provider failed; null otherwise.",
+            "title": "Error"
+          },
+          "loop": {
+            "description": "The replay starts over at the end of the recording.",
+            "title": "Loop",
+            "type": "boolean"
+          },
+          "mRID": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Mrid"
+          },
+          "mode": {
+            "description": "'replay' paces a recording; 'live' follows a live source and has no controls.",
+            "enum": [
+              "live",
+              "replay"
+            ],
+            "title": "Mode",
+            "type": "string"
+          },
+          "paused": {
+            "title": "Paused",
+            "type": "boolean"
+          },
+          "range_end": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Exclusive end of a chunk being played; null otherwise.",
+            "title": "Range End"
+          },
+          "source": {
+            "description": "The active source.",
+            "title": "Source",
+            "type": "string"
+          },
+          "sources": {
+            "description": "Every source the player can switch to, in declared order.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Sources",
+            "type": "array"
+          },
+          "speed": {
+            "description": "Speed multiplier; 1 is real time.",
+            "title": "Speed",
+            "type": "number"
+          },
+          "timestamp": {
+            "format": "date-time",
+            "title": "Timestamp",
+            "type": "string"
+          },
+          "version": {
+            "const": "v1",
+            "default": "v1",
+            "title": "Version",
             "type": "string"
           }
         },
         "required": [
-          "line_number",
-          "text"
+          "timestamp",
+          "mode",
+          "source",
+          "sources",
+          "cursor",
+          "speed",
+          "paused",
+          "loop",
+          "ended",
+          "can_seek",
+          "coverage_start",
+          "coverage_end"
         ],
-        "title": "PmuRecord",
+        "title": "PlayerStatus",
+        "type": "object"
+      },
+      "PmuFrame": {
+        "description": "One instant of every channel in a stream.",
+        "properties": {
+          "header": {
+            "$ref": "#/components/schemas/PmuHeader",
+            "description": "The channel layout; `values` follows its column order."
+          },
+          "mRID": {
+            "description": "The stream (a PDC, a recording).",
+            "title": "Mrid",
+            "type": "string"
+          },
+          "timestamp": {
+            "description": "The PMU time of this instant.",
+            "format": "date-time",
+            "title": "Timestamp",
+            "type": "string"
+          },
+          "values": {
+            "description": "One value per header column; null where NaN.",
+            "items": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "title": "Values",
+            "type": "array"
+          },
+          "version": {
+            "const": "v1",
+            "default": "v1",
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "mRID",
+          "timestamp",
+          "header",
+          "values"
+        ],
+        "title": "PmuFrame",
+        "type": "object"
+      },
+      "PmuHeader": {
+        "description": "The channel layout of a stream: one entry per column of a frame.\n\nThe label rows are the ones p-SWAMP's ``Indexer`` queries, so\n``columns(measurement=\"f\")`` selects inputs the same way here.",
+        "properties": {
+          "channel": {
+            "description": "Per column: the phasor or signal name.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Channel",
+            "type": "array"
+          },
+          "cimReferenceId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "The grid (CIM) data that applies to this layout. Set by the gateway, never by a provider.",
+            "title": "Cimreferenceid"
+          },
+          "data_rate": {
+            "description": "Frames per second.",
+            "exclusiveMinimum": 0,
+            "title": "Data Rate",
+            "type": "number"
+          },
+          "header_id": {
+            "description": "Content hash of the layout; equal layouts share it.",
+            "readOnly": true,
+            "title": "Header Id",
+            "type": "string"
+          },
+          "measurement": {
+            "description": "Per column: \"f\", \"df\", \"<name>_Magnitude\" or \"<name>_Angle\".",
+            "items": {
+              "type": "string"
+            },
+            "title": "Measurement",
+            "type": "array"
+          },
+          "station": {
+            "description": "Per column: the station (PMU) the value is from.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Station",
+            "type": "array"
+          },
+          "units": {
+            "description": "Per column: the unit of the value.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Units",
+            "type": "array"
+          }
+        },
+        "required": [
+          "station",
+          "channel",
+          "measurement",
+          "units",
+          "data_rate",
+          "header_id"
+        ],
+        "title": "PmuHeader",
         "type": "object"
       },
       "PmuSite": {
@@ -857,52 +1474,201 @@
         "type": "object"
       },
       "PmuStreamState": {
-        "description": "The single message shape pushed to a client on connect and every change.\n\nA declared model rather than a loose dict, because this IS the downstream half\nof the published contract: api_contract.py collects it via this package's\nWS_MESSAGE export, and a bare dict would silently drop the app out of it.\n\n`total_lines` lets the client show \"record N of M\" \u2014 which is also how the\nwrap-around at the end of the file becomes visible in the UI.",
+        "description": "What the page renders, pushed on connect and after every change. Its parts\nare the core's messages as they are, so the browser's types are generated\nfrom the same classes.",
         "properties": {
-          "index": {
-            "description": "0-based cursor into the sample file.",
-            "title": "Index",
-            "type": "integer"
+          "excursion": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ExcursionResult"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The excursion module's latest result."
           },
-          "playing": {
-            "description": "Whether the server is advancing this client.",
-            "title": "Playing",
-            "type": "boolean"
+          "frame": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PmuFrame"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The frame at the cursor, with its layout."
           },
-          "total_lines": {
-            "description": "How many records the sample file holds.",
-            "title": "Total Lines",
-            "type": "integer"
+          "frame_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Frames in the recording; null when live.",
+            "title": "Frame Count"
+          },
+          "frame_index": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "0-based position of the frame in the recording; null when live.",
+            "title": "Frame Index"
+          },
+          "player": {
+            "$ref": "#/components/schemas/PlayerStatus",
+            "description": "Where the player is and which controls apply."
+          },
+          "stats": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FrameStatsResult"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The frame statistics for (about) that frame."
+          },
+          "summary": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RangeSummaryResult"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The answer to this client's last range summary."
           },
           "type": {
             "const": "state",
             "default": "state",
             "title": "Type",
             "type": "string"
-          },
-          "window": {
-            "description": "Records around the cursor; null where it runs off an end.",
-            "items": {
-              "anyOf": [
-                {
-                  "$ref": "#/components/schemas/PmuRecord"
-                },
-                {
-                  "type": "null"
-                }
-              ]
-            },
-            "title": "Window",
-            "type": "array"
           }
         },
         "required": [
-          "window",
-          "index",
-          "total_lines",
-          "playing"
+          "frame",
+          "player",
+          "stats",
+          "frame_index",
+          "frame_count",
+          "excursion",
+          "summary"
         ],
         "title": "PmuStreamState",
+        "type": "object"
+      },
+      "RangeSummary": {
+        "properties": {
+          "end_offset_s": {
+            "title": "End Offset S",
+            "type": "number"
+          },
+          "frames": {
+            "description": "Frames in the range.",
+            "title": "Frames",
+            "type": "integer"
+          },
+          "max_frequency_hz": {
+            "title": "Max Frequency Hz",
+            "type": "number"
+          },
+          "mean_frequency_hz": {
+            "title": "Mean Frequency Hz",
+            "type": "number"
+          },
+          "min_frequency_hz": {
+            "title": "Min Frequency Hz",
+            "type": "number"
+          },
+          "offset_s": {
+            "title": "Offset S",
+            "type": "number"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source",
+          "offset_s",
+          "end_offset_s",
+          "frames",
+          "min_frequency_hz",
+          "max_frequency_hz",
+          "mean_frequency_hz"
+        ],
+        "title": "RangeSummary",
+        "type": "object"
+      },
+      "RangeSummaryResult": {
+        "properties": {
+          "app": {
+            "$ref": "#/components/schemas/AppIdentity"
+          },
+          "mRID": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Mrid"
+          },
+          "parameters": {
+            "additionalProperties": true,
+            "description": "The module's settings.",
+            "title": "Parameters",
+            "type": "object"
+          },
+          "request_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Set when this result answers a command.",
+            "title": "Request Id"
+          },
+          "result": {
+            "$ref": "#/components/schemas/RangeSummary"
+          },
+          "timestamp": {
+            "description": "The instant the result is about.",
+            "format": "date-time",
+            "title": "Timestamp",
+            "type": "string"
+          },
+          "version": {
+            "const": "v1",
+            "default": "v1",
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "timestamp",
+          "app",
+          "result"
+        ],
+        "title": "RangeSummaryResult",
         "type": "object"
       },
       "ReferenceSubappState": {
@@ -973,6 +1739,112 @@
           "duration"
         ],
         "title": "ReplayStatus",
+        "type": "object"
+      },
+      "SeekBody": {
+        "properties": {
+          "end_offset_s": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Stop here: play a chunk.",
+            "title": "End Offset S"
+          },
+          "offset_s": {
+            "description": "Seconds from the start of the recording.",
+            "minimum": 0.0,
+            "title": "Offset S",
+            "type": "number"
+          },
+          "play": {
+            "default": false,
+            "description": "Also start playing.",
+            "title": "Play",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "offset_s"
+        ],
+        "title": "SeekBody",
+        "type": "object"
+      },
+      "SourceBody": {
+        "properties": {
+          "name": {
+            "description": "One of PlayerStatus.sources.",
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "SourceBody",
+        "type": "object"
+      },
+      "SpeedBody": {
+        "properties": {
+          "speed": {
+            "description": "Speed multiplier; 1 is real time.",
+            "exclusiveMinimum": 0.0,
+            "maximum": 10.0,
+            "title": "Speed",
+            "type": "number"
+          }
+        },
+        "required": [
+          "speed"
+        ],
+        "title": "SpeedBody",
+        "type": "object"
+      },
+      "StepBody": {
+        "properties": {
+          "n": {
+            "description": "Frames to step; negative steps back.",
+            "title": "N",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "n"
+        ],
+        "title": "StepBody",
+        "type": "object"
+      },
+      "SummaryBody": {
+        "properties": {
+          "end_offset_s": {
+            "description": "Exclusive end, in seconds from the start.",
+            "exclusiveMinimum": 0.0,
+            "title": "End Offset S",
+            "type": "number"
+          },
+          "offset_s": {
+            "description": "Seconds from the start of the recording.",
+            "minimum": 0.0,
+            "title": "Offset S",
+            "type": "number"
+          },
+          "source": {
+            "description": "The recording to read: one of PlayerStatus.sources.",
+            "title": "Source",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source",
+          "offset_s",
+          "end_offset_s"
+        ],
+        "title": "SummaryBody",
         "type": "object"
       },
       "TimeWindowSlice": {
@@ -1121,7 +1993,7 @@
   "info": {
     "description": "The api between the p-SWAMP web client and its state server.\n\n**Two directions, two transports.** Anything a user triggers goes up as an HTTP\n`POST` under `/api/<app>/`; everything the server has to say comes down a\nWebSocket at `/api/<app>/ws`, which is downstream only. A command's reply is a\nsmall `CommandAck`, never state, so state has exactly one path and there is no\nordering to reconcile between two of them.\n\n**The operations below are therefore only half the api.** The socket half is\ndescribed by the `x-websocket-channels` extension at the root of this document,\nwhose message schemas are ordinary `components.schemas` entries \u2014 so a code\ngenerator picks them up like any other model even though OpenAPI itself has no\nnotion of a socket.\n\n**The first path segment after `/api/` is the routing key.** The server itself\nholds no domain logic: it mounts one self-contained backend package under each\n`/api/<app>` prefix, so `/api/pmu-test-streamer/...` is served by\n`src/pmu_test_streamer/`, `/api/time-window/...` by\n`src/pswamp_web/time_window/`, and so on for every tag listed below \u2014 the paths\na package declares are relative to its own prefix.\n`/healthz` sits outside `/api` because it is the process's health rather than any\none app's, and everything else is the built web client, served from the same\norigin with unknown paths falling back to its `index.html` so deep links work.\n\n**Every request carries `?client_id=`**, a numeric string the browser resolves\nonce per profile and persists. It is the sharding key for all server state and\nall of a browser's sockets must send the same one. It is *not* authentication and\ndoes not pretend to be: supply someone else's id and you drive their session.\n\n**The web client's types are generated from the API contract.**\n`openapi-typescript` compiles it into `app/client-web/src/api/schema.ts`, which is\ncommitted in git, and a page hook takes its downstream type from there rather\nthan hand-copying the Python model's fields \u2014 `Wire['ReferenceSubappState']` for\n`/api/reference-subapp/ws`. Field names stay as the server sends them, snake_case\nand all, all the way to the frontend components.\n\nThis document is generated from the server and committed at `doc/api/openapi.json`;\n`scripts/error_check.sh` fails if the two disagree. See\n`doc/the-client-server-api.md` for more detail.\n",
     "title": "p-SWAMP api",
-    "version": "1.0.0"
+    "version": "2.0.0"
   },
   "openapi": "3.1.0",
   "paths": {
@@ -1322,10 +2194,10 @@
         ]
       }
     },
-    "/api/pmu-test-streamer/playback/back": {
+    "/api/pmu-test-streamer/excursion/auto-pause": {
       "post": {
-        "description": "Step one record back, independently of the play/pause flag.",
-        "operationId": "pmu_test_streamer_back",
+        "description": "Tell the excursion module whether to pause the player on an excursion.",
+        "operationId": "pmu_test_streamer_auto_pause",
         "parameters": [
           {
             "description": "The browser's client id -- the same value its WebSockets send, which is what makes a command apply to the pipeline the page is watching.",
@@ -1340,6 +2212,16 @@
             }
           }
         ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AutoPauseBody"
+              }
+            }
+          },
+          "required": true
+        },
         "responses": {
           "200": {
             "content": {
@@ -1350,6 +2232,12 @@
               }
             },
             "description": "Successful Response"
+          },
+          "404": {
+            "description": "The client has no running pipeline: its page is not open."
+          },
+          "409": {
+            "description": "The command does not apply in the pipeline's current state."
           },
           "422": {
             "content": {
@@ -1362,16 +2250,16 @@
             "description": "Validation Error"
           }
         },
-        "summary": "Back",
+        "summary": "Auto Pause",
         "tags": [
           "pmu-test-streamer"
         ]
       }
     },
-    "/api/pmu-test-streamer/playback/forward": {
+    "/api/pmu-test-streamer/playback/pause": {
       "post": {
-        "description": "Step one record forward, independently of the play/pause flag.",
-        "operationId": "pmu_test_streamer_forward",
+        "description": "Pause the recording at the cursor.",
+        "operationId": "pmu_test_streamer_pause",
         "parameters": [
           {
             "description": "The browser's client id -- the same value its WebSockets send, which is what makes a command apply to the pipeline the page is watching.",
@@ -1397,6 +2285,12 @@
             },
             "description": "Successful Response"
           },
+          "404": {
+            "description": "The client has no running pipeline: its page is not open."
+          },
+          "409": {
+            "description": "The command does not apply in the pipeline's current state."
+          },
           "422": {
             "content": {
               "application/json": {
@@ -1408,7 +2302,7 @@
             "description": "Validation Error"
           }
         },
-        "summary": "Forward",
+        "summary": "Pause",
         "tags": [
           "pmu-test-streamer"
         ]
@@ -1416,7 +2310,7 @@
     },
     "/api/pmu-test-streamer/playback/play": {
       "post": {
-        "description": "Start advancing this client through the recorded stream.",
+        "description": "Play the recording from the cursor.",
         "operationId": "pmu_test_streamer_play",
         "parameters": [
           {
@@ -1443,6 +2337,12 @@
             },
             "description": "Successful Response"
           },
+          "404": {
+            "description": "The client has no running pipeline: its page is not open."
+          },
+          "409": {
+            "description": "The command does not apply in the pipeline's current state."
+          },
           "422": {
             "content": {
               "application/json": {
@@ -1460,10 +2360,10 @@
         ]
       }
     },
-    "/api/pmu-test-streamer/playback/stop": {
+    "/api/pmu-test-streamer/playback/seek": {
       "post": {
-        "description": "Pause this client where it is in the stream.",
-        "operationId": "pmu_test_streamer_stop",
+        "description": "Move to an offset into the recording; with an end, play only that chunk.",
+        "operationId": "pmu_test_streamer_seek",
         "parameters": [
           {
             "description": "The browser's client id -- the same value its WebSockets send, which is what makes a command apply to the pipeline the page is watching.",
@@ -1478,6 +2378,16 @@
             }
           }
         ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SeekBody"
+              }
+            }
+          },
+          "required": true
+        },
         "responses": {
           "200": {
             "content": {
@@ -1488,6 +2398,12 @@
               }
             },
             "description": "Successful Response"
+          },
+          "404": {
+            "description": "The client has no running pipeline: its page is not open."
+          },
+          "409": {
+            "description": "The command does not apply in the pipeline's current state."
           },
           "422": {
             "content": {
@@ -1500,7 +2416,255 @@
             "description": "Validation Error"
           }
         },
-        "summary": "Stop",
+        "summary": "Seek",
+        "tags": [
+          "pmu-test-streamer"
+        ]
+      }
+    },
+    "/api/pmu-test-streamer/playback/source": {
+      "post": {
+        "description": "Read another source: a recording lands paused at its start, a live feed\nis followed from now.",
+        "operationId": "pmu_test_streamer_source",
+        "parameters": [
+          {
+            "description": "The browser's client id -- the same value its WebSockets send, which is what makes a command apply to the pipeline the page is watching.",
+            "in": "query",
+            "name": "client_id",
+            "required": true,
+            "schema": {
+              "description": "The browser's client id -- the same value its WebSockets send, which is what makes a command apply to the pipeline the page is watching.",
+              "pattern": "^\\d{1,20}$",
+              "title": "Client Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SourceBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandAck"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "description": "The client has no running pipeline: its page is not open."
+          },
+          "409": {
+            "description": "The command does not apply in the pipeline's current state."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Source",
+        "tags": [
+          "pmu-test-streamer"
+        ]
+      }
+    },
+    "/api/pmu-test-streamer/playback/speed": {
+      "post": {
+        "description": "Change the replay speed.",
+        "operationId": "pmu_test_streamer_speed",
+        "parameters": [
+          {
+            "description": "The browser's client id -- the same value its WebSockets send, which is what makes a command apply to the pipeline the page is watching.",
+            "in": "query",
+            "name": "client_id",
+            "required": true,
+            "schema": {
+              "description": "The browser's client id -- the same value its WebSockets send, which is what makes a command apply to the pipeline the page is watching.",
+              "pattern": "^\\d{1,20}$",
+              "title": "Client Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SpeedBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandAck"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "description": "The client has no running pipeline: its page is not open."
+          },
+          "409": {
+            "description": "The command does not apply in the pipeline's current state."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Speed",
+        "tags": [
+          "pmu-test-streamer"
+        ]
+      }
+    },
+    "/api/pmu-test-streamer/playback/step": {
+      "post": {
+        "description": "Step ``n`` frames, forward or back.",
+        "operationId": "pmu_test_streamer_step",
+        "parameters": [
+          {
+            "description": "The browser's client id -- the same value its WebSockets send, which is what makes a command apply to the pipeline the page is watching.",
+            "in": "query",
+            "name": "client_id",
+            "required": true,
+            "schema": {
+              "description": "The browser's client id -- the same value its WebSockets send, which is what makes a command apply to the pipeline the page is watching.",
+              "pattern": "^\\d{1,20}$",
+              "title": "Client Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StepBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandAck"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "description": "The client has no running pipeline: its page is not open."
+          },
+          "409": {
+            "description": "The command does not apply in the pipeline's current state."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Step",
+        "tags": [
+          "pmu-test-streamer"
+        ]
+      }
+    },
+    "/api/pmu-test-streamer/summary": {
+      "post": {
+        "description": "Ask the range summary module to summarize a range of a recording. The\nanswer arrives on the socket as ``summary``.",
+        "operationId": "pmu_test_streamer_summary",
+        "parameters": [
+          {
+            "description": "The browser's client id -- the same value its WebSockets send, which is what makes a command apply to the pipeline the page is watching.",
+            "in": "query",
+            "name": "client_id",
+            "required": true,
+            "schema": {
+              "description": "The browser's client id -- the same value its WebSockets send, which is what makes a command apply to the pipeline the page is watching.",
+              "pattern": "^\\d{1,20}$",
+              "title": "Client Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SummaryBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandAck"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "description": "The client has no running pipeline: its page is not open."
+          },
+          "409": {
+            "description": "The command does not apply in the pipeline's current state."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Summary",
         "tags": [
           "pmu-test-streamer"
         ]
@@ -1744,7 +2908,7 @@
   },
   "tags": [
     {
-      "description": "Scaffold demo: replays sample PMU records line by line.",
+      "description": "The server data architecture's worked example: a recorded and a live PMU feed through a core pipeline per client, with player commands and a stats module.",
       "name": "pmu-test-streamer"
     },
     {
@@ -1774,6 +2938,10 @@
     {
       "description": "The reference example: a per-client counter over the whole stack.",
       "name": "reference-subapp"
+    },
+    {
+      "description": "Operational errors from any of a client's pipeline runs, for the layout's error tray.",
+      "name": "errors"
     }
   ],
   "x-websocket-channels": [
@@ -1832,6 +3000,14 @@
         "$ref": "#/components/schemas/ReferenceSubappState"
       },
       "path": "/api/reference-subapp/ws"
+    },
+    {
+      "app": "errors",
+      "direction": "server-to-client",
+      "message": {
+        "$ref": "#/components/schemas/ErrorNotice"
+      },
+      "path": "/api/errors/ws"
     }
   ]
 }

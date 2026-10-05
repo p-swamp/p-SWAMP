@@ -9,9 +9,15 @@
 # pushing state from a new backend package, and two POST commands over a per-client
 # counter. Replacing that counter is the only work left.
 #
-# Generated files come from scripts/templates/ — edit those, not this script, to
-# change what a subapp starts life as. Each is <filename>.template; the suffix is
-# stripped on render and keeps editors off them.
+# Generated files come from scripts/templates/<set>/ — edit those, not this
+# script, to change what a subapp starts life as. Each is <filename>.template;
+# the suffix is stripped on render and keeps editors off them.
+#
+# TEMPLATE_SET picks the set: `subapp` (the default: the counter above) or
+# `module` (a module over the core pipeline and the page that shows it, which is
+# what generate-new-module-with-frontend.sh runs). The module set also writes
+# into modules/: the module with its tests/ folder, and its pipeline, live
+# there, and only the web API goes into the server.
 #
 # The subapp joins the api contract with no registry entry (its package exports
 # WS_MESSAGE, api_contract.py collects it); this script regenerates both artifacts
@@ -21,15 +27,16 @@ set -euo pipefail
 # Run from the repo root regardless of where the script is invoked from.
 cd "$(dirname "$0")/.."
 
+GENERATOR="${GENERATOR:-scripts/generate-new-subapp.sh}"
 if [ $# -ne 2 ]; then
-  echo 'usage: scripts/generate-new-subapp.sh <url-name> "<Nav Label>"' >&2
-  echo '   eg: scripts/generate-new-subapp.sh grid-overview "Grid Overview"' >&2
+  echo "usage: $GENERATOR <url-name> \"<Nav Label>\"" >&2
+  echo "   eg: $GENERATOR grid-overview \"Grid Overview\"" >&2
   exit 1
 fi
 
 # python3 does the work: derive the name's spellings, render the templates, and
 # insert into the registries by anchor. (Already required by error_check.sh.)
-SLUG="$1" LABEL="$2" python3 - <<'PY'
+SLUG="$1" LABEL="$2" TEMPLATE_SET="${TEMPLATE_SET:-subapp}" python3 - <<'PY'
 import json
 import keyword
 import os
@@ -48,16 +55,22 @@ def die(msg):
 # script removes. Templates spell them __SLUG__, __PKG__ … __LABEL__.
 #
 #   slug            grid-overview          URL, page folder, /api prefix
-#   pkg             grid_overview          Python package (must be an identifier)
+#   pkg             grid_overview          Python package (must be an identifier);
+#                                          in the module set also the module's
+#                                          package under pswamp_modules
 #   name            GridOverview           React component, hook, model class
 #   ws_path_const   GRID_OVERVIEW_WS_PATH  ws path const in lib/servers.ts
 #   api_path_const  GRID_OVERVIEW_API_PATH REST prefix const, same file
+#   upper           GRID_OVERVIEW          environment variable prefix (module set)
 #
 # Two path consts because the directions use two transports: state down the
 # socket, commands up as POSTs (see AGENTS.md).
 
 slug = os.environ["SLUG"]
 label = os.environ["LABEL"]
+template_set = os.environ["TEMPLATE_SET"]
+if template_set not in ("subapp", "module"):
+    die(f"TEMPLATE_SET={template_set!r}: use 'subapp' or 'module'.")
 pkg = slug.replace("-", "_")
 name = "".join(word.capitalize() for word in slug.split("-"))
 ws_path_const = f"{pkg.upper()}_WS_PATH"
@@ -112,17 +125,22 @@ def ts_squote(value):
 
 WEB = Path("app/client-web/src")
 PY_SRC = Path("app/server-python/src")
+MODULES = Path("modules/pswamp_modules")
 page_dir = WEB / "pages" / slug
 api_dir = PY_SRC / pkg
+module_dir = MODULES / pkg  # module set only
 
 if page_dir.exists() or api_dir.exists():
     die(f"{slug} already exists as a page or an api package — pick another name.")
+# Also what refuses `pipelines` and `sources`, the two packages beside the modules.
+if template_set == "module" and module_dir.exists():
+    die(f"{module_dir} already exists — pick another name.")
 
 
-# --- render scripts/templates/ into the two new folders ---------------------
+# --- render scripts/templates/ into the new folders --------------------------
 #
 # File *names* carry the tokens too (use__NAME__Socket.ts.template), so a template
-# folder maps 1:1 onto the subapp. Every template ends in .template, stripped here.
+# folder maps 1:1 onto its destination. Every template ends in .template, stripped here.
 # The suffix keeps editors and type-checkers off them — a real `.ts` holding
 # `__WS_PATH_CONST__` would be a wall of IDE errors on a non-source file. A missing
 # suffix is an error, not a no-op, so the convention can't rot into "some of them".
@@ -135,16 +153,31 @@ def render(text):
         ("__NAME__", name),
         ("__WS_PATH_CONST__", ws_path_const),
         ("__API_PATH_CONST__", api_path_const),
+        ("__UPPER__", pkg.upper()),
         ("__LABEL__", label),
     ):
         text = text.replace(token, value)
     return text
 
 
+TEMPLATES = Path("scripts/templates") / template_set
 sources = [
-    (Path("scripts/templates/server-python"), api_dir),
-    (Path("scripts/templates/client-web"), page_dir),
+    (TEMPLATES / "server-python", api_dir),
+    (TEMPLATES / "client-web", page_dir),
 ]
+new_dirs = [api_dir, page_dir]
+# The module set: the module, its tests/ folder beside it, and its pipeline go
+# to modules/, which depends on the core only; the web API's test goes into the
+# server's tests/.
+SERVER_TESTS = Path("app/server-python/tests")
+if template_set == "module":
+    sources += [
+        (TEMPLATES / "module", module_dir),
+        (TEMPLATES / "module-tests", module_dir / "tests"),
+        (TEMPLATES / "pipeline", MODULES / "pipelines"),
+        (TEMPLATES / "tests", SERVER_TESTS),
+    ]
+    new_dirs += [module_dir, module_dir / "tests"]
 
 # Validate every template's name before rendering. This, the slug/label checks
 # above and the anchor checks below all run before the commit phase touches the
@@ -162,12 +195,19 @@ for templates, _ in sources:
 # the old behaviour: folders and half the registries on disk, no rollback, and a
 # re-run blocked by "already exists".
 
-# --- render scripts/templates/ into the two new folders (in memory) ---------
+# --- render scripts/templates/ into the new folders (in memory) -------------
 
 rendered = {}  # dest Path -> file contents
 for templates, dest_dir in sources:
     for template in sorted(templates.iterdir()):
         dest = dest_dir / render(template.name).removesuffix(".template")
+        if dest.exists():
+            die(f"{dest} already exists — pick another name.")
+        # The server's and the core's tests run as one pytest session and are
+        # not packages, so a test file's name must be unique across the two.
+        # (A module's tests are a package beside its code, so they cannot clash.)
+        if dest_dir == SERVER_TESTS and (Path("core/tests") / dest.name).exists():
+            die(f"core/tests/{dest.name} already exists — pick another name.")
         rendered[dest] = render(template.read_text())
 
 
@@ -181,14 +221,20 @@ for templates, dest_dir in sources:
 patches = {}  # path -> patched contents
 
 
-def plan_edit(path, pattern, addition, before=False):
+def plan_edit(path, pattern, addition, before=False, group=None):
+    """Insert `addition` after the last match of `pattern`, before the first
+    (`before`), or at the end of capture `group` of the first (a value inside
+    a line, such as a worker's list)."""
     text = patches.get(path)
     if text is None:
         text = path.read_text()
     found = list(re.finditer(pattern, text, re.M))
     if not found:
         die(f"Could not find {pattern!r} in {path} — add the entry by hand.")
-    at = found[0].start() if before else found[-1].end()
+    if group is not None:
+        at = found[0].end(group)
+    else:
+        at = found[0].start() if before else found[-1].end()
     patches[path] = text[:at] + addition + text[at:]
 
 
@@ -246,20 +292,45 @@ plan_edit(
 )
 
 
+# The module set: under compose and k8s the module-worker hosts the modules
+# (the server hosts none there), so its pipeline and module lists each gain the
+# new one. Anchored on the worker's own name, so another worker's lists are
+# never the ones patched.
+if template_set == "module":
+    for var, addition in (
+        ("PSWAMP_WORKER_PIPELINES", f",pswamp_modules.pipelines.{pkg}:PIPELINE"),
+        ("PSWAMP_WORKER_MODULES", f",{slug}"),
+    ):
+        plan_edit(
+            Path("docker-compose.yml"),
+            rf'^  module-worker:\n(?:.*\n)*?\s*{var}: "?([^"\n]*)',
+            addition,
+            group=1,
+        )
+        plan_edit(
+            Path("k8s/p-swamp-local.yaml"),
+            rf'name: p-swamp-module-worker\n(?:.*\n)*?\s*- name: {var}\n\s*value: "?([^"\n]*)',
+            addition,
+            group=1,
+        )
+
+
 # --- commit: create dirs, write files, write patches, or roll back ----------
 #
 # The first write to the working tree happens here. If any write fails part way,
-# restore every patched file and remove the new folders, so a failure never
-# leaves a partial subapp for the contributor to untangle by hand.
+# restore every patched file and remove the new folders and files, so a failure
+# never leaves a partial subapp for the contributor to untangle by hand.
 
 created_dirs = []
+written = []  # also the files rendered into folders that already existed
 originals = {path: path.read_text() for path in patches}
 try:
-    for dest_dir in (api_dir, page_dir):
+    for dest_dir in new_dirs:
         dest_dir.mkdir(parents=True)
         created_dirs.append(dest_dir)
     for dest, content in rendered.items():
         dest.write_text(content)
+        written.append(dest)
         print(f"  new      {dest}")
     for path, text in patches.items():
         path.write_text(text)
@@ -267,12 +338,17 @@ try:
 except Exception:
     for path, text in originals.items():
         path.write_text(text)
+    for dest in written:
+        dest.unlink(missing_ok=True)
     for dest_dir in reversed(created_dirs):
         shutil.rmtree(dest_dir, ignore_errors=True)
     raise
 
-print(f"\n\033[1m{label}: page /{slug}, socket /api/{slug}/ws, "
-      f"commands POST /api/{slug}/count/…\033[0m")
+if template_set == "module":
+    print(f"\n\033[1m{label}: page /{slug}, socket /api/{slug}/ws, module {module_dir}/module.py\033[0m")
+else:
+    print(f"\n\033[1m{label}: page /{slug}, socket /api/{slug}/ws, "
+          f"commands POST /api/{slug}/count/…\033[0m")
 print("  the api contract is regenerated next — commit doc/api/openapi.json and")
 print("  app/client-web/src/api/schema.ts along with the new subapp.")
 PY

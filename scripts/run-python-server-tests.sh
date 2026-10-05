@@ -1,12 +1,15 @@
 #!/usr/bin/env bash
-# Run the Python state server's unit test suite (app/server-python/tests/).
+# Run the Python state server's unit test suite (app/server-python/tests/), and
+# with it the core's (core/tests/) and the modules' (each module's tests/
+# folder, under modules/).
 #
 # The stable interface for those tests: it hides the `uv run --project … pytest`
 # incantation and the working-directory rule pytest needs to find its config.
 #
-# Every file under app/server-python/tests/ is picked up automatically — pytest
-# discovers test_*.py and testpaths=["tests"] is set in
-# app/server-python/pyproject.toml — so a suite added there needs no change here.
+# Every file under those is picked up automatically — pytest discovers
+# test_*.py and `testpaths` in app/server-python/pyproject.toml names them — so
+# a suite added there needs no change here. File names must be unique across
+# app/server-python/tests/ and core/tests/, which are not packages.
 #
 # These are fast and hermetic: HubRegistry is driven with a stubbed Hub, so
 # nothing binds a port and no server starts. They are deliberately NOT part of
@@ -48,5 +51,10 @@ fi
 # locked env — pytest + pytest-asyncio from the dev group, plus the main deps the
 # tests import (pswamp_web → pswamp). A cold run syncs that env first. exec so
 # pytest's exit code is this script's.
+#
+# `-c pyproject.toml` pins that config. Without it pytest picks its config from
+# the common ancestor of the paths it is given, so naming a file under tests/
+# and one under ../../modules/ together would land on the repo root's manifest
+# and lose `pythonpath` and `asyncio_mode`.
 cd app/server-python || exit 1
-exec uv run pytest "$@"
+exec uv run pytest -c pyproject.toml "$@"
