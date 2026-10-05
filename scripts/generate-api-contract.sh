@@ -69,7 +69,34 @@ else
   OUT_TYPES="$TYPES"
 fi
 
-uv run --project app/server-python python app/server-python/tools/dump_openapi.py "$OUT_SPEC" || exit 1
+# TEMP: OpenBLAS SIGILL workaround for arm64 Linux on Apple silicon. The dump
+# below imports the server, and so numpy, on this machine. numpy's bundled
+# OpenBLAS (<= v0.3.34) picks its ARMV9SME kernel on any CPU that reports SME,
+# without checking for SVE; Apple silicon reports SME but has no plain SVE, so
+# `import numpy` dies with SIGILL (exit 132, no traceback). Fixed upstream in
+# OpenBLAS df46d62 (issue #6011), not yet in any numpy wheel as of 2026-10-05.
+# Pin the generic Armv8 kernels on exactly that CPU, unless the caller already
+# chose a core type. Remove together with the TEMP stages in the Dockerfile,
+# which carry the full note and the revert check.
+if [ -z "${OPENBLAS_CORETYPE:-}" ] && [ "$(uname -s)" = "Linux" ] \
+  && [ "$(uname -m)" = "aarch64" ] && [ -r /proc/cpuinfo ]; then
+  cpu_features="$(grep -m1 '^Features' /proc/cpuinfo)"
+  if printf '%s\n' "$cpu_features" | grep -qw sme \
+    && ! printf '%s\n' "$cpu_features" | grep -qw sve; then
+    export OPENBLAS_CORETYPE=ARMV8
+  fi
+fi
+
+uv run --project app/server-python python app/server-python/tools/dump_openapi.py "$OUT_SPEC"
+dump_status=$?
+if [ "$dump_status" -ne 0 ]; then
+  if [ "$dump_status" -eq 132 ]; then
+    printf '\033[31mgenerate-api-contract: the server import crashed with SIGILL (exit 132).\033[0m\n' >&2
+    printf 'This is the OpenBLAS CPU-detection bug, not a stale contract. Retry with:\n' >&2
+    printf '  OPENBLAS_CORETYPE=ARMV8 %s\n' "$0${1:+ $1}" >&2
+  fi
+  exit 1
+fi
 
 # openapi-typescript emits types only -- no runtime, no `enum` (tsconfig.app.json
 # sets erasableSyntaxOnly). Run from app/client-web so npx --no-install resolves

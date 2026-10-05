@@ -10,6 +10,10 @@
 # Node and node_modules never ship. Pinned to a digest for reproducible builds
 # (the tag is kept as documentation); this is the multi-arch index digest, so
 # arm64/amd64 both resolve. Resolved 2026-09-01 from tag 24-bookworm-slim.
+# TEMP: needed by the per-arch OpenBLAS workaround stages further down; see
+# the TEMP note there for what it is and when to remove it.
+ARG TARGETARCH
+
 FROM node:24-bookworm-slim@sha256:ba849c60be29959425b8734d57b8b4b7d56f98edd9504c9af091d5281095a71e AS web-build
 WORKDIR /web
 # Copy only the manifests first so `npm ci` is cached and re-runs only when the
@@ -46,7 +50,40 @@ RUN npm run build
 #   curl -sI -H "Authorization: Bearer <token>" \
 #     -H "Accept: application/vnd.oci.image.index.v1+json" \
 #     https://ghcr.io/v2/astral-sh/uv/manifests/python3.14-trixie-slim
-FROM ghcr.io/astral-sh/uv:python3.14-trixie-slim@sha256:8e88a074b0969bdc461f681727238e109438d70771828909f9ef19cfcc96c43a
+FROM ghcr.io/astral-sh/uv:python3.14-trixie-slim@sha256:8e88a074b0969bdc461f681727238e109438d70771828909f9ef19cfcc96c43a AS runtime-base
+
+# TEMP: OpenBLAS SIGILL workaround for arm64 images. Remove once a numpy release
+# bundles an OpenBLAS newer than v0.3.34 (see below for how to check).
+#
+# The problem: numpy's wheels bundle OpenBLAS, which picks a CPU-specific kernel
+# at import. Up to and including v0.3.34 it selects its ARMV9SME kernel whenever
+# the CPU reports SME, without checking for SVE. Apple silicon (M4) reports SME
+# but has no plain SVE, so on an arm64 Linux VM or container on such a Mac the
+# kernel's setup runs an SVE instruction the CPU lacks and `import numpy` dies
+# with SIGILL (exit 132, no traceback). Here that kills the `import server`
+# check below, and the server at start. Fixed upstream in OpenBLAS df46d62
+# ("Confirm SVE capability before assigning ARMV9SME", issue #6011, merged
+# 2026-09-05), which is in no release yet. numpy 2.5.2, 2.5.3 and the nightly
+# wheel all still crash, checked 2026-10-05.
+#
+# The workaround: OPENBLAS_CORETYPE=ARMV8 skips the detection and uses the
+# generic Armv8 kernels. Safe on every arm64 CPU, a little slower for linear
+# algebra, which this server barely does. Set on arm64 only, so amd64 images
+# (what CI builds) are unchanged. Needs BuildKit, which sets TARGETARCH; it is
+# the default builder for docker, compose and minikube.
+#
+# To revert: once a numpy release bundles a fixed OpenBLAS, bump numpy in both
+# lockfiles, then check on an Apple-silicon arm64 VM that this exits 0:
+#   env -u OPENBLAS_CORETYPE uv run --no-project --with numpy==<new> \
+#     python -c "import numpy; numpy.linalg.inv(numpy.eye(50))"
+# Then delete the two per-arch stages below, drop the `AS runtime-base` and the
+# `FROM runtime-${TARGETARCH}`, and delete the `ARG TARGETARCH` above.
+FROM runtime-base AS runtime-amd64
+
+FROM runtime-base AS runtime-arm64
+ENV OPENBLAS_CORETYPE=ARMV8
+
+FROM runtime-${TARGETARCH}
 
 # The image mirrors the *whole repo* at its real depth, not just the server dir
 # flattened to /app. The depth is required for the build to work at all, not a
