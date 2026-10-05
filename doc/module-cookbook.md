@@ -4,6 +4,14 @@ How to add an analysis module to the server data architecture, show its
 results on a page, send it commands, and run it in a process of its own.
 `doc/server-data-architecture.md` explains the pieces; this is the recipe.
 
+It goes in two parts, then recipes:
+
+1. **The module**: the server side. Write the analysis and test it, without
+   the pipeline running.
+2. **The frontend**: the web API and the page that show the module's results.
+3. **Further recipes**: commands, chaining, batch queries, a worker of its
+   own, scaling, data sources.
+
 The examples come from two apps:
 - **`peak-frequency`**: what the generator writes below. One module, one page.
 - **The PMU test streamer** (`frame_stats/`, `excursion/`, `range_summary/`
@@ -14,48 +22,52 @@ The examples come from two apps:
   frequency leaving its band, and `RangeSummaryModule` summarizes a time range
   of a recording on command.
 
-## The pieces you touch
-
-| File | What it holds |
-|---|---|
-| `modules/pswamp_modules/<pkg>/module.py` | the module: what it reads, what it publishes, `process` (and `handle`) |
-| `modules/pswamp_modules/pipelines/<pkg>.py` | the pipeline: the app's name, its sources, its modules |
-| `modules/pswamp_modules/<pkg>/tests/test_module.py` | the module's tests, beside its code |
-| `app/server-python/src/<pkg>/api.py` | the web API: the run registry, the socket's state message, the POSTs |
-| `app/server-python/tests/test_<pkg>.py` | the web API's tests |
-| `app/client-web/src/pages/<slug>/` | the page and its socket hook |
-| `docker-compose.yml`, `k8s/p-swamp-local.yaml` | which worker hosts the module |
-
-A module is one folder, `modules/pswamp_modules/<pkg>/`, holding its code
-and its tests. It and its pipeline import the core only: never the web backend (`shared`, `fastapi`, `pswamp_web`). A
-worker then hosts the module without loading the server.
-`pswamp_modules/tests/test_layering.py` fails if one does. The web API imports the
-pipeline and the result classes from `pswamp_modules`.
-
-## Add a module and its page
-
-**1. Generate it.**
+## Generate the starting point
 
 ```
 ./scripts/generate-new-module-with-frontend.sh peak-frequency "Peak frequency"
 ```
 
-This writes a working app and registers it everywhere:
-- a module over PMU frames with a placeholder analysis: the station with the
-  highest frequency;
-- its pipeline (sources: the synthetic live feed) and its `api.py`;
-- a page at `/peak-frequency` showing the latest result;
-- unit tests, for the module and for the web API;
-- entries in `server.py`, the route table, the nav, `lib/servers.ts`, and the
-  module-worker's lists in compose and k8s.
+This writes a working app, registers it everywhere, regenerates the api
+contract and runs `error_check.sh`.
 
-It regenerates the api contract and runs `error_check.sh`. Restart
-`./scripts/start-local-hotloaded-pswamp-server.sh` (a new package needs a
-rebuild) and open the page: results arrive at once, from the one shared live
-run.
+The module, in `modules/`. Part 1 is about these:
 
-**2. Write the analysis.** In
-`modules/pswamp_modules/peak_frequency/module.py`, replace
+| File | What it holds |
+|---|---|
+| `modules/pswamp_modules/peak_frequency/module.py` | the module: what it reads, what it publishes, `process`. Its analysis is a placeholder: the station with the highest frequency |
+| `modules/pswamp_modules/peak_frequency/tests/test_module.py` | the module's tests, beside its code |
+| `modules/pswamp_modules/pipelines/peak_frequency.py` | the pipeline: the app's name, its sources, its modules |
+
+A starting frontend, in `app/`:
+
+| File | What it holds |
+|---|---|
+| `app/server-python/src/peak_frequency/api.py` | the web API: the run registry, the socket's state message |
+| `app/server-python/tests/test_peak_frequency.py` | the web API's test |
+| `app/client-web/src/pages/peak-frequency/` | the page at `/peak-frequency` and its socket hook |
+
+The frontend files give the module a page from the start: it shows the
+module's latest result, and needs no change while you work on the module.
+Part 2 comes back to them.
+
+The registrations: entries in `server.py`, the route table, the nav,
+`lib/servers.ts`, and the module-worker's lists in `docker-compose.yml` and
+`k8s/p-swamp-local.yaml`.
+
+## Part 1: The module
+
+A module is one folder, `modules/pswamp_modules/<pkg>/`, holding its code
+and its tests. It and its pipeline import the core only: never the web backend
+(`shared`, `fastapi`, `pswamp_web`). A worker then hosts the module without
+loading the server. `pswamp_modules/tests/test_layering.py` fails if one does.
+
+So the work in this part needs no server, no broker and no browser: write the
+analysis, and run its tests.
+
+### Write the analysis
+
+In `modules/pswamp_modules/peak_frequency/module.py`, replace
 `highest_frequency` and the result body it fills. Keep the analysis a plain
 function and `process` a thin adapter: the function is then testable with plain
 values.
@@ -80,8 +92,72 @@ class PeakFrequencyModule(Module):
   (`PeakFrequencyResult` → `peak.frequency.result`), and the browser's type is
   generated from it.
 
-**3. Choose its sources.** `pswamp_modules/pipelines/peak_frequency.py` names
-them in `<APP>_DATA_CLIENTS`, with a default:
+### Test it without the pipeline
+
+```
+./scripts/run-python-server-tests.sh ../../modules/pswamp_modules/peak_frequency
+```
+
+This runs the module's own folder and nothing else. The path is relative to
+`app/server-python/`, where the runner starts pytest.
+
+Three levels, bottom up. The generated `tests/test_module.py` has the first
+two:
+
+1. **The analysis**: call the function with plain values.
+
+   ```python
+   assert highest_frequency(["a", "b", "c"], [49.9, 50.1, 50.0]) == ("b", 50.1)
+   ```
+
+2. **The module**: build a `PmuFrame` by hand (the `frame()` helper in the
+   generated tests) and await `process` directly.
+
+   ```python
+   body = await PeakFrequencyModule().process(frame([49.9, 50.1, None]))
+   assert (body.station, body.frequency_hz) == ("s1", 50.1)
+   ```
+
+   A module with state, or one that publishes on its own, is driven the same
+   way: `await module.setup(out)` with an `out` that records what is
+   published, then `process` and `handle` in the order under test.
+   `excursion/tests/test_module.py` does.
+
+3. **The module, hosted**: a `ModuleHost` over an `InMemoryTransport`. Publish
+   a frame on the input topic and read the result off the output topic. There
+   is still no server, source or player. It checks what the first two cannot:
+   the topics, the run key, and the result envelope.
+
+   ```python
+   import asyncio
+
+   from pswamp_core.host import ModuleHost
+   from pswamp_core.transport import InMemoryTransport
+   from pswamp_core.util.tasks import cancel_and_wait
+   from pswamp_modules.peak_frequency import PeakFrequencyModule, PeakFrequencyResult
+
+   async def test_hosted_over_the_transport():
+       broker = InMemoryTransport()
+       host = asyncio.create_task(ModuleHost(PeakFrequencyModule, broker, app="peak-frequency").serve())
+       await asyncio.sleep(0)  # let the host subscribe
+       with broker.subscribe(PeakFrequencyResult, app="peak-frequency", key="client-1") as results:
+           await broker.publish(frame([49.9, 50.1]), app="peak-frequency", key="client-1")
+           key, result = await asyncio.wait_for(results.get(), 5)
+       await cancel_and_wait(host)
+       assert key == "client-1" and result.result.station == "s1"
+   ```
+
+   The in-memory transport passes every message through JSON, so a result
+   that would not survive Kafka fails here.
+
+For more, see the streamer's tests, beside each module under
+`modules/pswamp_modules/`: a chained module (`excursion/tests/`), a batch
+query (`range_summary/tests/`), the sources (`sources/tests/`).
+
+### Choose its sources
+
+`pswamp_modules/pipelines/peak_frequency.py` names them in
+`<APP>_DATA_CLIENTS`, with a default:
 
 ```python
 DEFAULT_DATA_CLIENTS = "live:pswamp_modules.sources.live_client:LiveSyntheticClient"
@@ -90,38 +166,16 @@ DEFAULT_DATA_CLIENTS = "live:pswamp_modules.sources.live_client:LiveSyntheticCli
 - A **live** source is shared: one run, one module instance, results for
   everyone.
 - A **recording** (`sample:pswamp_modules.sources.sample_client:SampleRecordingClient`)
-  gets a run per client, starting paused, so the page needs the player's
-  controls. Copy them from the streamer's page and api.
+  gets a run per client, starting paused, so its page needs the player's
+  controls (part 2).
 
-**4. Shape the page's state.** `api.py`'s state model is what the socket
-pushes. Add fields to it, then run `./scripts/generate-api-contract.sh`. The
-page reads the generated type (`Wire['PeakFrequencyState']`), field names and
-all.
+### Watch it run
 
-## Test it
-
-```
-./scripts/run-python-server-tests.sh -k peak_frequency
-```
-
-The generated tests show the three levels. The first two are in the module's
-own folder, `pswamp_modules/peak_frequency/tests/test_module.py`, the third in
-`app/server-python/tests/test_peak_frequency.py`; `-k peak_frequency` selects
-both:
-1. **the analysis**: call the function with plain values;
-2. **the module**: `await PeakFrequencyModule().process(frame)` with a
-   hand-made `PmuFrame`;
-3. **the page's socket**: the whole server in-process (`TestClient`, in-memory
-   transport, the module hosted in the server), a result arriving on the socket.
-
-For more, see the streamer's tests. Beside each module, under
-`modules/pswamp_modules/`: a module hosted over the transport
-(`frame_stats/tests/`), a chained module (`excursion/tests/`), a batch query
-(`range_summary/tests/`), the sources (`sources/tests/`).
-`app/server-python/tests/test_pmu_test_streamer.py`: POSTs, 409s, seek and
-step, two clients on live, a module command, and its refusal on the error tray.
-
-## See what it is doing
+Restart `./scripts/start-local-hotloaded-pswamp-server.sh` (a new package
+needs a rebuild) and open `http://127.0.0.1:8000/peak-frequency`, the
+generated page as built into the image. Results arrive at once, from the one
+shared live run. From then on, a saved edit under `modules/pswamp_modules/`
+reloads the server and restarts the workers.
 
 - **Logs.** The host logs `hosting peak-frequency for peak-frequency: reads
   pmu.frame, publishes peak.frequency.result`, then `instance started for key
@@ -137,11 +191,127 @@ step, two clients on live, a module command, and its refusal on the error tray.
   `keep_up = KeepUp(max_input_age_s=..., report_every_s=...)`, or
   `keep_up = None` to stay quiet.
 
-## Send it commands
+## Part 2: The frontend
 
-A command is a class beside the module, listed in `commands`, and applied in
-`handle`. The streamer's `ExcursionModule` takes one, which turns its
-auto-pause on or off:
+The generator wrote a web API and a page. How a result gets from the module
+to the screen:
+
+```
+PeakFrequencyModule           publishes a PeakFrequencyResult on its topic
+  → the client's run          keeps the latest: run.latest.get(PeakFrequencyResult)
+  → state_message()           builds a PeakFrequencyState                (api.py)
+  → /api/peak-frequency/ws    pushes it, on connect and after every change
+  → usePeakFrequencySocket()  types it as Wire['PeakFrequencyState']
+  → PeakFrequencyPage         renders it
+```
+
+State comes down the socket; commands go up as POSTs.
+`doc/the-client-server-api.md` explains that seam.
+
+| File | What it holds |
+|---|---|
+| `app/server-python/src/peak_frequency/api.py` | `REGISTRY` (a run of the pipeline per client), `PeakFrequencyState` and `state_message` (what the socket pushes), the `/ws` endpoint |
+| `app/server-python/src/peak_frequency/__init__.py` | what `server.py` picks up: `router`, `lifespan`, and `WS_MESSAGE`, which puts the state model in the api contract |
+| `app/client-web/src/pages/peak-frequency/usePeakFrequencySocket.ts` | the socket hook: opens the socket, types its message |
+| `app/client-web/src/pages/peak-frequency/PeakFrequencyPage.tsx` | the page |
+| `App.tsx`, `components/AppLayout.tsx`, `lib/servers.ts` (in `app/client-web/src/`) | the route, the nav entry, `PEAK_FREQUENCY_WS_PATH` and `PEAK_FREQUENCY_API_PATH` |
+
+### Start the dev loop
+
+Two terminals, the server first:
+
+```
+./scripts/start-local-hotloaded-pswamp-server.sh      # the server, Kafka and the workers, on 127.0.0.1:8000
+./scripts/start-local-hotloaded-pswamp-web-client.sh  # the web client with hot reload, on http://localhost:5173
+```
+
+Open `http://localhost:5173/peak-frequency`. A saved edit to the page shows
+at once; a saved edit to `api.py` reloads the server. The api contract is not
+reloaded: the next step regenerates it.
+
+### Shape the page's state
+
+`PeakFrequencyState` in `api.py` is the one message the socket carries:
+
+```python
+class PeakFrequencyState(BaseModel):
+    type: Literal["state"] = "state"
+    player: PlayerStatus = Field(description="Which source is open, and where it is.")
+    result: PeakFrequencyResult | None = Field(description="The module's latest result; null until the first.")
+
+
+def state_message(run: PipelineRun) -> PeakFrequencyState:
+    return PeakFrequencyState(player=run.player.status(), result=run.latest.get(PeakFrequencyResult))
+```
+
+- To show more, add a field and fill it in `state_message`. Another module's
+  result is one more `run.latest.get(...)`; the streamer's `state_message`
+  carries three.
+- Then run `./scripts/generate-api-contract.sh`. It rewrites
+  `doc/api/openapi.json` and `app/client-web/src/api/schema.ts`, which the
+  page's type comes from. Run it after changing the result body in
+  `module.py` too. Commit both files.
+- Keep the state a pydantic model. A dict would drop the app out of the
+  contract while the page keeps working.
+- Nothing warns of a stale contract while you work: the dev client does not
+  type-check. `./scripts/error_check.sh` does.
+
+### Change the page
+
+```tsx
+export function PeakFrequencyPage() {
+  const { state, connected } = usePeakFrequencySocket()
+  const result = state?.result?.result
+  ...
+```
+
+- `state` is `Wire['PeakFrequencyState']`, generated from the Python model.
+  The field names are the server's (`frequency_hz`); the hook does not rename
+  them.
+- `state.result` is the envelope (`timestamp`, `app`), and
+  `state.result.result` the body `process` returned.
+- `state` is null until the first message, and `result` until the first
+  result. Render both cases.
+- Components come from `@/components/ui/` (shadcn). What only this page uses
+  stays in its folder, imported relatively.
+- What the page needs beyond the latest message (the last header, a history)
+  is derived in the hook. `usePmuStreamSocket.ts` keeps the last header.
+- A control is a POST that becomes a command: "Send it commands", below.
+- A page over a recording needs the player's controls (play, pause, step,
+  seek). Copy them from the streamer: the POSTs in its `api.py`, the
+  functions in `usePmuStreamSocket.ts`, the buttons in
+  `PmuTestStreamerPage.tsx`.
+
+### Test it
+
+1. **The web API**: `app/server-python/tests/test_peak_frequency.py`, generated.
+   The whole server in-process (`TestClient`, in-memory transport, the module
+   hosted in the server), a result arriving on the page's socket.
+
+   ```
+   ./scripts/run-python-server-tests.sh -k peak_frequency    # this and the module's tests
+   ```
+
+   For more, see `app/server-python/tests/test_pmu_test_streamer.py`: POSTs,
+   409s, seek and step, two clients on live, a module command, and its
+   refusal on the error tray.
+2. **The types and the contract**: `./scripts/error_check.sh`. It fails where
+   the page reads a field the state no longer has, and while the contract is
+   stale.
+3. **The page in a browser**: a Playwright spec in `e2e/`, run by
+   `./scripts/run-playwright-tests.sh` against the compose stack. The
+   generator writes none. The page marks its readout `data-testid="result"`;
+   `e2e/pmu-test-streamer.spec.ts` is the example of a page over a pipeline.
+
+## Further recipes
+
+### Send it commands
+
+Three steps: the module, the web API, the page.
+
+**1. The module takes it.** A command is a class beside the module, listed in
+`commands`, and applied in `handle`. The streamer's `ExcursionModule` takes
+one, which turns its auto-pause on or off:
 
 ```python
 class AutoPauseCommand(Command):
@@ -159,8 +329,11 @@ class ExcursionModule(Module):
         return self._state()
 ```
 
-The POST builds it, and `dispatch_command` publishes it on its topic under the
-client's key:
+Test it without the pipeline:
+`await module.handle(AutoPauseCommand(enabled=True))`, then `process`.
+
+**2. The web API posts it.** The POST builds the command, and
+`dispatch_command` publishes it on its topic under the client's key:
 
 ```python
 @router.post("/excursion/auto-pause", operation_id="pmu_test_streamer_auto_pause", responses=COMMAND_RESPONSES)
@@ -168,7 +341,28 @@ async def auto_pause(client_id: ClientId, body: AutoPauseBody) -> CommandAck:
     return dispatch(AutoPauseCommand(client_id=client_id, enabled=body.enabled))
 ```
 
-- The page calls it with `postCommand` from its hook.
+`dispatch` there is `dispatch_command(REGISTRY, command, logger)`. It,
+`ClientId`, `CommandAck` and `COMMAND_RESPONSES` come from `shared`.
+
+**3. The page calls it.** Regenerate the contract, then add a function to the
+page's hook:
+
+```ts
+const setAutoPause = useCallback(
+  (enabled: boolean) =>
+    fireCommand(
+      'pmu-test-streamer',
+      postCommand(`${PMU_STREAM_API_PATH}/excursion/auto-pause`, { body: { enabled } }),
+    ),
+  [],
+)
+```
+
+`postCommand` is typed against the contract: a wrong path or body is a `tsc`
+error. `fireCommand` logs a POST that fails. Disable the control while the
+socket is closed, since a POST without a run answers 404. The result arrives
+as the next state, not in the POST's answer.
+
 - A module command is checked where the module runs, so the POST answers 200
   when it is accepted, with the command's `request_id`. A refusal comes back
   as an `ErrorEvent` on the tray, carrying that id.
@@ -177,7 +371,7 @@ async def auto_pause(client_id: ClientId, body: AutoPauseBody) -> CommandAck:
   sink `setup` gave it. `ExcursionModule` publishes `PauseCommand` when the
   frequency leaves its band.
 
-## Chain it onto another module
+### Chain it onto another module
 
 A chained module reads another module's results instead of raw frames. Set
 its `input_model` to that module's result class, and list both modules in the
@@ -217,7 +411,7 @@ So the streamer's data runs frame → frame stats → excursion.
 - **Each link is a hop over the transport**, so a chained module sees an
   instant a little later than the module before it.
 
-## Read data yourself: a batch query
+### Read data yourself: a batch query
 
 A module that sets `reads_gateway = True` gets `self.gateway` (a gateway over
 the pipeline's sources, of its own) before `setup`. It can answer a command by
@@ -231,7 +425,7 @@ async for frame in await self.gateway.consume(start, end): ...
 worker hosting it needs the app's `<APP>_DATA_CLIENTS`, and the settings of
 the clients that names (`REMOTE_URL`, ...), since it builds the gateway itself.
 
-## Run it in its own worker
+### Run it in its own worker
 
 A worker is the server's image running `python -m pswamp_core.worker`. It
 hosts the modules named in `PSWAMP_WORKER_MODULES`, from the pipelines named
@@ -300,7 +494,7 @@ A module that reads the gateway also needs its sources there: the app's
 `<APP>_DATA_CLIENTS` and the settings of the clients it names. The streamer's
 `batch-worker`, which hosts `range-summary`, is the example.
 
-## Scale it
+### Scale it
 
 What a worker of its own lets you change, for that module alone:
 
@@ -323,7 +517,7 @@ What it does not let you change yet: **the number of replicas**. Keep
 consumer group, so two replicas would each read every input and publish every
 result twice. A module scales up, not out.
 
-## A CPU-heavy module
+### A CPU-heavy module
 
 `process` runs on the worker's event loop, so a slow one stalls every other
 module in that process.
@@ -334,7 +528,7 @@ module in that process.
   threads per call multiply the CPU and collapse throughput.
 - Watch the tray: falling behind is reported.
 
-## Plug in a data source
+### Plug in a data source
 
 - **Your own store, over HTTP:** implement
   `doc/remote-data-integration-contract.md` and name `RemoteDataClient` in
