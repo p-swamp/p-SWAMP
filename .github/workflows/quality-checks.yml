@@ -80,10 +80,10 @@ jobs:
           enable-cache: true
           cache-dependency-glob: app/server-python/uv.lock
 
-      # `uv lock --check` runs --offline and needs a real 3.11 (per
-      # app/server-python/.python-version); the runner's newer python3 won't do.
-      - name: Install Python 3.11 for uv
-        run: uv python install 3.11
+      # `uv lock --check` runs --offline and needs a real 3.14.8 (per
+      # app/server-python/.python-version); the runner's own python3 won't do.
+      - name: Install Python 3.14.8 for uv
+        run: uv python install 3.14.8
 
       # Installs node_modules and syncs the server env itself (the api-contract
       # check imports the FastAPI app), so there is no separate install step.
@@ -126,7 +126,7 @@ jobs:
         with:
           enable-cache: true
           cache-dependency-glob: app/server-python/uv.lock
-      - run: uv python install 3.11
+      - run: uv python install 3.14.8
 
       # The server's, the core's and the modules' suites; hermetic but for the
       # Kafka half, which uses the service container above.
@@ -158,7 +158,7 @@ jobs:
         with:
           enable-cache: true
           cache-dependency-glob: app/server-python/uv.lock
-      - run: uv python install 3.11
+      - run: uv python install 3.14.8
 
       # Shares the type=gha layer cache with build-container.yml, so this build
       # is mostly a cache hit. `load: true` puts the image in the runner's daemon.

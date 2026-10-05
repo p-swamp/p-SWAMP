@@ -184,7 +184,12 @@ async def test_live_is_one_shared_run_that_client_runs_follow():
     for run in clients:
         await run.start()
         run.dispatch(SwitchSourceCommand(source="tick"))
-    await until(lambda: all(run.frame is not None and run.frame.timestamp == live.frame.timestamp for run in clients))
+    # live.frame is None until the ticker's first frame, and a client holds its
+    # recording's frame until its switch lands, so check the live run first.
+    await until(
+        lambda: live.frame is not None
+        and all(run.frame is not None and run.frame.timestamp == live.frame.timestamp for run in clients)
+    )
     assert live.key == "live.tick" and all(run.player.status().mode == "live" for run in clients)
     # One module instance counts the live frames for everyone.
     await until(lambda: all(run.latest.get(NumberResult) is not None for run in clients))

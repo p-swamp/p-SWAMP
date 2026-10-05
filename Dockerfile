@@ -32,16 +32,21 @@ RUN npm run build
 
 # --- server stage -----------------------------------------------------------
 #
-# Base: Astral's official uv image (Python 3.11 on Debian 12 "bookworm" slim).
+# Base: Astral's official uv image (Python 3.14.8 on Debian 13 "trixie" slim).
 # Pinned to a digest for reproducible builds — the readable tag is kept as
 # documentation, but Docker enforces the @sha256. This is the multi-arch OCI
 # index digest, so arm64/amd64 still resolve automatically.
-# Resolved 2026-06-06 from tag python3.11-bookworm-slim. To refresh:
+# The tag names only the minor version, so the digest is what fixes the patch:
+# after a refresh, check `python --version` in the image and keep
+# app/server-python/.python-version in step with it.
+# trixie, not bookworm: the python3.14-bookworm-slim tag is no longer updated
+# (Python 3.14.2 and uv 0.9.30 when checked on 2026-10-05).
+# Resolved 2026-10-05 from tag python3.14-trixie-slim. To refresh:
 #   curl -s "https://ghcr.io/token?scope=repository:astral-sh/uv:pull" | ...
 #   curl -sI -H "Authorization: Bearer <token>" \
 #     -H "Accept: application/vnd.oci.image.index.v1+json" \
-#     https://ghcr.io/v2/astral-sh/uv/manifests/python3.11-bookworm-slim
-FROM ghcr.io/astral-sh/uv:python3.11-bookworm-slim@sha256:4f5d923c9dcea037f57bda425dd209f3ec643da2f0b74227f68d09dab0b3bb36
+#     https://ghcr.io/v2/astral-sh/uv/manifests/python3.14-trixie-slim
+FROM ghcr.io/astral-sh/uv:python3.14-trixie-slim@sha256:8e88a074b0969bdc461f681727238e109438d70771828909f9ef19cfcc96c43a
 
 # The image mirrors the *whole repo* at its real depth, not just the server dir
 # flattened to /app. The depth is required for the build to work at all, not a

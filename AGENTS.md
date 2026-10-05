@@ -1100,8 +1100,13 @@ mind when editing that script:
   built and `src/` is a plain source folder, not a packaging layout — `server.py`
   imports each app package by name because the working directory *is* `src/`, and
   a new backend api is just a new folder there (no new manifest, no new lockfile).
-  `app/server-python/.python-version` pins local dev to Python 3.11, matching the
+  `app/server-python/.python-version` pins local dev to Python 3.14.8, matching the
   image; without it `uv` would build the venv on whatever system Python is newest.
+  The same version is repeated in the Dockerfile's base image (fixed by the
+  digest, the tag names only `3.14`), the `uv python install` steps in
+  `quality-checks.yml` and `.devcontainer/devcontainer.json`; change them
+  together. `requires-python` stays `>=3.11` in all four manifests: it is the
+  floor for whoever installs the packages, not the version this repo runs.
   Deliberately **no `[tool.ruff]` section** in `pyproject.toml`: ruff only treats
   the file as config when that section exists, so omitting it keeps the explicit
   `--select F` below authoritative (verified — lint output is unchanged
@@ -1256,14 +1261,14 @@ What has to hold in the `static-errorcheck` job:
   already on `ubuntu-latest`. Node must be **24**, matching the Dockerfile's
   `web-build` stage. `uv` (not `uvx`) is required since ruff now comes from the
   locked `dev` dependency group.
-- **A real Python 3.11 must be on the runner *before* the check runs.** Passing
+- **A real Python 3.14.8 must be on the runner *before* the check runs.** Passing
   the preflight isn't enough: `uv lock --check` resolves against the project's
-  `requires-python` and wants 3.11 (per `app/server-python/.python-version`), and
-  it runs `--offline` so uv may not download one on demand. A runner with only a
-  newer python3 fails with *"No interpreter found for Python 3.11 … uv is set to
+  `requires-python` and wants 3.14.8 (per `app/server-python/.python-version`), and
+  it runs `--offline` so uv may not download one on demand. A runner with only
+  another python3 fails with *"No interpreter found for Python 3.14.8 … uv is set to
   offline mode"* — `py_compile` still passes, which makes it look like a lockfile
   problem when it is an interpreter problem. The workflow therefore runs
-  `uv python install 3.11` before calling the script. Fix it there, not by
+  `uv python install 3.14.8` before calling the script. Fix it there, not by
   dropping `--offline` from `error_check.sh`: that flag keeps the pre-push hook
   off the network.
 - **Cache keys:** npm on `app/client-web/package-lock.json`, uv on
