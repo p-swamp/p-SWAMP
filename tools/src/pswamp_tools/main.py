@@ -10,7 +10,7 @@ from . import _ui
 from ._docker import ContainerToolMissing
 from ._paths import RepoNotFound
 from ._proc import ToolMissing, repair_path
-from .commands import api, new, test
+from .commands import api, dev, new, test
 from .commands.check import HELP as CHECK_HELP
 from .commands.check import check
 from .commands.check_generators import HELP as CHECK_GENERATORS_HELP
@@ -56,6 +56,7 @@ app.add_typer(api.app, name="api")
 app.add_typer(test.app, name="test")
 app.add_typer(new.app, name="new")
 app.command("check-generators", help=CHECK_GENERATORS_HELP)(check_generators)
+app.add_typer(dev.app, name="dev")
 
 
 if __name__ == "__main__":
