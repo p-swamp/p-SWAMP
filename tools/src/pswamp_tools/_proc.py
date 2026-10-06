@@ -14,11 +14,12 @@ and code that needs the server's environment goes through ``uv run``.
 
 from __future__ import annotations
 
+import contextlib
 import os
 import shutil
 import subprocess
 import sys
-from collections.abc import Mapping, Sequence
+from collections.abc import Iterator, Mapping, Sequence
 from pathlib import Path
 
 # How to get each tool the commands may need. Shown verbatim after "not found".
@@ -30,6 +31,8 @@ INSTALL_HINTS: dict[str, str] = {
     "git": "install git: https://git-scm.com/downloads",
     "docker": "install Docker (https://docs.docker.com/get-docker/) or Podman (https://podman.io/)",
     "podman": "install Podman: https://podman.io/docs/installation",
+    "minikube": "install minikube: https://minikube.sigs.k8s.io/docs/start/",
+    "kubectl": "install kubectl: https://kubernetes.io/docs/tasks/tools/",
 }
 
 
@@ -184,6 +187,49 @@ def run_filtered(
             process.kill()
             process.wait()
         return 130
+
+
+@contextlib.contextmanager
+def background(
+    argv: Sequence[str],
+    *,
+    cwd: Path | str | None = None,
+    env: Mapping[str, str] | None = None,
+) -> Iterator[subprocess.Popen]:
+    """Run ``argv`` in the background (output discarded) for the ``with`` block, then stop it.
+
+    The child gets its own process group (Windows) or session (POSIX), so a
+    Ctrl-C in the console never reaches it directly: it is stopped here, on every
+    exit path, by :func:`stop` -- the port of bash's ``&`` plus a ``kill`` trap.
+    """
+    kwargs: dict = {
+        "cwd": cwd,
+        "env": child_env(env),
+        "stdin": subprocess.DEVNULL,
+        "stdout": subprocess.DEVNULL,
+        "stderr": subprocess.DEVNULL,
+    }
+    if sys.platform == "win32":
+        kwargs["creationflags"] = subprocess.CREATE_NEW_PROCESS_GROUP
+    else:
+        kwargs["start_new_session"] = True
+    process = subprocess.Popen(_resolve(argv), **kwargs)
+    try:
+        yield process
+    finally:
+        stop(process)
+
+
+def stop(process: subprocess.Popen, timeout: float = 5.0) -> None:
+    """Terminate ``process`` if it is still running, killing it if it does not exit in ``timeout``."""
+    if process.poll() is not None:
+        return
+    process.terminate()
+    try:
+        process.wait(timeout)
+    except subprocess.TimeoutExpired:
+        process.kill()
+        process.wait()
 
 
 def capture(
