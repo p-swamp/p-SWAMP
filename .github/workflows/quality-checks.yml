@@ -1,6 +1,6 @@
-# Quality gates for pull requests. Publishes nothing — and neither does anything
-# else in this repo: build-container.yml only checks that the image still builds
-# on main. Downstream deployments build their own image from the Dockerfile.
+# Quality gates for pull requests. Pushes nothing: the private container image
+# for core contributors is built and pushed by build-container.yml, on main and
+# on other branches by hand.
 #
 # Four independent merge gates:
 #   dependency-review — rejects unsafe dependency changes in this pull request

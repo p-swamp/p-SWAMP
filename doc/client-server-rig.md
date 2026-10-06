@@ -15,7 +15,7 @@ against real production data from inside TSO infrastructure.
 - Should do what we can to prevent people from tripping over each other and break others code/modules (some guardrails, such as basic syntax error checking before push). Probably also some automated testing
 at least for a "reference app" to ensure the basic structure of the repo/project stays intact.
 
-- The public open source repo does not contain any TSO config/details, nor any explicit authentication. 
+- The public open source repo does not contain any TSO config/details, nor any explicit authentication.
 - Any deployments of the repo in the wild must bolt on their own auth, config etc.
 
 - Consumed PMU/grid data need to be stubbed out, so that deployments in TSO infra fetches from full dataset, while the public
@@ -34,11 +34,11 @@ at least for a "reference app" to ensure the basic structure of the repo/project
 # How to onboard when you are new to the project
 
 - Clone this repo
-- Make sure you are able to run the two scripts that launches the project locally: 
+- Make sure you are able to run the two scripts that launches the project locally:
 `scripts/start-local-hotloaded-pswamp-server.sh` and `scripts/start-local-hotloaded-pswamp-web-client.sh`
 - Make sure the error check script runs ok for you: `scripts/error_check.sh`
 - Make sure the smoke test script runs green: `scripts/e2e-smoke-test.sh`
-  
+
 Folder structure for client-server specific bits
 ==
 
@@ -58,8 +58,8 @@ scripts/      the stable developer interface — start the server, start the web
               client, run in minikube, etc. Call these rather than the underlying
               docker/npm/uv commands; they stay the same if the tooling changes.
 .github/      CI: workflows/quality-checks.yml (checks + tests on pull requests) and
-              workflows/build-container.yml (checks the image still builds on main;
-              publishes nothing)
+              workflows/build-container.yml (builds the image and pushes it to a
+              private registry package for core contributors)
 .githooks/    pre-push hook: checks every pushed commit is signed off (DCO), then
               runs scripts/error_check.sh. Opt in per clone with
               `git config core.hooksPath .githooks`.
@@ -165,19 +165,24 @@ Build pipeline (CI)
 ==
 
 Two workflows under `.github/workflows/`: `quality-checks.yml` gates pull
-requests, and `build-container.yml` checks on every change to `main` that the
-container image still builds and starts.
+requests, and `build-container.yml` builds the container image, checks it
+starts, and pushes it to a **private** GitHub Container Registry package.
 
-**CI publishes no container image, and nothing else here does either.** This
-repo cannot host binaries, so there is no registry to pull from. The `Dockerfile`
-is an **example** of how to containerise the stack — the same one the compose,
-minikube and CI paths build from — and a TSO or any other downstream deployment
-builds its own image from it, into its own registry:
+**That image is for core contributors only.** This repo must not be a public
+source of binaries, so the package is private, and it cannot be made public for
+this repo.
+
+- **`main`:** built automatically on every change.
+- **Any other branch:** built only by hand. On github.com: Actions →
+  build-container → "Run workflow" → pick the branch. Needs write access.
+- **Name:** `ghcr.io/<owner>/p-swamp:<branch>-<full commit sha>`. There is no
+  `latest`; a tag never moves.
+- **Pulling:** needs access to the package and a personal access token (classic)
+  with `read:packages`.
 
 ```
-git clone <this repo> && cd p-SWAMP
-docker build --build-arg GIT_SHA="$(git rev-parse HEAD)" -t <registry>/p-swamp:<tag> .
-docker push <registry>/p-swamp:<tag>
+echo $TOKEN | docker login ghcr.io -u <github user> --password-stdin
+docker pull ghcr.io/<owner>/p-swamp:<branch>-<full commit sha>
 ```
 
 The build context is the repo root (the image holds both the web client and the
@@ -427,7 +432,7 @@ once and handed to every pipeline (`load_recording()` is cached). Safe because
   clearing it (or a private window) gets a fresh pipeline — also the easy way to force
   a restart from 0 s.
 
-  
+
 Adding a dependency
 --
 
@@ -495,4 +500,3 @@ How the project/core team collaborates with the wider open source community
 ==
 
 _See `how-the-project-interacts-with-open-source-contributors.md`_
-

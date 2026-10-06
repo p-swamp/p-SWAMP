@@ -1093,14 +1093,14 @@ mind when editing that script:
   it. Ruff's own version is pinned in the `dev` dependency group of
   `app/server-python/pyproject.toml` and locked, so everyone runs the identical
   linter.
-- **CI checks; it never publishes and never deploys.** The workflows (below)
-  check pull requests and check that the image still builds from `main`. No
-  image is pushed to any registry — **this repo cannot host binaries** — and
-  nothing rolls anything out to a cluster. The `Dockerfile` is an *example* of
-  how to containerise the stack; a downstream deployment builds its own image
-  from it (see "CI"). The **pre-push hook** is still the first gate and the fast
-  one — run `error_check.sh` before finishing any change rather than discovering
-  it in CI.
+- **CI checks, and builds a private image; it never deploys.** The workflows
+  (below) check pull requests, and `build-container.yml` pushes an image to a
+  **private** GHCR package for core contributors: from `main` on every change,
+  from any other branch only when started by hand. Nothing is offered to the
+  public and nothing rolls anything out to a cluster; a downstream deployment
+  still builds its own image from the `Dockerfile` (see "CI"). The **pre-push
+  hook** is still the first gate and the fast one — run `error_check.sh` before
+  finishing any change rather than discovering it in CI.
 
 ## CI
 
@@ -1121,21 +1121,48 @@ mind when editing that script:
   through their runner scripts (`run-python-server-tests.sh`; the desktop
   `run-core-python-tests.sh` step is commented out with a TODO until its
   missing-module failure is resolved), so `error_check.sh` stays strictly static.
-- **`build-container.yml`** runs on every push to `main` and from the Actions
-  tab: it builds the image with `push: false`, starts it, checks `/healthz`
-  answers, and discards it. **It publishes nothing.** It runs no gates of its
+- **`build-container.yml`** builds the image, starts it, checks `/healthz`
+  answers, and pushes it to a **private** GHCR package, `ghcr.io/<owner>/p-swamp`.
+  It runs on every push to `main`, and on any other branch only when started by
+  hand: Actions → build-container → "Run workflow" → pick the branch. Each run
+  pushes one image, tagged `<branch>-<full commit sha>`. It runs no gates of its
   own — `main` is protected, so every commit on it already passed the checks on
-  its pull request. What it adds over the pull-request smoke test is a build of
-  the *merged* result with the `GIT_SHA` build arg threaded in as a deployment
-  would pass it. Its job is `build-container`; it needs no secret and only
-  `contents: read`.
+  its pull request; a branch built by hand has passed only the `/healthz` check.
+  Its job is `build-container`; it needs no secret, since the automatic
+  `GITHUB_TOKEN` with `packages: write` covers GHCR.
 
-A branch with no PR open runs nothing.
+A branch with no PR open runs nothing on its own.
 
-**Nothing in this repo publishes a container image, by constraint rather than
-by omission: this repo cannot host binaries.** The `Dockerfile` is an **example**
-of how to containerise the stack — the one the compose, minikube and CI paths
-all build from — and a downstream deployment builds its own image from it:
+**The image is for core contributors only. This repo must not be a public
+source of binaries** — that is why a public push was removed once, and it still
+holds. What keeps it so:
+
+- **Starting a build needs write access.** That is GitHub's rule for a push to
+  `main` and for "Run workflow" alike. There is no `pull_request` trigger, so a
+  pull request from a fork cannot cause a push.
+- **Pulling needs access to the package**, which is private. A package linked to
+  a repo takes that repo's access roles (not its visibility); change who has
+  access under the package's settings on github.com. It also needs a personal
+  access token (classic) with `read:packages`:
+
+  ```
+  echo $TOKEN | docker login ghcr.io -u <github user> --password-stdin
+  docker pull ghcr.io/<owner>/p-swamp:<branch>-<full commit sha>
+  ```
+- **The package cannot be made public for this repo**, so the workflow does not
+  check its visibility. That is a setting on github.com, outside this repo: if it
+  is ever relaxed, note that a public package cannot be made private again, only
+  deleted.
+- **The tag is `<branch>-<full commit sha>`, and there is no `latest`.** What a
+  tag cannot hold becomes `-` (`feature/x` → `feature-x`), and the branch part is
+  cut to 87 characters so the tag fits docker's 128. A tag never moves, so
+  nothing is overwritten, and nothing is cleaned up either.
+- **"Run workflow" uses the workflow file as it is on the chosen branch.** A
+  branch cut before this file pushed images still has the old one; merge `main`
+  into it first.
+
+**A downstream deployment does not pull that image; it builds its own** from the
+`Dockerfile`, the one the compose, minikube and CI paths all build from:
 
 ```
 git clone <this repo> && cd p-SWAMP
@@ -1147,8 +1174,8 @@ What holds for such a build: the context is the repo root (see below), the
 `GIT_SHA` build arg is what the client footer shows on deployed origins, and a
 deployment should pin to an immutable tag of its own making (the commit sha)
 rather than a moving one, since a moving tag never triggers a k8s rollout on its
-own. Don't add a registry push back to either workflow without an explicit ask;
-if hosting ever becomes possible, that is a decision for an ADR.
+own. Don't make the package public, or add a push to a public registry, without
+an explicit ask; that is a decision for an ADR.
 
 **Blocking a merge on the checks is a repo setting, not something a workflow
 can express.** Settings → Branches → branch protection for `main` → "Require
@@ -1212,10 +1239,11 @@ What has to hold in the `static-errorcheck` job:
   with `uvicorn --reload` for local dev — which is not what ships. It needs `uv`
   on the runner for the WebSocket half, keyed on the same `uv.lock` cache as the
   `static-errorcheck` job.
-- **The CI image is `linux/amd64` only**, stated explicitly via `platforms:` in
-  both workflows. Dev boxes here are often arm64, but they build their own image
-  via compose/minikube, so an emulated arm64 leg would cost every push for a
-  check nothing needs. The *Dockerfile* is
+- **The CI image is `linux/amd64` only**, the pushed one included, stated
+  explicitly via `platforms:` in both workflows. Dev boxes here are often arm64,
+  but they build their own image via compose/minikube, so an emulated arm64 leg
+  would cost every build for an image nobody has asked for. Pulled onto an arm64
+  machine, the pushed image runs only under emulation. The *Dockerfile* is
   still multi-arch-capable (both base images are multi-arch index digests, and
   `uv.lock` carries wheel hashes for both) — adding arm64 back is a `platforms`
   edit plus a QEMU/binfmt step, not a rewrite. Don't drop lock hashes to "fix" a
@@ -1223,10 +1251,10 @@ What has to hold in the `static-errorcheck` job:
 - **Build context is the repo root**, as in compose and the minikube script — the
   `web-build` stage needs `app/client-web/` and the runtime stage needs root
   `src/` — so it can't be narrowed to `app/server-python/`.
-- **`push: false` + `load: true` in `build-container.yml` is the whole
-  "nothing published" guarantee**, together with the job's `contents: read`-only
-  permissions: there is no registry login and no `packages: write`, so a push
-  could not succeed even if someone flipped the flag by accident.
+- **`build-container.yml` builds with `load: true`, starts the image, then
+  `docker push`es it** — one build, and the image pushed is the one whose
+  `/healthz` answered. That job is the only one with `packages: write`;
+  `quality-checks.yml` has no registry login and pushes nothing.
 - **k8s manifest:** `p-swamp-local.yaml` is local-only (`imagePullPolicy: Never`, image
   built into minikube)
 

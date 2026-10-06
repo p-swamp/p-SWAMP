@@ -1,30 +1,43 @@
-# Check that the container image (web client + server, one Dockerfile) still
-# builds from main. Runs on every change to main and from the Actions tab.
+# Build the container image (web client + server, one Dockerfile) and push it to
+# a PRIVATE GitHub Container Registry package, for core contributors only.
 #
-# THIS PUBLISHES NOTHING. This repo cannot host binaries, so no image is pushed
-# to any registry and the build is discarded when the job ends. The Dockerfile
-# is an EXAMPLE of how to containerise the stack: a downstream deployment builds
-# its own image from this repo, with its own tag and its own registry:
+# When it runs:
+#   main          — automatically, on every change
+#   other branch  — only by hand: Actions → build-container → "Run workflow" →
+#                   pick the branch
 #
+# What it pushes: one image per run, named after the branch and the commit.
+#   ghcr.io/<owner>/p-swamp:<branch>-<full commit sha>
+# No `latest` and no moving tag, so a tag never changes what it points at.
+#
+# Who it is for: core contributors, not the public. This repo must not be a
+# public source of binaries, so:
+#   - starting a build needs write access (GitHub's rule for a push to main and
+#     for "Run workflow"); there is no pull_request trigger
+#   - the package is private, and cannot be made public for this repo. Pulling
+#     needs access to it plus a personal access token (classic) with
+#     read:packages:
+#       echo $TOKEN | docker login ghcr.io -u <github user> --password-stdin
+#       docker pull ghcr.io/<owner>/p-swamp:<branch>-<full commit sha>
+#
+# A downstream deployment does not pull from here. It builds its own image:
 #   git clone <this repo> && cd p-SWAMP
 #   docker build --build-arg GIT_SHA="$(git rev-parse HEAD)" -t <registry>/p-swamp:<tag> .
-#   docker push <registry>/p-swamp:<tag>
-#
-# What this job adds over quality-checks.yml (which already builds the image for
-# its smoke test on every pull request) is that the build is exercised on the
-# merged result, with the GIT_SHA build arg threaded in as a deployment would.
 #
 # No quality gates here: main is protected, so every commit on it already passed
-# quality-checks.yml on its pull request.
+# quality-checks.yml on its pull request. A branch built by hand has passed only
+# the start-and-/healthz check below.
+#
+# "Run workflow" uses this file as it is on the chosen branch. A branch cut
+# before this file pushed images still has the old one: merge main into it first.
 name: build-container
 
 on:
   push:
     branches: [main] # Main is protected, but this runs on PR merges as well (github pushes to main)
-  workflow_dispatch:
+  workflow_dispatch: # any branch, picked in the Actions tab
 
-# Finish every run: a build that broke on main should show up as a red run for
-# that commit rather than be cancelled by the next one.
+# Never cancel a build in progress: every main commit should get its image.
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: false
@@ -33,27 +46,53 @@ jobs:
   build-container:
     runs-on: ubuntu-latest
     permissions:
-      contents: read # read-only: nothing is pushed anywhere
+      contents: read
+      packages: write # GHCR push with the automatic GITHUB_TOKEN; no extra secret
     steps:
       - uses: actions/checkout@v5
+
+      # The path: GHCR needs it all-lowercase and this repo's name is not (p-SWAMP).
+      # The tag: <branch>-<full commit sha>. A branch name is not a valid tag as
+      # it stands, so "/" and the like become "-", and the branch part is cut to
+      # 87 characters: docker allows 128, less the "-" and the 40 of the sha.
+      # Read from the runner's own GITHUB_* variables rather than ${{ }}, which
+      # would paste the branch name into this script as code.
+      - name: Name the image after the branch and the commit
+        run: |
+          package="$(printf '%s' "$GITHUB_REPOSITORY" | tr '[:upper:]' '[:lower:]')"
+          branch="$(printf '%s' "$GITHUB_REF_NAME" \
+            | LC_ALL=C sed -e 's/[^A-Za-z0-9_.-]/-/g' -e 's/^[.-]*//' | cut -c1-87)"
+          echo "IMAGE=ghcr.io/${package}:${branch:-branch}-${GITHUB_SHA}" >> "$GITHUB_ENV"
 
       # buildx for the layer cache; no QEMU, the image is amd64 only.
       - uses: docker/setup-buildx-action@v4
 
+      - name: Log in to GHCR
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
       # Context is the repo root: the web-build stage needs app/client-web/ and
-      # the runtime stage needs root src/. amd64 only: that is what a downstream
-      # cluster would run, and dev boxes build their own image via compose/minikube.
+      # the runtime stage needs root src/. amd64 only: dev boxes build their own
+      # image via compose/minikube.
       #
-      # `push: false` + `load: true`: the image lands in the runner's own docker
-      # daemon and nowhere else, and is gone when the runner is.
-      - name: Build the image (not published)
+      # `load: true`, not `push: true`: the image goes to the runner's docker
+      # daemon first, so the one that is pushed is the one that was started below.
+      - name: Build the image
         uses: docker/build-push-action@v7
         with:
           context: .
           platforms: linux/amd64
           push: false
           load: true
-          tags: p-swamp:ci
+          tags: ${{ env.IMAGE }}
+          # `source` links the package to this repo, which is where it takes its
+          # access roles from.
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
           # Exposed to Vite as VITE_GIT_SHA; the footer shows it on deployed origins.
           build-args: |
             GIT_SHA=${{ github.sha }}
@@ -66,7 +105,7 @@ jobs:
       # the command with `uvicorn --reload` for local dev.
       - name: Start the built image
         run: |
-          docker run -d --name p-swamp-ci -p 8000:8000 -e HOST=0.0.0.0 -e PORT=8000 p-swamp:ci
+          docker run -d --name p-swamp-ci -p 8000:8000 -e HOST=0.0.0.0 -e PORT=8000 "$IMAGE"
           for i in $(seq 1 30); do
             if curl -fsS http://127.0.0.1:8000/healthz >/dev/null; then
               echo "healthz answered after ${i}s"; exit 0
@@ -83,12 +122,23 @@ jobs:
         if: always()
         run: docker rm -f p-swamp-ci || true
 
+      - name: Push the image
+        run: docker push "$IMAGE"
+
       - name: Summary
         run: |
           {
-            echo "### Container build OK — nothing published"
+            echo "### Pushed a private image"
             echo
-            echo "The image built from \`${{ github.sha }}\` and answered \`/healthz\`."
-            echo "This repo hosts no binaries: build your own image from the Dockerfile"
-            echo "(see the comment at the top of this workflow)."
+            echo '```'
+            echo "$IMAGE"
+            echo '```'
+            echo
+            echo "For core contributors. Pulling needs access to the package and a"
+            echo "personal access token (classic) with \`read:packages\`:"
+            echo
+            echo '```'
+            echo "echo \$TOKEN | docker login ghcr.io -u <github user> --password-stdin"
+            echo "docker pull $IMAGE"
+            echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
