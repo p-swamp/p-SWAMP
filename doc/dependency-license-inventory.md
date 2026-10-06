@@ -13,7 +13,8 @@ The inventory covers the dependency inputs committed to this repository:
 - `app/client-web/package-lock.json`: 572 npm package records, including
   transitive and platform-specific optional packages;
 - `e2e/package-lock.json`: 6 npm package records;
-- root `uv.lock` and `app/server-python/uv.lock`: 82 unique registry package and
+- `desktop/uv.lock` and the root `uv.lock` (formerly the root `uv.lock` and
+  `app/server-python/uv.lock`, before the desktop package moved to `desktop/`): 82 unique registry package and
   version pairs, plus four commit-pinned Git dependencies; and
 - actions referenced by `.github/workflows/*.yml`.
 

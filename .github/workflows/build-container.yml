@@ -75,7 +75,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       # Context is the repo root: the web-build stage needs app/client-web/ and
-      # the runtime stage needs root src/. amd64 only: dev boxes build their own
+      # the runtime stage needs desktop/src/. amd64 only: dev boxes build their own
       # image via compose/minikube.
       #
       # `load: true`, not `push: true`: the image goes to the runner's docker

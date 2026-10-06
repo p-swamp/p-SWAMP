@@ -44,7 +44,7 @@ services:
         "--reload-dir",
         "/workspace/p-SWAMP/app/server-python/src",
         "--reload-dir",
-        "/workspace/p-SWAMP/src",
+        "/workspace/p-SWAMP/desktop/src",
         "--reload-dir",
         "/workspace/p-SWAMP/core/src",
         "--reload-dir",
@@ -87,16 +87,17 @@ services:
         - path: app/server-python/src
           action: sync
           target: /workspace/p-SWAMP/app/server-python/src
-        # The same live-reload loop for the desktop package at the repo root.
-        # p-swamp is installed editable (see the Dockerfile), so root src/pswamp/
-        # in the image is what actually gets imported, and syncing it means a
+        # The same live-reload loop for the desktop package in desktop/.
+        # p-swamp is installed editable (see the Dockerfile), so
+        # desktop/src/pswamp/ in the image is what actually gets imported, and
+        # syncing it means a
         # change to a monitoring application or the time-window storage
         # hot-reloads here just like a change to the server's own code. Without
         # this, edits there would appear to do nothing until the next rebuild.
-        - path: src
+        - path: desktop/src
           action: sync
-          target: /workspace/p-SWAMP/src
-        # The shared core, installed editable in the image like root src/.
+          target: /workspace/p-SWAMP/desktop/src
+        # The shared core, installed editable in the image like desktop/src/.
         - path: core/src
           action: sync
           target: /workspace/p-SWAMP/core/src
@@ -108,9 +109,13 @@ services:
         # installed, which a file sync can't do. These rebuild the image and
         # recreate the container instead — slower, on purpose. Without this,
         # editing pyproject.toml would appear to do nothing.
+        - path: pyproject.toml
+          action: rebuild
+        - path: uv.lock
+          action: rebuild
         - path: app/server-python/pyproject.toml
           action: rebuild
-        - path: app/server-python/uv.lock
+        - path: desktop/pyproject.toml
           action: rebuild
         - path: core/pyproject.toml
           action: rebuild
@@ -146,6 +151,8 @@ services:
         - path: core/pyproject.toml
           action: rebuild
         - path: modules/pyproject.toml
+          action: rebuild
+        - path: uv.lock
           action: rebuild
 
   # The range summary in a worker of its own: a batch query over a recording,

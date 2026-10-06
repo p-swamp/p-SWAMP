@@ -9,9 +9,9 @@
 #   app/server-python          depends on both
 #
 # So a worker hosting modules imports core and modules, and no web backend.
-# The web backend takes this project as an editable path dependency, and its
-# tests run in the web backend's locked environment, so there is no lockfile
-# here. A module's own third-party dependency goes in `dependencies` below.
+# It is a member of the uv workspace rooted at the repo root, locked in the one
+# uv.lock there, and its tests run with the web backend's, so there is no
+# lockfile here. A module's own third-party dependency goes in `dependencies` below.
 
 [project]
 name = "pswamp-modules"
@@ -22,7 +22,7 @@ requires-python = ">=3.11"
 dependencies = ["pswamp-core"]
 
 [tool.uv.sources]
-pswamp-core = { path = "../core", editable = true }
+pswamp-core = { workspace = true }
 
 [build-system]
 requires = ["uv_build"]

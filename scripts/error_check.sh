@@ -13,9 +13,9 @@
 #     - tsc -b ....... type-check (also catches unused locals, bad imports)
 #     - eslint . ..... lint (flat eslint.config.js, react-hooks etc)
 #
-#   Python (app/server-python + core + modules)
-#     - uv lock --check  pyproject.toml vs uv.lock in sync (read-only)
-#     - py_compile ..... syntax/AST errors (app/, core/, modules/, + the older root src/ package)
+#   Python (the uv workspace: app/server-python + core + modules)
+#     - uv lock --check  the members' pyproject.toml vs the root uv.lock in sync (read-only)
+#     - py_compile ..... syntax/AST errors (app/, core/, modules/, + the older desktop/src/ package)
 #     - ruff check ..... lint (pyflakes F — real bugs, not style), app/ + core/ + modules/, from the locked dev group
 #
 #   The api contract (doc/api/openapi.json + app/client-web/src/api/schema.ts)
@@ -84,10 +84,12 @@ section "Python (app/server-python, core, modules)"
 # Dependency manifest vs lockfile (the Python counterpart of `npm ci`), so nobody
 # adds a dependency, forgets to re-lock, and only finds out when the Docker
 # build's `uv export --locked` fails. `--check` never writes; `--offline` keeps
-# the pre-push hook off the network. Fix with: (cd app/server-python && uv lock)
-if [ -f app/server-python/pyproject.toml ]; then
+# the pre-push hook off the network. The lockfile is the workspace's, at the repo
+# root, so this runs from here. Fix with: uv lock (at the repo root). The desktop
+# package's own desktop/uv.lock is outside the workspace and not checked here.
+if [ -f uv.lock ]; then
   run "uv lock --check (deps vs lockfile)" \
-    uv lock --check --offline --project app/server-python
+    uv lock --check --offline
 fi
 
 # Every .py under app/, core/ and modules/, excluding caches. NUL-delimited to survive odd paths.
@@ -106,18 +108,18 @@ else
   # AST/syntax: compile each module. Third-party deps aren't needed just to parse.
   run "py_compile (Python syntax/AST)" python3 -m py_compile "${PY_FILES[@]}"
 
-  # The older desktop pswamp package at root src/ ships in the image (installed
+  # The older desktop pswamp package at desktop/src/ ships in the image (installed
   # editable), so it must at least parse. It gets a syntax-only gate for now: it
   # is not yet lint-clean, so it is deliberately excluded from `ruff check` below.
-  # TODO Add full ruff lint check on the older pswamp code (root src/). It has
+  # TODO Add full ruff lint check on the older pswamp code (desktop/src/). It has
   # ~334 pyflakes findings to triage first — see AGENTS.md "Two Python projects".
-  if [ -d src ]; then
+  if [ -d desktop/src ]; then
     SRC_PY_FILES=()
     while IFS= read -r -d '' py_file; do
       SRC_PY_FILES+=("$py_file")
-    done < <(find src -name '*.py' -not -path '*/__pycache__/*' -print0)
+    done < <(find desktop/src -name '*.py' -not -path '*/__pycache__/*' -print0)
     if [ "${#SRC_PY_FILES[@]}" -ne 0 ]; then
-      run "py_compile (older pswamp src/, syntax only)" \
+      run "py_compile (older pswamp desktop/src/, syntax only)" \
         python3 -m py_compile "${SRC_PY_FILES[@]}"
     fi
   fi
