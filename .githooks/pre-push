@@ -4,9 +4,11 @@
 #   1. Every commit being pushed is signed off. The DCO check on the pull
 #      request rejects a commit that is not, and by then the fix is a rebase
 #      plus a force-push of a branch others may already have looked at.
-#   2. The static error checks. CI runs the same script after the push, but this
-#      hook is the fast gate: it fails in seconds on your machine instead of
-#      minutes into a pipeline.
+#   2. The static checks (`pswamp check`). CI runs the same command after the
+#      push, but this hook is the fast gate: it fails in seconds on your machine
+#      instead of minutes into a pipeline.
+#
+# Git for Windows runs hooks through its bundled bash, so this works there too.
 #
 # Activate once per clone:  git config core.hooksPath .githooks
 # Bypass for a single push: git push --no-verify
@@ -71,4 +73,7 @@ else
     [ "$unsigned" -eq 0 ] || exit 1
 fi
 
-exec ./scripts/error_check.sh
+# GUI git frontends may start hooks with a minimal PATH; ~/.local/bin is where the
+# uv installer puts uv. (pswamp repairs the rest of PATH, node included, itself.)
+PATH="$HOME/.local/bin:$PATH"
+exec uv run pswamp check
