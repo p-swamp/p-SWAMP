@@ -1,0 +1,36 @@
+# pswamp-tools: the `pswamp` command line — the repo's automation (checks, the
+# api contract, the test suites) as one cross-platform Typer CLI, run with
+# `uv run pswamp …` from anywhere in the repo. `uv run pswamp --help` is the
+# documentation.
+#
+# A member of the uv workspace rooted at the repo root (one uv.lock there). It
+# imports nothing from the other members: everything that needs the server's
+# environment (the api contract, ruff, pytest, the smoke-test clients) is run
+# as a subprocess through `uv run --project app/server-python`, so the CLI
+# behaves the same whichever environment it was itself launched from.
+#
+# Never shipped: the Dockerfile exports only pswamp-server's dependencies.
+
+[project]
+name = "pswamp-tools"
+version = "0.1.0"
+description = "The p-SWAMP repo CLI (`pswamp`): checks, api contract, test suites."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "typer>=0.15",
+    "rich>=13.7",
+]
+
+[project.scripts]
+pswamp = "pswamp_tools.main:app"
+
+[build-system]
+requires = ["uv_build"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-name = "pswamp_tools"
+
+# No [tool.ruff] section: `pswamp check` passes `--select F` explicitly.
+# The tests (tests/) run with the server's, through `pswamp test server`.

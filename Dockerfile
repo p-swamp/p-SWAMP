@@ -94,6 +94,11 @@ COPY core/pyproject.toml core/README.md ${REPO_DIR}/core/
 # The modules (modules/), the third: same again.
 COPY modules/pyproject.toml modules/README.md ${REPO_DIR}/modules/
 
+# The repo CLI (tools/, pswamp-tools): manifest only, and never installed. It is
+# a workspace member (and in the server's dev group), so `uv export --locked`
+# needs its manifest to validate the lock; --no-dev keeps it out of the export.
+COPY tools/pyproject.toml tools/README.md ${REPO_DIR}/tools/
+
 # The manifests declare the direct dependencies; the workspace uv.lock pins the
 # whole transitive closure resolved from them. --package pswamp-server exports
 # what the server needs (and so, through it, what the core and modules need). Install system-wide at build time, so
