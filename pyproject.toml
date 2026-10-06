@@ -4,6 +4,7 @@
 #
 #   core/                pswamp-core      the server data architecture
 #   modules/             pswamp-modules   the analysis modules, over the core
+#   tools/               pswamp-tools     the `pswamp` repo CLI (`uv run pswamp --help`)
 #   app/server-python/   pswamp-server    the web backend, over both
 #
 # The desktop package (desktop/, p-swamp) is deliberately NOT a member: it keeps
@@ -16,7 +17,7 @@
 #   uv sync                                   every member plus the dev group, into ./.venv
 
 [tool.uv.workspace]
-members = ["core", "modules", "app/server-python"]
+members = ["core", "modules", "tools", "app/server-python"]
 
 # No [dependency-groups] here, on purpose. The dev tooling (ruff, pytest,
 # pytest-asyncio) is the dev group of app/server-python/pyproject.toml. Because
