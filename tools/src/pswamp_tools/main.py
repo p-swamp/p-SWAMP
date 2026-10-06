@@ -10,7 +10,7 @@ from . import _ui
 from ._docker import ContainerToolMissing
 from ._paths import RepoNotFound
 from ._proc import ToolMissing, repair_path
-from .commands import api, test
+from .commands import api, new, test
 from .commands.check import HELP as CHECK_HELP
 from .commands.check import check
 
@@ -52,6 +52,7 @@ def _main() -> None:
 app.command("check", help=CHECK_HELP)(check)
 app.add_typer(api.app, name="api")
 app.add_typer(test.app, name="test")
+app.add_typer(new.app, name="new")
 
 
 if __name__ == "__main__":

@@ -160,7 +160,7 @@ def render(text):
     return text
 
 
-TEMPLATES = Path("scripts/templates") / template_set
+TEMPLATES = Path("tools/src/pswamp_tools/templates") / template_set
 sources = [
     (TEMPLATES / "server-python", api_dir),
     (TEMPLATES / "client-web", page_dir),
@@ -184,7 +184,7 @@ if template_set == "module":
 # working tree, so any of them can die() with nothing half-written.
 for templates, _ in sources:
     if not templates.is_dir():
-        die(f"Missing {templates}/ — the templates live beside this script.")
+        die(f"Missing {templates}/ — the templates live in tools/src/pswamp_tools/templates/.")
     for template in sorted(templates.iterdir()):
         if not template.name.endswith(".template"):
             die(f"{template} must be named <filename>.template — see the note above.")
