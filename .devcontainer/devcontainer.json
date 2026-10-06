@@ -6,7 +6,7 @@
     "ghcr.io/devcontainers/features/node:1": { "version": "22" },
     "ghcr.io/devcontainers/features/python:1": { "version": "3.11" }
   },
-  // installs the 4th tool that error_check.sh preflights (node/npx/python3 come from features)
+  // installs uv, which runs the repo CLI (`uv run pswamp …`); node/npm/npx come from features
   "postCreateCommand": "curl -LsSf https://astral.sh/uv/install.sh | sh",
   "forwardPorts": [5173, 8000],
   "portsAttributes": {

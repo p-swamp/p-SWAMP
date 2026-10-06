@@ -2,14 +2,19 @@
 # else in this repo: build-container.yml only checks that the image still builds
 # on main. Downstream deployments build their own image from the Dockerfile.
 #
+# Every job drives the repo through the `pswamp` CLI (`uv run pswamp …`, tools/),
+# the same commands a developer runs locally.
+#
 # Four independent merge gates:
 #   dependency-review — rejects unsafe dependency changes in this pull request
-#   static-errorcheck — scripts/error_check.sh, the same gate .githooks/pre-push runs, and scripts/check-generators.sh
-#   unit-tests        — the Python test suites via their runner scripts, the
-#                       transport suite against a real Kafka broker included
+#   static-errorcheck — `pswamp check`, the same gate .githooks/pre-push runs, and `pswamp check-generators`
+#   unit-tests        — `pswamp test server`, the transport suite against a real
+#                       Kafka broker included
 #   e2e-smoke-test    — builds the image, runs it, drives the Reference example and the PMU test streamer
-# The provisional playwright-e2e job is present too, but is not yet a required
-# branch-protection check.
+# Not required branch-protection checks (yet):
+#   playwright-e2e    — provisional browser tests
+#   windows-checks    — `pswamp check` and `pswamp test server` on Windows, so the
+#                       CLI's "works natively on Windows" promise is enforced
 
 # Making these block a merge is a repo setting: Settings → Branches → protection
 # for main → "Require status checks to pass", selecting the four JOB names above.
@@ -66,7 +71,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      # error_check.sh needs node, npx, uv and python3. Node 24 matches the
+      # `pswamp check` needs node, npm, npx and uv. Node 24 matches the
       # Dockerfile's web-build stage.
       - uses: actions/setup-node@v5
         with:
@@ -87,13 +92,13 @@ jobs:
 
       # Installs node_modules and syncs the server env itself (the api-contract
       # check imports the FastAPI app), so there is no separate install step.
-      - name: Static checks (tsc, eslint, uv lock --check, py_compile, ruff, api contract)
-        run: ./scripts/error_check.sh
+      - name: Static checks (tsc, eslint, uv lock --check, syntax, ruff, api contract)
+        run: uv run pswamp check
 
       # Both generators, in a throwaway worktree: their output passes the same
       # checks and the generated module's tests.
       - name: The generators produce working apps
-        run: ./scripts/check-generators.sh
+        run: uv run pswamp check-generators
 
   unit-tests:
     runs-on: ubuntu-latest
@@ -133,7 +138,7 @@ jobs:
       - name: Server, core and modules unit tests
         env:
           KAFKA_TEST_BOOTSTRAP_SERVERS: localhost:9092
-        run: ./scripts/run-python-server-tests.sh
+        run: uv run pswamp test server
 
       # TODO Re-enable once the desktop suite (desktop/tests/) collects again:
       # tests/test_run_simple_case_{kafka,nqkafka}.py import
@@ -141,12 +146,12 @@ jobs:
       # Kafka/NQKafka/MQTT brokers and a Qt display, so the infra-bound tests
       # must be skip-guarded first.
       # - name: Core (desktop) unit tests
-      #   run: ./scripts/run-core-python-tests.sh
+      #   run: uv run pswamp test desktop
 
-  # error_check.sh never starts the app; this job only starts it. It runs the
+  # `pswamp check` never starts the app; this job only starts it. It runs the
   # image as a cluster would (the Dockerfile's own CMD, no compose dev overrides,
   # no broker: the in-memory transport) and drives the Reference example and the
-  # PMU test streamer end to end. See scripts/e2e-smoke-test.sh.
+  # PMU test streamer end to end. See `uv run pswamp test smoke --help`.
   e2e-smoke-test:
     runs-on: ubuntu-latest
     steps:
@@ -181,10 +186,10 @@ jobs:
             -p 8000:8000 -e HOST=0.0.0.0 -e PORT=8000 \
             p-swamp:smoketest
 
-      # SMOKETEST_URL = test this server, don't manage its lifecycle. The script
-      # waits for /healthz itself.
+      # --url = test this server, don't manage its lifecycle. It waits for
+      # /healthz itself.
       - name: Smoke test the running image
-        run: SMOKETEST_URL=http://127.0.0.1:8000 ./scripts/e2e-smoke-test.sh
+        run: uv run pswamp test smoke --url http://127.0.0.1:8000
 
       - name: Server log
         if: always()
@@ -228,3 +233,30 @@ jobs:
         name: playwright-report
         path: e2e/playwright-report/
         retention-days: 30
+
+  # --- Windows ------------------------------------------------------------------
+  #
+  # The CLI promises to run natively on Windows; this keeps it honest. The static
+  # gate and the hermetic unit tests, as on Linux (no Kafka: the transport suite's
+  # Kafka half skips itself). NOT a required check: add it to branch protection
+  # once it has proven stable. actions/checkout leaves core.autocrlf on here, so
+  # this also covers CRLF checkouts (the contract check ignores line endings).
+  windows-checks:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: app/client-web/package-lock.json
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+      - name: Install Python 3.11 for uv
+        run: uv python install 3.11
+      - name: Static checks
+        run: uv run pswamp check
+      - name: Server, core, modules and tools unit tests
+        run: uv run pswamp test server
