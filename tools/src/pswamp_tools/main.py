@@ -13,6 +13,8 @@ from ._proc import ToolMissing, repair_path
 from .commands import api, new, test
 from .commands.check import HELP as CHECK_HELP
 from .commands.check import check
+from .commands.check_generators import HELP as CHECK_GENERATORS_HELP
+from .commands.check_generators import check_generators
 
 # Errors that are the environment's, not the code's: printed as one clear
 # message with exit code 1, never as a traceback.
@@ -53,6 +55,7 @@ app.command("check", help=CHECK_HELP)(check)
 app.add_typer(api.app, name="api")
 app.add_typer(test.app, name="test")
 app.add_typer(new.app, name="new")
+app.command("check-generators", help=CHECK_GENERATORS_HELP)(check_generators)
 
 
 if __name__ == "__main__":
