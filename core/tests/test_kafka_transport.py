@@ -1,7 +1,7 @@
 """The Kafka transport. The suite needs a broker:
 
     docker compose up -d kafka
-    KAFKA_TEST_BOOTSTRAP_SERVERS=127.0.0.1:19092 ./scripts/run-python-server-tests.sh -k kafka
+    KAFKA_TEST_BOOTSTRAP_SERVERS=127.0.0.1:19092 uv run pswamp test server -k kafka
 
 and is skipped without one.
 """

@@ -29,7 +29,7 @@ export function ReferenceSubappPage() {
         <CardTitle className="text-lg">Reference example</CardTitle>
         <span className="text-gray-500">
           Used for end to end tests of our client-server stack. When we refactor or upgrade the project, we use this page as a smoketest to see if anything fundamental breaks.
-         <em> Do not use this page to do p-SWAMP experiments; use <code>generate-new-subapp.sh</code> to generate a new
+         <em> Do not use this page to do p-SWAMP experiments; use <code>pswamp new subapp</code> to generate a new
           page/subapp instead. 🙂</em>
     </span>
         <CardAction className="self-center">

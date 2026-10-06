@@ -25,11 +25,11 @@ The examples come from two apps:
 ## Generate the starting point
 
 ```
-./scripts/generate-new-module-with-frontend.sh peak-frequency "Peak frequency"
+uv run pswamp new module peak-frequency "Peak frequency"
 ```
 
 This writes a working app, registers it everywhere, regenerates the api
-contract and runs `error_check.sh`.
+contract and runs `pswamp check`.
 
 The module, in `modules/`. Part 1 is about these:
 
@@ -95,7 +95,7 @@ class PeakFrequencyModule(Module):
 ### Test it without the pipeline
 
 ```
-./scripts/run-python-server-tests.sh ../../modules/pswamp_modules/peak_frequency
+uv run pswamp test server ../../modules/pswamp_modules/peak_frequency
 ```
 
 This runs the module's own folder and nothing else. The path is relative to
@@ -171,7 +171,7 @@ DEFAULT_DATA_CLIENTS = "live:pswamp_modules.sources.live_client:LiveSyntheticCli
 
 ### Watch it run
 
-Restart `./scripts/start-local-hotloaded-pswamp-server.sh` (a new package
+Restart `uv run pswamp dev server` (a new package
 needs a rebuild) and open `http://127.0.0.1:8000/peak-frequency`, the
 generated page as built into the image. Results arrive at once, from the one
 shared live run. From then on, a saved edit under `modules/pswamp_modules/`
@@ -221,8 +221,8 @@ State comes down the socket; commands go up as POSTs.
 Two terminals, the server first:
 
 ```
-./scripts/start-local-hotloaded-pswamp-server.sh      # the server, Kafka and the workers, on 127.0.0.1:8000
-./scripts/start-local-hotloaded-pswamp-web-client.sh  # the web client with hot reload, on http://localhost:5173
+uv run pswamp dev server      # the server, Kafka and the workers, on 127.0.0.1:8000
+uv run pswamp dev client  # the web client with hot reload, on http://localhost:5173
 ```
 
 Open `http://localhost:5173/peak-frequency`. A saved edit to the page shows
@@ -247,14 +247,14 @@ def state_message(run: PipelineRun) -> PeakFrequencyState:
 - To show more, add a field and fill it in `state_message`. Another module's
   result is one more `run.latest.get(...)`; the streamer's `state_message`
   carries three.
-- Then run `./scripts/generate-api-contract.sh`. It rewrites
+- Then run `uv run pswamp api generate`. It rewrites
   `doc/api/openapi.json` and `app/client-web/src/api/schema.ts`, which the
   page's type comes from. Run it after changing the result body in
   `module.py` too. Commit both files.
 - Keep the state a pydantic model. A dict would drop the app out of the
   contract while the page keeps working.
 - Nothing warns of a stale contract while you work: the dev client does not
-  type-check. `./scripts/error_check.sh` does.
+  type-check. `uv run pswamp check` does.
 
 ### Change the page
 
@@ -289,17 +289,17 @@ export function PeakFrequencyPage() {
    hosted in the server), a result arriving on the page's socket.
 
    ```
-   ./scripts/run-python-server-tests.sh -k peak_frequency    # this and the module's tests
+   uv run pswamp test server -k peak_frequency    # this and the module's tests
    ```
 
    For more, see `app/server-python/tests/test_pmu_test_streamer.py`: POSTs,
    409s, seek and step, two clients on live, a module command, and its
    refusal on the error tray.
-2. **The types and the contract**: `./scripts/error_check.sh`. It fails where
+2. **The types and the contract**: `uv run pswamp check`. It fails where
    the page reads a field the state no longer has, and while the contract is
    stale.
 3. **The page in a browser**: a Playwright spec in `e2e/`, run by
-   `./scripts/run-playwright-tests.sh` against the compose stack. The
+   `uv run pswamp test playwright` against the compose stack. The
    generator writes none. The page marks its readout `data-testid="result"`;
    `e2e/pmu-test-streamer.spec.ts` is the example of a page over a pipeline.
 
@@ -486,7 +486,7 @@ whole Deployment to copy.
 workers is run by both: every result arrives twice.
 
 **3. Apply it.** `docker compose up -d` (or restart
-`./scripts/start-local-hotloaded-pswamp-server.sh`), or `kubectl apply -f
+`uv run pswamp dev server`), or `kubectl apply -f
 k8s/p-swamp-local.yaml`. The image, the module, its web API and its page are
 unchanged. The new worker logs `hosting peak-frequency for peak-frequency: …`.
 
@@ -545,7 +545,7 @@ module in that process.
 |---|---|
 | The page shows no result, and the server logs nothing about the module | No host for it. With Kafka, the module is not in any worker's `PSWAMP_WORKER_PIPELINES`/`PSWAMP_WORKER_MODULES`. |
 | Results arrive twice as often | Two workers host the same module. |
-| A result field never reaches the page | The contract is stale: run `./scripts/generate-api-contract.sh`. |
+| A result field never reaches the page | The contract is stale: run `uv run pswamp api generate`. |
 | A POST answers 404 | The page's socket is not open: a command never builds a run. |
 | A module command does nothing | It was refused where the module runs: see the tray, or the worker's log. |
 | The worker exits with code 2 | No broker (`PSWAMP_TRANSPORT` unset: the server hosts modules then), or nothing to host. |

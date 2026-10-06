@@ -34,11 +34,11 @@ build-backend = "uv_build"
 module-name = "pswamp_modules"
 module-root = ""
 
-# No [tool.ruff] section: scripts/error_check.sh passes `--select F` explicitly.
+# No [tool.ruff] section: `pswamp check` passes `--select F` explicitly.
 
 # Each module carries its tests in a tests/ package beside its code, so they
 # are found under pswamp_modules/. Used when pytest is pointed at this folder directly; the
-# usual runner is scripts/run-python-server-tests.sh, which takes the server's
+# usual runner is `uv run pswamp test server`, which takes the server's
 # config. core/examples holds the remote data stub, which the sources' tests
 # run in-process.
 [tool.pytest.ini_options]

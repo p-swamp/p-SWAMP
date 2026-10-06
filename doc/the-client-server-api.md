@@ -81,13 +81,13 @@ Two consequences, and they are the whole point:
 
 - **Never edit the two generated files.** Change the Python — a route, a model, or
   the metadata in `api_contract.py` — then run
-  `./scripts/generate-api-contract.sh` and commit everything together. A hand-edit
+  `uv run pswamp api generate` and commit everything together. A hand-edit
   to `openapi.json` or `schema.ts` is discarded on the next regeneration. See
   [Changing the api](#changing-the-api).
 - **The committed contract cannot disagree with the running server**, because
   `dump_openapi.py` asks the app for its own document instead of describing the api
-  twice. `generate-api-contract.sh --check` regenerates into a temp dir and diffs;
-  `error_check.sh` runs that on every push.
+  twice. `pswamp api generate --check` regenerates into a temp dir and diffs;
+  `pswamp check` runs that on every push.
 
 For the file-by-file table, see [Where the pieces live](#where-the-pieces-live).
 
@@ -128,7 +128,7 @@ const step = useCallback(
 )
 ```
 
-Then run `./scripts/generate-api-contract.sh` and commit `doc/api/openapi.json`
+Then run `uv run pswamp api generate` and commit `doc/api/openapi.json`
 and `app/client-web/src/api/schema.ts` with the code.
 
 ### I want to add a field to a socket message
@@ -137,7 +137,7 @@ Add it to the message model — `pswamp_web/wire.py` for the p-SWAMP apps, the a
 own `api.py` for a standalone one — and fill it in wherever `state_message()` (or
 the page's push task) builds it.
 
-Run `./scripts/generate-api-contract.sh` and `Wire['<Model>']` carries the field,
+Run `uv run pswamp api generate` and `Wire['<Model>']` carries the field,
 as does the page, which reads the message as the contract types it. There is no
 mapping layer to extend: hooks used to rename every field into a camelCase mirror,
 so a new field reached the page only if someone remembered to add it there too (and
@@ -148,15 +148,15 @@ Commit both generated artifacts with the model change.
 ### I want to add a whole new page and its api
 
 ```
-./scripts/generate-new-subapp.sh flow-map "Flow Map"
+uv run pswamp new subapp flow-map "Flow Map"
 ```
 
-The script writes both halves, patches the four registries, regenerates the
+The generator writes both halves, patches the four registries, regenerates the
 contract and runs the checks — the new app joins the contract with **no registry
 entry to add** (see "How a package joins the contract"). Commit both generated
 artifacts with the new folders.
 
-> **To see every moving part a subapp needs, run that script and read the diff.**
+> **To see every moving part a subapp needs, run that generator and read the diff.**
 > It writes a page folder under `app/client-web/src/pages/<slug>/` and a backend
 > package under `app/server-python/src/<pkg>/` — socket endpoint, pydantic models,
 > two POST commands over a per-client counter, the hook and the view — patches the
@@ -179,13 +179,13 @@ async def list_channels() -> ChannelCatalogue:
 Use a GET only for what never changes (grid topology, channel catalogue); put
 anything that changes on the socket. Then regenerate and commit.
 
-### `error_check.sh` is failing on "api contract (spec matches code)"
+### `pswamp check` is failing on "api contract (spec matches code)"
 
 You changed the api and left the committed contract behind. The check prints the
 diff:
 
 ```
-./scripts/generate-api-contract.sh      # regenerate both artifacts
+uv run pswamp api generate      # regenerate both artifacts
 ```
 
 then commit both. Hand-edit nothing — that is the whole fix.
@@ -237,7 +237,7 @@ the small hand-written layer over it.
 
 The running server serves the identical document at **`/openapi.json`**, rendered
 by **`/docs`** (Swagger UI) and **`/redoc`**. One function produces both the served
-and committed copy, and `error_check.sh` proves it on every push.
+and committed copy, and `pswamp check` proves it on every push.
 
 > Swagger UI at `/docs` fetches its assets from a CDN, so it needs internet.
 > `/openapi.json` and `/redoc` do not.
@@ -293,9 +293,9 @@ exporting `WS_MESSAGE`. When socket models merge into the HTTP schemas,
 rename one or give it an explicit pydantic title rather than let the document
 disagree with itself.
 
-This is why `generate-new-subapp.sh` needs no new anchor to patch: its template
+This is why `pswamp new subapp` needs no new anchor to patch: its template
 exports `WS_MESSAGE`, so a scaffolded subapp joins the contract the moment it is
-written. The script regenerates both artifacts before it checks — commit them with
+written. The generator regenerates both artifacts before it checks — commit them with
 the rest.
 
 One rule keeps this working: **push a pydantic model, never a bare dict.** Every
@@ -309,11 +309,11 @@ Changing the api
 ==
 
 1. Change the Python — an endpoint, a body model, or a message model.
-2. Run `./scripts/generate-api-contract.sh`.
+2. Run `uv run pswamp api generate`.
 3. Commit `doc/api/openapi.json` and `app/client-web/src/api/schema.ts` with the
    change.
 
-Skip step 2 and `./scripts/error_check.sh` fails — in the pre-push hook, then again
+Skip step 2 and `uv run pswamp check` fails — in the pre-push hook, then again
 in CI — printing a diff of what moved. That is deliberate: committing the contract
 only buys a **reviewable** change if it rides in the same PR as the code that caused
 it. Never hand-edit either generated file (`schema.ts` says so at the top).
@@ -421,7 +421,7 @@ From there the two families of app part ways.
 (`doc/server-data-architecture.md`): its state is a pipeline run per client, its
 commands go to that run's player or modules through `shared.dispatch_command`, and
 `shared.push_changes` sends a state message after every change in the run. Copy it
-(or run `generate-new-module-with-frontend.sh`) when an app's data comes from PMU
+(or run `pswamp new module`) when an app's data comes from PMU
 sources and modules.
 
 A client id may briefly hold several sockets — a reconnect overlapping the dying one
@@ -679,7 +679,7 @@ Where the pieces live
 |---|---|
 | `app/server-python/src/api_contract.py` | Document metadata, `WS_MESSAGE` validation/collection, the extension, schema merging |
 | `app/server-python/tools/dump_openapi.py` | Imports the app, writes the document to a file |
-| `scripts/generate-api-contract.sh` | Regenerates both artifacts; `--check` diffs instead |
+| `uv run pswamp api generate` | Regenerates both artifacts; `--check` diffs instead |
 | `doc/api/openapi.json` | The contract (generated, committed) |
 | `app/client-web/src/api/schema.ts` | TypeScript (generated, committed, not linted) |
 | `app/client-web/src/api/wire.ts` | Hand-written: `Wire[...]` and `ApiPaths` |
@@ -707,6 +707,6 @@ project runs 6, though it drives the TS 6 compiler API without complaint (we che
 So `app/client-web/package.json` carries an `overrides` entry pointing that peer at
 the project's own TypeScript, which keeps plain `npm install`/`npm ci` working with no
 flags rather than pinning everything to `--legacy-peer-deps`. It costs one thing:
-`scripts/update-dependencies.sh` runs `npm-check-updates --peer`, which refuses to
+`uv run pswamp deps update` runs `npm-check-updates --peer`, which refuses to
 bump TypeScript past 5 while the stale range stands, and says so. Drop the `overrides`
 entry when upstream widens the range.

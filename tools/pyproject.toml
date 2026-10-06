@@ -1,5 +1,6 @@
 # pswamp-tools: the `pswamp` command line — the repo's automation (checks, the
-# api contract, the test suites) as one cross-platform Typer CLI, run with
+# api contract, the test suites, scaffolding, dev, deploy, dependency upgrades)
+# as one cross-platform Typer CLI, run with
 # `uv run pswamp …` from anywhere in the repo. `uv run pswamp --help` is the
 # documentation.
 #
@@ -14,7 +15,7 @@
 [project]
 name = "pswamp-tools"
 version = "0.1.0"
-description = "The p-SWAMP repo CLI (`pswamp`): checks, api contract, test suites."
+description = "The p-SWAMP repo CLI (`pswamp`): checks, api contract, tests, scaffolding, dev, deploy, deps."
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [

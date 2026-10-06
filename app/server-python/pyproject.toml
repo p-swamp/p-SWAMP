@@ -85,7 +85,7 @@ dev = [
 # is just a new folder under src/, with no manifest change.
 #
 # Deliberately no [tool.ruff] section: ruff treats a pyproject.toml as config only
-# when one is present, and the explicit `--select F` in scripts/error_check.sh is
+# when one is present, and the explicit `--select F` in `pswamp check` is
 # meant to stay authoritative (see the note there about not inheriting ruff's
 # opinionated defaults).
 [tool.uv]

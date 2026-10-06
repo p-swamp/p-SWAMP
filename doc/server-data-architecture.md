@@ -576,7 +576,7 @@ Kafka is the only broker transport in the repo today.
   (frame-stats, excursion), `batch-worker` (range-summary, one CPU),
   `remote-data-stub`, `kafka`.
 - **Minikube** (`k8s/p-swamp-local.yaml`, via
-  `scripts/start-pswamp-in-local-minikube-cluster.sh`): the same five, and the
+  `uv run pswamp deploy minikube`): the same five, and the
   live feed reads a file from a ConfigMap.
 
 **A cloud cluster** starts from `k8s/p-swamp-local.yaml` and changes:
@@ -708,11 +708,11 @@ no deployment-specific configuration: the local manifests are examples, and a
 deployment's own sources and broker come in through the same variables.
 
 *Where.* `Dockerfile`, `docker-compose.yml`, `k8s/`,
-`scripts/start-pswamp-in-local-minikube-cluster.sh`.
+`uv run pswamp deploy minikube`.
 
 ## Adding a module
 
-`./scripts/generate-new-module-with-frontend.sh <slug> "<Label>"` writes a
+`uv run pswamp new module <slug> "<Label>"` writes a
 working module (code and tests in one folder) and its pipeline in `modules/`,
 its web API and page in `app/`, and adds it to the module-worker. Then replace the placeholder
 analysis.

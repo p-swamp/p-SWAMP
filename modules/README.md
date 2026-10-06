@@ -10,7 +10,7 @@ that put them together, and the example data sources.
 - Example sources: `pswamp_modules/sources/`
 - Tests: a `tests/` package beside the code it tests
   (`pswamp_modules/<module>/tests/test_module.py`), run by
-  `scripts/run-python-server-tests.sh` (`-k <module>` for one module's)
+  `uv run pswamp test server` (`-k <module>` for one module's)
 
 A module is one folder: its code and its tests. Adding, removing or reviewing
 a module touches that folder (and, for a new pipeline, one file in
@@ -34,6 +34,6 @@ modules alone, from any working directory.
 
 ## Adding a module
 
-`./scripts/generate-new-module-with-frontend.sh <slug> "<Label>"` writes the
+`uv run pswamp new module <slug> "<Label>"` writes the
 module folder (code and tests) and its pipeline here, and its web API and page
 in `app/`.

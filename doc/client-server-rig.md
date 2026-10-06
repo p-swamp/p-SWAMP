@@ -34,10 +34,10 @@ at least for a "reference app" to ensure the basic structure of the repo/project
 # How to onboard when you are new to the project
 
 - Clone this repo
-- Make sure you are able to run the two scripts that launches the project locally: 
-`scripts/start-local-hotloaded-pswamp-server.sh` and `scripts/start-local-hotloaded-pswamp-web-client.sh`
-- Make sure the error check script runs ok for you: `scripts/error_check.sh`
-- Make sure the smoke test script runs green: `scripts/e2e-smoke-test.sh`
+- Make sure you are able to run the two commands that launch the project locally: 
+`uv run pswamp dev server` and `uv run pswamp dev client`
+- Make sure the error check runs ok for you: `uv run pswamp check`
+- Make sure the smoke test runs green: `uv run pswamp test smoke`
   
 Folder structure for client-server specific bits
 ==
@@ -54,13 +54,14 @@ app/          the two deployables — everything that ends up in the container
                   only); one package per api under src/<app>/.
 doc/          markdown notes on how the rig works, plus things to follow up later.
 k8s/          Kubernetes manifests
-scripts/      the stable developer interface — start the server, start the web
-              client, run in minikube, etc. Call these rather than the underlying
-              docker/npm/uv commands; they stay the same if the tooling changes.
+tools/        the `pswamp` CLI (`uv run pswamp --help`), the stable developer
+              interface — start the server, start the web client, run in minikube,
+              etc. Call it rather than the underlying docker/npm/uv commands; it
+              stays the same if the tooling changes, and runs on Windows too.
 .github/      CI: workflows/quality-checks.yml (checks + tests on pull requests) and
               workflows/build-container.yml (checks the image still builds on main;
               publishes nothing)
-.githooks/    pre-push hook running scripts/error_check.sh. Opt in per clone with
+.githooks/    pre-push hook running uv run pswamp check. Opt in per clone with
               `git config core.hooksPath .githooks`.
 ```
 
@@ -75,8 +76,8 @@ colliding.
 How to run this locally
 ==
 
-Fire up `start-local-hotloaded-pswamp-server.sh` and
-`start-local-hotloaded-pswamp-web-client.sh` to launch locally. The backend runs in
+Fire up `pswamp dev server` and
+`pswamp dev client` to launch locally. The backend runs in
 Docker, the frontend in a Vite process; both hot-reload on save.
 
 You only need **two things installed: Docker and Node.js**. You do *not* strictly
@@ -88,7 +89,7 @@ Prereqs, what to install
 
 **1. Docker** (with the Compose v2 plugin)
 
-The backend script uses `docker compose watch`, which needs Compose **2.22+**. Any
+`pswamp dev server` uses `docker compose watch`, which needs Compose **2.22+**. Any
 current Docker Desktop or Docker Engine has it.
 
 - Linux (Ubuntu/Debian): https://docs.docker.com/engine/install/ubuntu/ — install
@@ -127,10 +128,10 @@ Two terminals, backend first:
 
 ```
 # terminal 1 — state server on http://127.0.0.1:8000
-./scripts/start-local-hotloaded-pswamp-server.sh
+uv run pswamp dev server
 
 # terminal 2 — web client on http://localhost:5173 (opens your browser)
-./scripts/start-local-hotloaded-pswamp-web-client.sh
+uv run pswamp dev client
 ```
 
 Open http://localhost:5173. The page talks to the backend through Vite, which proxies
@@ -147,8 +148,8 @@ What hot-reloads:
 
 What does **not**: the generated api contract. Change an endpoint or socket message
 and the server reloads, but `doc/api/openapi.json` and the client's generated types
-stay put until you run `./scripts/generate-api-contract.sh`. Vite doesn't type-check,
-so a mismatch is invisible in the browser — `scripts/error_check.sh` catches it.
+stay put until you run `uv run pswamp api generate`. Vite doesn't type-check,
+so a mismatch is invisible in the browser — `uv run pswamp check` catches it.
 
 
 Running it as a kubernetes service
@@ -157,7 +158,7 @@ Running it as a kubernetes service
 In real deployments the app is one container on kubernetes, serving both the frontend
 and the api on the same port. The frontend is static assets that talk to `/api` on
 the same host/port. Test this "prod mode" locally in minikube with
-`scripts/start-pswamp-in-local-minikube-cluster.sh`.
+`uv run pswamp deploy minikube`.
 
 
 Build pipeline (CI)
@@ -183,7 +184,7 @@ The build context is the repo root (the image holds both the web client and the
 desktop package's `src/`), and `GIT_SHA` is what the client footer shows on a
 deployed origin. Tag the image with the commit it was built from rather than a
 moving tag, so a deployment can be pinned and a rollout is triggered by a change
-of image. `scripts/start-pswamp-in-local-minikube-cluster.sh` is the local
+of image. `uv run pswamp deploy minikube` is the local
 rehearsal of that path: it builds the same Dockerfile into minikube and applies
 `k8s/p-swamp-local.yaml`.
 
@@ -201,7 +202,7 @@ One real application and two scaffold demos:
 |---|---|---------------------------------------------------|
 | `/` (grid monitor) | `/api/time-window/ws`, `/api/islanding/ws`, `/api/phasors/ws`, `/api/app-status/ws`, `/api/grid/model` | Dashboard of panels over a recorded Nordic 44 PMU stream replayed through p-SWAMP's monitoring applications |
 | `/time-window`, `/phasors`, `/islanding`, `/app-status` | as above | The same panel components, full-size — focused views, not copies |
-| `/reference-subapp` | `/api/reference-subapp/ws` | The reference example: a per-client counter, generated by `generate-new-subapp.sh`, and the stack's end-to-end smoke test |
+| `/reference-subapp` | `/api/reference-subapp/ws` | The reference example: a per-client counter, generated by `pswamp new subapp`, and the stack's end-to-end smoke test |
 | `/pmu-test-streamer` | `/api/pmu-test-streamer/ws`, `/api/errors/ws` | The server data architecture's worked example: a recorded, a live and a remote PMU source through a core pipeline, with player controls and three modules |
 
 The Api column lists the *sockets* a page opens (where its state comes from). A page
@@ -209,25 +210,25 @@ with controls also POSTs commands to its app's prefix — see "The api between c
 and backend".
 
 The grid monitor is the real one. `/reference-subapp` is what
-`generate-new-subapp.sh` writes and the example every doc points at — copy it, and
+`pswamp new subapp` writes and the example every doc points at — copy it, and
 click it after a refactor or an upgrade to check the whole seam works.
 `/pmu-test-streamer` is the worked example of the server data architecture
 (`doc/server-data-architecture.md`); a new module and its page start from
-`generate-new-module-with-frontend.sh` (`doc/module-cookbook.md`). A new
+`pswamp new module` (`doc/module-cookbook.md`). A new
 *p-SWAMP* view over the monitor's data is a panel in the monitor, not a new page —
 see "Adding a p-SWAMP view" in `AGENTS.md`.
 
 
-### Adding a new page/subapp: just run the script
+### Adding a new page/subapp: just run the generator
 
 ```
-./scripts/generate-new-subapp.sh grid-overview "Grid Overview"   # url-name, nav label
+uv run pswamp new subapp grid-overview "Grid Overview"   # url-name, nav label
 ```
 
 It does every step in the two sections below and leaves a working subapp: a nav
 entry, a page at `/grid-overview`, and a WebSocket to a new backend package holding a
 per-client counter you can bump and reset. Replacing that counter with the real thing
-is the only work left. The files it writes come from `scripts/templates/`; edit those
+is the only work left. The files it writes come from `tools/src/pswamp_tools/templates/`; edit those
 to change what a subapp starts life as. Read on to see what it wired up, or to do it
 by hand.
 
@@ -255,7 +256,7 @@ lib/              servers.ts (each app's ws path + the serving-origin url), util
 A page keeps its own parts in its own folder, named after the route. Things move to
 `components/` or `hooks/` only once a *second* page needs them.
 
-**To add a page**, three small edits (all done by `generate-new-subapp.sh`):
+**To add a page**, three small edits (all done by `pswamp new subapp`):
 
 1. New folder `src/pages/my-thing/` with `MyThingPage.tsx`, plus whatever only that
    page uses (copy `src/pages/reference-subapp/`).
@@ -287,7 +288,7 @@ errors/           the error tray's backend
 pswamp_web/       the p-SWAMP web layer: a package of page packages
 ```
 
-**To add an api**, two small edits (also done by `generate-new-subapp.sh`):
+**To add an api**, two small edits (also done by `pswamp new subapp`):
 
 1. New folder `src/my_thing/` (copy `src/reference_subapp/`), whose `__init__.py`
    exposes a `router`, plus `lifespan` if it needs background work.
@@ -335,7 +336,7 @@ and a line in the access log with a status code, and a rejected command says *wh
 (422 for a bad sequence name, 404 for an unknown alarm) rather than failing quietly.
 
 **Both halves are described by a generated contract** — `doc/api/openapi.json`,
-committed, with the client's TypeScript generated from it and `error_check.sh` failing
+committed, with the client's TypeScript generated from it and `pswamp check` failing
 on drift. Socket messages are in there too (OpenAPI has no native notion of them);
 `the-client-server-api.md` covers how, and how to change the api without breaking
 anyone.
@@ -452,17 +453,17 @@ uv lock    # at the repo root: one lock for the whole uv workspace
 
 The manifest states a compatible *range*; the lockfile pins the one exact version of
 every package everyone gets. Re-locking keeps existing versions, so an upgrade is a
-deliberate `uv lock --upgrade`, never a side effect. `./scripts/error_check.sh` (and
+deliberate `uv lock --upgrade`, never a side effect. `uv run pswamp check` (and
 the Docker build) fail if the two drift.
 
 Updating dependencies
 --
 
-Good hygiene to update often, to stay ahead of supply-chain attacks. One script does
+Good hygiene to update often, to stay ahead of supply-chain attacks. One command does
 the whole repo — both Python projects and the web client, manifests and lockfiles:
 
 ```
-./scripts/update-dependencies.sh          # TARGET=minor to skip major-version jumps
+uv run pswamp deps update          # TARGET=minor to skip major-version jumps
 ```
 
 It produces a *candidate diff*: run it on a branch, read the report, run the app and
@@ -474,25 +475,26 @@ diff is per-wheel sha256 hashes, so one numpy bump rewrites ~40 lines while movi
 version. The report prints the versions, direct deps first and transitive ones as a
 count (`VERBOSE=1` lists those too).
 
-One thing to expect: on the npm side the script moves the *ranges* themselves; on the
+One thing to expect: on the npm side the command moves the *ranges* themselves; on the
 Python side it can't (`uv lock --upgrade` respects `pyproject.toml`'s bounds, and uv
 has no `npm-check-updates`). So a capped dependency needs a hand edit first, and the
-script ends by listing which ones are held back and how far they could go. The script
-header covers the rest — what it runs, why, and how to recover from a half-finished run.
+command ends by listing which ones are held back and how far they could go. Its `--help`
+covers the rest — what it runs, why, and how to recover from a half-finished run.
 
 Optional extras
 --
 
-Needed only for the checks and alternative run modes, not the two scripts above:
+Needed only for the checks and alternative run modes, not the two dev commands above
+(those need only uv, Docker or Podman, and Node.js):
 
 - **uv** (https://docs.astral.sh/uv/) — runs the backend directly without Docker
   (`cd app/server-python && uv run src/server.py`), manages
   `app/server-python/pyproject.toml` + `uv.lock`, and provides the linter for
-  `./scripts/error_check.sh`. Install: `curl -LsSf https://astral.sh/uv/install.sh | sh`.
+  `uv run pswamp check`. Install: `curl -LsSf https://astral.sh/uv/install.sh | sh`.
 - **minikube + kubectl** — only for
-  `./scripts/start-pswamp-in-local-minikube-cluster.sh`, which tests the real image
-  on a local cluster. That script also preflights the api contract, so it wants `uv`
-  and `npx` too (`NO_CHECK=1` skips both the check and the requirement).
+  `uv run pswamp deploy minikube`, which tests the real image
+  on a local cluster. That command also preflights the api contract, so it wants `uv`
+  and `npx` too (`--no-check` skips both the check and the requirement).
 
 
 How the project/core team collaborates with the wider open source community

@@ -222,7 +222,7 @@ for _app in APPS:
 # include_router loop above, or the document would describe an empty api.
 #
 # /openapi.json, /docs and /redoc all serve this, and it is the same function
-# scripts/generate-api-contract.sh dumps to doc/api/openapi.json -- so the served
+# uv run pswamp api generate dumps to doc/api/openapi.json -- so the served
 # document and the committed one cannot drift.
 
 api_contract.install(app, APPS)
@@ -238,7 +238,7 @@ api_contract.install(app, APPS)
 # mount is guarded on the dir existing so the api-only paths still boot without it
 # — i.e. `uv run src/server.py` from app/server-python/ for quick backend dev (the
 # web client is run separately with hot reload via
-# scripts/start-local-hotloaded-pswamp-web-client.sh). It's registered AFTER
+# uv run pswamp dev client). It's registered AFTER
 # /healthz and the routers above because a mount at "/" is greedy and would shadow
 # them — so must any api route added later.
 

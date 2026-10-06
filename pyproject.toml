@@ -28,4 +28,4 @@ members = ["core", "modules", "tools", "app/server-python"]
 #
 # Deliberately no [tool.ruff] section: ruff treats a pyproject.toml as config
 # only when one is present, and the explicit `--select F` in
-# scripts/error_check.sh is meant to stay authoritative.
+# `pswamp check` is meant to stay authoritative.

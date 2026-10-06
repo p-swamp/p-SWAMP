@@ -8,5 +8,5 @@ how they fit together.
 - Source: `src/pswamp_core/`
 - Built on it: `../modules/` (`pswamp-modules`: the modules, pipelines and
   example sources). The core imports nothing from there.
-- Tests: `tests/`, run by `scripts/run-python-server-tests.sh`
+- Tests: `tests/`, run by `uv run pswamp test server`
 - Extras: `kafka` (the Kafka transport), `remote-data` (the remote data client)

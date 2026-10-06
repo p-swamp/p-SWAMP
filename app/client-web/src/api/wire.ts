@@ -2,7 +2,7 @@
  * The api contract, as the rest of the client sees it.
  *
  * `schema.ts` beside this file is GENERATED from `doc/api/openapi.json`, which is
- * itself generated from the server (see `scripts/generate-api-contract.sh`). This
+ * itself generated from the server (see `uv run pswamp api generate`). This
  * file is the small hand-written layer over it, so no page has to know the shape
  * of a generated module.
  *
@@ -19,8 +19,8 @@
  * a type error — the field would simply never appear.
  *
  * Don't edit `schema.ts`. Change the Python model, run
- * `scripts/generate-api-contract.sh`, and commit both artifacts — until you do,
- * `scripts/error_check.sh` fails.
+ * `uv run pswamp api generate`, and commit both artifacts — until you do,
+ * `uv run pswamp check` fails.
  */
 import type { components, paths } from './schema'
 

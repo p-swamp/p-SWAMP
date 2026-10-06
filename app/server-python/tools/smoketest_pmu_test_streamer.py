@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright Contributors to the p-SWAMP Project.
 
-"""Drive the PMU test streamer end to end over the wire. Run by scripts/e2e-smoke-test.sh.
+"""Drive the PMU test streamer end to end over the wire. Run by uv run pswamp test smoke.
 
     python tools/smoketest_pmu_test_streamer.py <base-url>
 
