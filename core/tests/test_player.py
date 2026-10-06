@@ -87,11 +87,17 @@ async def test_a_recording_starts_paused_showing_its_first_frame():
 
 
 async def test_play_paces_frames_in_order_and_pause_stops_without_skipping():
-    player, out = await running(ListClient(), speed=10)  # 20 frames at 20 Hz: 0.1 s
-    began = time.monotonic()
+    player, out = await running(ListClient(), speed=10)  # 20 frames at 20 Hz: 0.1 s, 5 ms apart
+    began = time.perf_counter()
     await command(player, PlayCommand())
-    await until(lambda: len(frames(out)) >= 6)
-    assert time.monotonic() - began >= 0.02  # paced, not a burst
+    await until(lambda: len(frames(out)) >= 11)  # 10 gaps after the first: 0.05 s when paced
+    # Paced, not a burst (a burst of 10 frames takes well under a millisecond).
+    # The player paces on time.monotonic() and asyncio's loop clock, whose tick
+    # on Windows is ~15.6 ms: the anchor can read up to one tick early and a
+    # sleep can wake up to one tick early, so allow two ticks of slack below 80%
+    # of the paced time. Elsewhere the tick is ~1 ns and this is 0.04 s.
+    tick = time.get_clock_info("monotonic").resolution
+    assert time.perf_counter() - began >= 0.04 - 2 * tick
     await command(player, PauseCommand())
     paused_at = len(frames(out))
     await asyncio.sleep(0.05)
