@@ -1,21 +1,15 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 
-import type { Wire } from '@/api/wire'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { resolveApiUrl, TIME_WINDOW_API_PATH } from '@/lib/servers'
 import { cn } from '@/lib/utils'
 
+import { useChannelCatalogue } from './useChannelCatalogue'
 import type { ChannelInfo } from './useTimeWindowSocket'
 
 /** Cap on how many traces can be shown at once — past this they stop being
  *  readable, and the Qt plot draws the same line at 50. */
 const MAX_SELECTED = 12
-
-/** The catalogue endpoint is HTTP, on the same origin everything else resolves to. */
-function channelsUrl(): string {
-  return resolveApiUrl(`${TIME_WINDOW_API_PATH}/channels`)
-}
 
 export function ChannelPicker({
   selected,
@@ -24,26 +18,8 @@ export function ChannelPicker({
   selected: ChannelInfo[]
   onChange: (indices: number[]) => void
 }) {
-  const [all, setAll] = useState<ChannelInfo[]>([])
+  const { channels: all, failed } = useChannelCatalogue()
   const [measurement, setMeasurement] = useState('f')
-  const [error, setError] = useState<string | null>(null)
-
-  useEffect(() => {
-    const controller = new AbortController()
-    // State is only touched from the fetch callbacks, never synchronously in the
-    // effect body — the same reason useServerSocket defers its first setState.
-    fetch(channelsUrl(), { signal: controller.signal })
-      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
-      .then((body: Wire['ChannelCatalogue']) => {
-        if (controller.signal.aborted) return
-        setAll(body.channels)
-        setError(null)
-      })
-      .catch(() => {
-        if (!controller.signal.aborted) setError('Could not load the channel list.')
-      })
-    return () => controller.abort()
-  }, [])
 
   const measurements = useMemo(
     () => [...new Set(all.map((c) => c.measurement))],
@@ -71,7 +47,10 @@ export function ChannelPicker({
     onChange([...next])
   }
 
-  if (error) return <p className="text-sm text-muted-foreground">{error}</p>
+  if (failed)
+    return (
+      <p className="text-sm text-muted-foreground">Could not load the channel list.</p>
+    )
   if (all.length === 0)
     return <p className="text-sm text-muted-foreground">Loading channels…</p>
 

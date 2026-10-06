@@ -1,6 +1,3 @@
-import { ChevronDownIcon, ChevronUpIcon } from 'lucide-react'
-
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
   Table,
@@ -12,20 +9,19 @@ import {
 } from '@/components/ui/table'
 import { cn } from '@/lib/utils'
 
+import { type PanelVariant, tableDensity } from '../variant'
 import type { Alarm, AlarmStatus } from './useIslandingSocket'
 
 /**
- * Alarm row colours, following p-SWAMP's Qt alarm overview: an unseen alarm is
- * loud, one that has been handled or has cleared is quiet, a silenced one is
- * greyed out.
+ * Row colours, the Qt alarm overview's own (`AlarmOverview.update_display`): an
+ * unseen alarm is loud, one that has been handled or has cleared is quiet, a
+ * silenced one is greyed out. The whole row is tinted, as there.
  */
-const STATUS_STYLES: Record<AlarmStatus, string> = {
-  unseen: 'border-transparent bg-red-600/20 text-red-700 dark:text-red-400',
-  acknowledged:
-    'border-transparent bg-amber-500/20 text-amber-700 dark:text-amber-400',
-  not_critical:
-    'border-transparent bg-emerald-600/15 text-emerald-700 dark:text-emerald-400',
-  silenced: 'border-transparent bg-muted text-muted-foreground',
+const ROW_BACKGROUND: Record<AlarmStatus, string> = {
+  unseen: 'rgb(250, 100, 100)',
+  acknowledged: 'rgb(255, 200, 200)',
+  not_critical: 'rgb(255, 200, 200)',
+  silenced: 'rgb(225, 225, 225)',
 }
 
 const STATUS_LABELS: Record<AlarmStatus, string> = {
@@ -47,93 +43,88 @@ export function AlarmTable({
   onSelect,
   onAcknowledge,
   onSilence,
+  variant = 'focused',
 }: {
   alarms: Alarm[]
   /** The alarm whose details are open, if any. */
   selectedUuid?: string | null
-  /** Toggles the detail pane. Passing null closes it. */
+  /** Toggles the details. Passing null closes them. */
   onSelect?: (uuid: string | null) => void
   onAcknowledge: (uuid: string) => void
   onSilence: (uuid: string) => void
+  /** The dock shows the Qt table's three columns and leaves the operator
+   *  actions to the details it opens; focused, they are on the row too. */
+  variant?: PanelVariant
 }) {
+  const compact = variant === 'dashboard'
+  const columns = compact ? 3 : 4
   return (
-    <Table>
+    <Table className={tableDensity(variant)}>
       <TableHeader>
         <TableRow>
-          {onSelect && <TableHead className="w-8" />}
-          <TableHead>Raised</TableHead>
-          <TableHead>Application</TableHead>
-          <TableHead>Status</TableHead>
-          <TableHead className="text-right">Actions</TableHead>
+          <TableHead>Time</TableHead>
+          <TableHead>App</TableHead>
+          <TableHead>Alarm status</TableHead>
+          {!compact && <TableHead className="text-right">Actions</TableHead>}
         </TableRow>
       </TableHeader>
       <TableBody>
         {alarms.map((alarm) => (
           <TableRow
             key={alarm.uuid}
+            aria-selected={selectedUuid === alarm.uuid}
             className={cn(
               onSelect && 'cursor-pointer',
-              selectedUuid === alarm.uuid && 'bg-muted/60',
+              // An inset bar rather than a background: the background is the
+              // alarm's status and has to stay readable on the selected row.
+              selectedUuid === alarm.uuid && 'shadow-[inset_4px_0_0_0_rgb(0,0,0)]',
             )}
+            // Inline, so the shared row's hover tint does not replace a colour
+            // that carries meaning; and with its own text colour, since these
+            // are light backgrounds whatever the page theme is.
+            style={{ background: ROW_BACKGROUND[alarm.status], color: 'rgb(0, 0, 0)' }}
             onClick={
               onSelect
-                ? () =>
-                    onSelect(selectedUuid === alarm.uuid ? null : alarm.uuid)
+                ? () => onSelect(selectedUuid === alarm.uuid ? null : alarm.uuid)
                 : undefined
             }
           >
-            {onSelect && (
-              <TableCell className="text-muted-foreground">
-                {selectedUuid === alarm.uuid ? (
-                  <ChevronUpIcon className="size-4" />
-                ) : (
-                  <ChevronDownIcon className="size-4" />
-                )}
-              </TableCell>
-            )}
             <TableCell className="tabular-nums">
               {clockTime(alarm.t_start)}
-              {alarm.t_end !== null && (
-                <span className="text-muted-foreground">
-                  {' '}
-                  – {clockTime(alarm.t_end)}
-                </span>
-              )}
+              {alarm.t_end !== null && <> – {clockTime(alarm.t_end)}</>}
             </TableCell>
             <TableCell className="font-medium">{alarm.app_name}</TableCell>
-            <TableCell>
-              <Badge className={STATUS_STYLES[alarm.status]}>
-                {STATUS_LABELS[alarm.status]}
-              </Badge>
-            </TableCell>
-            <TableCell
-              className="space-x-2 text-right"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <Button
-                size="sm"
-                variant="outline"
-                disabled={alarm.status !== 'unseen'}
-                onClick={() => onAcknowledge(alarm.uuid)}
+            <TableCell>{STATUS_LABELS[alarm.status]}</TableCell>
+            {!compact && (
+              <TableCell
+                className="space-x-2 text-right"
+                onClick={(e) => e.stopPropagation()}
               >
-                Acknowledge
-              </Button>
-              <Button
-                size="sm"
-                variant="ghost"
-                disabled={alarm.status === 'silenced'}
-                onClick={() => onSilence(alarm.uuid)}
-              >
-                Silence
-              </Button>
-            </TableCell>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={alarm.status !== 'unseen'}
+                  onClick={() => onAcknowledge(alarm.uuid)}
+                >
+                  Acknowledge
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={alarm.status === 'silenced'}
+                  onClick={() => onSilence(alarm.uuid)}
+                >
+                  Silence
+                </Button>
+              </TableCell>
+            )}
           </TableRow>
         ))}
         {alarms.length === 0 && (
           <TableRow>
             <TableCell
-              colSpan={onSelect ? 5 : 4}
-              className="h-20 text-center text-muted-foreground"
+              colSpan={columns}
+              className="h-16 text-center text-muted-foreground"
             >
               No alarms raised.
             </TableCell>

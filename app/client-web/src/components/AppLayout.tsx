@@ -36,10 +36,25 @@ function isLocalhost(): boolean {
 // deploy?".
 const GIT_SHA = import.meta.env.VITE_GIT_SHA ?? ''
 
-export function AppLayout() {
+export function AppLayout({
+  window: asWindow = false,
+}: {
+  /**
+   * Lay the page out as a window rather than a document: the shell takes
+   * exactly the viewport's height and the page fills what the nav and footer
+   * leave, scrolling inside itself. For the grid monitor, which is a main
+   * window with docks; every other page is a card centred on a scrolling page.
+   *
+   * Only from `lg` up. On a narrow screen there is no room for a window, so it
+   * falls back to an ordinary scrolling page and the monitor stacks its docks.
+   */
+  window?: boolean
+}) {
   return (
-    <div className="flex min-h-svh flex-col bg-background">
-      <header className="flex items-center gap-6 border-b px-6 py-3">
+    <div
+      className={cn('flex min-h-svh flex-col bg-background', asWindow && 'lg:h-svh')}
+    >
+      <header className="flex shrink-0 items-center gap-6 border-b px-6 py-3">
         <span className="font-semibold tracking-tight">P-SWAMP</span>
         <nav className="flex items-center gap-4 text-sm">
           {NAV_ITEMS.map(({ to, label, end }) => (
@@ -73,7 +88,12 @@ export function AppLayout() {
         </nav>
       </header>
 
-      <main className="flex flex-1 items-center justify-center p-6">
+      <main
+        className={cn(
+          'flex flex-1',
+          asWindow ? 'min-w-0 lg:min-h-0' : 'items-center justify-center p-6',
+        )}
+      >
         <Outlet />
       </main>
 
@@ -84,7 +104,12 @@ export function AppLayout() {
 
           Also show what git SHA/version we are running off of, so its easy to see what has been
           deployed to remote env at any time*/}
-      <footer className="px-6 py-2 text-right text-xs text-muted-foreground/60">
+      <footer
+        className={cn(
+          'shrink-0 px-6 text-right text-xs text-muted-foreground/60',
+          asWindow ? 'py-1' : 'py-2',
+        )}
+      >
         client id: <span className="font-mono">{CLIENT_ID}</span>
         {!isLocalhost() && (
           <>

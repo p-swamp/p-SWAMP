@@ -486,6 +486,46 @@ export interface components {
             v_nom?: number | null;
         };
         /**
+         * GridDiagram
+         * @description How the grid is drawn: the Qt grid view's base layers, as data.
+         *
+         *     Separate from the topology beside it because the two disagree on purpose. A
+         *     single-line diagram places a bus where it is legible, not where the station
+         *     stands -- up to a few degrees away from its ``PmuSite`` -- and routes a
+         *     branch along a polyline rather than straight between its ends. So a view
+         *     that draws this must take every position from here and none from ``pmus``.
+         *
+         *     Built ahead of time by ``tools/build_n44_grid_geometry.py``, because the DXF
+         *     and shapefile readers it needs are not in the server's environment.
+         */
+        GridDiagram: {
+            /** Aspect Ratio */
+            aspect_ratio: number;
+            /** Branches */
+            branches: {
+                [key: string]: [
+                    number,
+                    number
+                ][];
+            };
+            /** Buses */
+            buses: {
+                [key: string]: [
+                    number,
+                    number
+                ];
+            };
+            /** Countries */
+            countries: string[];
+            /** Outlines */
+            outlines: [
+                number,
+                number
+            ][][];
+            /** Sld */
+            sld: string;
+        };
+        /**
          * GridModel
          * @description Static topology. Served over HTTP rather than a socket: it never changes,
          *     it is worth caching, and putting it on the socket would make every page's
@@ -503,6 +543,7 @@ export interface components {
             branches: components["schemas"]["GridBranch"][];
             /** Buses */
             buses: components["schemas"]["GridBus"][];
+            diagram?: components["schemas"]["GridDiagram"] | null;
             /** Pmus */
             pmus: components["schemas"]["PmuSite"][];
         };
@@ -612,8 +653,9 @@ export interface components {
         };
         /**
          * LineOutageLog
-         * @description Newest first. The detector is silent unless something changes, so this is
-         *     a log of transitions rather than a snapshot of present state.
+         * @description Newest first. The detector is silent unless something changes, so
+         *     ``events`` is a log of transitions; ``disconnected`` is the present state
+         *     they add up to.
          */
         LineOutageLog: {
             /**
@@ -626,6 +668,11 @@ export interface components {
              * @default null
              */
             app_uuid: string | null;
+            /**
+             * Disconnected
+             * @default []
+             */
+            disconnected: string[];
             /** Events */
             events: components["schemas"]["LineOutageEvent"][];
             /**

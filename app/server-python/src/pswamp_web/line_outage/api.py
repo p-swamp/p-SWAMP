@@ -35,6 +35,7 @@ def current_message(hub: Hub) -> LineOutageLog:
         app_name=store.app_name,
         window_length=store.window_length,
         events=store.list(),
+        disconnected=store.disconnected(),
     )
 
 

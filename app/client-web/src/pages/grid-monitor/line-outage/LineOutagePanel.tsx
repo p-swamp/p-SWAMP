@@ -11,8 +11,8 @@ import {
 } from '@/components/ui/table'
 
 import { Panel } from '../Panel'
-import type { PanelVariant } from '../variant'
-import { useLineOutageSocket } from './useLineOutageSocket'
+import { type PanelVariant, tableDensity } from '../variant'
+import { useLineOutageData } from './lineOutageContext'
 
 function clockTime(epochSeconds: number): string {
   return new Date(epochSeconds * 1000).toLocaleTimeString(undefined, {
@@ -34,14 +34,15 @@ export function LineOutagePanel({
 }: {
   variant?: PanelVariant
 }) {
-  const { state, status, connected } = useLineOutageSocket()
+  const { state, status, connected } = useLineOutageData()
   const events = state?.events ?? []
   const ready = connected && state !== null
   const outages = events.filter((e) => e.kind === 'disconnect').length
+  const compact = variant === 'dashboard'
 
   return (
     <Panel
-      title="Line Outages"
+      title="Line outages"
       subtitle="Branches whose current magnitude dropped to zero, and their recovery"
       status={status}
       ready={ready}
@@ -49,7 +50,7 @@ export function LineOutagePanel({
       focusHref="/line-outage"
       variant={variant}
       minBodyClass="min-h-[152px]"
-      contentClassName="px-0 pt-0"
+      contentClassName="p-0"
       badge={
         connected ? (
           <Badge variant={outages > 0 ? 'destructive' : 'secondary'}>
@@ -70,13 +71,13 @@ export function LineOutagePanel({
           : undefined
       }
     >
-      <Table>
+      <Table className={tableDensity(variant)}>
         <TableHeader>
           <TableRow>
             <TableHead>Time</TableHead>
             <TableHead>Event</TableHead>
             <TableHead>Branches</TableHead>
-            <TableHead className="text-right">Stations</TableHead>
+            {!compact && <TableHead className="text-right">Stations</TableHead>}
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -96,19 +97,21 @@ export function LineOutagePanel({
                   {event.kind === 'disconnect' ? 'Disconnected' : 'Reconnected'}
                 </Badge>
               </TableCell>
-              <TableCell className="font-mono text-xs">
+              <TableCell className="font-mono text-xs whitespace-normal">
                 {event.branches.join(', ')}
               </TableCell>
-              <TableCell className="text-right text-muted-foreground tabular-nums">
-                {new Set(event.stations).size}
-              </TableCell>
+              {!compact && (
+                <TableCell className="text-right text-muted-foreground tabular-nums">
+                  {new Set(event.stations).size}
+                </TableCell>
+              )}
             </TableRow>
           ))}
           {events.length === 0 && (
             <TableRow>
               <TableCell
-                colSpan={4}
-                className="h-20 text-center text-muted-foreground"
+                colSpan={compact ? 3 : 4}
+                className="h-12 text-center text-muted-foreground"
               >
                 All branches carrying current.
               </TableCell>

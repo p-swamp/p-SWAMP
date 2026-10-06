@@ -5,19 +5,18 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 
 import { Panel } from '../Panel'
-import { ISLAND_COLORS } from '../islands'
+import { islandColor, islandName } from '../palette'
 import type { PanelVariant } from '../variant'
 import { PhasorDial } from './PhasorDial'
-import { usePhasorsSocket } from './usePhasorsSocket'
+import { usePhasorsData } from './phasorsContext'
 
 /**
  * Voltage phasors — the web counterpart of p-SWAMP's Qt voltage phasor plot.
  *
- * Reads the same measurement window the live measurements panel does — this
- * client's own, one per pipeline.
- * When the recorded line trip separates the northern stations, their phasors
- * drift away from the rest of the dial, coloured by the island the detector
- * assigned them.
+ * Reads the same measurement window the frequency dock does — this client's
+ * own, one per pipeline. When the recorded line trip separates the northern
+ * stations, their phasors drift away from the rest of the dial, coloured by the
+ * island the detector assigned them.
  */
 export function PhasorsPanel({
   variant = 'dashboard',
@@ -26,7 +25,8 @@ export function PhasorsPanel({
 }) {
   const [equalLengths, setEqualLengths] = useState(true)
   const [rotateToMean, setRotateToMean] = useState(true)
-  const { state, status, connected } = usePhasorsSocket()
+  const { state, status, connected } = usePhasorsData()
+  const compact = variant === 'dashboard'
 
   const ready = connected && state !== null
   const islandCount = state
@@ -35,7 +35,7 @@ export function PhasorsPanel({
 
   return (
     <Panel
-      title="Voltage Phasors"
+      title="Voltage phasors"
       subtitle="Bus voltage phasors across the Nordic 44 grid, coloured by island"
       status={status}
       ready={ready}
@@ -65,43 +65,49 @@ export function PhasorsPanel({
           : undefined
       }
     >
-      <div className="space-y-3">
+      <div className={compact ? 'flex items-center gap-3' : 'space-y-3'}>
         <PhasorDial
           phasors={state?.phasors ?? []}
           magRef={state?.mag_ref ?? null}
           angRef={state?.ang_ref ?? null}
           equalLengths={equalLengths}
           rotateToMean={rotateToMean}
-          size={variant === 'dashboard' ? 300 : 420}
+          size={compact ? 190 : 420}
         />
-        <div className="flex flex-wrap items-center justify-center gap-2">
+        <div
+          className={
+            compact
+              ? 'flex min-w-0 flex-col items-start gap-1.5'
+              : 'flex flex-wrap items-center justify-center gap-2'
+          }
+        >
           <Button
-            size="sm"
+            size={compact ? 'xs' : 'sm'}
             variant={equalLengths ? 'default' : 'outline'}
             onClick={() => setEqualLengths((v) => !v)}
           >
             Equal lengths
           </Button>
           <Button
-            size="sm"
+            size={compact ? 'xs' : 'sm'}
             variant={rotateToMean ? 'default' : 'outline'}
             onClick={() => setRotateToMean((v) => !v)}
           >
             Rotate to mean
           </Button>
-          {islandCount > 1 && (
-            <span className="flex items-center gap-2 text-xs text-muted-foreground">
-              {Array.from({ length: islandCount }, (_, i) => (
-                <span key={i} className="flex items-center gap-1">
-                  <span
-                    className="size-2 rounded-full"
-                    style={{ background: ISLAND_COLORS[i % ISLAND_COLORS.length] }}
-                  />
-                  {i === 0 ? 'main' : `island ${i}`}
-                </span>
-              ))}
-            </span>
-          )}
+          {islandCount > 1 &&
+            Array.from({ length: islandCount }, (_, i) => (
+              <span
+                key={i}
+                className="flex items-center gap-1.5 text-xs text-muted-foreground"
+              >
+                <span
+                  className="size-2 rounded-full ring-1 ring-foreground/20"
+                  style={{ background: islandColor(i) }}
+                />
+                {islandName(i)}
+              </span>
+            ))}
         </div>
       </div>
     </Panel>
