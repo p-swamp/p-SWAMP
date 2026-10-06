@@ -147,6 +147,45 @@ def run(
     return process.returncode
 
 
+def run_filtered(
+    argv: Sequence[str],
+    *,
+    drop: str,
+    cwd: Path | str | None = None,
+    env: Mapping[str, str] | None = None,
+) -> int:
+    """Run ``argv``, streaming its combined output minus every line containing ``drop``; its exit code.
+
+    The port of ``cmd 2>&1 | grep -v --line-buffered …``, used to keep the
+    /healthz probe lines out of a log view. Ctrl-C reaches the child too (same
+    console), so on the first one the output keeps flowing while the child
+    shuts down (``compose up`` stops its containers); a second one kills it.
+    """
+    process = subprocess.Popen(
+        _resolve(argv), cwd=cwd, env=child_env(env), stdout=subprocess.PIPE, stderr=subprocess.STDOUT
+    )
+    needle = drop.encode("utf-8")
+
+    def pump() -> None:
+        assert process.stdout is not None
+        for raw in process.stdout:
+            if needle not in raw:
+                sys.stdout.write(raw.decode("utf-8", errors="replace"))
+                sys.stdout.flush()
+
+    try:
+        pump()
+        return process.wait()
+    except KeyboardInterrupt:
+        try:
+            pump()
+            process.wait()
+        except KeyboardInterrupt:
+            process.kill()
+            process.wait()
+        return 130
+
+
 def capture(
     argv: Sequence[str],
     *,
