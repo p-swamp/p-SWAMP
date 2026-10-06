@@ -1,12 +1,12 @@
 # Subapp and module templates
 
 What the generators copy into a new app. Edit these to change what every new
-page/api starts life as; the scripts only derive names and patch the
+page/api starts life as; the generator (`../generate.py`) only derives names and patches the
 registries. Two sets:
 
-- `subapp/`, for `../generate-new-subapp.sh`: a per-client counter, like the
+- `subapp/`, for `uv run pswamp new subapp`: a per-client counter, like the
   checked-in reference subapp (`app/server-python/src/reference_subapp/`).
-- `module/`, for `../generate-new-module-with-frontend.sh`: a module over the
+- `module/`, for `uv run pswamp new module`: a module over the
   core pipeline, its pipeline and its web API, a page showing its latest
   result, and unit tests. It is also added to the module-worker in compose and
   k8s. `doc/module-cookbook.md` walks through it.
@@ -29,7 +29,7 @@ A module carries its tests in a `tests/` package beside its code, so
 `module-tests/` holds an (empty) `__init__.py` as well as `test_module.py`.
 That file is what lets every module name its test file the same.
 
-What the script writes is then yours: change it freely. The rest of this file
+What the generator writes is then yours: change it freely. The rest of this file
 describes the `subapp` set; the module set follows the same rules.
 
 **This file is where the scaffolding is explained.** The templates themselves
@@ -63,11 +63,11 @@ called `use__NAME__Socket.ts.template`. The tokens, for the example name
 | `__UPPER__` | `GRID_OVERVIEW` | the environment variable prefix (`<APP>_DATA_CLIENTS`) |
 | `__LABEL__` | `Grid Overview` | the nav entry and page title |
 
-The rendered Python has to pass `scripts/error_check.sh` — pyflakes lint plus a
+The rendered Python has to pass `uv run pswamp check` — pyflakes lint plus a
 syntax compile — so avoid unused imports or names. Line length is no longer
 enforced (formatting and pycodestyle were dropped from the gate), but the
 templates still keep lines short for readability, so prefer a token at the end of
-its line. The prose here is written to the script's 32-character name cap; the one
+its line. The prose here is written to the generator's 32-character name cap; the one
 line that stretches at the top of that range is `state_message`'s signature, which
 carries `__NAME__` twice.
 
@@ -84,7 +84,7 @@ halves when you replace the counter.
 
 `doc/the-client-server-api.md` is the account of *why* the seam is shaped this
 way, and its "Common tasks" section is the recipe for changing it — including
-"run the script on a throwaway name and read the diff", which shows every moving
+"run the generator on a throwaway name and read the diff", which shows every moving
 part at once. What follows here is only what a template editor needs on top of
 that.
 
@@ -135,8 +135,8 @@ Four things follow when editing these templates:
 - **A command that grows a body takes a pydantic model**, and a plain `GET` added
   beside these declares a response model — a bare `-> dict` publishes as an
   untyped `object` and leaves the client casting an implicitly-`any` body.
-- **`generate-new-subapp.sh` regenerates the contract before it runs
-  `error_check.sh`**, because the rendered hook imports a type that does not
+- **`pswamp new` regenerates the contract before it runs
+  `pswamp check`**, because the rendered hook imports a type that does not
   exist until it does. Commit `doc/api/openapi.json` and
   `app/client-web/src/api/schema.ts` along with the generated subapp.
 
