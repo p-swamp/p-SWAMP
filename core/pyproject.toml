@@ -34,10 +34,10 @@ build-backend = "uv_build"
 [tool.uv.build-backend]
 module-name = "pswamp_core"
 
-# No [tool.ruff] section: scripts/error_check.sh passes `--select F` explicitly.
+# No [tool.ruff] section: `pswamp check` passes `--select F` explicitly.
 
 # Used when pytest is pointed at core/tests directly; the usual runner is
-# scripts/run-python-server-tests.sh, which takes the server's config.
+# `uv run pswamp test server`, which takes the server's config.
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 asyncio_mode = "auto"

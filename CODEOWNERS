@@ -59,7 +59,7 @@
 # package-lock.json, and every Python pyproject.toml / uv.lock (the workspace
 # root and its members, and the desktop package under desktop/).
 # A dependency bump is the change most worth a second pair of eyes — it is
-# usually produced wholesale by scripts/update-dependencies.sh, so the diff is
+# usually produced wholesale by uv run pswamp deps update, so the diff is
 # large, machine-written, and the only place a supply-chain surprise can enter.
 package.json        @thomanil
 package-lock.json   @thomanil

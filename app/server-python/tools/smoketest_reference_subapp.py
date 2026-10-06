@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright Contributors to the p-SWAMP Project.
 
-"""Drive the Reference example app end to end. Driven by scripts/smoketest.sh.
+"""Drive the Reference example app end to end. Driven by uv run pswamp test smoke.
 
     python tools/smoketest_reference_subapp.py <base-url>
 

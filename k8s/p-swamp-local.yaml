@@ -1,5 +1,5 @@
 # The p-swamp stack on local minikube, applied by
-# scripts/start-pswamp-in-local-minikube-cluster.sh (which also builds the
+# uv run pswamp deploy minikube (which also builds the
 # image into minikube and creates the ConfigMap below).
 #
 #   p-swamp                   the server, with the web client baked in (NodePort 30080)

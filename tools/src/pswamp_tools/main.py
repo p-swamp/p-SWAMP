@@ -33,9 +33,11 @@ class _App(typer.Typer):
 app = _App(
     name="pswamp",
     help=(
-        "The p-SWAMP repo CLI: checks, the api contract and the test suites, on Windows, macOS and Linux.\n\n"
+        "The p-SWAMP repo CLI: checks, the api contract, tests, scaffolding, the dev loop, deploys and "
+        "dependency upgrades, on Windows, macOS and Linux.\n\n"
         "Run it as `uv run pswamp …` from anywhere in the repo. Every command and group has --help, "
-        "and that help is the documentation. A missing tool (uv, node/npm/npx, docker/podman, git) "
+        "and that help is the documentation. A missing tool (uv, node/npm/npx, docker/podman, git, "
+        "minikube/kubectl) "
         "is reported with how to install it."
     ),
     no_args_is_help=True,
