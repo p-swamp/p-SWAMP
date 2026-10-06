@@ -1,11 +1,11 @@
 # Dependency manifest for the Python state server — the single source of truth
 # for what this deployable depends on. Mirrors app/client-web/package.json on the
 # other half of the repo: this file states intent (compatible version ranges),
-# and the committed uv.lock beside it pins the exact resolved versions of the
-# full transitive closure, with hashes.
+# and the committed uv.lock at the repo root (the workspace lock) pins the exact
+# resolved versions of the full transitive closure, with hashes.
 #
-# Add or change a dependency by editing this file, then run `uv lock` (from this
-# directory) and commit both files together.
+# Add or change a dependency by editing this file, then run `uv lock` (anywhere
+# in the workspace) and commit both files together.
 
 [project]
 name = "pswamp-server"
@@ -23,45 +23,46 @@ dependencies = [
     "pswamp-modules",
 ]
 
-# p-swamp is the desktop package at the repo root (root pyproject.toml, root
-# src/pswamp/). It supplies the PMU decoding, the time-window storage and the
-# monitoring applications this server is a front end for, and the code under
+# p-swamp is the desktop package in desktop/ (desktop/pyproject.toml,
+# desktop/src/pswamp/). It supplies the PMU decoding, the time-window storage and
+# the monitoring applications this server is a front end for, and the code under
 # src/pswamp_web/ is written so it could fold into it as src/pswamp/web/.
 #
-# This is the ONE place where the two Python projects in this repo are wired
-# together — everywhere else in AGENTS.md still holds: the web backend keeps its
-# own manifest and lockfile, and nothing under src/pswamp/ imports pswamp_web.
+# It is NOT a workspace member: it keeps its own desktop/uv.lock, and reaches
+# this workspace only through this one path dependency. Everywhere else in
+# AGENTS.md still holds: nothing under desktop/src/pswamp/ imports pswamp_web.
 # The dependency points one way only, web → desktop.
 #
-# Editable, so an edit to root src/pswamp/ is live here with no reinstall.
+# Editable, so an edit to desktop/src/pswamp/ is live here with no reinstall.
 #
 # Deliberately no extras. p-swamp's [full] extra is what carries PySide6,
 # pyqtgraph, kafka, nqkafka and tops-rt; none of that belongs in a headless
 # server image, and the base dependency set (numpy, scipy, pandas) is all the
 # analysis core needs.
 #
-# The path is relative to this file's directory: app/server-python/ → repo root.
+# The path is relative to this file's directory: app/server-python/ → desktop/.
 # It is deliberately the same string on the host and inside the image, which is
 # why the image mirrors the repo at its real depth rather than flattening the
 # server to /app — see the workspace note at the top of the runtime stage in the
-# Dockerfile.
+# Dockerfile. After editing desktop/pyproject.toml, run
+# `uv lock --upgrade-package p-swamp` at the repo root.
 [tool.uv.sources]
-p-swamp = { path = "../../", editable = true }
-# The shared core at core/. Same one-way rule: nothing under core/ imports from
-# app/. After editing core/pyproject.toml, run
-# `uv lock --upgrade-package pswamp-core`.
-pswamp-core = { path = "../../core", editable = true }
-# The modules at modules/, which depend on the core only. Nothing under
-# modules/ imports from app/. After editing modules/pyproject.toml, run
-# `uv lock --upgrade-package pswamp-modules`.
-pswamp-modules = { path = "../../modules", editable = true }
+p-swamp = { path = "../../desktop", editable = true }
+# The shared core at core/ and the modules at modules/ are members of the uv
+# workspace rooted at the repo root (one uv.lock there). Same one-way rule:
+# nothing under core/ or modules/ imports from app/.
+pswamp-core = { workspace = true }
+pswamp-modules = { workspace = true }
 
-# Tooling that must never ship in the image — the Dockerfile installs with
-# --no-dev. Declared here so the versions are locked and hash-verified like
-# everything else, and defined in exactly one place rather than duplicated across
-# the scripts that invoke them. ruff is pinned exactly so everyone runs the
-# identical linter; pytest drives the server unit tests under tests/, which
-# error_check.sh runs alongside the static checks.
+# Tooling that must never ship in the image — the Dockerfile exports with
+# --no-dev. Declared here so the versions are locked (in the workspace uv.lock)
+# and hash-verified like everything else, and defined in exactly one place rather
+# than duplicated across the scripts that invoke them. ruff is pinned exactly so
+# everyone runs the identical linter; pytest drives the server, core and modules
+# unit tests. It lives on this member rather than on the virtual workspace root
+# because a root group is not installed by `uv sync`/`uv run` from this
+# directory, while a member's dev group is installed from both (see the root
+# pyproject.toml).
 [dependency-groups]
 dev = [
     "ruff==0.16.4",

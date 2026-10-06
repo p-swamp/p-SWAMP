@@ -41,7 +41,7 @@ jobs:
       - uses: docker/setup-buildx-action@v4
 
       # Context is the repo root: the web-build stage needs app/client-web/ and
-      # the runtime stage needs root src/. amd64 only: that is what a downstream
+      # the runtime stage needs desktop/src/. amd64 only: that is what a downstream
       # cluster would run, and dev boxes build their own image via compose/minikube.
       #
       # `push: false` + `load: true`: the image lands in the runner's own docker

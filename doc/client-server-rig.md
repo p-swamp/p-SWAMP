@@ -441,13 +441,13 @@ exact versions. Commit both; never commit the install directory.
 | | Python (`app/server-python/`) | Web client (`app/client-web/`) |
 |---|---|---|
 | You edit | `pyproject.toml` | `package.json` |
-| Generated lock | `uv.lock` | `package-lock.json` |
-| Install dir (never committed) | `.venv/` | `node_modules/` |
+| Generated lock | `uv.lock` (at the repo root, the workspace's) | `package-lock.json` |
+| Install dir (never committed) | `.venv/` (at the repo root) | `node_modules/` |
 | Re-resolve after editing | `uv lock` | `npm install` |
 
 ```
 # Python: add the requirement to [project.dependencies], then
-(cd app/server-python && uv lock)
+uv lock    # at the repo root: one lock for the whole uv workspace
 ```
 
 The manifest states a compatible *range*; the lockfile pins the one exact version of

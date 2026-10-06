@@ -2,10 +2,11 @@
 # transport, modules, gateway, player, pipelines). See
 # doc/server-data-architecture.md.
 #
-# The third Python project in the repo, beside the desktop package (root
-# pyproject.toml) and the web backend (app/server-python/pyproject.toml). The
-# web backend takes it as an editable path dependency, and its tests run in the
-# web backend's locked environment, so there is no lockfile here. The fourth,
+# The third Python project in the repo, beside the desktop package
+# (desktop/pyproject.toml) and the web backend (app/server-python/pyproject.toml).
+# It is a member of the uv workspace rooted at the repo root, locked in the one
+# uv.lock there, and its tests run with the web backend's, so there is no
+# lockfile here. The fourth,
 # modules/ (pswamp-modules), depends on this one; this one imports nothing
 # from it.
 #

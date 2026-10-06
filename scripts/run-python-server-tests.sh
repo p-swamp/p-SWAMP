@@ -16,7 +16,7 @@
 # scripts/error_check.sh, which is strictly static (lockfile / AST / lint / api
 # contract) and runs no test suites.
 #
-# The desktop "core" package's tests (repo-root tests/) are a separate suite in a
+# The desktop "core" package's tests (desktop/tests/) are a separate suite in a
 # separate env — see scripts/run-core-python-tests.sh.
 #
 # Any arguments are forwarded verbatim to pytest:
@@ -47,14 +47,15 @@ if ! command -v uv >/dev/null 2>&1; then
 fi
 
 # pytest reads its config ([tool.pytest.ini_options]) and resolves pythonpath
-# relative to app/server-python, so run from there. `uv run` uses the project's
-# locked env — pytest + pytest-asyncio from the dev group, plus the main deps the
+# relative to app/server-python, so run from there. `uv run` uses the
+# workspace's locked env (the root uv.lock) — pytest + pytest-asyncio from this
+# member's dev group, plus the main deps the
 # tests import (pswamp_web → pswamp). A cold run syncs that env first. exec so
 # pytest's exit code is this script's.
 #
 # `-c pyproject.toml` pins that config. Without it pytest picks its config from
 # the common ancestor of the paths it is given, so naming a file under tests/
-# and one under ../../modules/ together would land on the repo root's manifest
-# and lose `pythonpath` and `asyncio_mode`.
+# and one under ../../modules/ together would land on the workspace root's
+# manifest and lose `pythonpath` and `asyncio_mode`.
 cd app/server-python || exit 1
 exec uv run pytest -c pyproject.toml "$@"

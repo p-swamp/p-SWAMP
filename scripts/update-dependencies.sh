@@ -10,7 +10,7 @@
 #      major jump,
 #   3. run the app and click through it,
 #   4. open a PR, so someone else sees the same diff.
-# It edits four manifests + three lockfiles in place and nothing else. Never
+# It edits the manifests + three lockfiles in place and nothing else. Never
 # commit the result unread — the reading is the whole point.
 #
 # WHAT IT TOUCHES
@@ -20,11 +20,12 @@
 #                              installed peerDependency accepts, and reports it.
 #     - npm install            re-resolve package-lock.json; falls back to a
 #                              from-scratch resolve on ERESOLVE (see that step).
-#   Desktop package (root) + Web backend (app/server-python)
-#     - uv lock --upgrade      re-resolve each closure. The backend re-reads the
+#   Desktop package (desktop/) + the uv workspace (root uv.lock: core, modules,
+#   app/server-python)
+#     - uv lock --upgrade      re-resolve each closure. The workspace re-reads the
 #                              p-swamp path dependency (--upgrade implies
 #                              --refresh; a plain `uv lock` doesn't — see
-#                              AGENTS.md), so it's locked AFTER the root.
+#                              AGENTS.md), so it's locked AFTER the desktop.
 #
 # It does NOT widen a Python range: `uv lock --upgrade` respects pyproject.toml's
 # bounds and uv has no npm-check-updates, so a cap like `fastapi>=…,<0.116` needs
@@ -66,10 +67,13 @@ fi
 MANIFESTS=(
   app/client-web/package.json
   app/client-web/package-lock.json
+  desktop/pyproject.toml
+  desktop/uv.lock
   pyproject.toml
   uv.lock
   app/server-python/pyproject.toml
-  app/server-python/uv.lock
+  core/pyproject.toml
+  modules/pyproject.toml
 )
 
 # Snapshot the lockfiles before touching them, so the report can say what MOVED.
@@ -81,8 +85,8 @@ snapshot_before() {
   # snapshot_before <path> — stash a copy under a flattened name.
   [ -f "$1" ] && cp "$1" "$BEFORE_DIR/$(echo "$1" | tr / _)"
 }
+snapshot_before desktop/uv.lock
 snapshot_before uv.lock
-snapshot_before app/server-python/uv.lock
 snapshot_before app/client-web/package-lock.json
 
 FAILURES=()
@@ -163,26 +167,27 @@ if [ "$NPM_INSTALL_OK" -eq 0 ]; then
   printf '       it installs a tree npm itself considers broken.\n\033[0m'
 fi
 
-# --- Desktop package at the repo root ---------------------------------------
-section "Desktop package (repo root)"
+# --- Desktop package in desktop/ --------------------------------------------
+section "Desktop package (desktop/)"
 
-# The root project is the desktop package — and, since the merge, the analysis
-# core the web backend imports, so it ships in the image too. Its ranges are
+# The desktop package, with its own desktop/uv.lock outside the workspace — and,
+# since the merge, the analysis core the web backend imports, so it ships in the
+# image too. Its ranges are
 # mostly open (`numpy>=2.2.5`), so --upgrade reaches latest; the exact pins
 # (PySide6==6.8.3) and git deps stay put. Locked FIRST, so the backend below
 # resolves against the result.
-step "uv lock --upgrade (root: re-resolve uv.lock)" \
-  uv lock --upgrade
+step "uv lock --upgrade (desktop: re-resolve desktop/uv.lock)" \
+  uv lock --upgrade --project desktop
 
-# --- Web backend ------------------------------------------------------------
-section "Web backend (app/server-python)"
+# --- The uv workspace (core, modules, web backend) ---------------------------
+section "Workspace (root uv.lock: core, modules, app/server-python)"
 
 # --upgrade implies --refresh, which is what makes uv re-read the p-swamp path
 # dependency. A plain `uv lock` would print "Resolved N packages" and ignore the
-# root manifest we just changed — the AGENTS.md trap, and why the two are locked
-# in this order.
-step "uv lock --upgrade (app/server-python: re-resolve uv.lock)" \
-  uv lock --upgrade --project app/server-python
+# desktop manifest we just changed — the AGENTS.md trap, and why the two are
+# locked in this order.
+step "uv lock --upgrade (workspace: re-resolve uv.lock)" \
+  uv lock --upgrade
 
 # --- What is still held back ------------------------------------------------
 section "Held back by a version range (needs a hand edit)"
@@ -212,8 +217,8 @@ held_back() {
   fi
 }
 
-held_back "Root (pyproject.toml)"
-held_back "Web backend (app/server-python/pyproject.toml)" --project app/server-python
+held_back "Desktop (desktop/pyproject.toml)" --project desktop
+held_back "Workspace (core, modules, app/server-python)"
 
 # npm has no equivalent gap — ncu just rewrote the ranges — but a peer
 # dependency conflict can still pin something below latest, and that shows up
@@ -229,18 +234,18 @@ section "What actually moved"
 # 72 actual `version =`). So parse the before/after pairs and print the versions —
 # this, not the diff, is what to read first.
 version_delta() {
-  # version_delta <label> <lockfile> <manifest> — compare snapshot vs now,
+  # version_delta <label> <lockfile> <manifest>... — compare snapshot vs now,
   # splitting DIRECT dependencies (named in the manifest, yours) from transitive
   # ones (your deps' choices). The split is what makes it readable — one radix-ui
   # bump drags ~70 packages with it. VERBOSE=1 prints the transitive detail too.
-  local label="$1" path="$2" manifest="$3"
+  local label="$1" path="$2"
   local before="$BEFORE_DIR/$(echo "$path" | tr / _)"
   printf '\n%s (%s):\n' "$label" "$path"
   if [ ! -f "$before" ] || [ ! -f "$path" ]; then
     printf '  (no before/after pair to compare)\n'
     return
   fi
-  VERBOSE="${VERBOSE:-}" python3 - "$before" "$path" "$manifest" <<'PYEOF'
+  VERBOSE="${VERBOSE:-}" python3 - "$before" "$path" "${@:3}" <<'PYEOF'
 import json, os, re, sys
 
 def read_lock(path):
@@ -298,7 +303,8 @@ def read_direct(path):
             out.add(name.lower().replace("_", "-"))
     return out
 
-before, after, direct = read_lock(sys.argv[1]), read_lock(sys.argv[2]), read_direct(sys.argv[3])
+before, after = read_lock(sys.argv[1]), read_lock(sys.argv[2])
+direct = set().union(*(read_direct(m) for m in sys.argv[3:]))
 
 def classify(names):
     return sorted(n for n in names if n in direct), sorted(n for n in names if n not in direct)
@@ -336,8 +342,8 @@ print(f"  transitive: {len(t_changed)} upgraded, {len(t_added)} added, {len(t_re
 PYEOF
 }
 
-version_delta "Desktop package" uv.lock                          pyproject.toml
-version_delta "Web backend"     app/server-python/uv.lock        app/server-python/pyproject.toml
+version_delta "Desktop package" desktop/uv.lock                  desktop/pyproject.toml
+version_delta "Workspace"       uv.lock                          app/server-python/pyproject.toml core/pyproject.toml modules/pyproject.toml
 version_delta "Web client"      app/client-web/package-lock.json app/client-web/package.json
 
 # --- The diff to review -----------------------------------------------------
@@ -347,7 +353,7 @@ printf '\nThe line counts above are mostly per-wheel hashes, not upgrades — re
 printf 'list before them for that. What the lockfile diff IS good for is spotting a\n'
 printf 'package that appeared without being asked for. The manifests are the\n'
 printf 'decision and are small enough to read in full:\n'
-printf '  git --no-pager diff -- app/client-web/package.json pyproject.toml app/server-python/pyproject.toml\n'
+printf '  git --no-pager diff -- app/client-web/package.json desktop/pyproject.toml app/server-python/pyproject.toml core/pyproject.toml modules/pyproject.toml\n'
 
 # --- Does it still hold together? -------------------------------------------
 # The upgrade is half the job; the other half is finding what it broke. Same gate

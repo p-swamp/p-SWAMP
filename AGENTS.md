@@ -9,8 +9,8 @@ are thin pointers to this file; put new guidance **here**, never in those.
 The p-SWAMP repository. It holds **two implementations side by side**:
 
 - the original **Python + Qt single-process application** — the research/desktop
-  code at the repo root (`src/pswamp/`, `examples/`, `tests/`, and the root
-  `pyproject.toml` + `uv.lock`), and
+  code in `desktop/` (`desktop/src/pswamp/`, `desktop/examples/`,
+  `desktop/tests/`, and `desktop/pyproject.toml` + `desktop/uv.lock`), and
 - the **client-server stack** — a FastAPI server plus a React web client under
   `app/`, with its dev tooling and deploy path (`Dockerfile`,
   `docker-compose.yml`, `k8s/`, `scripts/`, `.github/`, `doc/`).
@@ -20,16 +20,17 @@ client-server shape of P-SWAMP — tech stack, repo structure, local dev
 experience, deploy path — and has since been **merged back into this repo**. It is
 no longer a PoC of its own: it is the web half of this project, living *alongside*
 the Qt implementation rather than replacing it. `doc/client-server-rig.md` holds
-the driving goals and constraints behind it; `README.md` is the desktop package's.
+the driving goals and constraints behind it; `desktop/README.md` is the desktop
+package's, and the root `README.md` is a short map of the repository.
 
 The two are no longer disconnected. The web stack's **grid monitor** is a front
 end over the desktop package's analysis core: `app/server-python/src/pswamp_web/`
-imports `pswamp.*` and the web backend declares the root package as an editable
-path dependency. See "The Python projects in one repo" for what that does and
+imports `pswamp.*` and the web backend declares the desktop package as an
+editable path dependency. See "The Python projects in one repo" for what that does and
 does not change, and "The p-SWAMP web layer" for the code itself.
 
 **Everything below is about the client-server stack**, except where it says
-otherwise. The desktop package at the repo root has its own manifest and is
+otherwise. The desktop package in `desktop/` has its own manifest and is
 covered by neither these conventions nor `error_check.sh` — see the next section.
 
 The web stack ships two things. The **grid monitor** at `/` is the real one: a
@@ -70,12 +71,15 @@ have no volume.
 
 ## The Python projects in one repo
 
-The root `pyproject.toml` + `uv.lock` belong to the **desktop `p-swamp` package**
-(root `src/pswamp/`, imported as `pswamp`; PySide6, pyqtgraph, Kafka). The web
-backend keeps its own `app/server-python/pyproject.toml` + `uv.lock`, and the two
-still resolve **separately** — which is the point, since Qt + Kafka and FastAPI +
-uvicorn have no business being solved as one dependency problem. Don't hoist
-either manifest to the other's level.
+The root `pyproject.toml` is a **virtual uv workspace root** (no package of its
+own) whose members are `core/`, `modules/` and `app/server-python/`; they share
+**one lockfile, the root `uv.lock`**, and one `.venv` at the root. The
+**desktop `p-swamp` package** lives in `desktop/` (`desktop/src/pswamp/`,
+imported as `pswamp`; PySide6, pyqtgraph, Kafka) with its own
+`desktop/pyproject.toml` + `desktop/uv.lock`, and is deliberately **not** a
+workspace member: the two still resolve **separately** — which is the point,
+since Qt + Kafka and FastAPI + uvicorn have no business being solved as one
+dependency problem. Don't make the desktop package a member.
 
 They are not, however, independent. **The dependency runs one way, web →
 desktop:**
@@ -85,34 +89,35 @@ desktop:**
 dependencies = ["fastapi…", "uvicorn…", "p-swamp"]
 
 [tool.uv.sources]
-p-swamp = { path = "../../", editable = true }   # the repo root
+p-swamp = { path = "../../desktop", editable = true }   # outside the workspace
 ```
 
 That single stanza is the whole seam. `pswamp_web/` imports `pswamp.*`; nothing
-under root `src/pswamp/` imports anything from `app/`, and nothing may start.
-Editable, so an edit to root `src/pswamp/` is live in the server with no
+under `desktop/src/pswamp/` imports anything from `app/`, and nothing may start.
+Editable, so an edit to `desktop/src/pswamp/` is live in the server with no
 reinstall — locally through the venv, and in the container through the compose
-watch that syncs root `src/` into it.
+watch that syncs `desktop/src/` into it.
 
 Consequences worth knowing before touching anything:
 
-- **`src/` is ambiguous — always qualify it.** Root `src/` is the desktop package;
-  `app/server-python/src/` is the server. This file always means the latter unless
+- **`src/` is ambiguous — always qualify it.** `desktop/src/` is the desktop
+  package; `app/server-python/src/` is the server. This file always means the latter unless
   it says otherwise.
-- **Root `src/` is now IN the image**, installed editable at
-  `/workspace/p-SWAMP/src`. It follows that `.dockerignore` has to keep `build/`
-  (~1.6 GB), `examples/` and `tests/` out of the build context by hand. It also follows
+- **`desktop/src/` is IN the image**, installed editable at
+  `/workspace/p-SWAMP/desktop/src`. It follows that `.dockerignore` has to keep
+  `desktop/build/` (~1.6 GB), `desktop/examples/` and `desktop/tests/` out of the
+  build context by hand. It also follows
   that the image mirrors the *repo root*, not just the server dir — see the
   workspace note at the top of the Dockerfile's runtime stage for why the depth is
   required rather than a matter of taste.
 - **A third project, `core/` (`pswamp-core`)**, holds the server data
-  architecture. The web backend takes it as a second editable path dependency
-  (`pswamp-core[kafka,remote-data]`); it has no lockfile of its own, and its
+  architecture. It is a workspace member, which the web backend takes as
+  `pswamp-core[kafka,remote-data]`; it has no lockfile of its own, and its
   tests (`core/tests/`) run in the web backend's environment through
   `run-python-server-tests.sh`. Its only required dependency is pydantic, so a
   data provider can depend on it alone. It imports nothing from `app/` or from
-  the desktop package. After editing `core/pyproject.toml`, run
-  `(cd app/server-python && uv lock --upgrade-package pswamp-core)`.
+  the desktop package. After editing `core/pyproject.toml`, run `uv lock` at
+  the repo root.
   `error_check.sh` gates it fully, like `app/`.
 - **A fourth project, `modules/` (`pswamp-modules`)**, holds the analysis
   modules (`pswamp_modules/<module>/`), the pipeline declarations
@@ -128,17 +133,16 @@ Consequences worth knowing before touching anything:
   server imports its pipeline, results and commands from `pswamp_modules`.
   `pswamp_modules/tests/test_layering.py` checks both rules. Why: a worker hosting
   modules then loads core and modules alone, no FastAPI and no `pswamp_web`.
-  Like core it is an editable path dependency of the web backend with no
-  lockfile of its own, its tests run through `run-python-server-tests.sh`
+  Like core it is a workspace member with no lockfile of its own, its tests run through `run-python-server-tests.sh`
   (found under `modules/`; `-k <module>` selects one module's), and
   `error_check.sh` gates it fully. `.dockerignore` keeps the `tests/` folders
-  out of the image. After editing `modules/pyproject.toml`, run
-  `(cd app/server-python && uv lock --upgrade-package pswamp-modules)`. Test
+  out of the image. After editing `modules/pyproject.toml`, run `uv lock` at
+  the repo root. Test
   file names must be unique across `app/server-python/tests/` and
   `core/tests/`, which run in the same pytest session and are not packages; a
   module's tests are a package, so they cannot clash.
-- **`./scripts/error_check.sh` gates `app/`, `core/` and `modules/` fully; root `src/` only for syntax.**
-  ruff, `tsc` and the lockfile check are scoped to those three. Root `src/` now gets a
+- **`./scripts/error_check.sh` gates `app/`, `core/` and `modules/` fully; `desktop/src/` only for syntax.**
+  ruff, `tsc` and the lockfile check (the root `uv.lock`) are scoped to those three. `desktop/src/` gets a
   **syntax-only** `py_compile` gate (it ships in the image, so it must at least
   parse) — but it is *not* lint-gated: `ruff check` deliberately leaves it out,
   with a `TODO` beside the src/ step in the script. Widening ruff to `src/` means
@@ -146,16 +150,22 @@ Consequences worth knowing before touching anything:
   findings), which is a real piece of work and not a one-line scope change.
 - **The web backend takes p-swamp with no extras.** `[full]` is what carries
   PySide6, pyqtgraph, kafka-python, nqkafka and tops-rt; none of that belongs in a
-  headless server image. `synchrophasor` is a *base* root dependency but is
+  headless server image. `synchrophasor` is a *base* desktop dependency but is
   excluded from the image too (`--no-emit-package` in the Dockerfile): only the
   live-PMU and playback paths import it, and it is the one dependency fetched from
   git rather than an index. The Dockerfile's `import server` smoke test is what
   makes both exclusions checked decisions rather than hopeful ones.
 - **A dependency for the web backend goes in `app/server-python/pyproject.toml`**,
-  never the root one — and vice versa. After editing either, re-lock **both**:
-  `(cd app/server-python && uv lock --upgrade-package p-swamp)` is what refreshes
-  the web backend's view of the root manifest. A plain `uv lock` will report
-  "Resolved N packages" without re-reading the path dependency.
+  never the desktop one — and vice versa. After editing the desktop manifest,
+  re-lock **both**: `(cd desktop && uv lock)` for its own lock, then
+  `uv lock --upgrade-package p-swamp` at the repo root, which is what refreshes
+  the workspace's view of the desktop manifest. A plain `uv lock` will report
+  "Resolved N packages" without re-reading that path dependency.
+- **The dev tooling (ruff, pytest, pytest-asyncio) is the dev group of
+  `app/server-python/pyproject.toml`**, not of the root. The root is virtual, so
+  `uv sync`/`uv run` there install every member with its dev group, and from
+  `app/server-python` they install that member with its dev group; a group on the
+  virtual root would be dropped by the latter.
 
 ## Architecture
 
@@ -202,10 +212,10 @@ Two deployables, one wire protocol:
   `<repo>/` → `/workspace/p-SWAMP`, so this directory lands at
   `/workspace/p-SWAMP/app/server-python` with `WORKDIR …/src`, and `server.py`,
   `server:app` and `import reference_subapp` all resolve off the working
-  directory. The depth is not cosmetic: it is what makes `../../` in `[tool.uv.sources]` mean the
+  directory. The depth is not cosmetic: it is what makes `../../desktop` in `[tool.uv.sources]` mean the
   same thing on a laptop and in the image (uv refuses to normalise a relative path
   above its base directory). Everything under `src/` shares the one
-  `pyproject.toml` + `uv.lock` one level up.
+  `pyproject.toml` one level up, locked in the workspace's root `uv.lock`.
 - **`app/client-web/`** — a thin React/TS/Vite renderer (shadcn/ui + Tailwind v4).
   Holds no state; sends commands, renders whatever the server pushes. In the
   shipped image it is **baked into the server image** and served from the same
@@ -531,7 +541,7 @@ What is in there:
   reconnection**, so every panel has a real disturbance to show. It is a committed
   fixture; `tools/record_n44_dataset.py` regenerates it, but not from the server's
   own environment — it needs `tops-rt` and `synchrophasor`, neither of which is in
-  the server's dependency set. A venv with the root package plus those two is
+  the server's dependency set. A venv with the desktop package plus those two is
   enough (the full `[full]` extra, Qt included, is not required), and the tool
   additionally needs `fastapi` on the path purely because it imports
   `pswamp_web.recorded_io`, whose package `__init__` pulls in the whole web stack
@@ -801,7 +811,7 @@ underlying tech). Start the server first, then the client:
 
 ```
 ./scripts/start-local-hotloaded-pswamp-server.sh      # state server on 127.0.0.1:8000 (docker compose up --watch --build; streams logs, Ctrl-C stops it)
-                                                     # also live-syncs root src/, so desktop-package edits hot-reload too
+                                                     # also live-syncs desktop/src/, so desktop-package edits hot-reload too
 ./scripts/start-local-hotloaded-pswamp-web-client.sh  # Vite/React web client w/ HMR on http://localhost:5173
 ```
 
@@ -888,22 +898,23 @@ compose container already holds that port. Dependency changes go through the sam
 manifest:
 
 ```
-(cd app/server-python && uv lock)                          # re-resolve after editing app/server-python/pyproject.toml
-(cd app/server-python && uv lock --upgrade-package p-swamp) # ALSO needed after editing the ROOT pyproject.toml
+uv lock                              # at the repo root: re-resolve the workspace after editing any member's pyproject.toml
+uv lock --upgrade-package p-swamp    # at the repo root: ALSO needed after editing desktop/pyproject.toml
+(cd desktop && uv lock)              # the desktop package's own lock, outside the workspace
 ```
 
 The second form is not optional and not interchangeable with the first. A plain
 `uv lock` treats the already-locked path dependency as settled and reports
-"Resolved N packages" without re-reading the root manifest — so a root dependency
-change, or a change to where the path points, is silently ignored until
-`--upgrade-package p-swamp` forces it.
+"Resolved N packages" without re-reading the desktop manifest — so a desktop
+dependency change, or a change to where the path points, is silently ignored
+until `--upgrade-package p-swamp` forces it.
 
 Quality checks (cover both halves of the codebase):
 
 ```
 ./scripts/error_check.sh             # READ-ONLY static gate, NO test suites: uv lock --check + py_compile + ruff check F (python), tsc -b + eslint (web), api contract vs code. Runs all checks even if one fails, exits non-zero on any failure.
 ./scripts/run-python-server-tests.sh # the server, core and modules unit tests (app/server-python/tests/, core/tests/, each module's tests/ under modules/), fast + hermetic; args pass through to pytest (-k, -v, a node id).
-./scripts/run-core-python-tests.sh   # the desktop "core" tests (repo-root tests/) in the [full] env; needs Kafka/NQKafka/MQTT/Qt infra — run deliberately, not in CI.
+./scripts/run-core-python-tests.sh   # the desktop "core" tests (desktop/tests/) in the [full] env; needs Kafka/NQKafka/MQTT/Qt infra — run deliberately, not in CI.
 ./scripts/check-generators.sh        # both generators, in a throwaway worktree: their output passes error_check and its tests
 KAFKA_TEST_BOOTSTRAP_SERVERS=127.0.0.1:19092 ./scripts/run-python-server-tests.sh -k kafka   # the transport suite against the compose broker (docker compose up -d kafka)
 ```
@@ -930,11 +941,11 @@ separate envs and are hermetic to very different degrees:
   `src/` is). Add a suite here for any new backend api with non-trivial lifecycle
   logic.
 - **`./scripts/run-core-python-tests.sh`** — the desktop package's tests
-  (repo-root `tests/`), in the root project's `[full]` env. A **starting point,
+  (`desktop/tests/`), in the desktop project's own `[full]` env. A **starting point,
   not a gate**: most need external infrastructure (Kafka / NQKafka / MQTT brokers,
   a Qt display) with no skip guards, so a bare run fails without it — which is why
   they are a separate, deliberately-run script and why neither `error_check.sh`
-  nor CI touches them (CI only syntax-checks the root `src/`). The natural next
+  nor CI touches them (CI only syntax-checks `desktop/src/`). The natural next
   step is to mark the infra-bound tests so a bare run executes the hermetic
   subset.
 
@@ -989,7 +1000,7 @@ Dependency upgrades (all four manifests + all three lockfiles, in one pass):
 It produces a *candidate diff*, never a decision: `npm-check-updates -u --peer`
 plus `npm install` on the web client (falling back to a from-scratch resolve
 when an existing lock anchors npm to a tree it cannot reconcile — seen for
-real), then `uv lock --upgrade` on the root package and then on the web backend.
+real), then `uv lock --upgrade` on the desktop package and then on the workspace.
 That order matters: the second re-reads the first through the path dependency,
 which is only true because `--upgrade` implies `--refresh`.
 
@@ -1085,14 +1096,14 @@ mind when editing that script:
 ## Conventions
 
 - **Central Python manifest.** `app/server-python/pyproject.toml` declares the
-  web backend's direct dependencies (its single source of truth — the root
-  `pyproject.toml` belongs to the desktop package, and reaches this one only as
-  the `p-swamp` path dependency declared here) and
-  `app/server-python/uv.lock` pins the whole resolved transitive closure with
+  web backend's direct dependencies (its single source of truth — the desktop
+  package's `desktop/pyproject.toml` reaches this one only as the `p-swamp` path
+  dependency declared here) and the workspace's root
+  `uv.lock` pins the whole resolved transitive closure with
   hashes — the Python mirror of `app/client-web/package.json` +
   `package-lock.json`. Both are committed; `.venv/` is derived and is not.
-  Add/change a dep by editing `[project.dependencies]`, then run `uv lock` from
-  that directory and commit both files. Ranges express intent, the lock pins
+  Add/change a dep by editing `[project.dependencies]`, then run `uv lock` at
+  the repo root and commit both files. Ranges express intent, the lock pins
   reality: re-locking keeps existing versions, so upgrades need an explicit
   `uv lock --upgrade`. `error_check.sh` runs `uv lock --check` and the Dockerfile
   runs `uv export --locked`, so an unlocked manifest edit fails loudly in both.
@@ -1100,7 +1111,7 @@ mind when editing that script:
   built and `src/` is a plain source folder, not a packaging layout — `server.py`
   imports each app package by name because the working directory *is* `src/`, and
   a new backend api is just a new folder there (no new manifest, no new lockfile).
-  `app/server-python/.python-version` pins local dev to Python 3.11, matching the
+  The root `.python-version` (and `app/server-python/.python-version`) pins local dev to Python 3.11, matching the
   image; without it `uv` would build the venv on whatever system Python is newest.
   Deliberately **no `[tool.ruff]` section** in `pyproject.toml`: ruff only treats
   the file as config when that section exists, so omitting it keeps the explicit
@@ -1124,10 +1135,10 @@ mind when editing that script:
   `git check-ignore -v <path>` before assuming it is tracked, and `git status`
   is not enough — an ignored file simply never shows up.
 - **`.dockerignore` now has to earn its keep.** The build context is the repo root
-  and the image installs root `src/` (see "The Python projects in one repo"), so
-  everything else at the root would otherwise be uploaded to the daemon on every
-  build — `build/` alone is ~1.6 GB. It is excluded there, along with `examples/`,
-  `tests/` and the cache dirs. Two entries are deliberately *not* excluded and
+  and the image installs `desktop/src/` (see "The Python projects in one repo"), so
+  everything else in `desktop/` would otherwise be uploaded to the daemon on every
+  build — `desktop/build/` alone is ~1.6 GB. It is excluded there, along with
+  `desktop/examples/`, `desktop/tests/` and the cache dirs. Two entries are deliberately *not* excluded and
   will break the build if added: root `pyproject.toml` and root `README.md`, which
   uv reads to generate the desktop package's metadata while resolving.
 - **Dockerfile base images are digest-pinned**, with the readable tag kept as a
@@ -1188,7 +1199,8 @@ mind when editing that script:
   Manual dispatch can compare a selected branch with a configurable base ref
   after the workflow exists on the default branch. It requires **Dependency
   Graph** to be enabled in repository settings: GitHub parses the npm locks and
-  runs its uv graph job for the two `uv.lock` files; the action consumes those
+  runs its uv graph job for the two `uv.lock` files (the root workspace lock and
+  `desktop/uv.lock`); the action consumes those
   snapshots rather than building a graph itself. The documented license inventory
   is in `doc/dependency-license-inventory.md`. `static-errorcheck` also runs
   `check-generators.sh`. `unit-tests` runs the Python suites through their
@@ -1258,7 +1270,7 @@ What has to hold in the `static-errorcheck` job:
   locked `dev` dependency group.
 - **A real Python 3.11 must be on the runner *before* the check runs.** Passing
   the preflight isn't enough: `uv lock --check` resolves against the project's
-  `requires-python` and wants 3.11 (per `app/server-python/.python-version`), and
+  `requires-python` and wants 3.11 (per the root `.python-version`), and
   it runs `--offline` so uv may not download one on demand. A runner with only a
   newer python3 fails with *"No interpreter found for Python 3.11 … uv is set to
   offline mode"* — `py_compile` still passes, which makes it look like a lockfile
@@ -1266,8 +1278,8 @@ What has to hold in the `static-errorcheck` job:
   `uv python install 3.11` before calling the script. Fix it there, not by
   dropping `--offline` from `error_check.sh`: that flag keeps the pre-push hook
   off the network.
-- **Cache keys:** npm on `app/client-web/package-lock.json`, uv on
-  `app/server-python/uv.lock`. Both are committed, so both are valid keys.
+- **Cache keys:** npm on `app/client-web/package-lock.json`, uv on the root
+  `uv.lock`. Both are committed, so both are valid keys.
 - **No `paths` filter on the `pull_request` trigger, on purpose.** The three
   jobs are required status checks, and GitHub scores a required check that never
   ran as *pending* rather than passed — so a PR whose files all fell outside a
@@ -1275,8 +1287,9 @@ What has to hold in the `static-errorcheck` job:
   unmergeable for ever. A docs-only PR therefore pays for a heavily cached run.
   The `main` push trigger in `build-container.yml` has none either: every
   change to `main` builds. If one is ever added there, use directory globs (a
-  per-file list once silently missed `pyproject.toml`/`uv.lock`), cover root
-  `src/**` and the root `pyproject.toml` (both are in the image), and list the
+  per-file list once silently missed `pyproject.toml`/`uv.lock`), cover
+  `desktop/src/**`, `desktop/pyproject.toml` and the root `pyproject.toml` +
+  `uv.lock` (all are in the image), and list the
   workflow's own path — a filter naming a file that no longer exists fails
   silently, by never re-running the pipeline for a change to the pipeline.
 - **The smoke test builds the image too, but rarely pays for it.** Both
