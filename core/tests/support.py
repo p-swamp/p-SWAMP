@@ -145,3 +145,21 @@ class TickingClient(DataClient):
             if time_range.end is not None and now >= time_range.end:
                 return
             yield frame(0).model_copy(update={"timestamp": now})
+
+
+def install_modules(monkeypatch, **modules: str) -> None:
+    """Make ``pswamp_core.pipeline_config`` see exactly these modules as
+    installed: entry-point name → ``module.path:Class``, as a module project's
+    ``[project.entry-points."pswamp.modules"]`` would declare them."""
+    from importlib.metadata import EntryPoint
+
+    from pswamp_core import pipeline_config
+
+    points = {name: EntryPoint(name, value, pipeline_config.MODULES_GROUP) for name, value in modules.items()}
+    monkeypatch.setattr(pipeline_config, "available_modules", lambda: dict(points))
+
+
+def write_pipeline(path, text: str):
+    """``text`` written to ``path``, which is returned."""
+    path.write_text(text, encoding="utf-8")
+    return path

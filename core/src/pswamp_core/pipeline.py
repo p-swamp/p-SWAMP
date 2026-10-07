@@ -4,9 +4,13 @@
 """Pipelines: what an app's data flows through, declared once, run per key.
 
 A **``Pipeline``** is the declaration: the app's name (the namespace of its
-topics), its sources (a gateway factory) and its modules::
+topics), its sources (a gateway factory) and its modules. An app declares it
+as data, in ``pipelines/<app>.toml``, which ``Pipeline.load`` reads (see
+``pswamp_core.pipeline_config``)::
 
-    PIPELINE = Pipeline("pmu-test-streamer", gateway, modules=(FrameStatsModule,))
+    PIPELINE = Pipeline.load("pipelines/pmu-test-streamer.toml")
+
+A test may declare one in code: ``Pipeline("app", gateway, modules=(FrameStatsModule,))``.
 
 A **``PipelineRun``** is one running instance under one key: a gateway, a
 player and an outbox. It publishes the player's frames to the modules and
@@ -38,6 +42,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import os
 import time
 from collections.abc import AsyncIterator, Callable, Collection
 from dataclasses import dataclass
@@ -94,12 +99,24 @@ class Pipeline:
     same command class: a command class is an address. Also when a module
     sends a command (lists it in its ``outputs``) that nothing in the pipeline
     takes, and when two classes of the pipeline have the same topic, as two of
-    the same name do: a topic carries one class.
+    the same name do: a topic carries one class. And, when ``source_models``
+    is given, when a module reads a class nothing in the pipeline produces.
     """
 
     app: str
     gateway: Callable[[], DataGateway]
     modules: tuple[type[Module], ...] = ()
+    #: What the sources serve. When given (``Pipeline.load`` always gives it),
+    #: every class a module reads must have a producer in the pipeline.
+    source_models: tuple[type[DataModel], ...] | None = None
+
+    @classmethod
+    def load(cls, path: str | os.PathLike[str]) -> Pipeline:
+        """The pipeline declared in the file at ``path`` (``pipelines/<app>.toml``).
+        See ``pswamp_core.pipeline_config``."""
+        from .pipeline_config import load_pipeline
+
+        return load_pipeline(path)
 
     def __post_init__(self) -> None:
         taken: dict[type[Command], str] = {command: "the player" for command in PLAYER_COMMANDS}
@@ -120,6 +137,15 @@ class Pipeline:
                     f"{self.app}: {other.__module__}.{other.__qualname__} and {model.__module__}.{model.__qualname__} "
                     f"are both on topic {model.topic}; rename one, or give it a topic of its own (topic: ClassVar[str])"
                 )
+        if self.source_models is not None:
+            produced = {*self.source_models, *self.outputs, PlayerStatus, ErrorEvent, PipelineClosed}
+            for module in self.modules:
+                for model in module.input_models():
+                    if model not in produced:
+                        raise ValueError(
+                            f"{self.app}: {module.name} reads {model.__name__}, which nothing in the pipeline produces "
+                            f"(the sources serve {_names(self.source_models)}; the modules emit {_names(self.outputs)})"
+                        )
 
     @property
     def inputs(self) -> frozenset[type[DataModel]]:
@@ -154,6 +180,10 @@ class Pipeline:
             for module in self.modules
             if only is None or module.name in only
         ]
+
+
+def _names(models: Collection[type]) -> str:
+    return ", ".join(model.__name__ for model in models) or "nothing"
 
 
 def live_key(source: str) -> str:
