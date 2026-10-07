@@ -63,6 +63,17 @@ other test folder, so its test file is named after the module
 (`test___PKG___module.py`) rather than `test_module.py`; the generator refuses
 a name whose test file exists in any test folder.
 
+**The module and source sets show the current contract**, so they change with it:
+a module template uses `inputs`/`outputs`, a synchronous `process` and `run_one` in
+its test and example; a source template uses `read`/`coverage` and
+`SourceConformance`. Change `Module` or `SourceModule` in `core/` and these in the
+same commit. `uv run pswamp check-generators` renders the generators (a subapp, a
+module, a playable source) into a throwaway worktree and runs the result through
+`pswamp check`, the generated tests (including `SourceConformance`) and both
+example scripts, so a template that has drifted fails there. The examples they
+write are the same shape as the repo's canonical script
+(`modules/sample-replay/examples/replay_stats.py`): short, top to bottom, no asyncio.
+
 What the generator writes is then yours: change it freely. The rest of this file
 describes the `subapp` set; the module set follows the same rules.
 

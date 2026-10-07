@@ -1,7 +1,7 @@
 # Remote data integration contract
 
-**Status:** preliminary. It is implemented by the `RemoteHistory` source and the stub
-in this repo. Security, limits and schema governance are still open (see
+**Status:** preliminary. It is implemented by the `RemoteHistory` source
+(the `remote-history` project) and the stub in this repo. Security, limits and schema governance are still open (see
 "Not settled yet").
 
 **This document is the contract.** It is written in terms of HTTP alone, so a
@@ -30,12 +30,15 @@ p-SWAMP (RemoteHistory)                    deployment
 ```
 
 In this repo:
-- the client, a playable history source (`remote-history`):
+- the client, a playable history source and a module project like any other
+  (`pswamp-remote-history`, entry point `remote-history`):
   `modules/remote-history/src/pswamp_modules/remote_history/source.py`;
 - the request and line models: `models/src/pswamp_models/remote_data/`;
 - a stub service: `modules/remote-history/examples/remote_data_stub/`, serving
   the streamer's sample recording (any history source, by
-  `REMOTE_DATA_STUB_SOURCE`).
+  `REMOTE_DATA_STUB_SOURCE=name:entry-point`, `sample:sample-replay` by default).
+  Run it with `modules/remote-history/examples` on the `PYTHONPATH`:
+  `python -m remote_data_stub` (compose and k8s start it as `remote-data-stub`).
 
 ## Data
 
@@ -131,8 +134,13 @@ between does not buffer the stream into one blob.
 
 ## The client
 
+A deployment names the source in its pipeline's source list, either in
+`pipelines/<app>.toml` (`[[sources]] name = "remote"`, `module = "remote-history"`)
+or, as compose and k8s do, through the environment; each source reads its own
+`{NAME}_{SETTING}` variables, `REMOTE_*` for the source named `remote`:
+
 ```
-PMU_TEST_STREAMER_SOURCES=...,remote:remote-history
+PMU_TEST_STREAMER_SOURCES=sample:sample-replay,live:live-synthetic,remote:remote-history
 REMOTE_URL=http://remote-data:8100      # required
 REMOTE_TIMEOUT=30                       # seconds; default 30
 ```
@@ -146,14 +154,15 @@ REMOTE_TIMEOUT=30                       # seconds; default 30
 
 ## Checking a service
 
-The conformance suite that every data source passes is the acceptance test.
+The conformance suite that every source passes (`pswamp_core.testing.SourceConformance`)
+is the acceptance test.
 Point `RemoteHistory` at your service and run it:
 
 ```python
 class TestOurService(SourceConformance):
     @pytest.fixture
     def source_under_test(self):
-        return RemoteHistory("remote", url="http://our-service:8100")
+        return RemoteHistory("remote", url="http://our-service:8100")   # name, then settings
 
     @pytest.fixture
     def conformance_records(self):
