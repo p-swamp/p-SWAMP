@@ -34,7 +34,7 @@ from typing import ClassVar
 
 from pydantic import BaseModel, PrivateAttr, field_validator
 
-from ..util.time import ensure_utc
+from .utc import ensure_utc
 
 __all__ = ["DataModel", "sent_at", "stamp_sent_at", "topic_from_name"]
 

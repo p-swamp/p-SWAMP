@@ -4,11 +4,12 @@
 #
 # The fourth Python project in the repo. The layering runs one way:
 #
-#   core/     pswamp-core      depends on pydantic only
-#   modules/  pswamp-modules   depends on pswamp-core
+#   models/   pswamp-models    depends on pydantic only
+#   core/     pswamp-core      depends on pswamp-models
+#   modules/  pswamp-modules   depends on pswamp-core and pswamp-models
 #   app/server-python          depends on both
 #
-# So a worker hosting modules imports core and modules, and no web backend.
+# So a worker hosting modules imports models, core and modules, and no web backend.
 # It is a member of the uv workspace rooted at the repo root, locked in the one
 # uv.lock there, and its tests run with the web backend's, so there is no
 # lockfile here. A module's own third-party dependency goes in `dependencies` below.
@@ -19,10 +20,11 @@ version = "0.1.0"
 description = "p-SWAMP analysis modules, their pipelines and example data sources, over pswamp-core."
 readme = "README.md"
 requires-python = ">=3.11"
-dependencies = ["pswamp-core"]
+dependencies = ["pswamp-core", "pswamp-models"]
 
 [tool.uv.sources]
 pswamp-core = { workspace = true }
+pswamp-models = { workspace = true }
 
 [build-system]
 requires = ["uv_build"]

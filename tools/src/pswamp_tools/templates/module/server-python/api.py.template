@@ -8,8 +8,8 @@ from fastapi import APIRouter, FastAPI, WebSocket
 from pydantic import BaseModel, Field
 from shared import connected_pipeline, push_changes, serve_pipeline, transport
 
-from pswamp_core.messages import PlayerStatus
 from pswamp_core.pipeline import PipelineRegistry, PipelineRun
+from pswamp_models.player import PlayerStatus
 from pswamp_modules.__PKG__ import __NAME__Result
 from pswamp_modules.pipelines.__PKG__ import PIPELINE
 

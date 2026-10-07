@@ -43,7 +43,7 @@ def server() -> None:
     """Start the state server on 127.0.0.1:8000: `compose up --watch --build`, logs in this terminal.
 
     The FastAPI/uvicorn server runs in its container with hot reload (compose
-    syncs the server, core/, modules/ and desktop/src/ in, and uvicorn --reload picks
+    syncs the server, models/, core/, modules/ and desktop/src/ in, and uvicorn --reload picks
     the edit up), next to Kafka and the module workers. This terminal is the
     local log view (the /healthz probe lines are filtered out), and Ctrl-C STOPS
     the stack rather than leaving it bound to port 8000.

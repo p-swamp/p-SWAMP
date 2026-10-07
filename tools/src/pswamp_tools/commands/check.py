@@ -13,7 +13,7 @@ from .._paths import client_dir, repo_root
 from .._proc import require_tools, run, uv_server
 
 # Fully gated: syntax and ruff. `tools` is new with the CLI and starts lint-clean.
-LINTED = ("app", "core", "modules", "tools")
+LINTED = ("app", "models", "core", "modules", "tools")
 # Syntax only: the older desktop package ships in the image so it must parse, but
 # it has ~334 pyflakes findings to triage before it can join LINTED.
 # TODO Add the desktop package (desktop/src) to the ruff check once it is lint-clean.
@@ -32,8 +32,8 @@ one fails; the command exits non-zero if any did.
 
 [bold]Python[/bold] (the uv workspace)
   - uv lock --check --offline ... manifests vs the root uv.lock (fix: `uv lock`)
-  - syntax ...... every .py under app/, core/, modules/, tools/, + desktop/src/ (syntax only)
-  - ruff check --select F ... pyflakes (real bugs, not style) over app/, core/, modules/, tools/,
+  - syntax ...... every .py under app/, models/, core/, modules/, tools/, + desktop/src/ (syntax only)
+  - ruff check --select F ... pyflakes (real bugs, not style) over app/, models/, core/, modules/, tools/,
     with the ruff pinned in app/server-python's dev group
 
 [bold]Api contract[/bold]
@@ -106,7 +106,7 @@ def check(
     if not linted:
         _ui.info("(no Python files found)")
     else:
-        report.record("syntax (Python, app/ core/ modules/ tools/)", _syntax_step(linted, root))
+        report.record("syntax (Python, " + " ".join(f"{d}/" for d in LINTED) + ")", _syntax_step(linted, root))
         desktop = list(python_files(root, SYNTAX_ONLY))
         if desktop:
             report.record("syntax (older pswamp desktop/src/, syntax only)", _syntax_step(desktop, root))

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
 
-from pswamp_core.messages import PauseCommand
+from pswamp_models.player import PauseCommand
 from pswamp_modules.excursion import AutoPauseCommand, ExcursionModule
 from pswamp_modules.frame_stats import FrameStats, FrameStatsResult
 

@@ -26,7 +26,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field, computed_field, model_validator
 
-from .data_model import DataModel
+from ..common.data_model import DataModel
 
 __all__ = ["PmuFrame", "PmuHeader", "header_id_of"]
 

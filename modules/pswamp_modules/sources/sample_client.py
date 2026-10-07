@@ -29,9 +29,9 @@ from functools import lru_cache
 from pathlib import Path
 
 from pswamp_core.datagateway import DataClient, TimeRange
-from pswamp_core.messages import PmuFrame, PmuHeader
 from pswamp_core.settings import EnvSetting
 from pswamp_core.util.time import UTC
+from pswamp_models.pmu import PmuFrame, PmuHeader
 
 __all__ = ["DEFAULT_PATH", "EPOCH", "STREAM_ID", "SampleRecording", "SampleRecordingClient", "load_sample"]
 

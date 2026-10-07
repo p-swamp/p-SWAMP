@@ -48,7 +48,7 @@ FROM ghcr.io/astral-sh/uv:python3.11-bookworm-slim@sha256:4f5d923c9dcea037f57bda
 # matter of taste.
 #
 # The repo root is a uv workspace (root pyproject.toml + the one uv.lock), with
-# core/, modules/ and app/server-python/ as members, so the root manifest and
+# models/, core/, modules/ and app/server-python/ as members, so the root manifest and
 # lock land at ${REPO_DIR} and each member at its own path below it.
 # app/server-python/pyproject.toml also declares p-swamp -- the desktop package
 # in desktop/, outside the workspace -- as an editable path dependency,
@@ -87,11 +87,14 @@ COPY app/server-python/pyproject.toml ${SERVER_DIR}/
 # change to desktop/src/pswamp/ does not invalidate.
 COPY desktop/pyproject.toml desktop/README.md ${REPO_DIR}/desktop/
 
-# The shared core (core/), a workspace member: its manifest now, for resolving;
-# its source further down.
+# The message models (models/), a workspace member: its manifest now, for
+# resolving; its source further down.
+COPY models/pyproject.toml models/README.md ${REPO_DIR}/models/
+
+# The shared core (core/), the next member: same again.
 COPY core/pyproject.toml core/README.md ${REPO_DIR}/core/
 
-# The modules (modules/), the third: same again.
+# The modules (modules/): same again.
 COPY modules/pyproject.toml modules/README.md ${REPO_DIR}/modules/
 
 # The repo CLI (tools/, pswamp-tools): manifest only, and never installed. It is
@@ -101,14 +104,14 @@ COPY tools/pyproject.toml tools/README.md ${REPO_DIR}/tools/
 
 # The manifests declare the direct dependencies; the workspace uv.lock pins the
 # whole transitive closure resolved from them. --package pswamp-server exports
-# what the server needs (and so, through it, what the core and modules need). Install system-wide at build time, so
+# what the server needs (and so, through it, what the models, core and modules need). Install system-wide at build time, so
 # container startup needs no network and no runtime resolution.
 #
 # --locked asserts the lockfile exists and still matches pyproject.toml: change a
 # dependency without re-running `uv lock`, or forget to COPY the lock, and the
 # build fails loudly here instead of silently re-resolving to whatever the index
 # serves today. --no-emit-workspace skips the workspace members themselves (the
-# non-packaged server, and the core and modules, installed from their own layers
+# non-packaged server, and the models, core and modules, installed from their own layers
 # below), and --no-dev keeps the linter out of the image. Hashes are kept (no --no-hashes),
 # so uv verifies every artifact it installs; the lock carries wheel hashes for
 # both amd64 and arm64, so this stays multi-arch.
@@ -157,14 +160,19 @@ RUN uv export --locked --package pswamp-server --no-emit-workspace --no-dev \
 COPY desktop/src/ ${REPO_DIR}/desktop/src/
 RUN uv pip install --system --no-deps -e ${REPO_DIR}/desktop
 
-# The shared core, installed editable like the desktop package so compose watch
-# can sync edits in. core/tests/ is kept out by .dockerignore.
+# The message models, installed editable like the desktop package so compose
+# watch can sync edits in. models/tests/ is kept out by .dockerignore.
+COPY models/ ${REPO_DIR}/models/
+RUN uv pip install --system --no-deps -e ${REPO_DIR}/models
+
+# The shared core, installed the same way. core/tests/ is kept out by
+# .dockerignore.
 COPY core/ ${REPO_DIR}/core/
 RUN uv pip install --system --no-deps -e ${REPO_DIR}/core
 
 # The modules, their pipelines and the example sources, installed the same
-# way. They depend on the core only, so a worker imports them from any working
-# directory. Each module's tests/ folder is kept out by .dockerignore.
+# way. They depend on the core and the models only, so a worker imports them
+# from any working directory. Each module's tests/ folder is kept out by .dockerignore.
 COPY modules/ ${REPO_DIR}/modules/
 RUN uv pip install --system --no-deps -e ${REPO_DIR}/modules
 

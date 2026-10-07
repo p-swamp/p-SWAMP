@@ -11,9 +11,10 @@ from pydantic import BaseModel
 from support import Measurement, Number, NumberResult, Recorder, at, measurement, queue
 
 from pswamp_core.command_routing import CommandRefused, concrete_commands
-from pswamp_core.messages import Command, ErrorEvent, PlayerCommand
 from pswamp_core.modules import Module
 from pswamp_core.util.tasks import cancel_and_wait
+from pswamp_models.common import Command, ErrorEvent
+from pswamp_models.player import PlayerCommand
 
 
 class Doubler(Module):

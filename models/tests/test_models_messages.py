@@ -6,21 +6,50 @@ from datetime import datetime, timedelta, timezone
 from typing import ClassVar, Literal
 
 import pytest
-from pydantic import ValidationError
-from support import HEADER, Measurement, NumberResult, at, frame
+from pydantic import BaseModel, ValidationError
 
-from pswamp_core.messages import (
-    DataModel,
-    ErrorEvent,
-    PlayCommand,
-    PlayerStatus,
-    PmuFrame,
-    PmuHeader,
-    SeekCommand,
-    SpeedCommand,
-    SwitchSourceCommand,
-    topic_from_name,
+from pswamp_models.common import DataModel, ErrorEvent, ResultEnvelope, topic_from_name
+from pswamp_models.player import PlayCommand, PlayerStatus, SeekCommand, SpeedCommand, SwitchSourceCommand
+from pswamp_models.pmu import PmuFrame, PmuHeader
+
+# A few test messages of our own. Not shared with core/tests/support.py: the
+# models' tests import nothing but the models.
+T0 = datetime(2026, 1, 1, tzinfo=timezone.utc)
+
+
+def at(seconds: float) -> datetime:
+    """``seconds`` after ``T0``."""
+    return T0 + timedelta(seconds=seconds)
+
+
+HEADER = PmuHeader(
+    station=["A", "A", "B", "B"],
+    channel=["V", "f", "V", "f"],
+    measurement=["V_Magnitude", "f", "V_Magnitude", "f"],
+    units=["kV", "Hz", "kV", "Hz"],
+    data_rate=20.0,
 )
+
+
+def frame(seconds: float, f: float = 50.0) -> PmuFrame:
+    """A frame at ``at(seconds)`` with every frequency column at ``f``."""
+    values = [f if m == "f" else 400.0 for m in HEADER.measurement]
+    return PmuFrame(timestamp=at(seconds), mRID="test", header=HEADER, values=values)
+
+
+class Measurement(DataModel):
+    """A minimal message for tests."""
+
+    version: Literal["v1"] = "v1"
+    value: float = 0.0
+
+
+class Number(BaseModel):
+    value: float
+
+
+class NumberResult(ResultEnvelope[Number]):
+    version: Literal["v1"] = "v1"
 
 
 @pytest.mark.parametrize(

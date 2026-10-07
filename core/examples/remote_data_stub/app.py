@@ -20,7 +20,7 @@ from fastapi.responses import StreamingResponse
 
 from pswamp_core.datagateway import DataClient, TimeRange
 from pswamp_core.log import get_logger
-from pswamp_core.messages import RemoteDataQuery, RemoteDataResult
+from pswamp_models.remote_data import RemoteDataQuery, RemoteDataResult
 
 __all__ = ["create_app"]
 

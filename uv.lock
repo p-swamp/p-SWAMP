@@ -16,6 +16,7 @@ resolution-markers = [
 [manifest]
 members = [
     "pswamp-core",
+    "pswamp-models",
     "pswamp-modules",
     "pswamp-server",
     "pswamp-tools",
@@ -561,6 +562,7 @@ name = "pswamp-core"
 version = "0.1.0"
 source = { editable = "core" }
 dependencies = [
+    { name = "pswamp-models" },
     { name = "pydantic" },
 ]
 
@@ -576,9 +578,21 @@ remote-data = [
 requires-dist = [
     { name = "aiokafka", marker = "extra == 'kafka'", specifier = ">=0.14,<1" },
     { name = "httpx", marker = "extra == 'remote-data'", specifier = ">=0.28,<1" },
+    { name = "pswamp-models", editable = "models" },
     { name = "pydantic", specifier = ">=2.12" },
 ]
 provides-extras = ["kafka", "remote-data"]
+
+[[package]]
+name = "pswamp-models"
+version = "0.1.0"
+source = { editable = "models" }
+dependencies = [
+    { name = "pydantic" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "pydantic", specifier = ">=2.12" }]
 
 [[package]]
 name = "pswamp-modules"
@@ -586,10 +600,14 @@ version = "0.1.0"
 source = { editable = "modules" }
 dependencies = [
     { name = "pswamp-core" },
+    { name = "pswamp-models" },
 ]
 
 [package.metadata]
-requires-dist = [{ name = "pswamp-core", editable = "core" }]
+requires-dist = [
+    { name = "pswamp-core", editable = "core" },
+    { name = "pswamp-models", editable = "models" },
+]
 
 [[package]]
 name = "pswamp-server"
@@ -599,6 +617,7 @@ dependencies = [
     { name = "fastapi" },
     { name = "p-swamp" },
     { name = "pswamp-core", extra = ["kafka", "remote-data"] },
+    { name = "pswamp-models" },
     { name = "pswamp-modules" },
     { name = "uvicorn", extra = ["standard"] },
 ]
@@ -616,6 +635,7 @@ requires-dist = [
     { name = "fastapi", specifier = ">=0.141.1,<0.142" },
     { name = "p-swamp", editable = "desktop" },
     { name = "pswamp-core", extras = ["kafka", "remote-data"], editable = "core" },
+    { name = "pswamp-models", editable = "models" },
     { name = "pswamp-modules", editable = "modules" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.52.4,<0.53" },
 ]

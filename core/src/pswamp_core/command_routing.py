@@ -20,15 +20,17 @@ import asyncio
 from collections.abc import AsyncIterable, Callable, Sequence
 from typing import TYPE_CHECKING, ClassVar, Protocol
 
+from pswamp_models.common import ErrorEvent
+
 from .log import get_logger
-from .messages.errors import ErrorEvent
 from .util.tasks import cancel_and_wait
 from .util.time import utcnow
 
 if TYPE_CHECKING:
     from pydantic import BaseModel
 
-    from .messages.commands import Command
+    from pswamp_models.common import Command
+
     from .subscription import Sink
 
 __all__ = ["CommandInbox", "CommandReceiver", "CommandRefused", "NoReceiver", "concrete_commands"]

@@ -44,18 +44,18 @@ from uuid import uuid4
 
 from pydantic import BaseModel
 
+from pswamp_models.common import AppIdentity, ErrorEvent, ResultEnvelope
+
 from .command_routing import CommandInbox
 from .keep_up import KeepUp, KeepUpMonitor
 from .log import get_logger
-from .messages.errors import ErrorEvent
-from .messages.results import AppIdentity, ResultEnvelope
 from .subscription import Overflow
 from .util.time import utcnow
 
 if TYPE_CHECKING:
+    from pswamp_models.common import Command, DataModel
+
     from .datagateway import DataGateway
-    from .messages.commands import Command
-    from .messages.data_model import DataModel
     from .subscription import Sink, Subscription
 
 __all__ = ["Module"]

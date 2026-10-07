@@ -9,11 +9,11 @@ from typing import ClassVar
 from support import Measurement, Number, NumberResult, Recorder, measurement, queue
 
 from pswamp_core.keep_up import KeepUp, KeepUpMonitor
-from pswamp_core.messages import ErrorEvent, sent_at, stamp_sent_at
 from pswamp_core.modules import Module
 from pswamp_core.subscription import Overflow
 from pswamp_core.transport import InMemoryTransport, Outbox
 from pswamp_core.util.tasks import cancel_and_wait
+from pswamp_models.common import ErrorEvent, sent_at, stamp_sent_at
 
 
 class Slow(Module):

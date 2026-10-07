@@ -30,8 +30,9 @@ from datetime import datetime, timedelta
 from typing import Any
 from uuid import uuid4
 
-from ...messages.pmu import PmuFrame
-from ...messages.remote_data import RemoteDataQuery, RemoteDataResult
+from pswamp_models.pmu import PmuFrame
+from pswamp_models.remote_data import RemoteDataQuery, RemoteDataResult
+
 from ...settings import EnvSetting
 from ...util.time import ensure_utc
 from ..data_client import DataClient

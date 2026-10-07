@@ -5,8 +5,8 @@ from __future__ import annotations
 import pytest
 from errors import ErrorHub
 
-from pswamp_core.messages import ErrorEvent
 from pswamp_core.util.time import utcnow
+from pswamp_models.common import ErrorEvent
 
 
 def event(message: str = "it broke") -> ErrorEvent:

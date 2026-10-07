@@ -1,32 +1,19 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright Contributors to the p-SWAMP Project.
 
-"""Commands: typed messages going upstream.
+"""The player's commands: what a page (or a module) asks of a run's replay.
 
-**A command's class is its address.** Each class travels on its own topic
-(``SeekCommand`` → ``<app>.seek.command``), and exactly one part of a pipeline
-declares that it handles it: the player, or one module. Anyone may publish a
-command (the web API, a module); anyone may subscribe to its topic to watch. The
-fields are the arguments, validated where the command is built.
-
-The player's commands are here because the player is core. A module's own
-commands live beside the module.
-
-``request_id`` is generated when a command is built. Whatever answers the
-command carries it: a module's result, or an ``ErrorEvent`` if it was refused.
+Each class is its own address (see ``pswamp_models.common.Command``); the
+player is the one receiver of every ``PlayerCommand``.
 """
 
 from __future__ import annotations
 
-from typing import ClassVar, Literal
-from uuid import uuid4
-
 from pydantic import Field, model_validator
 
-from .data_model import DataModel, topic_from_name
+from ..common.command import Command
 
 __all__ = [
-    "Command",
     "PauseCommand",
     "PlayCommand",
     "PlayerCommand",
@@ -35,24 +22,6 @@ __all__ = [
     "StepCommand",
     "SwitchSourceCommand",
 ]
-
-
-class _Name:
-    """``Command.name``: the class name without ``Command``, dotted:
-    ``SwitchSourceCommand`` → ``switch.source``. What logs and acks call it."""
-
-    def __get__(self, instance: object, owner: type[Command]) -> str:
-        return topic_from_name(owner.__name__.removesuffix("Command") or owner.__name__)
-
-
-class Command(DataModel):
-    """One upstream action. Subclass it; the subclass is the address."""
-
-    version: Literal["v1"] = "v1"
-    request_id: str = Field(default_factory=lambda: uuid4().hex)
-    client_id: str | None = Field(default=None, description="The client that issued it, if any.")
-
-    name: ClassVar[_Name] = _Name()
 
 
 class PlayerCommand(Command):

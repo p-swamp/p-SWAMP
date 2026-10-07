@@ -18,8 +18,8 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
-from ..util.time import ensure_utc
-from .data_model import DataModel
+from ..common.data_model import DataModel
+from ..common.utc import ensure_utc
 
 __all__ = ["RemoteDataQuery", "RemoteDataResult"]
 

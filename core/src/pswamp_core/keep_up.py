@@ -5,7 +5,7 @@
 
 A module reads a bounded ``DROP_OLDEST`` queue: right for a live stream, and
 silent unless someone counts. Every message that crossed a transport carries
-when it was sent (``messages.sent_at``). The monitor watches both, dropped
+when it was sent (``pswamp_models.common.sent_at``). The monitor watches both, dropped
 input and input age, and past a ``KeepUp`` policy publishes an ``ErrorEvent``:
 once on falling behind, at most every ``report_every_s`` while behind, and once
 on catching up. So it reaches the error tray, not only the log. The run's
@@ -18,13 +18,14 @@ import time
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
+from pswamp_models.common import ErrorEvent, sent_at
+
 from .log import get_logger
-from .messages.data_model import sent_at
-from .messages.errors import ErrorEvent
 from .util.time import utcnow
 
 if TYPE_CHECKING:
-    from .messages.data_model import DataModel
+    from pswamp_models.common import DataModel
+
     from .subscription import Sink, Subscription
 
 __all__ = ["KeepUp", "KeepUpMonitor"]

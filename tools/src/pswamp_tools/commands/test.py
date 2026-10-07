@@ -28,13 +28,14 @@ PASS_THROUGH = {"allow_extra_args": True, "ignore_unknown_options": True}
 
 @app.command(context_settings=PASS_THROUGH)
 def server(ctx: typer.Context) -> None:
-    """The server, core, modules and tools unit tests: fast, hermetic, nothing binds a port.
+    """The server, models, core, modules and tools unit tests: fast, hermetic, nothing binds a port.
 
     Runs pytest from app/server-python with its config (`-c pyproject.toml`),
-    whose `testpaths` names app/server-python/tests, core/tests, each module's
-    tests/ under modules/, and tools/tests; a new test_*.py there is picked up
-    with no change here. Test file names must be unique across the non-package
-    test folders (app/server-python/tests, core/tests, tools/tests).
+    whose `testpaths` names app/server-python/tests, models/tests, core/tests,
+    each module's tests/ under modules/, and tools/tests; a new test_*.py there
+    is picked up with no change here. Test file names must be unique across the
+    non-package test folders (app/server-python/tests, models/tests, core/tests,
+    tools/tests).
 
     Every extra argument goes to pytest verbatim:
 

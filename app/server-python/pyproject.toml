@@ -21,6 +21,8 @@ dependencies = [
     "pswamp-core[kafka,remote-data]",
     # The modules, their pipelines and the example sources (modules/).
     "pswamp-modules",
+    # The message models (models/): the server imports them directly.
+    "pswamp-models",
 ]
 
 # p-swamp is the desktop package in desktop/ (desktop/pyproject.toml,
@@ -48,9 +50,11 @@ dependencies = [
 # `uv lock --upgrade-package p-swamp` at the repo root.
 [tool.uv.sources]
 p-swamp = { path = "../../desktop", editable = true }
-# The shared core at core/ and the modules at modules/ are members of the uv
-# workspace rooted at the repo root (one uv.lock there). Same one-way rule:
-# nothing under core/ or modules/ imports from app/.
+# The message models at models/, the shared core at core/ and the modules at
+# modules/ are members of the uv workspace rooted at the repo root (one uv.lock
+# there). Same one-way rule: nothing under models/, core/ or modules/ imports
+# from app/.
+pswamp-models = { workspace = true }
 pswamp-core = { workspace = true }
 pswamp-modules = { workspace = true }
 pswamp-tools = { workspace = true }
@@ -100,10 +104,10 @@ package = false
 [tool.pytest.ini_options]
 # core/examples holds the remote data stub, which the tests run in-process.
 pythonpath = ["src", "../../core/examples"]
-# core/tests and the modules' tests run here too: one runner and one CI job
-# cover all three suites. Each module carries its tests in a tests/ package
+# models/tests, core/tests and the modules' tests run here too: one runner and
+# one CI job cover every suite. Each module carries its tests in a tests/ package
 # beside its code, so those are found under modules/. The repo CLI's tests
 # (tools/tests) run here too. Test file names must be unique across tests/,
-# core/tests and tools/tests, which are not packages.
-testpaths = ["tests", "../../core/tests", "../../modules", "../../tools/tests"]
+# models/tests, core/tests and tools/tests, which are not packages.
+testpaths = ["tests", "../../models/tests", "../../core/tests", "../../modules", "../../tools/tests"]
 asyncio_mode = "auto"

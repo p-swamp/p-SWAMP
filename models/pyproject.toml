@@ -1,0 +1,37 @@
+# pswamp-models: every message that crosses a topic, a socket or a process
+# boundary, as pydantic models, one package per producer. See
+# doc/server-data-architecture.md.
+#
+# A member of the uv workspace rooted at the repo root (one uv.lock there); its
+# tests (tests/) run with the web backend's, through `uv run pswamp test server`.
+# The bottom of the layering:
+#
+#   models/   pswamp-models    depends on pydantic only
+#   core/     pswamp-core      depends on pswamp-models
+#   modules/  pswamp-modules   depends on pswamp-core and pswamp-models
+#   app/server-python          depends on all three
+#
+# So anything may depend on it, a data provider outside this repo included, and
+# it imports nothing from them (tests/test_models_layering.py checks that).
+
+[project]
+name = "pswamp-models"
+version = "0.1.0"
+description = "p-SWAMP message models: every message on a topic or a socket, one package per producer."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = ["pydantic>=2.12"]
+
+[build-system]
+requires = ["uv_build"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-name = "pswamp_models"
+
+# No [tool.ruff] section: `pswamp check` passes `--select F` explicitly.
+
+# Used when pytest is pointed at models/tests directly; the usual runner is
+# `uv run pswamp test server`, which takes the server's config.
+[tool.pytest.ini_options]
+testpaths = ["tests"]

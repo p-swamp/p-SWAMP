@@ -18,7 +18,8 @@ from typing import TYPE_CHECKING
 from ..log import get_logger
 
 if TYPE_CHECKING:
-    from ..messages.data_model import DataModel
+    from pswamp_models.common import DataModel
+
     from .data_client import DataClient
     from .enrich import Enricher
     from .time_range import TimeRange

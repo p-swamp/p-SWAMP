@@ -40,26 +40,27 @@ from collections import deque
 from datetime import datetime, timedelta
 from typing import TYPE_CHECKING, ClassVar
 
-from .command_routing import CommandRefused
-from .log import get_logger
-from .messages.commands import (
-    Command,
+from pswamp_models.common import Command, ErrorEvent
+from pswamp_models.player import (
     PauseCommand,
     PlayCommand,
     PlayerCommand,
+    PlayerStatus,
     SeekCommand,
     SpeedCommand,
     StepCommand,
     SwitchSourceCommand,
 )
-from .messages.control import PlayerStatus
-from .messages.errors import ErrorEvent
+
+from .command_routing import CommandRefused
+from .log import get_logger
 from .util.tasks import cancel_and_wait
 from .util.time import utcnow
 
 if TYPE_CHECKING:
+    from pswamp_models.common import DataModel
+
     from .datagateway import DataGateway, DataStream, TimeRange
-    from .messages.data_model import DataModel
     from .subscription import Sink
 
 __all__ = ["PLAYER_COMMANDS", "Player"]

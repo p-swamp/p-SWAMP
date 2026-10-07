@@ -22,7 +22,7 @@ from uuid import uuid4
 
 from pydantic import BaseModel, Field
 
-from pswamp_core.messages import ErrorEvent
+from pswamp_models.common import ErrorEvent
 from pswamp_web.log import get_logger
 from pswamp_web.sessions import SessionRegistry
 

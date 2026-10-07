@@ -43,13 +43,13 @@ from collections.abc import AsyncIterator, Callable, Collection
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Generic, TypeVar
 
+from pswamp_models.common import Command, ErrorEvent, PipelineClosed
+from pswamp_models.player import PlayerStatus
+
 from .command_routing import CommandInbox, NoReceiver, concrete_commands
 from .host import DEFAULT_IDLE_SECONDS, ModuleHost
 from .keep_up import KeepUp
 from .log import get_logger
-from .messages.commands import Command
-from .messages.control import PipelineClosed, PlayerStatus
-from .messages.errors import ErrorEvent
 from .player import PLAYER_COMMANDS, Player
 from .subscription import Overflow
 from .transport import Outbox
@@ -57,9 +57,9 @@ from .util.tasks import cancel_and_wait, finish
 from .util.time import utcnow
 
 if TYPE_CHECKING:
+    from pswamp_models.common import DataModel, ResultEnvelope
+
     from .datagateway import DataGateway
-    from .messages.data_model import DataModel
-    from .messages.results import ResultEnvelope
     from .modules import Module
     from .transport import Transport, TransportSubscription
 

@@ -19,9 +19,10 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
-from pswamp_core.messages import Command, PauseCommand, ResultEnvelope
 from pswamp_core.modules import Module
 from pswamp_core.subscription import Sink
+from pswamp_models.common import Command, ResultEnvelope
+from pswamp_models.player import PauseCommand
 
 from ..frame_stats import FrameStatsResult
 
