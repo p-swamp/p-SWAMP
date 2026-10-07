@@ -14,19 +14,20 @@ app = "pmu-test-streamer"
 modules = ["frame-stats", "excursion", "range-summary"]
 
 # Its sources, in order: the first is the one a run starts on. Each names a
-# data client as module.path:Class, configured from its own {NAME}_{SETTING}
-# variables (SAMPLE_PATH, LIVE_PATH, ...). PMU_TEST_STREAMER_DATA_CLIENTS, when
-# set (name:module.path:Class,...), replaces this whole list.
-# Transitional: once sources are modules, `client` gives way to a module name.
+# source module by its `pswamp.modules` entry point, instanced under `name`
+# and configured from its own {NAME}_{SETTING} variables (SAMPLE_PATH,
+# LIVE_PATH, REMOTE_URL, ...). PMU_TEST_STREAMER_SOURCES, when set
+# (name:entry-point,...), replaces this whole list; compose and k8s add the
+# remote history that way.
 [[sources]]
 name = "sample"
-client = "pswamp_modules.sources.sample_client:SampleRecordingClient"
+module = "sample-replay"
 
 [[sources]]
 name = "live"
-client = "pswamp_modules.sources.live_client:LiveSyntheticClient"
+module = "live-synthetic"
 
-# What the gateway adds to every frame. cim_reference: the CIM reference id
+# What is added to every frame from the sources. cim_reference: the CIM reference id
 # set on each frame's header ("none": no reference).
 # PMU_TEST_STREAMER_CIM_REFERENCE, when set, overrides it.
 [enrich]

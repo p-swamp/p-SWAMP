@@ -35,7 +35,7 @@ from ..settings import Configurable
 if TYPE_CHECKING:
     from pswamp_models.common import DataModel
 
-    from .time_range import TimeRange
+    from ..time_range import TimeRange
 
 __all__ = ["DataClient"]
 

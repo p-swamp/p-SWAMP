@@ -22,7 +22,7 @@ from collections.abc import Sequence
 from ..settings import MissingSettingError, load_class, parse_specs
 from .data_client import DataClient
 from .data_gateway import DataGateway
-from .enrich import Enricher
+from ..enrich import Enricher
 
 __all__ = ["clients_from_env", "gateway_from_env"]
 

@@ -36,7 +36,7 @@ from uuid import uuid4
 
 import httpx
 
-from pswamp_core.datagateway import TimeRange
+from pswamp_core.time_range import TimeRange
 from pswamp_core.playable import Playable
 from pswamp_core.settings import EnvSetting
 from pswamp_core.sources import SourceModule

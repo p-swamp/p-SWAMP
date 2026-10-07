@@ -26,8 +26,8 @@ after ``retry_seconds`` builds a new one; what arrives before is ignored.
 With the in-memory transport the server runs the hosts itself; with a broker a
 worker does (``pswamp_core.worker``). The module cannot tell the difference.
 
-A module that ``reads_gateway`` gets a gateway of its own per instance, built
-by the pipeline's factory from the same configuration the server reads.
+A module that ``reads_sources`` gets a ``SourceSet`` of its own per instance,
+built by the pipeline's factory from the same configuration the server reads.
 """
 
 from __future__ import annotations
@@ -52,8 +52,8 @@ if TYPE_CHECKING:
 
     from pswamp_models.common import Command
 
-    from .datagateway import DataGateway
     from .modules import Module
+    from .sources import SourceSet
     from .subscription import Sink
     from .transport import Transport, TransportSubscription
 
@@ -166,7 +166,7 @@ class ModuleHost:
         idle_seconds: How long a key may go without a message before its
             instance is dropped, in case its ``PipelineClosed`` never arrives.
         retry_seconds: How long a key is left alone after its instance failed.
-        gateway: Builds a gateway for an instance that ``reads_gateway``.
+        sources: Builds a ``SourceSet`` for an instance that ``reads_sources``.
     """
 
     def __init__(
@@ -177,10 +177,10 @@ class ModuleHost:
         app: str,
         idle_seconds: float = DEFAULT_IDLE_SECONDS,
         retry_seconds: float = DEFAULT_RETRY_SECONDS,
-        gateway: Callable[[], DataGateway] | None = None,
+        sources: Callable[[], SourceSet] | None = None,
     ) -> None:
         self._factory = module
-        self._gateway = gateway
+        self._sources = sources
         self.transport = transport
         self.app = app
         self.idle_seconds = idle_seconds
@@ -282,8 +282,8 @@ class ModuleHost:
     async def _start(self, slot: _Slot) -> None:
         module = slot.module
         slot.out.start()
-        if module.reads_gateway and self._gateway is not None:
-            module.gateway = self._gateway()
+        if module.reads_sources and self._sources is not None:
+            module.sources = self._sources()
         await module.setup()
         if module.commands:
             slot.inbox = command_inbox(module, slot.commands, slot.out)
@@ -321,11 +321,11 @@ class ModuleHost:
         slot.inputs.close()
         slot.commands.close()
         await slot.out.close()
-        if slot.module.gateway is not None:
+        if slot.module.sources is not None:
             try:
-                await slot.module.gateway.close()
-            except Exception:  # one instance's gateway must not end the host's feeds
-                logger.exception("%s: closing the gateway for key %s failed", self.name, slot.key)
+                await slot.module.sources.close()
+            except Exception:  # one instance's sources must not end the host's feeds
+                logger.exception("%s: closing the sources for key %s failed", self.name, slot.key)
         logger.info("%s: instance dropped for key %s (%s), %d running", self.name, slot.key, reason, len(self._slots))
 
 

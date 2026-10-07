@@ -76,8 +76,8 @@ from pswamp_models.player import (
 )
 
 from .command_routing import CommandRefused
-from .datagateway.enrich import Enricher
-from .datagateway.time_range import TimeRange
+from .enrich import Enricher
+from .time_range import TimeRange
 from .log import get_logger
 from .sources import SourceStream
 from .util.tasks import cancel_and_wait

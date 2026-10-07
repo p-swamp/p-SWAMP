@@ -13,13 +13,15 @@ modules = ["counter", "halver"]
 
 [[sources]]
 name = "rec"
-client = "support:ListClient"
+module = "list-source"
 """
 
 
 @pytest.fixture
 def pipeline_file(monkeypatch, tmp_path):
-    install_modules(monkeypatch, counter="test_pipeline:FrameCounter", halver="test_modules:Halver")
+    install_modules(
+        monkeypatch, counter="test_pipeline:FrameCounter", halver="test_modules:Halver", **{"list-source": "support:ListSource"}
+    )
     return write_pipeline(tmp_path / "app.toml", PIPELINE_FILE)
 
 

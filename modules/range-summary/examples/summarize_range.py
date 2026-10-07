@@ -1,9 +1,9 @@
 """Summarize ranges of a small synthetic recording, with no server.
 
 The range summary module answers ``SummarizeRangeCommand`` by reading its own
-data gateway. Here the gateway holds one history source: ten seconds of
-synthetic frames, served by a minimal ``DataClient`` defined below (a
-``DataClient``'s ``consume`` is an async generator by contract). The script
+sources. Here its ``SourceSet`` holds one history source: ten seconds of
+synthetic frames, served by a minimal ``SourceModule`` defined below (a plain
+``read`` generator; the host reads it as ``aread``). The script
 itself stays synchronous: ``run_command`` runs the module's async handler on a
 loop of its own. No server, no transport.
 
@@ -16,7 +16,8 @@ import math
 from datetime import datetime, timedelta, timezone
 
 from pswamp_core.command_routing import CommandRefused
-from pswamp_core.datagateway import DataClient, DataGateway, TimeRange
+from pswamp_core.sources import SourceModule, SourceSet
+from pswamp_core.time_range import TimeRange
 from pswamp_models.pmu import PmuFrame, PmuHeader
 from pswamp_models.range_summary import SummarizeRangeCommand
 from pswamp_modules.range_summary import RangeSummaryModule
@@ -36,27 +37,28 @@ def recording(seconds: float = 10.0) -> list[PmuFrame]:
     return frames
 
 
-class InMemoryHistory(DataClient):
+class InMemoryHistory(SourceModule):
     """A history source holding a list of frames."""
 
+    name = "in-memory-history"
     kind = "history"
 
-    def __init__(self, name: str, frames: list[PmuFrame]) -> None:
-        super().__init__(name)
+    def __init__(self, source: str, frames: list[PmuFrame]) -> None:
+        super().__init__(source)
         self.frames = frames
 
-    async def coverage(self) -> TimeRange:
+    def coverage(self) -> TimeRange:
         return TimeRange(self.frames[0].timestamp, self.frames[-1].timestamp + timedelta(seconds=1 / RATE_HZ))
 
-    async def consume(self, time_range: TimeRange):
+    def read(self, start=None, end=None):
         for frame in self.frames:
-            if time_range.contains(frame.timestamp):
+            if TimeRange(start, end).contains(frame.timestamp):
                 yield frame
 
 
 def main() -> None:
     summary = RangeSummaryModule()
-    summary.gateway = DataGateway([InMemoryHistory("synthetic", recording())])
+    summary.sources = SourceSet([InMemoryHistory("synthetic", recording())])
     for start, end in ((0.0, 2.5), (2.5, 5.0), (5.0, 7.5), (7.5, 10.0)):
         (answer,) = summary.run_command(SummarizeRangeCommand(source="synthetic", offset_s=start, end_offset_s=end))
         r = answer.result

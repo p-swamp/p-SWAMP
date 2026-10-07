@@ -4,11 +4,11 @@
 #
 # By default the only source is the synthetic live feed: one shared run
 # feeds the module, and every page shows its results from the start.
-# __UPPER___DATA_CLIENTS, when set, replaces the sources.
+# __UPPER___SOURCES, when set (name:entry-point,...), replaces the sources.
 
 app = "__SLUG__"
 modules = ["__SLUG__"]
 
 [[sources]]
 name = "live"
-client = "pswamp_modules.sources.live_client:LiveSyntheticClient"
+module = "live-synthetic"

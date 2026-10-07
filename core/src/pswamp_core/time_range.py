@@ -13,7 +13,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime
 
-from ..util.time import ensure_utc
+from .util.time import ensure_utc
 
 __all__ = ["TimeRange"]
 

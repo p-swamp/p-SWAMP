@@ -34,7 +34,7 @@ class __NAME__State(BaseModel):
 
 
 def state_message(run: PipelineRun) -> __NAME__State:
-    return __NAME__State(player=run.player.status(), result=run.latest.get(__NAME__Result))
+    return __NAME__State(player=run.router.status(), result=run.latest.get(__NAME__Result))
 
 
 router = APIRouter()

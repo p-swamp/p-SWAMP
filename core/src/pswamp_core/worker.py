@@ -20,8 +20,8 @@ are found through the ``pswamp.modules`` entry points, so any working
 directory works for them (every module project is installed).
 
 One worker may host every module, or a heavy module gets a worker (and a CPU
-limit) of its own. A module that reads the gateway gets one built from the
-same ``<APP>_DATA_CLIENTS`` the server reads, so those go to its worker too.
+limit) of its own. A module that reads the sources gets a set built from the
+same ``<APP>_SOURCES`` the server reads, so those go to its worker too.
 
 Exits 2, saying why, when the transport is in-memory (the server hosts the
 modules itself then), a pipeline file is unusable, or no module is named.

@@ -56,8 +56,8 @@ spec:
               value: kafka:pswamp_core.transport.kafka:KafkaTransport
             - name: KAFKA_BOOTSTRAP_SERVERS
               value: p-swamp-kafka:9092
-            - name: PMU_TEST_STREAMER_DATA_CLIENTS
-              value: sample:pswamp_modules.sources.sample_client:SampleRecordingClient,live:pswamp_modules.sources.live_client:LiveSyntheticClient,remote:pswamp_core.datagateway.clients.remote_data:RemoteDataClient
+            - name: PMU_TEST_STREAMER_SOURCES
+              value: sample:sample-replay,live:live-synthetic,remote:remote-history
             - name: LIVE_PATH
               value: /etc/p-swamp/pmu/deployment_pmu_data_file_example.txt
             - name: REMOTE_URL
@@ -196,8 +196,8 @@ spec:
               value: pmu-test-streamer.toml
             - name: PSWAMP_WORKER_MODULES
               value: range-summary
-            - name: PMU_TEST_STREAMER_DATA_CLIENTS
-              value: sample:pswamp_modules.sources.sample_client:SampleRecordingClient,live:pswamp_modules.sources.live_client:LiveSyntheticClient,remote:pswamp_core.datagateway.clients.remote_data:RemoteDataClient
+            - name: PMU_TEST_STREAMER_SOURCES
+              value: sample:sample-replay,live:live-synthetic,remote:remote-history
             - name: REMOTE_URL
               value: http://p-swamp-remote-data-stub:8100
           resources:

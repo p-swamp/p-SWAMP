@@ -7,12 +7,12 @@ is loaded in app/server-python/tests/test_pipeline_files.py."""
 from __future__ import annotations
 
 import pytest
-from support import ListClient, Measurement, install_modules, write_pipeline
+from support import ListSource, Measurement, install_modules, write_pipeline
 from test_modules import HalveCommand
 
 from pswamp_core.modules import Module
 from pswamp_core.pipeline import Pipeline
-from pswamp_core.pipeline_config import ConfiguredGateway, PipelineConfigError, load_pipeline, main, resolve_module
+from pswamp_core.pipeline_config import ConfiguredSources, PipelineConfigError, load_pipeline, main, resolve_module
 from pswamp_models.pmu import PmuFrame
 
 PIPELINE = """
@@ -21,11 +21,11 @@ modules = ["counter", "halver"]
 
 [[sources]]
 name = "rec"
-client = "support:ListClient"
+module = "list-source"
 
 [[sources]]
 name = "tick"
-client = "support:TickingClient"
+module = "ticking-source"
 
 [enrich]
 cim_reference = "cim-1"
@@ -59,12 +59,14 @@ def installed(monkeypatch):
         counter="test_pipeline:FrameCounter",
         halver="test_modules:Halver",
         **{
+            "list-source": "support:ListSource",
+            "ticking-source": "support:TickingSource",
             "reads-measurement": "test_pipeline_config:ReadsMeasurement",
             "also-halves": "test_pipeline_config:AlsoHalves",
             "misnamed": "test_modules:Halver",
         },
     )
-    for variable in ("APP_DATA_CLIENTS", "APP_CIM_REFERENCE"):
+    for variable in ("APP_SOURCES", "APP_DATA_CLIENTS", "APP_CIM_REFERENCE"):
         monkeypatch.delenv(variable, raising=False)
 
 
@@ -77,29 +79,52 @@ async def test_a_file_declares_the_app_its_modules_and_its_sources(tmp_path):
     assert pipeline.app == "app"
     assert [m.name for m in pipeline.modules] == ["counter", "halver"]
     assert pipeline.source_models == (PmuFrame,)
-    gateway = pipeline.gateway()
-    assert gateway.sources == ["rec", "tick"] and gateway.source == "rec"  # the first is the default
-    assert isinstance(gateway.active, ListClient)
-    first = await anext(await gateway.consume())
+    sources = pipeline.sources()
+    assert sources.sources == ["rec", "tick"] and sources.source == "rec"  # the first is the default
+    assert isinstance(sources.active, ListSource)
+    first = await anext(await sources.consume())
     assert first.header.cimReferenceId == "cim-1"
     assert load_pipeline(tmp_path / "app.toml").app == "app"
 
 
 async def test_the_environment_overrides_the_sources_and_the_cim_reference(tmp_path, monkeypatch):
     pipeline = load(tmp_path)
-    assert isinstance(pipeline.gateway, ConfiguredGateway)
-    assert (pipeline.gateway.clients_variable, pipeline.gateway.cim_variable) == ("APP_DATA_CLIENTS", "APP_CIM_REFERENCE")
-    monkeypatch.setenv("APP_DATA_CLIENTS", "other:support:TickingClient,again:support:ListClient")
+    assert isinstance(pipeline.sources, ConfiguredSources)
+    assert (pipeline.sources.sources_variable, pipeline.sources.cim_variable) == ("APP_SOURCES", "APP_CIM_REFERENCE")
+    monkeypatch.setenv("APP_SOURCES", "other:ticking-source,again:list-source")
     monkeypatch.setenv("APP_CIM_REFERENCE", "none")
-    gateway = pipeline.gateway()
-    assert gateway.sources == ["other", "again"] and gateway.live
-    gateway.switch("again")
-    assert (await anext(await gateway.consume())).header.cimReferenceId is None
+    sources = pipeline.sources()
+    assert sources.sources == ["other", "again"] and sources.live
+    sources.switch("again")
+    assert (await anext(await sources.consume())).header.cimReferenceId is None
+
+
+def test_the_retired_data_clients_variable_is_an_error_naming_its_replacement(tmp_path, monkeypatch):
+    pipeline = load(tmp_path)
+    monkeypatch.setenv("APP_DATA_CLIENTS", "rec:support:ListClient")
+    with pytest.raises(PipelineConfigError, match=r"APP_DATA_CLIENTS is no longer read.*APP_SOURCES=name:entry-point"):
+        pipeline.sources()
+    with pytest.raises(PipelineConfigError, match="APP_SOURCES=name:entry-point"):
+        load(tmp_path)  # a server fails to start rather than ignore it
+
+
+def test_a_malformed_sources_variable_is_refused(tmp_path, monkeypatch):
+    pipeline = load(tmp_path)
+    for bad in ("rec", "rec:", ":list-source", "rec:list:source"):
+        monkeypatch.setenv("APP_SOURCES", bad)
+        with pytest.raises(PipelineConfigError, match="is not name:entry-point"):
+            pipeline.sources()
+    monkeypatch.setenv("APP_SOURCES", "rec:halver")
+    with pytest.raises(PipelineConfigError, match="'halver' is an analysis module, not a source"):
+        pipeline.sources()
+    monkeypatch.setenv("APP_SOURCES", "rec:nope")
+    with pytest.raises(PipelineConfigError, match="no module named 'nope'"):
+        pipeline.sources()
 
 
 def test_no_enrich_table_means_no_reference(tmp_path):
     text = PIPELINE.split("[enrich]")[0]
-    assert load(tmp_path, text).gateway().enrichers == ()
+    assert load(tmp_path, text).sources().enrichers == ()
 
 
 def test_an_unknown_module_lists_the_installed_ones(tmp_path):
@@ -129,8 +154,9 @@ def test_the_existing_checks_still_apply(tmp_path):
     [
         (PIPELINE.replace('app = "app"', 'app = "App 1"'), "app: String should match"),
         (PIPELINE.replace("[enrich]", "[enrich]\ncolour = 1"), "enrich.colour: Extra inputs"),
-        (PIPELINE.replace('"support:ListClient"', '"support.ListClient"'), "sources.0.client"),
-        (PIPELINE.replace('"support:ListClient"', '"support:Measurement"'), "is not a DataClient"),
+        (PIPELINE.replace('"list-source"', '"List Source"'), "sources.0.module"),
+        (PIPELINE.replace('"list-source"', '"halver"'), "is an analysis module, not a source"),
+        (PIPELINE.replace('module = "list-source"', 'client = "support:ListSource"'), "sources.0.module: Field required"),
         (PIPELINE.replace('name = "tick"', 'name = "rec"'), "source rec listed twice"),
         ('app = "app"\n', "sources: Field required"),
         ("app = ", "app.toml: "),

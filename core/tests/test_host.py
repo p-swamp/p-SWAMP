@@ -138,26 +138,26 @@ async def test_a_host_ignores_what_its_module_does_not_read():
     await cancel_and_wait(task)
 
 
-async def test_a_module_that_reads_the_gateway_gets_its_own():
-    from support import ListClient
+async def test_a_module_that_reads_the_sources_gets_its_own():
+    from support import ListSource
 
-    from pswamp_core.datagateway import DataGateway
+    from pswamp_core.sources import SourceSet
 
     class Reader(Doubler):
-        reads_gateway = True
-        gateways: list = []
+        reads_sources = True
+        source_sets: list = []
 
         async def setup(self) -> None:
-            Reader.gateways.append(self.gateway)
+            Reader.source_sets.append(self.sources)
 
     broker = InMemoryTransport()
-    host = ModuleHost(Reader, broker, app="a", gateway=lambda: DataGateway([ListClient()]))
+    host = ModuleHost(Reader, broker, app="a", sources=lambda: SourceSet([ListSource()]))
     task = asyncio.create_task(host.serve())
     await settle()
     for key in ("k1", "k2"):
         await broker.publish(measurement(1), app="a", key=key)
     await settle()
-    assert len(Reader.gateways) == 2 and Reader.gateways[0] is not Reader.gateways[1]
+    assert len(Reader.source_sets) == 2 and Reader.source_sets[0] is not Reader.source_sets[1]
     await cancel_and_wait(task)
 
 
