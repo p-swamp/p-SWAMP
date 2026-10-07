@@ -77,13 +77,24 @@ values.
 ```python
 class PeakFrequencyModule(Module):
     name = "peak-frequency"                 # its identity in results, logs and the tray
-    input_model = PmuFrame                  # what it reads
-    output_model = PeakFrequencyResult      # a ResultEnvelope subclass: what it publishes
+    inputs = (PmuFrame,)                    # what it reads
+    outputs = (PeakFrequencyResult,)        # what it publishes: a ResultEnvelope[PeakFrequencyBody]
 
-    async def process(self, frame: PmuFrame) -> PeakFrequencyBody | None:
+    def process(self, frame: PmuFrame) -> PeakFrequencyBody | None:
         columns = frame.header.columns(measurement="f")     # the layout rides in every frame
         ...                                                 # return None to publish nothing
 ```
+
+- `process` is plain synchronous code. It returns the body; the base class
+  wraps it in the declared envelope whose `ResultEnvelope[T]` matches it. It
+  may also return a list (several outputs), or any other class declared in
+  `outputs` as it is (a command, say). Returning an undeclared class is an
+  error, reported on the tray.
+- A module may read several inputs: `inputs = (A, B)` with one `@on(A)` /
+  `@on(B)` handler each, or named inputs combined by a join,
+  `inputs = {"pmu": PmuFrame, "se": StateEstimate}` with
+  `join = Latest(trigger="se", max_age={"pmu": 1.0})` and
+  `def process(self, *, pmu, se)`. See `core/src/pswamp_core/modules.py`.
 
 - The layout is in `frame.header`. A module that derives something from it
   (column indexes) re-derives it when `frame.header.header_id` changes; the
@@ -113,16 +124,16 @@ two:
    ```
 
 2. **The module**: build a `PmuFrame` by hand (the `frame()` helper in the
-   generated tests) and await `process` directly.
+   generated tests) and call `run` (or `run_one`) directly: no loop, no
+   transport. It returns exactly what a host would publish.
 
    ```python
-   body = await PeakFrequencyModule().process(frame([49.9, 50.1, None]))
-   assert (body.station, body.frequency_hz) == ("s1", 50.1)
+   result = PeakFrequencyModule().run_one(frame([49.9, 50.1, None]))
+   assert (result.result.station, result.result.frequency_hz) == ("s1", 50.1)
    ```
 
-   A module with state, or one that publishes on its own, is driven the same
-   way: `await module.setup(out)` with an `out` that records what is
-   published, then `process` and `handle` in the order under test.
+   A module with state, or one that sends a command, is driven the same way:
+   `run` and `run_command` in the order under test, checking every output.
    `excursion/tests/test_module.py` does.
 
 3. **The module, hosted**: a `ModuleHost` over an `InMemoryTransport`. Publish
@@ -327,13 +338,13 @@ class ExcursionModule(Module):
     def validate(self, command):          # raise CommandRefused to refuse it
         ...
 
-    async def handle(self, command):      # the returned body is published with its request_id
+    def handle(self, command):            # the returned body is published with its request_id
         self.auto_pause = command.enabled
         return self._state()
 ```
 
 Test it without the pipeline:
-`await module.handle(AutoPauseCommand(enabled=True))`, then `process`.
+`module.run_command(AutoPauseCommand(enabled=True))`, then `run`.
 
 **2. The web API posts it.** The POST builds the command, and
 `dispatch_command` publishes it on its topic under the client's key:
@@ -370,14 +381,15 @@ as the next state, not in the POST's answer.
   when it is accepted, with the command's `request_id`. A refusal comes back
   as an `ErrorEvent` on the tray, carrying that id.
   Player commands are checked before publishing, and a refusal is a 409.
-- **A module can command the player** by publishing a player command into the
-  sink `setup` gave it. `ExcursionModule` publishes `PauseCommand` when the
-  frequency leaves its band.
+- **A module can command the player** by returning a player command, declared
+  in its `outputs`. `ExcursionModule` returns `PauseCommand` beside its result
+  when the frequency leaves its band. The pipeline refuses a module that sends
+  a command nothing in it takes.
 
 ### Chain it onto another module
 
 A chained module reads another module's results instead of raw frames. Set
-its `input_model` to that module's result class, and list both modules in the
+its `inputs` to that module's result class, and list both modules in the
 pipeline.
 
 The streamer's two frame-rate modules are the example:
@@ -391,10 +403,10 @@ The streamer's two frame-rate modules are the example:
 ```python
 class ExcursionModule(Module):
     name = "excursion"
-    input_model = FrameStatsResult          # what FrameStatsModule publishes
-    output_model = ExcursionResult
+    inputs = (FrameStatsResult,)            # what FrameStatsModule publishes
+    outputs = (ExcursionResult, PauseCommand)
 
-    async def process(self, stats: FrameStatsResult) -> Excursion | None:
+    def process(self, stats: FrameStatsResult) -> Excursion | list | None:
         mean = stats.result.mean_frequency_hz
         ...
 
@@ -424,7 +436,8 @@ reading a range:
 async for frame in await self.gateway.consume(start, end): ...
 ```
 
-`RangeSummaryModule` is the example: command-only (`input_model = None`). The
+`RangeSummaryModule` is the example: command-only (no `inputs`). Reading the
+gateway awaits, so it answers in `async def ahandle` instead of `handle`. The
 worker hosting it needs the app's `<APP>_DATA_CLIENTS`, and the settings of
 the clients that names (`REMOTE_URL`, ...), since it builds the gateway itself.
 
@@ -507,8 +520,9 @@ What a worker of its own lets you change, for that module alone:
   total on a live source. A pod that passes its limit is killed and restarted;
   its instances are rebuilt on the next input, without what they had counted.
 - **More CPU.** Raise `resources.limits.cpu` or `cpus`. A module's `process`
-  runs on one event loop, so more than one core helps only an analysis moved
-  off the loop ("A CPU-heavy module", below).
+  runs on one event loop unless the module sets `blocking = True`, so more
+  than one core helps only an analysis moved off the loop ("A CPU-heavy
+  module", below).
 - **Isolation.** A slow or crashing module stalls or restarts its own worker
   and nothing else. The server, the pages and every module not chained onto
   it carry on; its own results stop until it is back.
@@ -525,8 +539,9 @@ result twice. A module scales up, not out.
 `process` runs on the worker's event loop, so a slow one stalls every other
 module in that process.
 - Give it a worker of its own, with a CPU limit.
-- Run the analysis off the loop: `await asyncio.to_thread(analyse, ...)`, or a
-  `ProcessPoolExecutor` for pure-Python work.
+- Run the analysis off the loop: `blocking = True` on the module runs
+  `process` and `handle` in a thread; for pure-Python work, a
+  `ProcessPoolExecutor` inside `process`.
 - With numpy or scipy in a pool, set `OPENBLAS_NUM_THREADS=1`: BLAS's own
   threads per call multiply the CPU and collapse throughput.
 - Watch the tray: falling behind is reported.
