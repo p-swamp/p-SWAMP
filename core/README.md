@@ -1,7 +1,7 @@
 # pswamp-core
 
-The shared pieces of the p-SWAMP server data architecture: the messages every
-part exchanges, the transport between processes, the module contract, the data
+The shared pieces of the p-SWAMP server data architecture, over the messages
+in `../models/` (`pswamp-models`): the transport between processes, the module contract, the data
 gateway and player, and pipelines. `doc/server-data-architecture.md` describes
 how they fit together.
 

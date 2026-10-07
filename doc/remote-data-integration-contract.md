@@ -31,7 +31,7 @@ p-SWAMP (RemoteDataClient)                 deployment
 
 In this repo:
 - the client: `core/src/pswamp_core/datagateway/clients/remote_data.py`;
-- the request and line models: `core/src/pswamp_core/messages/remote_data.py`;
+- the request and line models: `models/src/pswamp_models/remote_data/`;
 - a stub service: `core/examples/remote_data_stub/`, serving the streamer's
   sample recording.
 

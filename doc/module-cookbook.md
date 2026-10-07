@@ -35,6 +35,7 @@ The module, in `modules/`. Part 1 is about these:
 
 | File | What it holds |
 |---|---|
+| `models/src/pswamp_models/peak_frequency/results.py` | what the module publishes: the result body and its envelope, `PeakFrequencyResult` |
 | `modules/pswamp_modules/peak_frequency/module.py` | the module: what it reads, what it publishes, `process`. Its analysis is a placeholder: the station with the highest frequency |
 | `modules/pswamp_modules/peak_frequency/tests/test_module.py` | the module's tests, beside its code |
 | `modules/pswamp_modules/pipelines/peak_frequency.py` | the pipeline: the app's name, its sources, its modules |
@@ -58,7 +59,7 @@ The registrations: entries in `server.py`, the route table, the nav,
 ## Part 1: The module
 
 A module is one folder, `modules/pswamp_modules/<pkg>/`, holding its code
-and its tests. It and its pipeline import the core only: never the web backend
+and its tests. It and its pipeline import the core and the models only: never the web backend
 (`shared`, `fastapi`, `pswamp_web`). A worker then hosts the module without
 loading the server. `pswamp_modules/tests/test_layering.py` fails if one does.
 
@@ -68,7 +69,8 @@ analysis, and run its tests.
 ### Write the analysis
 
 In `modules/pswamp_modules/peak_frequency/module.py`, replace
-`highest_frequency` and the result body it fills. Keep the analysis a plain
+`highest_frequency`, and the result body it fills in
+`models/src/pswamp_models/peak_frequency/results.py`. Keep the analysis a plain
 function and `process` a thin adapter: the function is then testable with plain
 values.
 
@@ -134,7 +136,8 @@ two:
    from pswamp_core.host import ModuleHost
    from pswamp_core.transport import InMemoryTransport
    from pswamp_core.util.tasks import cancel_and_wait
-   from pswamp_modules.peak_frequency import PeakFrequencyModule, PeakFrequencyResult
+   from pswamp_models.peak_frequency import PeakFrequencyResult
+   from pswamp_modules.peak_frequency import PeakFrequencyModule
 
    async def test_hosted_over_the_transport():
        broker = InMemoryTransport()
@@ -250,7 +253,7 @@ def state_message(run: PipelineRun) -> PeakFrequencyState:
 - Then run `uv run pswamp api generate`. It rewrites
   `doc/api/openapi.json` and `app/client-web/src/api/schema.ts`, which the
   page's type comes from. Run it after changing the result body in
-  `module.py` too. Commit both files.
+  `pswamp_models.peak_frequency` too. Commit both files.
 - Keep the state a pydantic model. A dict would drop the app out of the
   contract while the page keeps working.
 - Nothing warns of a stale contract while you work: the dev client does not
@@ -309,8 +312,8 @@ export function PeakFrequencyPage() {
 
 Three steps: the module, the web API, the page.
 
-**1. The module takes it.** A command is a class beside the module, listed in
-`commands`, and applied in `handle`. The streamer's `ExcursionModule` takes
+**1. The module takes it.** A command is a class in the module's models
+(`pswamp_models.excursion` here), listed in `commands`, and applied in `handle`. The streamer's `ExcursionModule` takes
 one, which turns its auto-pause on or off:
 
 ```python

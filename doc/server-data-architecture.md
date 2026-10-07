@@ -158,17 +158,20 @@ under Deployment, shows the change in compose and in k8s.
 **The code is layered so a worker needs no web backend:**
 
 ```
-core/     pswamp-core      messages, transport, module contract, gateway, player, pipelines
+models/   pswamp-models    every message, one package per producer (pydantic only)
+core/     pswamp-core      transport, module contract, gateway, player, pipelines
 modules/  pswamp-modules   the modules, the pipeline declarations, the example sources
 app/server-python          the web API of each app, and the server
 ```
 
 Each depends only on those above it. A module, its pipeline and its sources
-import the core and nothing else, so a worker imports core and modules, from
-any working directory. An app's web API imports its pipeline, results and
-commands from `pswamp_modules`. A module is one folder there, holding its code
+import the core and the models and nothing else, so a worker imports models,
+core and modules, from any working directory. An app's web API imports its
+pipeline from `pswamp_modules`, and its results and commands from
+`pswamp_models`. A module is one folder there, holding its code
 and its tests (`<module>/tests/`).
-`modules/pswamp_modules/tests/test_layering.py` checks the layering.
+`modules/pswamp_modules/tests/test_layering.py` and
+`models/tests/test_models_layering.py` check the layering.
 
 ## The pieces
 
@@ -201,7 +204,8 @@ validated on receipt, and published in the browser's api contract without an
 adapter. A pinned version makes an incompatible payload fail loudly. Every
 frame carries its layout, so a module needs nothing but the frame in hand.
 
-*Where.* `core/src/pswamp_core/messages/`.
+*Where.* `models/src/pswamp_models/`, one package per producer: `common/`,
+`player/`, `pmu/`, `remote_data/`, and one per module (`frame_stats/`, …).
 
 ### Transport
 *What.* Keyed publish/subscribe: **one topic per message class, per app, and
@@ -449,7 +453,7 @@ where it runs, and a refusal comes back as an `ErrorEvent`. Player commands
 also travel on topics, so a module can command the player exactly as the web
 API does.
 
-*Where.* `core/src/pswamp_core/command_routing.py`, `messages/commands.py`,
+*Where.* `core/src/pswamp_core/command_routing.py`, `models/src/pswamp_models/player/commands.py`,
 `pipeline.py` (`dispatch`).
 
 ### The web API
@@ -512,7 +516,7 @@ to the person whose run it was. It is how a module command's refusal reaches
 the browser, since that command was accepted with a 200 before the module saw
 it. It is not a grid alarm: an alarm is a module's normal result.
 
-*Where.* `core/src/pswamp_core/messages/errors.py`;
+*Where.* `models/src/pswamp_models/common/errors.py`;
 `app/server-python/src/errors/`, `shared._forward_errors`;
 `app/client-web/src/components/ErrorTray.tsx`, `hooks/useErrorFeed.ts`.
 
@@ -520,7 +524,7 @@ it. It is not a grid alarm: an alarm is a module's normal result.
 *What.* A module that falls behind its input reports it. Its `KeepUpMonitor`
 watches its input queue: input the `DROP_OLDEST` queue discarded, and how long
 each input had been in flight when read (transports stamp the send time,
-`messages.sent_at`, never on the wire). Past the module's `keep_up` policy (by
+`pswamp_models.common.sent_at`, never on the wire). Past the module's `keep_up` policy (by
 default any drop, or input older than 2 s), it reports once on falling behind,
 at most every 5 s while behind, and once on catching up. A run's outbox does
 the same when it has to drop what it cannot publish.
@@ -550,7 +554,7 @@ player, which seeks, or at a module, which reads a range from its gateway
 like anyone else (the range summary).
 
 *Where.* `core/src/pswamp_core/datagateway/clients/remote_data.py`,
-`messages/remote_data.py`, `core/examples/remote_data_stub/`;
+`models/src/pswamp_models/remote_data/`, `core/examples/remote_data_stub/`;
 `core/tests/test_remote_data.py` runs the conformance suite over the stub.
 
 ### Deployment

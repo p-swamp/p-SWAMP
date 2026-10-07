@@ -22,15 +22,16 @@ The package sits directly in this folder, with no `src/` level (unlike
 
 ## Rules
 
-- **It depends on `pswamp-core` and nothing else in this repo.** Nothing here
+- **It depends on `pswamp-core` and `pswamp-models` and nothing else in this repo.** Nothing here
   imports the web backend (`app/server-python/src/`) or the desktop package
   (`pswamp`). `pswamp_modules/tests/test_layering.py` checks it.
 - **`pswamp-core` imports nothing from here.**
-- **The web backend imports from here**: an app's `api.py` takes its pipeline,
-  its result classes and its commands from this package.
+- **The web backend imports from here**: an app's `api.py` takes its pipeline
+  from this package. Its result classes and commands it takes from
+  `pswamp_models`, where every module's messages live.
 
-So a worker (`python -m pswamp_core.worker`) hosts a module with core and
-modules alone, from any working directory.
+So a worker (`python -m pswamp_core.worker`) hosts a module with models, core
+and modules alone, from any working directory.
 
 ## Adding a module
 

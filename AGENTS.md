@@ -110,12 +110,20 @@ Consequences worth knowing before touching anything:
   that the image mirrors the *repo root*, not just the server dir — see the
   workspace note at the top of the Dockerfile's runtime stage for why the depth is
   required rather than a matter of taste.
+- **`models/` (`pswamp-models`)** holds every message of the server data
+  architecture, one package per producer (`pswamp_models.common`, `.player`,
+  `.pmu`, `.remote_data`, and one per module: `.frame_stats`, `.excursion`,
+  `.range_summary`). It depends on pydantic only and imports nothing else from
+  this repo (`models/tests/test_models_layering.py` checks it); everyone,
+  a module's own code included, imports a message from here, never from the
+  module that produces it. A workspace member like core; its tests
+  (`models/tests/`) run through `pswamp test server`.
 - **A third project, `core/` (`pswamp-core`)**, holds the server data
   architecture. It is a workspace member, which the web backend takes as
   `pswamp-core[kafka,remote-data]`; it has no lockfile of its own, and its
   tests (`core/tests/`) run in the web backend's environment through
-  `pswamp test server`. Its only required dependency is pydantic, so a
-  data provider can depend on it alone. It imports nothing from `app/` or from
+  `pswamp test server`. Its only required dependencies are pydantic and
+  `pswamp-models`, so a data provider can depend on it alone. It imports nothing from `app/` or from
   the desktop package. After editing `core/pyproject.toml`, run `uv lock` at
   the repo root.
   `pswamp check` gates it fully, like `app/`.
@@ -127,10 +135,11 @@ Consequences worth knowing before touching anything:
   `sources/` do the same, so there is no `modules/tests/`. The project is
   laid out flat: the package sits directly in `modules/`, with no `src/` level
   (unlike `core/`; `module-root = ""` in its manifest). The
-  layering runs one way: **`core` ← `modules` ← the web backend.** `modules/`
-  depends on `pswamp-core` only and imports nothing from `app/` or the desktop
+  layering runs one way: **`models` ← `core` ← `modules` ← the web backend.** `modules/`
+  depends on `pswamp-core` and `pswamp-models` only and imports nothing from `app/` or the desktop
   package; `core/` imports nothing from `modules/`; an app's `api.py` in the
-  server imports its pipeline, results and commands from `pswamp_modules`.
+  server imports its pipeline from `pswamp_modules`, and its results and
+  commands from `pswamp_models`.
   `pswamp_modules/tests/test_layering.py` checks both rules. Why: a worker hosting
   modules then loads core and modules alone, no FastAPI and no `pswamp_web`.
   Like core it is a workspace member with no lockfile of its own, its tests run through `pswamp test server`
@@ -138,11 +147,11 @@ Consequences worth knowing before touching anything:
   `pswamp check` gates it fully. `.dockerignore` keeps the `tests/` folders
   out of the image. After editing `modules/pyproject.toml`, run `uv lock` at
   the repo root. Test
-  file names must be unique across `app/server-python/tests/` and
-  `core/tests/`, which run in the same pytest session and are not packages; a
+  file names must be unique across `app/server-python/tests/`, `models/tests/`,
+  `core/tests/` and `tools/tests/`, which run in the same pytest session and are not packages; a
   module's tests are a package, so they cannot clash.
-- **`uv run pswamp check` gates `app/`, `core/` and `modules/` fully; `desktop/src/` only for syntax.**
-  ruff, `tsc` and the lockfile check (the root `uv.lock`) are scoped to those three. `desktop/src/` gets a
+- **`uv run pswamp check` gates `app/`, `models/`, `core/`, `modules/` and `tools/` fully; `desktop/src/` only for syntax.**
+  ruff, `tsc` and the lockfile check (the root `uv.lock`) are scoped to those. `desktop/src/` gets a
   **syntax-only** `py_compile` gate (it ships in the image, so it must at least
   parse) — but it is *not* lint-gated: `ruff check` deliberately leaves it out,
   with a `TODO` beside the syntax-only step in `tools/src/pswamp_tools/commands/check.py`. Widening ruff to `src/` means
@@ -440,13 +449,14 @@ Key invariants to preserve:
 
 `doc/server-data-architecture.md` is the account: how PMU data flows from a
 source through modules to the browser, and how commands flow back. The code is
-`core/src/pswamp_core/`; the modules, pipelines and example sources built on it
+`core/src/pswamp_core/`; every message is in `models/src/pswamp_models/`; the modules, pipelines and example sources built on it
 are `modules/pswamp_modules/`; the worked example is the PMU test streamer; the recipe
 for a new module is `doc/module-cookbook.md`; a deployment's history service
 follows `doc/remote-data-integration-contract.md`. The rules to keep:
 
 - **Every message is a `DataModel`** with a pinned `version`; its topic is its
-  class name. No dicts, numpy or pickle on a topic or a socket.
+  class name. No dicts, numpy or pickle on a topic or a socket. It lives in
+  `pswamp_models`, in its producer's package, and nowhere else.
 - **A command's class is its address.** One receiver per class in a pipeline
   (the player or one module). Player commands are validated in the web API (409);
   module commands where the module runs (an `ErrorEvent` on refusal).
@@ -456,7 +466,7 @@ follows `doc/remote-data-integration-contract.md`. The rules to keep:
   (`PSWAMP_TRANSPORT`, `PSWAMP_WORKER_PIPELINES`, `PSWAMP_WORKER_MODULES`), never
   code.
 - **A module lives in `modules/`, its web API in the server.** The module, its
-  pipeline and its tests go under `modules/` and import the core only; the
+  pipeline and its tests go under `modules/` and import the core and the models only; the
   app's `api.py` and its page stay under `app/`. A worker runs from `modules/`,
   not the server's `src/`, so a module that imports the web backend fails at
   start.
@@ -920,7 +930,7 @@ KAFKA_TEST_BOOTSTRAP_SERVERS=127.0.0.1:19092 uv run pswamp test server -k kafka 
 ```
 
 Note the naming clash: `pswamp test desktop` runs the *desktop* package's
-tests. The server data architecture's `core/tests/` and the modules' own
+tests. The server data architecture's `models/tests/`, `core/tests/` and the modules' own
 `tests/` folders run with the server's, in `pswamp test server`.
 
 Test suites are their own step, **not** part of `pswamp check` — that gate is
