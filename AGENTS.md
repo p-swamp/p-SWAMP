@@ -155,13 +155,19 @@ Consequences worth knowing before touching anything:
   each `modules/<name>/tests/` and `legacy/pswamp-wiring/tests/` — since they
   run in one pytest session and none is a package: hence `test_models_*`,
   `test_tools_*`, `test_<pkg>_module.py`, `test_wiring_*`.
-- **`legacy/pswamp-wiring/` (`pswamp-wiring`) is TRANSITIONAL**: the pipeline
-  declarations (`pswamp_modules.pipelines.<app>`) and the example data sources
-  (`pswamp_modules.sources`), moved out of `modules/` because they are not
-  module code, as two more portions of the same namespace, so their import
-  paths (in compose, k8s, `<APP>_DATA_CLIENTS` and the server) are unchanged.
-  It depends on the modules its pipelines import. It goes away when pipelines
-  become TOML and sources become modules; don't add anything else to it.
+- **`legacy/pswamp-wiring/` (`pswamp-wiring`) is TRANSITIONAL**: the example
+  data sources (`pswamp_modules.sources`), moved out of `modules/` because they
+  are not module code, as one more portion of the same namespace, so their
+  import path (in the pipeline files, compose, k8s and `<APP>_DATA_CLIENTS`) is
+  unchanged. It depends on the core and the models only. It goes away when
+  sources become modules; don't add anything else to it.
+- **`pipelines/` holds one pipeline file per app, `pipelines/<app>.toml`**:
+  data, not code, and not a project. It names the app's modules by their
+  `pswamp.modules` entry points, its sources (the first is the default) and
+  its enrichment; `Pipeline.load` (`core/src/pswamp_core/pipeline_config.py`)
+  reads it in the server and in the workers. `uv run pswamp pipelines validate`
+  checks every file (and `pswamp check` runs it); `uv run pswamp modules list`
+  shows what a file can name.
 - **`uv run pswamp check` gates `app/`, `models/`, `core/`, `modules/`, `legacy/` and `tools/` fully; `desktop/src/` only for syntax.**
   ruff, `tsc` and the lockfile check (the root `uv.lock`) are scoped to those. `desktop/src/` gets a
   **syntax-only** `py_compile` gate (it ships in the image, so it must at least
@@ -211,9 +217,9 @@ Two deployables, one wire protocol:
   **`src/pmu_test_streamer/`** is the web API (`api.py`) of the worked example
   of the server data architecture. The rest of the example is its modules,
   one project each (`modules/frame-stats/`, `modules/excursion/`,
-  `modules/range-summary/`), and, in the transitional
-  `legacy/pswamp-wiring/src/pswamp_modules/`, its pipeline
-  (`pipelines/pmu_test_streamer.py`) and its data clients
+  `modules/range-summary/`), its pipeline file
+  (`pipelines/pmu-test-streamer.toml` at the repo root) and, in the transitional
+  `legacy/pswamp-wiring/src/pswamp_modules/`, its data clients
   (`sources/sample_client.py`, `sources/live_client.py`). See "The
   server data architecture" below.
   `sources/sample_data.txt` is a **one-off sample committed for testing**: 300
@@ -464,8 +470,9 @@ Key invariants to preserve:
 `doc/server-data-architecture.md` is the account: how PMU data flows from a
 source through modules to the browser, and how commands flow back. The code is
 `core/src/pswamp_core/`; every message is in `models/src/pswamp_models/`; the modules built on it
-are `modules/<name>/`, one project each, and the pipelines and example sources the
-transitional `legacy/pswamp-wiring/`; the worked example is the PMU test streamer; the recipe
+are `modules/<name>/`, one project each; each app's pipeline is a file,
+`pipelines/<app>.toml`; the example sources are in the transitional
+`legacy/pswamp-wiring/`; the worked example is the PMU test streamer; the recipe
 for a new module is `doc/module-cookbook.md`; a deployment's history service
 follows `doc/remote-data-integration-contract.md`. The rules to keep:
 
@@ -479,17 +486,28 @@ follows `doc/remote-data-integration-contract.md`. The rules to keep:
   declared `inputs` and returns its declared `outputs`; a `ModuleHost` runs it, in the server with the in-memory transport or in
   a worker with Kafka. Where a module runs is configuration
   (`PSWAMP_TRANSPORT`, `PSWAMP_WORKER_PIPELINES`, `PSWAMP_WORKER_MODULES`), never
-  code.
+  code. `PSWAMP_WORKER_PIPELINES` names pipeline files, relative to the
+  worker's working directory or absolute; compose and k8s run the workers from
+  `/workspace/p-SWAMP/pipelines` (the repo's `pipelines/`, copied into the
+  image), so the entries are bare `<app>.toml`.
+- **A pipeline is data.** `pipelines/<app>.toml` names modules by entry point,
+  never by import path; a module joins a pipeline by being installed and
+  listed. `Pipeline.load` keeps every check (one receiver per command class,
+  one class per topic, a sent command has a receiver) and adds one: every
+  class a module reads has a producer. The server finds the files from
+  `shared.py` (the repo root's `pipelines/`, in a checkout and in the image),
+  or from `PSWAMP_PIPELINES_DIR`.
 - **A module lives in `modules/<name>/`, its web API in the server.** The module
   and its tests go in its own project under `modules/` and import the core and
-  the models only (its pipeline, for now, in `legacy/pswamp-wiring/`); the
-  app's `api.py` and its page stay under `app/`. A worker runs from `modules/`,
-  not the server's `src/`, so a module that imports the web backend fails at
-  start.
+  the models only; the app's `api.py` and its page stay under `app/`. A worker
+  runs outside the server's `src/`, so a module that imports the web backend
+  fails at start.
 - **Recordings are per client, live is shared.** A client's run is keyed by its
   client id; each live source has one always-on run keyed `live.<source>`, which
   client runs follow.
-- **Sources are configured, not coded**: `<APP>_DATA_CLIENTS` plus each client's
+- **Sources are configured, not coded**: the pipeline file's `[[sources]]`,
+  which `<APP>_DATA_CLIENTS` replaces when set (and `<APP>_CIM_REFERENCE`
+  overrides `[enrich] cim_reference`), plus each client's
   `{NAME}_{SETTING}` block. A new `DataClient` passes
   `pswamp_core.testing.DataClientConformance`.
 - **The in-memory transport is not a mock.** It round-trips every message
@@ -938,11 +956,13 @@ until `--upgrade-package p-swamp` forces it.
 Quality checks (cover both halves of the codebase):
 
 ```
-uv run pswamp check             # READ-ONLY static gate, NO test suites: uv lock --check + py_compile + ruff check F (python), tsc -b + eslint (web), api contract vs code. Runs all checks even if one fails, exits non-zero on any failure.
+uv run pswamp check             # READ-ONLY static gate, NO test suites: uv lock --check + py_compile + ruff check F (python), tsc -b + eslint (web), pipeline files (pipelines validate), api contract vs code. Runs all checks even if one fails, exits non-zero on any failure.
 uv run pswamp test server # the server, core and modules unit tests (app/server-python/tests/, core/tests/, each module's tests/ under modules/), fast + hermetic; args pass through to pytest (-k, -v, a node id).
 uv run pswamp test module frame-stats # one module project's tests (modules/<name>/tests/)
 uv run pswamp test desktop   # the desktop "core" tests (desktop/tests/) in the [full] env; needs Kafka/NQKafka/MQTT/Qt infra — run deliberately, not in CI.
 uv run pswamp check-generators        # both generators, in a throwaway worktree: their output passes pswamp check and its tests
+uv run pswamp pipelines validate      # load and check every pipelines/*.toml (or the files given), as the server and workers do
+uv run pswamp modules list            # every installed module (pswamp.modules entry points): reads, emits, commands, distribution
 KAFKA_TEST_BOOTSTRAP_SERVERS=127.0.0.1:19092 uv run pswamp test server -k kafka   # the transport suite against the compose broker (docker compose up -d kafka)
 ```
 

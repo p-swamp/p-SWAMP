@@ -148,8 +148,8 @@ A worker is the same image running `python -m pswamp_core.worker`, configured
 by the same transport variables as the server plus:
 
 ```
-PSWAMP_WORKER_PIPELINES=pswamp_modules.pipelines.pmu_test_streamer:PIPELINE   # whose modules to host
-PSWAMP_WORKER_MODULES=range-summary                                           # optional: only these
+PSWAMP_WORKER_PIPELINES=pmu-test-streamer.toml   # pipeline files whose modules to host (relative to the working directory)
+PSWAMP_WORKER_MODULES=range-summary              # optional: only these
 ```
 
 So a heavy module gets a process, with CPU and memory limits of its own,
@@ -162,15 +162,17 @@ under Deployment, shows the change in compose and in k8s.
 models/   pswamp-models    every message, one package per producer (pydantic only)
 core/     pswamp-core      transport, module contract, gateway, player, pipelines
 modules/<name>/        pswamp-<name>   one project per module (pswamp_modules.<pkg>, a namespace portion)
-legacy/pswamp-wiring/  pswamp-wiring   transitional: the pipeline declarations, the example sources
+legacy/pswamp-wiring/  pswamp-wiring   transitional: the example sources
+pipelines/<app>.toml                   each app's pipeline, as data (not a project)
 app/server-python          the web API of each app, and the server
 ```
 
 Each depends only on those above it. A module imports the core and the models
-and nothing else (not another module), and so do the pipelines and sources, so
+and nothing else (not another module), and so do the sources, so
 a worker imports models, core, the modules and the wiring, from any working
-directory. An app's web API imports its pipeline from
-`pswamp_modules.pipelines`, and its results and commands from `pswamp_models`.
+directory. An app's web API loads its pipeline file (`Pipeline.load`), which
+names its modules by entry point, and imports its results and commands from
+`pswamp_models`.
 A module is one project, holding its code, its tests, a README and examples.
 `tools/tests/test_tools_layering.py` and
 `models/tests/test_models_layering.py` check the layering.
@@ -351,8 +353,9 @@ behind it. "Jump to a time" and "query a chunk" are the same call. The gateway
 opens a client on first use, so a source nobody reads costs nothing. History
 lives with the provider: the repo stores nothing.
 
-**Configured, not coded.** An app's sources come from `<APP>_DATA_CLIENTS`,
-with a default in the app's pipeline file. Each client reads its own
+**Configured, not coded.** An app's sources are the `[[sources]]` of its
+pipeline file (`pipelines/<app>.toml`; the first is the default), which
+`<APP>_DATA_CLIENTS` replaces when set. Each client reads its own
 `{NAME}_{SETTING}` variables:
 
 ```
@@ -382,7 +385,7 @@ in a worker gets it with no configuration of its own. It is a reference, not
 the grid data itself, which would cost kilobytes per frame.
 
 *Where.* `core/src/pswamp_core/datagateway/enrich.py`; wired in
-`legacy/pswamp-wiring/src/pswamp_modules/pipelines/pmu_test_streamer.py`.
+`pipelines/pmu-test-streamer.toml` (`[enrich] cim_reference`).
 
 ### Player
 *What.* Paces the run's active source and owns the transport controls.
@@ -420,7 +423,7 @@ namespace), its sources and its modules. A `PipelineRun` is one running
 instance under one key. A `PipelineRegistry` keeps one run per key.
 
 ```python
-PIPELINE = Pipeline("pmu-test-streamer", gateway, modules=(FrameStatsModule,))   # pswamp_modules/pipelines/<app>.py
+PIPELINE = Pipeline.load("pipelines/pmu-test-streamer.toml")   # or Pipeline(app, gateway, modules=...) in a test
 
 REGISTRY = PipelineRegistry(lambda key: PipelineRun(key, PIPELINE, transport))
 run = await REGISTRY.acquire(client_id)       # built on first connect
@@ -440,7 +443,8 @@ run outlive its sockets for five minutes, so a reload rejoins it. At its cap
 watched.
 
 *Where.* `core/src/pswamp_core/pipeline.py`, `worker.py`;
-`legacy/pswamp-wiring/src/pswamp_modules/pipelines/pmu_test_streamer.py`.
+`core/src/pswamp_core/pipeline_config.py` (`Pipeline.load`: the pipeline file, its schema,
+modules by entry point, the producer check); `pipelines/pmu-test-streamer.toml`.
 
 ### Commands
 *What.* A command's class is its address. Exactly one part of a pipeline
@@ -576,7 +580,7 @@ like anyone else (the range summary).
 | Role | Command | Configured by |
 |---|---|---|
 | server | the image's default (`python server.py`) | `PSWAMP_TRANSPORT`, `<APP>_DATA_CLIENTS` and their `{NAME}_*` blocks |
-| worker | `python -m pswamp_core.worker`, run from `modules/` | the same transport, `PSWAMP_WORKER_PIPELINES`, `PSWAMP_WORKER_MODULES`; a module that reads the gateway also needs `<APP>_DATA_CLIENTS` |
+| worker | `python -m pswamp_core.worker`, run from `pipelines/` | the same transport, `PSWAMP_WORKER_PIPELINES`, `PSWAMP_WORKER_MODULES`; a module that reads the gateway also needs `<APP>_DATA_CLIENTS` |
 | remote data stub | `python -m remote_data_stub` | `REMOTE_DATA_STUB_CLIENT` (and `core/examples` on `PYTHONPATH`) |
 | broker | `apache/kafka` | one KRaft node, topic auto-creation off, 10 s retention checks |
 
@@ -634,10 +638,10 @@ In compose (`docker-compose.yml`):
     build: .
     image: p-swamp:latest                  # the same image as the server
     command: ["python", "-m", "pswamp_core.worker"]
-    working_dir: /workspace/p-SWAMP/modules   # outside the server's src/
+    working_dir: /workspace/p-SWAMP/pipelines   # outside the server's src/; the pipeline files
     environment:
       <<: *transport                       # the same broker as the server
-      PSWAMP_WORKER_PIPELINES: "pswamp_modules.pipelines.pmu_test_streamer:PIPELINE"
+      PSWAMP_WORKER_PIPELINES: "pmu-test-streamer.toml"
       PSWAMP_WORKER_MODULES: "excursion"   # 1. only this module
     depends_on:
       kafka:
@@ -681,14 +685,14 @@ spec:
           image: p-swamp:latest            # the same image as the server
           imagePullPolicy: Never           # IfNotPresent with an image from a registry
           command: ["python", "-m", "pswamp_core.worker"]
-          workingDir: /workspace/p-SWAMP/modules   # outside the server's src/
+          workingDir: /workspace/p-SWAMP/pipelines   # outside the server's src/; the pipeline files
           env:
             - name: PSWAMP_TRANSPORT
               value: kafka:pswamp_core.transport.kafka:KafkaTransport
             - name: KAFKA_BOOTSTRAP_SERVERS
               value: p-swamp-kafka:9092
             - name: PSWAMP_WORKER_PIPELINES
-              value: pswamp_modules.pipelines.pmu_test_streamer:PIPELINE
+              value: pmu-test-streamer.toml
             - name: PSWAMP_WORKER_MODULES
               value: excursion             # 1. only this module
           resources:                       # 3. its own CPU and memory
