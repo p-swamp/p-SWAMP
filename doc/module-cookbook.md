@@ -14,9 +14,11 @@ It goes in two parts, then recipes:
 
 The examples come from two apps:
 - **`peak-frequency`**: what the generator writes below. One module, one page.
-- **The PMU test streamer** (`frame_stats/`, `excursion/`, `range_summary/`
-  and `pipelines/pmu_test_streamer.py` in `modules/pswamp_modules/`; its
-  web API in `app/server-python/src/pmu_test_streamer/`): the reference
+- **The PMU test streamer** (the projects `modules/frame-stats/`,
+  `modules/excursion/` and `modules/range-summary/`, its pipeline
+  `pipelines/pmu_test_streamer.py` in the transitional
+  `legacy/pswamp-wiring/src/pswamp_modules/`; its web API in
+  `app/server-python/src/pmu_test_streamer/`): the reference
   example, with three modules. `FrameStatsModule` computes each
   frame's statistics, `ExcursionModule` watches those statistics for the
   frequency leaving its band, and `RangeSummaryModule` summarizes a time range
@@ -31,14 +33,20 @@ uv run pswamp new module peak-frequency "Peak frequency"
 This writes a working app, registers it everywhere, regenerates the api
 contract and runs `pswamp check`.
 
-The module, in `modules/`. Part 1 is about these:
+The module, a project of its own in `modules/peak-frequency/`. Part 1 is about these:
 
 | File | What it holds |
 |---|---|
 | `models/src/pswamp_models/peak_frequency/results.py` | what the module publishes: the result body and its envelope, `PeakFrequencyResult` |
-| `modules/pswamp_modules/peak_frequency/module.py` | the module: what it reads, what it publishes, `process`. Its analysis is a placeholder: the station with the highest frequency |
-| `modules/pswamp_modules/peak_frequency/tests/test_module.py` | the module's tests, beside its code |
-| `modules/pswamp_modules/pipelines/peak_frequency.py` | the pipeline: the app's name, its sources, its modules |
+| `modules/peak-frequency/pyproject.toml` | the project, `pswamp-peak-frequency`: its dependencies and its `pswamp.modules` entry point |
+| `modules/peak-frequency/README.md` | what it reads, emits and accepts; its parameters |
+| `modules/peak-frequency/src/pswamp_modules/peak_frequency/module.py` | the module: what it reads, what it publishes, `process`. Its analysis is a placeholder: the station with the highest frequency |
+| `modules/peak-frequency/tests/test_peak_frequency_module.py` | the module's tests |
+| `modules/peak-frequency/examples/run_peak_frequency.py` | the module run from a plain script, no server |
+| `legacy/pswamp-wiring/src/pswamp_modules/pipelines/peak_frequency.py` | the pipeline: the app's name, its sources, its modules (transitional, until pipelines become TOML) |
+
+The project joins the workspace by itself (`"modules/*"`), becomes a
+dependency of the wiring and the server, and the generator re-locks (`uv lock`).
 
 A starting frontend, in `app/`:
 
@@ -58,17 +66,20 @@ The registrations: entries in `server.py`, the route table, the nav,
 
 ## Part 1: The module
 
-A module is one folder, `modules/pswamp_modules/<pkg>/`, holding its code
-and its tests. It and its pipeline import the core and the models only: never the web backend
-(`shared`, `fastapi`, `pswamp_web`). A worker then hosts the module without
-loading the server. `pswamp_modules/tests/test_layering.py` fails if one does.
+A module is one project, `modules/<slug>/`, holding its code
+(`src/pswamp_modules/<pkg>/`, a portion of the `pswamp_modules` namespace, so no
+`src/pswamp_modules/__init__.py`), its tests, its README and its examples, and
+nothing else. It imports the core and the models only: never the web backend
+(`shared`, `fastapi`, `pswamp_web`) or another module. A worker then hosts the
+module without loading the server. `tools/tests/test_tools_layering.py` fails
+if one does.
 
 So the work in this part needs no server, no broker and no browser: write the
 analysis, and run its tests.
 
 ### Write the analysis
 
-In `modules/pswamp_modules/peak_frequency/module.py`, replace
+In `modules/peak-frequency/src/pswamp_modules/peak_frequency/module.py`, replace
 `highest_frequency`, and the result body it fills in
 `models/src/pswamp_models/peak_frequency/results.py`. Keep the analysis a plain
 function and `process` a thin adapter: the function is then testable with plain
@@ -108,11 +119,12 @@ class PeakFrequencyModule(Module):
 ### Test it without the pipeline
 
 ```
-uv run pswamp test server ../../modules/pswamp_modules/peak_frequency
+uv run pswamp test module peak-frequency
 ```
 
-This runs the module's own folder and nothing else. The path is relative to
-`app/server-python/`, where the runner starts pytest.
+This runs the module's own `tests/` and nothing else, with the server's pytest
+config. `uv run python modules/peak-frequency/examples/run_peak_frequency.py`
+runs it from a plain script.
 
 Three levels, bottom up. The generated `tests/test_module.py` has the first
 two:
@@ -164,13 +176,13 @@ two:
    The in-memory transport passes every message through JSON, so a result
    that would not survive Kafka fails here.
 
-For more, see the streamer's tests, beside each module under
-`modules/pswamp_modules/`: a chained module (`excursion/tests/`), a batch
-query (`range_summary/tests/`), the sources (`sources/tests/`).
+For more, see the streamer's tests, in each module project: a chained module
+(`modules/excursion/tests/`), a batch query (`modules/range-summary/tests/`),
+and the sources (`legacy/pswamp-wiring/tests/`).
 
 ### Choose its sources
 
-`pswamp_modules/pipelines/peak_frequency.py` names them in
+`pswamp_modules/pipelines/peak_frequency.py` (in `legacy/pswamp-wiring/src/`) names them in
 `<APP>_DATA_CLIENTS`, with a default:
 
 ```python
@@ -188,7 +200,7 @@ DEFAULT_DATA_CLIENTS = "live:pswamp_modules.sources.live_client:LiveSyntheticCli
 Restart `uv run pswamp dev server` (a new package
 needs a rebuild) and open `http://127.0.0.1:8000/peak-frequency`, the
 generated page as built into the image. Results arrive at once, from the one
-shared live run. From then on, a saved edit under `modules/pswamp_modules/`
+shared live run. From then on, a saved edit under `modules/` (or `legacy/`)
 reloads the server and restarts the workers.
 
 - **Logs.** The host logs `hosting peak-frequency for peak-frequency: reads
@@ -555,7 +567,7 @@ module in that process.
   `coverage`, `consume`, `env_settings`), prove it with
   `pswamp_core.testing.DataClientConformance`, put the package in the image,
   and name it in `<APP>_DATA_CLIENTS`. `sample_client.py` and `live_client.py`
-  in `modules/pswamp_modules/sources/` are the examples.
+  in `legacy/pswamp-wiring/src/pswamp_modules/sources/` are the examples.
 
 ## When it does not work
 

@@ -53,8 +53,9 @@ worked example of every piece.
 
 The PMU test streamer (`/pmu-test-streamer`) is the app every example below
 is taken from. It is not part of the core: it is one pipeline built on it,
-kept complete so each piece has a working instance to read. Its pipeline,
-modules and sources are in `modules/pswamp_modules/`. Its parts:
+kept complete so each piece has a working instance to read. Its modules are
+projects in `modules/` (`frame-stats/`, `excursion/`, `range-summary/`); its
+pipeline and sources are in the transitional `legacy/pswamp-wiring/`. Its parts:
 
 | Part | What it is |
 |---|---|
@@ -160,17 +161,18 @@ under Deployment, shows the change in compose and in k8s.
 ```
 models/   pswamp-models    every message, one package per producer (pydantic only)
 core/     pswamp-core      transport, module contract, gateway, player, pipelines
-modules/  pswamp-modules   the modules, the pipeline declarations, the example sources
+modules/<name>/        pswamp-<name>   one project per module (pswamp_modules.<pkg>, a namespace portion)
+legacy/pswamp-wiring/  pswamp-wiring   transitional: the pipeline declarations, the example sources
 app/server-python          the web API of each app, and the server
 ```
 
-Each depends only on those above it. A module, its pipeline and its sources
-import the core and the models and nothing else, so a worker imports models,
-core and modules, from any working directory. An app's web API imports its
-pipeline from `pswamp_modules`, and its results and commands from
-`pswamp_models`. A module is one folder there, holding its code
-and its tests (`<module>/tests/`).
-`modules/pswamp_modules/tests/test_layering.py` and
+Each depends only on those above it. A module imports the core and the models
+and nothing else (not another module), and so do the pipelines and sources, so
+a worker imports models, core, the modules and the wiring, from any working
+directory. An app's web API imports its pipeline from
+`pswamp_modules.pipelines`, and its results and commands from `pswamp_models`.
+A module is one project, holding its code, its tests, a README and examples.
+`tools/tests/test_tools_layering.py` and
 `models/tests/test_models_layering.py` check the layering.
 
 ## The pieces
@@ -317,8 +319,8 @@ configuration. `process` runs on the event loop; a CPU-heavy module sets
 `blocking = True` to run it in a thread.
 
 *Where.* `core/src/pswamp_core/modules.py`, `host.py`, `command_routing.py`;
-a module is a package under `modules/pswamp_modules/`, and the
-streamer's are `frame_stats/`, `excursion/` and `range_summary/`.
+a module is a project under `modules/`, and the
+streamer's are `frame-stats/`, `excursion/` and `range-summary/`.
 
 ### Gateway and providers
 *What.* A provider implements `DataClient`: it is a `history` (it holds a
@@ -362,7 +364,7 @@ A deployment plugs in its own provider with one package in the image and one
 variable.
 
 *Where.* `core/src/pswamp_core/datagateway/`, `settings.py`, `testing.py`;
-the examples are `modules/pswamp_modules/sources/sample_client.py`
+the examples are `legacy/pswamp-wiring/src/pswamp_modules/sources/sample_client.py`
 (history) and `live_client.py` (live: the sample re-stamped on the wall clock).
 
 ### CIM reference
@@ -380,7 +382,7 @@ in a worker gets it with no configuration of its own. It is a reference, not
 the grid data itself, which would cost kilobytes per frame.
 
 *Where.* `core/src/pswamp_core/datagateway/enrich.py`; wired in
-`modules/pswamp_modules/pipelines/pmu_test_streamer.py`.
+`legacy/pswamp-wiring/src/pswamp_modules/pipelines/pmu_test_streamer.py`.
 
 ### Player
 *What.* Paces the run's active source and owns the transport controls.
@@ -438,7 +440,7 @@ run outlive its sockets for five minutes, so a reload rejoins it. At its cap
 watched.
 
 *Where.* `core/src/pswamp_core/pipeline.py`, `worker.py`;
-`modules/pswamp_modules/pipelines/pmu_test_streamer.py`.
+`legacy/pswamp-wiring/src/pswamp_modules/pipelines/pmu_test_streamer.py`.
 
 ### Commands
 *What.* A command's class is its address. Exactly one part of a pipeline
@@ -744,10 +746,10 @@ sources.
   answer every frame twice.
 - **A NATS transport**: a `Transport` subclass passing
   `core/tests/transport_suite.py`.
-- **A worker image of its own.** A worker imports only `pswamp-core` and
-  `pswamp-modules`, but runs the server's image, which also carries the web
+- **A worker image of its own.** A worker imports only `pswamp-core`,
+  `pswamp-models` and the module projects, but runs the server's image, which also carries the web
   backend, the web client and the desktop package's dependencies. A deployment
-  may build a slimmer image from `core/` and `modules/` alone.
+  may build a slimmer image from `models/`, `core/` and `modules/` alone.
 - **A live source over a real feed**, such as a broker's topic read as a
   `DataClient`.
 - **Cheaper frames**: the header serialised once per layout, and producer
