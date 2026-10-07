@@ -32,8 +32,8 @@ or not, untracked files included):
 
   1. `pswamp new subapp` (a counter) and `pswamp new module` (a module and its page);
   2. `pswamp check` over the result;
-  3. the generated module's tests (its own tests/ folder, its page's socket in
-     the server's tests/), and the layering test over the result;
+  3. the generated module's tests (its project's tests/ folder, its page's
+     socket in the server's tests/), and the layering tests over the result;
   4. import the module-worker's pipelines and modules as patched into
      docker-compose.yml and k8s/p-swamp-local.yaml, from outside the server
      tree, as a worker does.
@@ -209,8 +209,8 @@ def check_generators() -> None:
             [
                 "uv", "run", "pswamp", "test", "server", "-q",
                 f"tests/test_{module_pkg}.py",
-                f"../../modules/pswamp_modules/{module_pkg}/tests",
-                "../../modules/pswamp_modules/tests/test_layering.py",
+                f"../../modules/{MODULE}/tests",
+                "../../tools/tests/test_tools_layering.py",
                 "../../models/tests/test_models_layering.py",
             ],
             tree,

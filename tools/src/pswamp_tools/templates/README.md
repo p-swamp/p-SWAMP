@@ -6,31 +6,38 @@ registries. Two sets:
 
 - `subapp/`, for `uv run pswamp new subapp`: a per-client counter, like the
   checked-in reference subapp (`app/server-python/src/reference_subapp/`).
-- `module/`, for `uv run pswamp new module`: a module over the
+- `module/`, for `uv run pswamp new module`: a module project over the
   core pipeline, its messages, its pipeline and its web API, a page showing its latest
-  result, and unit tests. It is also added to the module-worker in compose and
-  k8s. `doc/module-cookbook.md` walks through it.
+  result, and unit tests. The project joins the workspace, the wiring's and the
+  server's dependencies and the lock, and the module is added to the
+  module-worker in compose and k8s. `doc/module-cookbook.md` walks through it.
 
 In each set:
 
 - `server-python/` → `app/server-python/src/<pkg>/`
 - `client-web/` → `app/client-web/src/pages/<slug>/`
 
-The module set has five more folders. What the module publishes goes to the
+The module set has six more folders. What the module publishes goes to the
 models (`models/`, pydantic only), where the module, its web API and anyone
-else import it from. The module, its tests and its pipeline go to `modules/`,
+else import it from. The module is a project of its own, `modules/<slug>/`,
 which depends on the core and the models only, so nothing rendered there may
-import from the web backend; only the web API goes into the server:
+import from the web backend; only the web API goes into the server. Its
+pipeline goes to the transitional `legacy/pswamp-wiring/`, until pipelines
+become TOML files:
 
 - `models/` → `models/src/pswamp_models/<pkg>/`
-- `module/` → `modules/pswamp_modules/<pkg>/`
-- `module-tests/` → `modules/pswamp_modules/<pkg>/tests/`
-- `pipeline/` → `modules/pswamp_modules/pipelines/`
+- `module-project/` → `modules/<slug>/` (`pyproject.toml` with the
+  `pswamp.modules` entry point, `README.md`)
+- `module/` → `modules/<slug>/src/pswamp_modules/<pkg>/` (no
+  `src/pswamp_modules/__init__.py`: the package is a PEP 420 namespace portion)
+- `module-tests/` → `modules/<slug>/tests/`
+- `pipeline/` → `legacy/pswamp-wiring/src/pswamp_modules/pipelines/`
 - `tests/` → `app/server-python/tests/`
 
-A module carries its tests in a `tests/` package beside its code, so
-`module-tests/` holds an (empty) `__init__.py` as well as `test_module.py`.
-That file is what lets every module name its test file the same.
+A module's `tests/` is not a package, and runs in one pytest session with every
+other test folder, so its test file is named after the module
+(`test___PKG___module.py`) rather than `test_module.py`; the generator refuses
+a name whose test file exists in any test folder.
 
 What the generator writes is then yours: change it freely. The rest of this file
 describes the `subapp` set; the module set follows the same rules.

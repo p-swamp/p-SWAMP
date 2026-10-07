@@ -9,7 +9,7 @@ the module, and every page shows its results from the start.
 from pswamp_core.datagateway import DataGateway, gateway_from_env
 from pswamp_core.pipeline import Pipeline
 
-from ..__PKG__ import __NAME__Module
+from pswamp_modules.__PKG__ import __NAME__Module
 
 APP = "__SLUG__"
 
