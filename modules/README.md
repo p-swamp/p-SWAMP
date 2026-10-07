@@ -9,6 +9,15 @@ architecture; `doc/module-cookbook.md` is the recipe for a new module.
 | [`frame-stats/`](frame-stats/) | `pswamp-frame-stats` | `pswamp_modules.frame_stats` | `PmuFrame` | `FrameStatsResult` |
 | [`excursion/`](excursion/) | `pswamp-excursion` | `pswamp_modules.excursion` | `FrameStatsResult` | `ExcursionResult`, `PauseCommand` |
 | [`range-summary/`](range-summary/) | `pswamp-range-summary` | `pswamp_modules.range_summary` | (commands only) | `RangeSummaryResult` |
+| [`sample-replay/`](sample-replay/) | `pswamp-sample-replay` | `pswamp_modules.sample_replay` | source (history, playable) | `PmuFrame` |
+| [`live-synthetic/`](live-synthetic/) | `pswamp-live-synthetic` | `pswamp_modules.live_synthetic` | source (live) | `PmuFrame` |
+| [`remote-history/`](remote-history/) | `pswamp-remote-history` | `pswamp_modules.remote_history` | source (history, playable; a remote service) | `PmuFrame` |
+
+The last three are **sources**: a `SourceModule` (`pswamp_core.sources`) reads nothing and
+produces data, from a script with a plain `for frame in SampleReplay().read():`. A history
+source that mixes in `Playable` (`pswamp_core.playable`) can also be replayed paced and
+sought. `uv run pswamp modules list` tells the three kinds apart. Until the run switches
+over to them, the legacy data clients in `legacy/pswamp-wiring/` still serve it.
 
 Each module folder holds exactly:
 
