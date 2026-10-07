@@ -1,6 +1,6 @@
 """The __LABEL__ app's web API, and the page that shows its module's results.
 The module is ``pswamp_modules.__PKG__``; its pipeline is
-``pswamp_modules.pipelines.__PKG__``.
+``pipelines/__SLUG__.toml`` at the repo root.
 
   router      the endpoints, mounted under /api/__SLUG__
   lifespan    the shared live run, the module hosted here when there is no broker

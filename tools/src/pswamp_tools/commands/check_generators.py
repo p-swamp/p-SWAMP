@@ -35,16 +35,16 @@ or not, untracked files included):
   3. the generated module's tests (its project's tests/ folder, its page's
      socket in the server's tests/), and the layering tests over the result,
      then its example script (examples/), run as a plain script;
-  4. import the module-worker's pipelines and modules as patched into
-     docker-compose.yml and k8s/p-swamp-local.yaml, from outside the server
-     tree, as a worker does.
+  4. load the module-worker's pipeline files and modules as patched into
+     docker-compose.yml and k8s/p-swamp-local.yaml, from the pipelines/
+     folder, as a worker does (its pipeline files are relative to it).
 
 Slow: the worktree gets its own uv environment. app/client-web/node_modules is
 linked in (a directory junction on Windows) rather than reinstalled; without one
 `pswamp check` runs `npm ci` there. The worktree is removed on every exit path.
 """
 
-# Step 4, run in the worktree's server environment from modules/ (outside the
+# Step 4, run in the worktree's server environment from pipelines/ (outside the
 # server tree, as a worker runs). argv: module slug, then a JSON file of {path: pattern}.
 WORKER_CHECK = """\
 import json, re, sys
@@ -232,7 +232,7 @@ def check_generators() -> None:
                 "uv", "run", "--project", "../app/server-python", "python",
                 str(work / "worker_check.py"), MODULE, str(work / "patterns.json"),
             ],
-            tree / "modules",
+            tree / "pipelines",
         )
     except typer.Exit:
         raise

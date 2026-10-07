@@ -20,7 +20,6 @@ REGISTRIES = [
     Path("docker-compose.yml"),
     Path("k8s/p-swamp-local.yaml"),
     Path("app/server-python/pyproject.toml"),
-    Path("legacy/pswamp-wiring/pyproject.toml"),
 ]
 
 
@@ -32,7 +31,7 @@ def tree(tmp_path):
         (tmp_path / path).parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(real / path, tmp_path / path)
     for folder in (
-        "legacy/pswamp-wiring/src/pswamp_modules/pipelines",
+        "pipelines",
         "legacy/pswamp-wiring/src/pswamp_modules/sources",
         "modules/frame-stats/src/pswamp_modules/frame_stats",
         "modules/frame-stats/tests",
@@ -194,7 +193,7 @@ def test_a_module_is_a_project_and_joins_the_module_worker(tree):
     assert not (project / "tests/__init__.py").exists()
     assert (project / "examples/run_zz_mod.py").is_file()
     assert (tree / "models/src/pswamp_models/zz_mod/results.py").is_file()
-    assert (tree / "legacy/pswamp-wiring/src/pswamp_modules/pipelines/zz_mod.py").is_file()
+    assert (tree / "pipelines/zz-mod.toml").is_file()
     assert (tree / "app/server-python/tests/test_zz_mod.py").is_file()
 
     import re
@@ -204,8 +203,10 @@ def test_a_module_is_a_project_and_joins_the_module_worker(tree):
     assert manifest["project"]["name"] == "pswamp-zz-mod"
     assert manifest["project"]["entry-points"]["pswamp.modules"] == {"zz-mod": "pswamp_modules.zz_mod:ZzModModule"}
     assert manifest["tool"]["uv"]["build-backend"]["module-name"] == "pswamp_modules.zz_mod"
-    # A dependency (with its workspace source) of the wiring and of the server.
-    for path in ("legacy/pswamp-wiring/pyproject.toml", "app/server-python/pyproject.toml"):
+    pipeline = tomllib.loads(text(tree, "pipelines/zz-mod.toml"))
+    assert (pipeline["app"], pipeline["modules"]) == ("zz-mod", ["zz-mod"])
+    # A dependency (with its workspace source) of the server, and of nothing else.
+    for path in ("app/server-python/pyproject.toml",):
         consumer = tomllib.loads(text(tree, path))
         assert "pswamp-zz-mod" in consumer["project"]["dependencies"], path
         assert consumer["tool"]["uv"]["sources"]["pswamp-zz-mod"] == {"workspace": True}, path
@@ -217,13 +218,19 @@ def test_a_module_is_a_project_and_joins_the_module_worker(tree):
         content = text(tree, path.as_posix())
         pipelines = re.search(pattern.format(var="PSWAMP_WORKER_PIPELINES"), content, re.M).group(1)
         modules = re.search(pattern.format(var="PSWAMP_WORKER_MODULES"), content, re.M).group(1)
-        assert pipelines.endswith(",pswamp_modules.pipelines.zz_mod:PIPELINE"), path
+        assert pipelines.endswith(",zz-mod.toml"), path
         assert modules.split(",")[-1] == "zz-mod", path
     # Only the module-worker: the batch worker's lists are untouched.
-    assert text(tree, "docker-compose.yml").count("zz_mod:PIPELINE") == 1
+    assert text(tree, "docker-compose.yml").count("zz-mod.toml") == 1
 
 
-@pytest.mark.parametrize("slug", ["pipelines", "sources", "frame-stats"])
+def test_a_module_cannot_take_an_app_s_pipeline_file(tree):
+    (tree / "pipelines/zz-mod.toml").write_text("", encoding="utf-8")
+    with pytest.raises(generate.GenerateError, match="pipelines/zz-mod.toml already exists"):
+        generate.plan(tree, "zz-mod", "ZZ Mod", "module")
+
+
+@pytest.mark.parametrize("slug", ["sources", "frame-stats"])
 def test_a_module_cannot_take_a_name_in_the_pswamp_modules_namespace(tree, slug):
     with pytest.raises(generate.GenerateError, match="already exists"):
         generate.plan(tree, slug, "Taken", "module")

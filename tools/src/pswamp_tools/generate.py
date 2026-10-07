@@ -7,11 +7,12 @@ explains them):
 * ``subapp``: a per-client counter, a page and its api;
 * ``module``: a module project over the core pipeline (``modules/<slug>/``:
   its code, tests, README and a runnable example), its messages (in ``pswamp_models``), its
-  pipeline (in the transitional ``legacy/pswamp-wiring/``), its web api, a page
+  pipeline file (``pipelines/<slug>.toml``), its web api, a page
   showing its latest result, and the api's test; the module joins the
-  workspace (``modules/*``), becomes a dependency of the wiring and of the
-  server, and is added to the module-worker in docker-compose.yml and
-  k8s/p-swamp-local.yaml. The caller re-locks (``uv lock``) afterwards.
+  workspace (``modules/*``), becomes a dependency of the server (which finds
+  it through its entry point), and its pipeline file and name are added to the
+  module-worker in docker-compose.yml and k8s/p-swamp-local.yaml. The caller
+  re-locks (``uv lock``) afterwards.
 
 Everything is computed in memory first, every rendered file and every registry
 patch, and only then written. So a bad name, a taken name or a missing anchor
@@ -41,15 +42,12 @@ PY_SRC = Path("app/server-python/src")
 MODULES = Path("modules")
 MODELS = Path("models/src/pswamp_models")
 SERVER_TESTS = Path("app/server-python/tests")
-# Transitional (until pipelines become TOML): the pipelines live in the wiring
-# project, a portion of the pswamp_modules namespace like every module.
-WIRING = Path("legacy/pswamp-wiring")
-PIPELINES = WIRING / "src" / "pswamp_modules" / "pipelines"
+# The pipeline files, one per app (pipelines/<app>.toml), at the repo root.
+PIPELINES = Path("pipelines")
 SERVER_MANIFEST = Path("app/server-python/pyproject.toml")
-WIRING_MANIFEST = WIRING / "pyproject.toml"
 # Test folders that run in one pytest session with the server's and are not
 # packages, so a test file name must be unique across all of them. The module
-# projects' and the wiring's are globbed.
+# projects' and the transitional wiring's (legacy/) are globbed.
 NON_PACKAGE_TESTS = (SERVER_TESTS, Path("models/tests"), Path("core/tests"), Path("tools/tests"))
 NON_PACKAGE_TEST_GLOBS = ("modules/*/tests", "legacy/*/tests")
 # The workspace's own distribution names: a module's, pswamp-<slug>, must not be one.
@@ -222,7 +220,7 @@ def plan(root: Path, slug: str, label: str, template_set: str = "subapp", templa
     if template_set == "module":
         if (root / project_dir).exists():
             raise GenerateError(f"{project_dir.as_posix()} already exists — pick another name.")
-        # Also what refuses `pipelines` and `sources`, the wiring's two packages.
+        # Also what refuses `sources`, the transitional wiring's package.
         if names.pkg in namespace_packages(root):
             raise GenerateError(f"pswamp_modules.{names.pkg} already exists — pick another name.")
         if f"pswamp-{names.slug}" in TAKEN_DISTRIBUTIONS:
@@ -238,8 +236,8 @@ def plan(root: Path, slug: str, label: str, template_set: str = "subapp", templa
     # manifest and README, its code in the pswamp_modules namespace, its tests
     # and an example script),
     # which depends on the core and the models only; what it publishes goes to
-    # the models, where every consumer imports it from; its pipeline goes to the
-    # transitional wiring; the web api's test goes into the server's tests/.
+    # the models, where every consumer imports it from; its pipeline file goes to
+    # pipelines/; the web api's test goes into the server's tests/.
     if template_set == "module":
         sources += [
             (tset / "models", models_dir),
@@ -341,24 +339,23 @@ def _plan_registries(p: Plan) -> None:
         before=True,
     )
 
-    # The module set: the new project is a dependency of the wiring (its
-    # pipeline imports the module) and of the server, each with its workspace
-    # source. Anchored on the comment that heads each one's list of modules.
+    # The module set: the new project is a dependency of the server, with its
+    # workspace source, so it is installed where the pipeline file is loaded
+    # and its entry point resolves. Anchored on the comment that heads the
+    # server's list of modules.
     if p.template_set == "module":
         dist = f"pswamp-{n.slug}"
-        for manifest, heading in (
-            (WIRING_MANIFEST, r"^    # The modules the pipelines in src/pswamp_modules/pipelines/ import\."),
-            (SERVER_MANIFEST, r"^    # The modules, one project each \(modules/<name>/\)\."),
-        ):
-            p.edit(manifest, heading + r'\n(?:    "pswamp-[a-z0-9-]+",\n)*', f'    "{dist}",\n')
-            p.edit(manifest, r"^pswamp-[a-z0-9-]+ = \{ workspace = true \}\n", f"{dist} = {{ workspace = true }}\n")
+        heading = r"^    # The modules, one project each \(modules/<name>/\)\."
+        p.edit(SERVER_MANIFEST, heading + r'\n(?:    "pswamp-[a-z0-9-]+",\n)*', f'    "{dist}",\n')
+        p.edit(SERVER_MANIFEST, r"^pswamp-[a-z0-9-]+ = \{ workspace = true \}\n", f"{dist} = {{ workspace = true }}\n")
 
-    # Under compose and k8s the module-worker hosts the modules,
-    # so its pipeline and module lists each gain the new one. Anchored on the
-    # worker's own name, so another worker's lists are never the ones patched.
+    # Under compose and k8s the module-worker hosts the modules, so its
+    # pipeline files (relative to its working directory, pipelines/) and its
+    # module list each gain the new one. Anchored on the worker's own name, so
+    # another worker's lists are never the ones patched.
     if p.template_set == "module":
         for var, addition in (
-            ("PSWAMP_WORKER_PIPELINES", f",pswamp_modules.pipelines.{n.pkg}:PIPELINE"),
+            ("PSWAMP_WORKER_PIPELINES", f",{n.slug}.toml"),
             ("PSWAMP_WORKER_MODULES", f",{n.slug}"),
         ):
             for path, pattern in WORKER_LIST_PATTERNS.items():

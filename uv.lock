@@ -1252,19 +1252,13 @@ version = "0.1.0"
 source = { editable = "legacy/pswamp-wiring" }
 dependencies = [
     { name = "pswamp-core" },
-    { name = "pswamp-excursion" },
-    { name = "pswamp-frame-stats" },
     { name = "pswamp-models" },
-    { name = "pswamp-range-summary" },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "pswamp-core", editable = "core" },
-    { name = "pswamp-excursion", editable = "modules/excursion" },
-    { name = "pswamp-frame-stats", editable = "modules/frame-stats" },
     { name = "pswamp-models", editable = "models" },
-    { name = "pswamp-range-summary", editable = "modules/range-summary" },
 ]
 
 [[package]]

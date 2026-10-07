@@ -1,0 +1,14 @@
+# The __LABEL__ pipeline: the __SLUG__.* topics, the configured sources,
+# and the module. Loaded by the app's web API and by the module-worker
+# (PSWAMP_WORKER_PIPELINES=...,__SLUG__.toml).
+#
+# By default the only source is the synthetic live feed: one shared run
+# feeds the module, and every page shows its results from the start.
+# __UPPER___DATA_CLIENTS, when set, replaces the sources.
+
+app = "__SLUG__"
+modules = ["__SLUG__"]
+
+[[sources]]
+name = "live"
+client = "pswamp_modules.sources.live_client:LiveSyntheticClient"
