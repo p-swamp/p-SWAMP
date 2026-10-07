@@ -1,12 +1,14 @@
 /**
  * The grid view's two projections, as plain functions over plain numbers.
  *
- * The Qt grid view is a pyqtgraph `GLViewWidget`, but what it draws is only
- * polylines and text -- no surfaces, nothing that hides anything else -- so it
- * needs neither a depth buffer nor WebGL. Projecting the points ourselves and
- * stroking them on a 2D canvas gives the same picture with no rendering library,
- * and the camera below takes the very parameters the Qt view sets, so "the same
- * view" is a matter of copying four numbers.
+ * The cameras take the very parameters the Qt grid view sets on its pyqtgraph
+ * `GLViewWidget`, so "the same view" is a matter of copying four numbers.
+ *
+ * The picture is drawn by WebGL, which projects for itself. These are the same
+ * projections done on the CPU, for everything that has to know where a point
+ * lands without drawing it: fitting the opening view, finding the bus under the
+ * pointer, and placing the bus names on the canvas laid over the picture.
+ * `glPainter.ts` stands its GL camera exactly where these say the view is from.
  *
  * World space is the Qt view's: x is longitude, y is latitude times the
  * diagram's aspect ratio, z is height above the map.

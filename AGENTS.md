@@ -583,19 +583,48 @@ branches coloured by island, each island raised by
 `(mean frequency − 50) × 5`, a branch carrying no current in red. 3D with an
 orbit camera, or 2D top-down.
 
-**Why a 2D canvas.** The Qt view is a `GLViewWidget`, but it draws only
-polylines and text, so there is nothing to depth-sort. `camera.ts` projects the
-points and the canvas strokes them — no WebGL, no rendering dependency. Qt's GL
-items blend additively; the canvas uses the `lighter` composite with Qt's own
-colours rather than guessed blended ones.
+Optionally one **field** is spread over the grid — frequency (deviation from
+the grid mean, ±35 mHz) or voltage (per unit, 0.9–1.1): the Qt heat map. In 2D
+it lies flat under the network; in 3D it is a surface through the buses, each
+of which then rides at its own value instead of its island's mean. Off by
+default; chosen in the Layers list.
+
+**How it is drawn.** WebGL through three.js, as the Qt view is OpenGL through
+pyqtgraph. Qt's GL items blend additively with the depth test off, so nothing
+hides anything and crossing lines brighten; the 3D view does the same, with
+Qt's own colours. The 2D view is painted normally, as the Qt 2D plot is. Three
+things follow from WebGL rather than from Qt:
+- **Thick lines are three.js's `LineSegments2`.** WebGL draws 1-pixel lines
+  only, so the network is instanced quads. Country outlines and stems are
+  1-pixel lines.
+- **Bus names are not GL.** They, and the hover ring, are drawn on a 2D canvas
+  laid over the picture. `camera.ts` projects a point on the CPU to the same
+  pixel the GL camera does, which is also what hover and view fitting use.
+- **The canvas is created with `preserveDrawingBuffer`,** so its pixels can be
+  read after the frame that drew them. `e2e/grid-monitor.spec.ts` depends on it.
+
+three.js is larger than the rest of the client together (570 kB against 405 kB
+minified), so `GridViewPanel` loads `GridView` with `lazy()`: a page that shows
+no grid never fetches it. Without WebGL the view says so instead of drawing.
 
 **Where.**
-- `renderer.ts` — drawing, cameras, pointer, the height animation. Not React:
-  it owns the canvas and redraws only when something it draws changed.
+- `renderer.ts` — state, cameras, pointer, the height animation, the overlay.
+  Not React: it owns its canvases and redraws only when something changed. It
+  decides what each frame *is*; it does not draw it.
+- `glPainter.ts` — the three.js scene. Given a frame, puts it on screen. All
+  three.js code is here.
 - `camera.ts`, `scene.ts` — the two projections; the model as typed arrays.
+- `field.ts`, `triangulate.ts` — a field's limits and lift, and the Delaunay
+  mesh over the buses. Qt's `scipy.griddata(method='linear')` interpolates on
+  the same triangles into an image; here the GPU interpolates per pixel.
 - `GridView.tsx` — the React edge: creates the renderer, forwards props.
 - `GridViewPanel.tsx` — reads three contexts (islanding for colours, line
-  outage for red branches, time window for the lift) and owns the toolbar.
+  outage for red branches, time window for the lift and the frequency field)
+  and owns the toolbar.
+- `liveValues.ts`, `VoltageFeed.tsx` — samples reach the canvas through a
+  subscribe/read store, not props. `VoltageFeed` is mounted only while the
+  voltage field shows, so the panel is not subscribed to the phasor socket
+  otherwise.
 - `../palette.ts` — Qt's plot background and island colours
   (`src/pswamp/styles/colors.py`). Every plot keeps that background in light and
   dark mode, since the palette is chosen against it.

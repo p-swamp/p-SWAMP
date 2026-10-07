@@ -1,4 +1,4 @@
-import { use, useMemo, useState } from 'react'
+import { lazy, Suspense, use, useMemo, useState } from 'react'
 import {
   AlertTriangleIcon,
   CheckCircle2Icon,
@@ -15,12 +15,22 @@ import { Panel } from '../Panel'
 import { useIslandingData } from '../islanding/islandingContext'
 import { useLineOutageData } from '../line-outage/lineOutageContext'
 import { islandColor, islandName, PLOT_BACKGROUND } from '../palette'
+import { PhasorsContext } from '../phasors/phasorsContext'
 import { TimeWindowContext } from '../time-window/timeWindowContext'
 import type { PanelVariant } from '../variant'
-import { GridView, type LiveFrequencies } from './GridView'
+import { type FieldKind, FIELDS } from './field'
+import { createLiveValues, type LiveValues } from './liveValues'
 import type { GridLayers, GridViewData, GridViewMode } from './renderer'
 import { buildScene } from './scene'
 import { useGridModel } from './useGridModel'
+import { VoltageFeed } from './VoltageFeed'
+
+// The view itself is fetched when it is first shown, not with the page: it is
+// what brings in three.js, which is larger than the rest of the client put
+// together and of no use to a page that draws no grid.
+const GridView = lazy(() =>
+  import('./GridView').then((module) => ({ default: module.GridView })),
+)
 
 /** The Qt view's layer names, in the order its layer dialog lists them. */
 const LAYER_LABELS: [keyof GridLayers, string][] = [
@@ -36,6 +46,46 @@ const LAYER_LABELS: [keyof GridLayers, string][] = [
  *  genuine island is a handful of stations; the detector can also briefly
  *  report half the grid as one, and that list would cover the map. */
 const MAX_STATIONS_NAMED = 6
+
+/** The colour scale under a field: red below the reference, blue above it,
+ *  nothing at it — the Qt heat map's colour bar, laid on its side. */
+const FIELD_SCALE =
+  'linear-gradient(to right, rgb(255 0 0), rgb(255 0 0 / 0) 50%, rgb(0 0 255 / 0) 50%, rgb(0 0 255))'
+
+/**
+ * The voltage entry of the field list.
+ *
+ * Its own component for one reason: whether the choice can be offered depends
+ * on a phasor provider being mounted, and asking that subscribes the asker to
+ * the phasor socket. Asked here, the thing that re-renders five times a second
+ * is one radio button, and only while the layer list is open.
+ */
+function VoltageChoice({
+  checked,
+  onChoose,
+}: {
+  checked: boolean
+  onChoose: () => void
+}) {
+  const available = use(PhasorsContext) !== null
+  return (
+    <label
+      className={cn(
+        'flex items-center gap-2',
+        available ? 'cursor-pointer' : 'opacity-50',
+      )}
+    >
+      <input
+        type="radio"
+        name="grid-field"
+        checked={checked}
+        disabled={!available}
+        onChange={onChoose}
+      />
+      {FIELDS.voltage.label}
+    </label>
+  )
+}
 
 const ALL_LAYERS: GridLayers = {
   countries: true,
@@ -80,6 +130,9 @@ export function GridViewPanel({
   const [layers, setLayers] = useState<GridLayers>(ALL_LAYERS)
   const [layersOpen, setLayersOpen] = useState(false)
   const [resetSignal, setResetSignal] = useState(0)
+  // Off to begin with, as Qt's "Other layers" are.
+  const [field, setField] = useState<FieldKind | null>(null)
+  const [relief, setRelief] = useState(1)
 
   const scene = useMemo(() => (model ? buildScene(model) : null), [model])
 
@@ -102,7 +155,7 @@ export function GridViewPanel({
 
   const buffer = timeWindow?.buffer
   const subscribe = timeWindow?.subscribe
-  const frequencies = useMemo<LiveFrequencies | undefined>(() => {
+  const frequencies = useMemo<LiveValues | undefined>(() => {
     if (!buffer || !subscribe) return undefined
     return {
       subscribe,
@@ -120,6 +173,17 @@ export function GridViewPanel({
       },
     }
   }, [buffer, subscribe])
+
+  // Written by <VoltageFeed>, which is mounted only while the voltage field is
+  // showing; read by the canvas. Nothing in between renders.
+  const voltages = useMemo(() => createLiveValues(), [])
+  const nominalKv = useMemo(() => {
+    const byBus = new Map<string, number>()
+    for (const bus of model?.buses ?? []) {
+      if (bus.v_nom) byBus.set(bus.name.trim(), bus.v_nom)
+    }
+    return byBus
+  }, [model])
 
   // Index 0 is the main system, so anything beyond it is a genuine split.
   const separated = (islands ?? []).filter((island) => island.index > 0)
@@ -212,14 +276,25 @@ export function GridViewPanel({
         style={{ background: PLOT_BACKGROUND }}
       >
         {scene ? (
-          <GridView
-            scene={scene}
-            data={data}
-            layers={layers}
-            mode={mode}
-            resetSignal={resetSignal}
-            frequencies={frequencies}
-          />
+          <Suspense
+            fallback={
+              <div className="flex size-full items-center justify-center text-sm text-white/60">
+                Loading grid view…
+              </div>
+            }
+          >
+            <GridView
+              scene={scene}
+              data={data}
+              layers={layers}
+              mode={mode}
+              resetSignal={resetSignal}
+              field={field}
+              relief={relief}
+              frequencies={frequencies}
+              voltages={voltages}
+            />
+          </Suspense>
         ) : (
           <div className="flex size-full items-center justify-center text-sm text-white/60">
             {failed
@@ -230,22 +305,74 @@ export function GridViewPanel({
           </div>
         )}
 
+        {field === 'voltage' && <VoltageFeed nominalKv={nominalKv} store={voltages} />}
+
         {layersOpen && (
-          <fieldset className="absolute top-2 right-2 z-10 space-y-1 rounded-md bg-black/55 px-3 py-2 text-xs backdrop-blur-sm">
-            <legend className="sr-only">Layers</legend>
-            {LAYER_LABELS.map(([key, label]) => (
-              <label key={key} className="flex cursor-pointer items-center gap-2">
+          <div className="absolute top-2 right-2 z-10 space-y-2 rounded-md bg-black/55 px-3 py-2 text-xs backdrop-blur-sm">
+            <fieldset className="space-y-1">
+              <legend className="sr-only">Layers</legend>
+              {LAYER_LABELS.map(([key, label]) => (
+                <label key={key} className="flex cursor-pointer items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={layers[key]}
+                    onChange={(event) =>
+                      setLayers((current) => ({ ...current, [key]: event.target.checked }))
+                    }
+                  />
+                  {label}
+                </label>
+              ))}
+            </fieldset>
+
+            {/* One at a time: two quantities spread over the same map are two
+                sets of colours meaning different things in the same place. */}
+            <fieldset className="space-y-1 border-t border-white/20 pt-2">
+              <legend className="sr-only">Field</legend>
+              <label className="flex cursor-pointer items-center gap-2">
                 <input
-                  type="checkbox"
-                  checked={layers[key]}
-                  onChange={(event) =>
-                    setLayers((current) => ({ ...current, [key]: event.target.checked }))
-                  }
+                  type="radio"
+                  name="grid-field"
+                  checked={field === null}
+                  onChange={() => setField(null)}
                 />
-                {label}
+                No heat map
               </label>
-            ))}
-          </fieldset>
+              <label
+                className={cn(
+                  'flex items-center gap-2',
+                  frequencies ? 'cursor-pointer' : 'opacity-50',
+                )}
+              >
+                <input
+                  type="radio"
+                  name="grid-field"
+                  checked={field === 'frequency'}
+                  disabled={!frequencies}
+                  onChange={() => setField('frequency')}
+                />
+                {FIELDS.frequency.label}
+              </label>
+              <VoltageChoice
+                checked={field === 'voltage'}
+                onChoose={() => setField('voltage')}
+              />
+              {field && mode === '3d' && (
+                <label className="flex items-center gap-2 pt-1">
+                  Surface height
+                  <input
+                    type="range"
+                    min={0}
+                    max={3}
+                    step={0.25}
+                    value={relief}
+                    onChange={(event) => setRelief(Number(event.target.value))}
+                    className="w-20"
+                  />
+                </label>
+              )}
+            </fieldset>
+          </div>
         )}
 
         {/* The legend of the Qt alarm view's plots — "System", "Island 1" —
@@ -287,6 +414,21 @@ export function GridViewPanel({
             </div>
           )}
         </div>
+
+        {field && (
+          <div
+            className="pointer-events-none absolute right-3 bottom-7 flex items-center gap-2 text-[11px] text-white/80"
+            aria-label={`Colour scale: ${FIELDS[field].scaleOf}`}
+          >
+            <span className="text-white/55">{FIELDS[field].scaleOf}</span>
+            <span className="tabular-nums">{FIELDS[field].low}</span>
+            <span
+              className="h-2 w-28 rounded-sm ring-1 ring-white/25"
+              style={{ background: FIELD_SCALE }}
+            />
+            <span className="tabular-nums">{FIELDS[field].high}</span>
+          </div>
+        )}
 
         <div className="pointer-events-none absolute right-3 bottom-2 hidden text-[11px] text-white/40 sm:block">
           {mode === '3d'

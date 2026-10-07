@@ -688,13 +688,14 @@ Status, Alarms, Alarm details). Against that:
 | Qt | Web today | Gap |
 |---|---|---|
 | Main window layout (`main_window.py`) | `GridMonitorPage` | **Done.** Grid view central, dock column on the right, alarm details in a dock beneath the grid. Docks do not float, close or re-tab |
-| Grid view 3D, base layers (`dim_3d`: countries, lines, buses, bus names) | `grid-view/` — 2D canvas with its own projection | **Done.** Orbit, pan, zoom, per-layer toggles. No WebGL was needed: the layers are polylines and text |
+| Grid view 3D, base layers (`dim_3d`: countries, lines, buses, bus names) | `grid-view/` — WebGL through three.js | **Done.** Orbit, pan, zoom, per-layer toggles. Additive blending as in Qt; bus names on a 2D canvas over the picture |
 | Grid view 2D (`dim_2d`) | `grid-view/`, 2D mode | **Done** for the same base layers |
 | Grid view, several views as tabs (`GridViewContainer`) | 3D/2D switch on one view | Partial. One view, no named tabs |
 | Single-line diagram, `geo` (`single_line_diagram`, DXF) | `GridModel.diagram`, from `tools/build_n44_grid_geometry.py` | **Done**, converted ahead of time into a committed fixture rather than at request time |
 | Single-line diagram, `other` (schematic `sld.dxf`) | — | Missing. The tool converts only the `geo` diagram |
-| Grid layers: voltage phasors, dynamic lines by frequency (`dim_3d/layers`) | — | Missing |
-| Grid surfaces (`surface_plot`, heatmap layers) | — | **Missing.** These are filled surfaces, so they would need WebGL |
+| Grid layer: voltage phasors (`dim_3d/layers/phasors`) | — | Missing |
+| Grid layers: bus frequency / bus voltage / dynamic lines by frequency (`dim_3d/layers`) | the field layers of `grid-view/` | **Done.** While a field is on, each bus and the lines between them ride at the bus's own value, with a surface through them, interpolated per pixel on the GPU |
+| FFT spectrum surface (`surface_plot.SurfacePlot`) | — | Missing. It belongs to the FFT application, which is not ported |
 | Frequency plot (`FreqPlot`) | `FrequencyPanel` | **Done.** Every station's frequency, one colour |
 | Time window plot (`time_window_plot*`) | `MeasurementsPanel` at `/time-window` | Done |
 | App status (`AppStatusMonitoringWidget`) | `AppStatusPanel` | Done. No Stop / Open console: both need a command topic |
@@ -706,8 +707,8 @@ Status, Alarms, Alarm details). Against that:
 | Phasor plot 2D (`phasor_plot`) | `PhasorDial` | Done |
 | Line outages grid layer (`dim_3d/layers/line_outages`) | red branches in the grid view | Done |
 | Phasor plot 3D (`phasor_plot_3d`) | — | Missing |
-| Frequency heatmap (grid-view layer + launcher) | — | Missing. **The live one** |
-| Voltage heatmap | — | **Dead in Qt** (launcher button commented out). Do not port |
+| Frequency heatmap (grid-view layer + launcher) | "Frequency heat map" in the grid view's Layers | **Done** as a layer: same triangulated interpolation, corner anchors, colours and ±35 mHz limits. No standalone app |
+| Voltage heatmap | "Voltage heat map" in the grid view's Layers | **Dead in Qt** (launcher button commented out): it feeds volts to limits of 0.9–1.1. Ported all the same as a second field, per unit as `Voltage3DLayer` computes it, since it cost one entry beside the frequency one. Remove `voltage` from `FIELDS` to drop it |
 | Channel select/tree | `ChannelPicker` | Done |
 | Line outage detection | `LineOutagePanel` | **Done**, once the recording gained currents |
 | App launcher (start/stop apps) | `AppsPanel` | **Partial.** Opens an application's view; starting and stopping is still the hub's decision |
@@ -780,8 +781,8 @@ makes every panel testable and every §1 number meaningful. A mode, not a phase.
 4. **Remaining analytic apps** — `n4sid`/oscillations, voltage stability once its
    analysis half is found.
 5. **Expensive visualisations** — single-line diagram (server-side DXF→GeoJSON),
-   then 3D grid view (WebGL). *Done for the line layers, on a 2D canvas — see
-   §10.1. What is left here is the surface and heatmap layers.*
+   then 3D grid view (WebGL). *Done with three.js — see §10.1, heat map and
+   surface included.*
 6. **Operational work** — auth, and the external store that lets `replicas` > 1.
 
 Steps 1–2 are worth doing regardless. Step 3 is the decision point.

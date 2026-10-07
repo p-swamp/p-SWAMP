@@ -18,19 +18,41 @@ const DOCKS = [
 const gridCanvas = (page: Page) =>
     page.getByRole('img', { name: /Nordic 44 grid/ })
 
-/** How much of the grid view is not background. The view is a canvas, so what
- *  it shows cannot be asked of the DOM; the plot background is a dark teal whose
- *  red channel is 30, and everything drawn over it is far brighter. */
-async function litPixels(page: Page): Promise<number> {
+/**
+ * What the grid view is showing, as counts of its pixels. What a canvas shows
+ * cannot be asked of the DOM, so the pixels are read and sorted:
+ *
+ * - `lit` is anything that is not background. The plot background is a dark
+ *   teal whose red channel is 30; everything drawn over it is far brighter.
+ * - `red` and `blue` are what a heat map tints the map: red where its quantity
+ *   is low, blue where it is high. Nothing else on the view is a red or a blue
+ *   this pure, apart from the few pixels of a dead branch.
+ *
+ * The view is a WebGL canvas, which has no `getImageData` of its own, so it is
+ * copied onto a 2D one and read there.
+ */
+async function countPixels(page: Page): Promise<{ lit: number; red: number; blue: number }> {
     return gridCanvas(page).evaluate((canvas: HTMLCanvasElement) => {
-        const { data } = canvas
-            .getContext('2d')!
-            .getImageData(0, 0, canvas.width, canvas.height)
-        let lit = 0
-        for (let i = 0; i < data.length; i += 4) if (data[i] > 90) lit++
-        return lit
+        const copy = document.createElement('canvas')
+        copy.width = canvas.width
+        copy.height = canvas.height
+        const ctx = copy.getContext('2d')!
+        ctx.drawImage(canvas, 0, 0)
+        const { data } = ctx.getImageData(0, 0, copy.width, copy.height)
+        const counts = { lit: 0, red: 0, blue: 0 }
+        for (let i = 0; i < data.length; i += 4) {
+            const [r, g, b] = [data[i], data[i + 1], data[i + 2]]
+            if (r > 90) counts.lit++
+            if (r > 90 && g < 60 && b < 70) counts.red++
+            if (b > 150 && r < 90 && g < 90) counts.blue++
+        }
+        return counts
     })
 }
+
+const litPixels = async (page: Page) => (await countPixels(page)).lit
+const tintedPixels = async (page: Page, tint: 'red' | 'blue') =>
+    (await countPixels(page))[tint]
 
 test.describe('Grid monitor', () => {
 
@@ -89,6 +111,48 @@ test.describe('Grid monitor', () => {
 
         await view.getByRole('checkbox', { name: 'Lines', exact: true }).check()
         await expect.poll(() => litPixels(page)).toBeGreaterThan(everything * 0.8)
+    })
+
+    test('the voltage heat map shows where voltage sags, flat and as a surface', async ({ page }) => {
+        // No disturbance needed: the south-west of the recorded grid sits a few
+        // percent under nominal all the time, which is a red patch on the map.
+        await page.goto('/')
+        const view = page.getByRole('region', { name: 'Grid view' })
+        await expect.poll(() => litPixels(page)).toBeGreaterThan(5000)
+        expect(await tintedPixels(page, 'red')).toBeLessThan(50)
+
+        await view.getByRole('button', { name: 'Layers' }).click()
+        await view.getByRole('radio', { name: 'Voltage heat map' }).check()
+        await expect(view.getByLabel(/Colour scale: voltage/)).toBeVisible()
+        await expect.poll(() => tintedPixels(page, 'red')).toBeGreaterThan(100)
+
+        await view.getByRole('button', { name: '2d', exact: true }).click()
+        await expect.poll(() => tintedPixels(page, 'red')).toBeGreaterThan(100)
+
+        await view.getByRole('radio', { name: 'No heat map' }).check()
+        await expect.poll(() => tintedPixels(page, 'red')).toBeLessThan(50)
+    })
+
+    test('the frequency heat map colours an island as it splits off', async ({ page }) => {
+        // Waits for the recorded trip, as the alarm test below does.
+        test.setTimeout(120_000)
+        await page.goto('/')
+        const view = page.getByRole('region', { name: 'Grid view' })
+
+        await view.getByRole('button', { name: 'Layers' }).click()
+        await view.getByRole('radio', { name: 'Frequency heat map' }).check()
+        await expect(view.getByLabel(/Colour scale: frequency/)).toBeVisible()
+
+        // The island runs fast, so it is the blue end of the scale: as a
+        // surface in 3D, and as the flat map in 2D.
+        await expect(view.getByText(/\d+ islands?/)).toBeVisible({ timeout: 90_000 })
+        await expect.poll(() => tintedPixels(page, 'blue')).toBeGreaterThan(2000)
+
+        await view.getByRole('button', { name: '2d', exact: true }).click()
+        await expect.poll(() => tintedPixels(page, 'blue')).toBeGreaterThan(2000)
+
+        await view.getByRole('radio', { name: 'No heat map' }).check()
+        await expect.poll(() => tintedPixels(page, 'blue')).toBeLessThan(200)
     })
 
     test('lists the monitoring applications in the status dock', async ({ page }) => {

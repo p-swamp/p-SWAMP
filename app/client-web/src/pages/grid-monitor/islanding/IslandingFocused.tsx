@@ -1,5 +1,6 @@
 import { GridViewPanel } from '../grid-view/GridViewPanel'
 import { LineOutageData } from '../line-outage/LineOutageData'
+import { PhasorsData } from '../phasors/PhasorsData'
 import { TimeWindowData } from '../time-window/TimeWindowData'
 import { AlarmsPanel } from './AlarmsPanel'
 import { IslandingData } from './IslandingData'
@@ -11,9 +12,9 @@ import { IslandingData } from './IslandingData'
  * showing the detection without the alarms it raised would be half the story.
  * Renders the same components the main window does, only larger.
  *
- * The other two providers are what the grid view draws from besides: which
- * branches are open, and every station's frequency, which is how high each
- * island rides.
+ * The other three providers are what the grid view draws from besides: which
+ * branches are open, every station's frequency, which is how high each island
+ * rides, and the phasors its voltage heat map is made of.
  */
 export function IslandingFocused() {
   return (
@@ -21,7 +22,9 @@ export function IslandingFocused() {
       <IslandingData>
         <LineOutageData>
           <TimeWindowData measurement="f">
-            <GridViewPanel variant="focused" />
+            <PhasorsData>
+              <GridViewPanel variant="focused" />
+            </PhasorsData>
           </TimeWindowData>
         </LineOutageData>
         <AlarmsPanel variant="focused" />

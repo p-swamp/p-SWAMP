@@ -1,4 +1,4 @@
-import { ISLAND_COLORS, PLOT_BACKGROUND } from '../palette'
+import { ISLAND_COLORS } from '../palette'
 import {
   type Camera2D,
   type Camera3D,
@@ -8,7 +8,9 @@ import {
   projector3D,
   rightOf,
 } from './camera'
-import type { Scene } from './scene'
+import { buildFieldMesh, type FieldKind, FIELDS } from './field'
+import { type BranchStyle, createGlPainter } from './glPainter'
+import type { Scene, SceneBranch } from './scene'
 
 /** The Qt grid view's layers. The first four are its "Base layers", on by
  *  default there too; the last two are what its islanding alarm view and its
@@ -45,6 +47,15 @@ export type GridRenderer = {
   /** Each station's present frequency in Hz, or null when no stream supplies
    *  one. Cheap to call at the stream's rate: it redraws only if a bus moves. */
   setFrequencies(frequencies: Map<string, number> | null): void
+  /** Each station's present voltage magnitude, per unit of its nominal. */
+  setVoltages(voltages: Map<string, number> | null): void
+  /**
+   * Spread a quantity over the grid, or stop doing so. Flat it is the Qt heat
+   * map; in 3D it is a surface through the buses, each of which then rides at
+   * its *own* value rather than at its island's mean. `relief` scales how far —
+   * the Qt layers' height slider — and 0 leaves the surface flat.
+   */
+  setField(field: FieldKind | null, relief: number): void
   setLayers(layers: GridLayers): void
   setMode(mode: GridViewMode): void
   /** Back to the opening view of the current mode. */
@@ -78,24 +89,20 @@ const NETWORK_Z = 1
  *  An island running fast rises off the map; one running slow sinks. */
 const NOMINAL_HZ = 50
 const LIFT_PER_HZ = 5
-
+/** The furthest a field may carry a bus from the network plane. A reconnection
+ *  swings frequency by a hertz and more for a second or two; uncapped, that is
+ *  a spike several times the height of the map it stands on. */
+const MAX_FIELD_LIFT = 2.5
 /**
- * Colours as the Qt layers give them. They are *not* what ends up on screen:
- * every GL item there blends additively, so `gray` over the teal background
- * reads as a pale teal and two lines that cross are brighter where they do. The
- * canvas reproduces that with the `lighter` composite rather than by guessing at
- * the blended result.
+ * What a branch is drawn in. The base colours are the Qt layers' own, `gray`
+ * in 3D and white in 2D; how they end up looking on screen — the 3D ones are
+ * blended additively, as every Qt GL item is — is the painter's business.
  */
-const COUNTRY_3D = '#404040'
-const COUNTRY_2D = '#808080'
 const LINE_3D = '#808080'
 const LINE_2D = '#ffffff'
-const STEM = 'rgba(255, 255, 255, 0.3)'
+const DISCONNECTED = '#ff0000'
 const NAME_3D = '#ffffff'
 const NAME_2D = '#7f7f7f'
-const DISCONNECTED = '#ff0000'
-/** Qt asks for 2, but of a GL line, which is measured in device pixels. */
-const LINE_WIDTH_3D = 1.5
 const FONT = '12px "Geist Variable", ui-sans-serif, system-ui, sans-serif'
 
 // --- interaction, after GLViewWidget ----------------------------------------
@@ -114,20 +121,41 @@ function clamp(value: number, [low, high]: [number, number]): number {
 }
 
 /**
- * Draws the grid on a canvas and lets the pointer move the camera.
+ * Runs the grid view: holds its state, moves its cameras, animates its buses.
  *
  * Deliberately not a React component. A drag is sixty camera updates a second
  * and an island lifting off the map is an animation, and neither has any
- * business in a render pass -- so this owns the canvas outright, and the
+ * business in a render pass -- so this owns its canvases outright, and the
  * component beside it only hands over data when the server sends some. Nothing
  * here redraws unless something it draws has changed.
+ *
+ * What it does not do is draw the grid: each frame it works out where the
+ * camera is, how high each bus rides and what each branch means, and hands
+ * that to the WebGL painter (`glPainter.ts`). The two things GL has no way to
+ * draw, the bus names and the ring round a hovered bus, it puts on a second,
+ * 2D canvas laid over the picture — positioned by `camera.ts`, which projects
+ * a point to the same pixel the GL camera does.
+ *
+ * @throws if the browser cannot provide WebGL.
  */
 export function createGridRenderer(
-  canvas: HTMLCanvasElement,
+  container: HTMLElement,
   scene: Scene,
   onHover: (hover: Hover) => void,
 ): GridRenderer {
-  const context = canvas.getContext('2d')
+  const painter = createGlPainter(scene, buildFieldMesh(scene))
+
+  const canvas = painter.canvas
+  const overlay = document.createElement('canvas')
+  for (const layer of [canvas, overlay]) {
+    layer.style.cssText = 'position:absolute;inset:0;display:block;width:100%;height:100%'
+    container.append(layer)
+  }
+  canvas.setAttribute('role', 'img')
+  canvas.setAttribute('aria-label', 'Nordic 44 grid, coloured by detected island')
+  overlay.style.pointerEvents = 'none'
+  overlay.setAttribute('aria-hidden', 'true')
+  const context = overlay.getContext('2d')
   if (!context) throw new Error('2D canvas is not available')
   const ctx = context
 
@@ -161,11 +189,24 @@ export function createGridRenderer(
   const islandOfBus = new Int16Array(nBuses)
   // NaN where the measurement stream has nothing for a station.
   const liveFrequency = new Float32Array(nBuses).fill(NaN)
+  const liveVoltage = new Float32Array(nBuses).fill(NaN)
   const height3D = new Float32Array(nBuses).fill(NETWORK_Z)
   const targetHeight = new Float32Array(nBuses).fill(NETWORK_Z)
   // Where each bus landed on screen in the last frame, for hit-testing a hover.
   const busScreen = new Float32Array(nBuses * 2).fill(NaN)
 
+  // The quantity spread over the grid, if any.
+  let field: FieldKind | null = null
+  let relief = 1
+  // The field is recomputed on the next draw, not on every sample.
+  let fieldStale = true
+  // The field at each bus, as a share of its limit: what it is coloured by.
+  const levels = new Float32Array(nBuses)
+  // Which group and colour each branch is in changes rarely; the painter is
+  // told on the next draw after it has.
+  let stylesStale = true
+  // Where the surface's corner anchors ride: at "no deviation".
+  let anchorHeight = NETWORK_Z
   // True while the detector reports anything besides the main system.
   let split = false
   let frame = 0
@@ -281,21 +322,37 @@ export function createGridRenderer(
 
   // --- drawing --------------------------------------------------------------
 
-  function trace(
-    project: Projector,
-    xy: Float32Array,
-    zAt: (i: number) => number,
-  ): void {
-    let penDown = false
-    for (let i = 0; i < xy.length / 2; i++) {
-      if (!project(xy[2 * i], xy[2 * i + 1], zAt(i), point)) {
-        penDown = false
-        continue
-      }
-      if (penDown) ctx.lineTo(point[0], point[1])
-      else ctx.moveTo(point[0], point[1])
-      penDown = true
+  /** Mean of the stations the stream has a frequency for; NaN if it has none. */
+  function meanFrequency(): number {
+    let sum = 0
+    let count = 0
+    for (let i = 0; i < nBuses; i++) {
+      if (Number.isNaN(liveFrequency[i])) continue
+      sum += liveFrequency[i]
+      count++
     }
+    return count ? sum / count : NaN
+  }
+
+  /** Recompute the field from the latest samples. */
+  function refreshField(active: FieldKind): void {
+    // What is coloured is not what lifts a bus. A frequency is coloured by how
+    // far it is from the *mean of the grid*, which is what the Qt heat map
+    // shows and what makes an island stand out whatever the system frequency
+    // is doing; it is lifted by how far it is from nominal.
+    const mean = meanFrequency()
+    const limit = FIELDS[active].limit
+    for (let i = 0; i < nBuses; i++) {
+      const deviation = active === 'frequency' ? liveFrequency[i] - mean : liveVoltage[i] - 1
+      levels[i] = deviation / limit
+    }
+    fieldStale = false
+  }
+
+  function branchStyle(branch: SceneBranch): BranchStyle {
+    const color = branchColor(branch.from, branch.to, branch.name)
+    if (layers.outages && data.disconnected.has(branch.name)) return { color, group: 'dead' }
+    return { color, group: color === LINE_3D || color === LINE_2D ? 'plain' : 'island' }
   }
 
   function branchColor(from: number, to: number, name: string): string {
@@ -315,10 +372,9 @@ export function createGridRenderer(
 
   function draw(): void {
     const dpr = window.devicePixelRatio || 1
+    // Only the names and the hover ring are drawn here, over the GL picture.
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
-    ctx.globalCompositeOperation = 'source-over'
-    ctx.fillStyle = PLOT_BACKGROUND
-    ctx.fillRect(0, 0, width, height)
+    ctx.clearRect(0, 0, width, height)
     if (width === 0 || height === 0) return
 
     const flat = mode === '2d'
@@ -328,60 +384,31 @@ export function createGridRenderer(
       ? projector2D(camera2D, width, height)
       : projector3D(camera3D, width, height)
 
-    ctx.globalCompositeOperation = 'lighter'
-    ctx.lineJoin = 'round'
-    ctx.lineCap = 'round'
+    if (field && fieldStale) refreshField(field)
 
-    if (layers.countries) {
-      ctx.beginPath()
-      for (const ring of scene.outlines) trace(project, ring, () => 0)
-      ctx.strokeStyle = flat ? COUNTRY_2D : COUNTRY_3D
-      ctx.lineWidth = 1
-      ctx.stroke()
+    if (stylesStale) {
+      // Over a field the colours that mean something are painted, not added:
+      // red added to blue reads as magenta.
+      painter.setBranchStyles(scene.branches.map(branchStyle), flat, !field)
+      stylesStale = false
     }
-
-    if (layers.buses && !flat) {
-      ctx.beginPath()
-      scene.buses.forEach((bus, i) => {
-        if (!project(bus.x, bus.y, height3D[i], point)) return
-        const [x, y] = point
-        if (!project(bus.x, bus.y, 0, point)) return
-        ctx.moveTo(x, y)
-        ctx.lineTo(point[0], point[1])
-      })
-      ctx.strokeStyle = STEM
-      ctx.lineWidth = 1
-      ctx.stroke()
-    }
-
-    if (layers.lines) {
-      for (const branch of scene.branches) {
-        const zFrom = height3D[branch.from]
-        const zTo = height3D[branch.to]
-        const open = layers.outages && data.disconnected.has(branch.name)
-        ctx.beginPath()
-        trace(project, branch.xy, (i) => zFrom + (zTo - zFrom) * branch.along[i])
-        ctx.strokeStyle = branchColor(branch.from, branch.to, branch.name)
-        ctx.lineWidth = open ? 2.5 : flat ? 1 : LINE_WIDTH_3D
-        ctx.stroke()
-      }
-    }
+    painter.render({
+      flat,
+      camera3D,
+      camera2D,
+      width,
+      height,
+      show: layers,
+      heights: height3D,
+      anchorHeight,
+      levels: field ? levels : null,
+    })
 
     scene.buses.forEach((bus, i) => {
       const visible = project(bus.x, bus.y, height3D[i], point)
       busScreen[2 * i] = visible ? point[0] : NaN
       busScreen[2 * i + 1] = visible ? point[1] : NaN
     })
-
-    if (layers.buses && flat) {
-      ctx.fillStyle = '#ffffff'
-      for (let i = 0; i < nBuses; i++) {
-        if (Number.isNaN(busScreen[2 * i])) continue
-        ctx.beginPath()
-        ctx.arc(busScreen[2 * i], busScreen[2 * i + 1], 3, 0, 2 * Math.PI)
-        ctx.fill()
-      }
-    }
 
     if (layers.busNames) {
       ctx.font = FONT
@@ -397,7 +424,6 @@ export function createGridRenderer(
     }
 
     if (hovered >= 0 && !Number.isNaN(busScreen[2 * hovered])) {
-      ctx.globalCompositeOperation = 'source-over'
       ctx.beginPath()
       ctx.arc(busScreen[2 * hovered], busScreen[2 * hovered + 1], 5, 0, 2 * Math.PI)
       ctx.strokeStyle = '#ffffff'
@@ -460,13 +486,30 @@ export function createGridRenderer(
       if (islandOfBus[i] > 0) split = true
     })
     const frequencies = islandFrequencies()
+    // With a field on, a bus rides at its own value, so that the surface
+    // passes through the network instead of beside it — the Qt "Dynamic lines,
+    // frequency" layer. Without one, at its island's mean, as before.
+    const fieldLift = (value: number, reference: number): number => {
+      if (!field || Number.isNaN(value)) return 0
+      const lift = (value - reference) * FIELDS[field].liftPerUnit * relief
+      return Math.max(-MAX_FIELD_LIFT, Math.min(MAX_FIELD_LIFT, lift))
+    }
+    anchorHeight =
+      NETWORK_Z + (field === 'frequency' ? fieldLift(meanFrequency(), NOMINAL_HZ) : 0)
+
     let moved = false
     for (let i = 0; i < nBuses; i++) {
-      const frequency = frequencies.get(islandOfBus[i])
-      targetHeight[i] =
-        layers.islanding && frequency !== undefined
-          ? NETWORK_Z + (frequency - NOMINAL_HZ) * LIFT_PER_HZ
-          : NETWORK_Z
+      if (field === 'frequency') {
+        targetHeight[i] = NETWORK_Z + fieldLift(liveFrequency[i], NOMINAL_HZ)
+      } else if (field === 'voltage') {
+        targetHeight[i] = NETWORK_Z + fieldLift(liveVoltage[i], 1)
+      } else {
+        const frequency = frequencies.get(islandOfBus[i])
+        targetHeight[i] =
+          layers.islanding && frequency !== undefined
+            ? NETWORK_Z + (frequency - NOMINAL_HZ) * LIFT_PER_HZ
+            : NETWORK_Z
+      }
       if (Math.abs(targetHeight[i] - height3D[i]) >= 1e-3) moved = true
     }
     return moved
@@ -614,12 +657,13 @@ export function createGridRenderer(
   // --- size -------------------------------------------------------------------
 
   const observer = new ResizeObserver(() => {
-    const box = canvas.getBoundingClientRect()
+    const box = container.getBoundingClientRect()
     const dpr = window.devicePixelRatio || 1
     width = box.width
     height = box.height
-    canvas.width = Math.round(width * dpr)
-    canvas.height = Math.round(height * dpr)
+    painter.resize(width, height, dpr)
+    overlay.width = Math.round(width * dpr)
+    overlay.height = Math.round(height * dpr)
     if (!moved3D) camera3D = null
     if (!moved2D) camera2D = null
     // Resizing a canvas clears it, so draw now rather than on the next frame:
@@ -628,7 +672,15 @@ export function createGridRenderer(
     frame = 0
     draw()
   })
-  observer.observe(canvas)
+  observer.observe(container)
+
+  // A GL context can be taken away — the GPU resets, or the browser decides
+  // there are too many. Claiming the event is what makes it come back; once it
+  // has, three.js rebuilds its state and the picture only needs asking for.
+  const onContextLost = (event: Event) => event.preventDefault()
+  const onContextRestored = () => schedule()
+  canvas.addEventListener('webglcontextlost', onContextLost)
+  canvas.addEventListener('webglcontextrestored', onContextRestored)
 
   canvas.style.cursor = 'grab'
   // The browser must not turn a drag into a scroll or a pinch into a page zoom.
@@ -645,6 +697,7 @@ export function createGridRenderer(
   return {
     setData(next) {
       data = next
+      stylesStale = true
       retarget()
       schedule()
     },
@@ -653,16 +706,40 @@ export function createGridRenderer(
         liveFrequency[i] = next?.get(bus.name) ?? NaN
       })
       // The stream ticks ten times a second and usually moves nothing visible;
-      // a redraw is only owed when a bus has somewhere to go.
-      if (retarget() && mode === '3d') schedule()
+      // a redraw is only owed when a bus has somewhere to go — or when the
+      // samples are themselves what is drawn.
+      const moved = retarget()
+      if (field === 'frequency') {
+        fieldStale = true
+        schedule()
+      } else if (moved && mode === '3d') schedule()
+    },
+    setVoltages(next) {
+      scene.buses.forEach((bus, i) => {
+        liveVoltage[i] = next?.get(bus.name) ?? NaN
+      })
+      if (field !== 'voltage') return
+      retarget()
+      fieldStale = true
+      schedule()
+    },
+    setField(nextField, nextRelief) {
+      field = nextField
+      relief = nextRelief
+      fieldStale = true
+      stylesStale = true
+      retarget()
+      schedule()
     },
     setLayers(next) {
       layers = next
+      stylesStale = true
       retarget()
       schedule()
     },
     setMode(next) {
       mode = next
+      stylesStale = true
       // Heights are a 3D matter; arriving back in 3D they are already where
       // they belong rather than animating up from wherever they were left.
       height3D.set(targetHeight)
@@ -679,6 +756,11 @@ export function createGridRenderer(
       canvas.removeEventListener('pointerleave', onPointerLeave)
       canvas.removeEventListener('dblclick', resetView)
       canvas.removeEventListener('wheel', onWheel)
+      canvas.removeEventListener('webglcontextlost', onContextLost)
+      canvas.removeEventListener('webglcontextrestored', onContextRestored)
+      painter.dispose()
+      canvas.remove()
+      overlay.remove()
     },
   }
 }
