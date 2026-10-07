@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import asyncio
 
-from support import Measurement, Number, NumberResult, measurement, take
-from test_modules import Doubler, HalveCommand, Halver
+from support import Measurement, Number, NumberResult, at, measurement, take
+from test_modules import Alarm, Assessment, Doubler, Estimate, HalveCommand, Halver, Monitor, Snapshot, TextResult
 
 from pswamp_core.host import ModuleHost
 from pswamp_core.subscription import Overflow
@@ -82,7 +82,7 @@ async def test_an_instance_that_fails_is_reported_and_dropped_and_built_again_la
     class Flaky(Doubler):
         setups = 0
 
-        async def setup(self, out) -> None:
+        async def setup(self) -> None:
             Flaky.setups += 1
             if Flaky.setups == 1:
                 raise RuntimeError("no source")
@@ -109,7 +109,7 @@ async def test_an_instance_that_fails_is_reported_and_dropped_and_built_again_la
 
 async def test_a_bad_answer_for_one_key_does_not_end_the_host():
     class Misanswering(Halver):
-        async def handle(self, command: HalveCommand):
+        def handle(self, command: HalveCommand):
             return Measurement() if command.value == 1 else Number(value=command.value / 2)
 
     broker = InMemoryTransport()
@@ -147,7 +147,7 @@ async def test_a_module_that_reads_the_gateway_gets_its_own():
         reads_gateway = True
         gateways: list = []
 
-        async def setup(self, out) -> None:
+        async def setup(self) -> None:
             Reader.gateways.append(self.gateway)
 
     broker = InMemoryTransport()
@@ -158,4 +158,53 @@ async def test_a_module_that_reads_the_gateway_gets_its_own():
         await broker.publish(measurement(1), app="a", key=key)
     await settle()
     assert len(Reader.gateways) == 2 and Reader.gateways[0] is not Reader.gateways[1]
+    await cancel_and_wait(task)
+
+
+async def test_a_host_reads_every_input_of_a_module():
+    broker = InMemoryTransport()
+    task = asyncio.create_task(ModuleHost(Monitor, broker, app="a").serve())
+    await settle()
+    with broker.subscribe(NumberResult, TextResult, app="a", key="k", overflow=Overflow.GROW) as outputs:
+        await broker.publish(Alarm(level=5, timestamp=at(0)), app="a", key="k")
+        ((_, text),) = await take(outputs, 1)
+        await broker.publish(measurement(1), app="a", key="k")
+        ((_, number),) = await take(outputs, 1)
+    assert text.result.text == "level 5" and number.result.value == 6.0
+    await cancel_and_wait(task)
+
+
+async def test_joined_inputs_only_the_trigger_queues():
+    broker = InMemoryTransport()
+    host = ModuleHost(Assessment, broker, app="a")  # maxsize 2
+    task = asyncio.create_task(host.serve())
+    await settle()
+    assert host.inputs == (Estimate,) and set(host.observed) == {Measurement, Snapshot}
+    with broker.subscribe(NumberResult, ErrorEvent, app="a", key="k", overflow=Overflow.GROW) as outputs:
+        await broker.publish(Snapshot(load_mw=100, timestamp=at(0)), app="a", key="k")
+        for i in range(200):  # a fast stream: it only replaces the newest, never queues
+            await broker.publish(Measurement(value=i, timestamp=at(i / 100)), app="a", key="k")
+        await settle()
+        await broker.publish(Estimate(n=1, timestamp=at(2)), app="a", key="k")
+        ((_, result),) = await take(outputs, 1)
+        assert result.result.value == 199 + 100 + 1 and result.timestamp == at(2)
+        await broker.publish(Estimate(n=1, timestamp=at(5)), app="a", key="k")  # the measurement is stale now
+        await settle()
+        assert outputs.get_nowait() is None
+    assert host._slots["k"].inputs.dropped == 0
+    await cancel_and_wait(task)
+
+
+async def test_an_undeclared_output_from_a_hosted_module_is_an_error_event():
+    class Sloppy(Doubler):
+        def process(self, message):
+            return Snapshot()
+
+    broker = InMemoryTransport()
+    task = asyncio.create_task(ModuleHost(Sloppy, broker, app="a").serve())
+    await settle()
+    with broker.subscribe(ErrorEvent, app="a", key="k") as errors:
+        await broker.publish(measurement(1), app="a", key="k")
+        ((_, error),) = await take(errors, 1)
+    assert error.source == "doubler" and "Snapshot, which is not in its outputs" in error.detail
     await cancel_and_wait(task)

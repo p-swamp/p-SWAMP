@@ -3,9 +3,11 @@
 
 """``RangeSummaryModule``: a batch query, answered by a module reading the gateway.
 
-It reads no topic (``input_model = None``) and only answers
+It reads no topic (``inputs = ()``) and only answers
 ``SummarizeRangeCommand``: it reads ``[offset_s, end_offset_s)`` of a
 recording from its own gateway (``reads_gateway``) and publishes a summary.
+Reading the gateway awaits, so it answers in ``ahandle`` rather than
+``handle``; from a script, ``run_command`` runs that on a loop of its own.
 It runs wherever its host runs; in compose, in a worker of its own. A range
 it cannot summarize (a live source, nothing in the range) is refused, and the
 refusal comes back as an ``ErrorEvent``. Its messages are in
@@ -26,8 +28,7 @@ __all__ = ["RangeSummaryModule"]
 
 class RangeSummaryModule(Module):
     name = "range-summary"
-    input_model = None
-    output_model = RangeSummaryResult
+    outputs = (RangeSummaryResult,)
     commands = (SummarizeRangeCommand,)
     reads_gateway = True
 
@@ -39,7 +40,7 @@ class RangeSummaryModule(Module):
         if command.end_offset_s <= command.offset_s:
             raise CommandRefused("the range is empty")
 
-    async def handle(self, command: SummarizeRangeCommand) -> RangeSummary:
+    async def ahandle(self, command: SummarizeRangeCommand) -> RangeSummary:
         self.gateway.switch(command.source)
         coverage = await self.gateway.coverage()
         start = coverage.start + timedelta(seconds=command.offset_s)

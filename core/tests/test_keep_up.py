@@ -8,6 +8,7 @@ from typing import ClassVar
 
 from support import Measurement, Number, NumberResult, Recorder, measurement, queue
 
+from pswamp_core.host import serve_module
 from pswamp_core.keep_up import KeepUp, KeepUpMonitor
 from pswamp_core.modules import Module
 from pswamp_core.subscription import Overflow
@@ -18,12 +19,13 @@ from pswamp_models.common import ErrorEvent, sent_at, stamp_sent_at
 
 class Slow(Module):
     name = "slow"
-    input_model = Measurement
-    output_model = NumberResult
+    inputs = (Measurement,)
+    outputs = (NumberResult,)
+    blocking = True  # it sleeps: in a thread, off the loop
     keep_up: ClassVar[KeepUp | None] = KeepUp(max_input_age_s=1.0, report_every_s=0.05)
 
-    async def process(self, message: Measurement) -> Number:
-        await asyncio.sleep(0.01)
+    def process(self, message: Measurement) -> Number:
+        time.sleep(0.01)
         return Number(value=message.value)
 
 
@@ -42,7 +44,7 @@ async def test_the_transport_stamps_when_a_message_was_sent():
 
 async def test_a_module_reports_dropped_input_then_catching_up():
     inputs, out = queue(Measurement, overflow=Overflow.DROP_OLDEST, maxsize=2), Recorder()
-    task = asyncio.create_task(Slow().run(inputs, out))
+    task = asyncio.create_task(serve_module(Slow(), inputs, out))
     for i in range(10):  # a burst into a queue of two: most are dropped
         inputs.offer(measurement(i))
     (behind,) = await out.wait_for(ErrorEvent)
@@ -66,7 +68,7 @@ async def test_old_input_counts_as_behind_and_no_policy_reports_nothing():
     inputs = queue(Measurement, overflow=Overflow.DROP_OLDEST, maxsize=1)
     for i in range(5):
         inputs.offer(measurement(i))
-    task = asyncio.create_task(silent.run(inputs, out))
+    task = asyncio.create_task(serve_module(silent, inputs, out))
     await asyncio.sleep(0.05)
     await cancel_and_wait(task)
     assert out.of(ErrorEvent) == []

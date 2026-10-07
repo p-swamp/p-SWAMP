@@ -27,20 +27,23 @@ def synthetic_frame(values: list[float | None], header: PmuHeader = TWO_STATIONS
     return PmuFrame(timestamp=T0 + timedelta(seconds=seconds), mRID="test", header=header, values=values)
 
 
-async def test_frame_stats_are_computed_from_the_frame_s_own_layout():
-    stats = await FrameStatsModule().process(synthetic_frame([400.0, 10.0, 50.0, 410.0, -5.0, 49.8]))
+def test_frame_stats_are_computed_from_the_frame_s_own_layout():
+    frame = synthetic_frame([400.0, 10.0, 50.0, 410.0, -5.0, 49.8], seconds=1.0)
+    result = FrameStatsModule().run_one(frame)
+    assert isinstance(result, FrameStatsResult) and result.timestamp == frame.timestamp
+    stats = result.result
     assert stats.n_stations == 2
     assert round(stats.mean_frequency_hz, 3) == 49.9
     assert (stats.min_frequency_hz, stats.max_frequency_hz) == (49.8, 50.0)
     assert stats.angle_spread_deg == 15.0 and stats.mean_voltage_kv == 405.0
 
 
-async def test_frame_stats_skip_nulls_and_follow_a_changed_layout():
+def test_frame_stats_skip_nulls_and_follow_a_changed_layout():
     module = FrameStatsModule()
-    stats = await module.process(synthetic_frame([400.0, 0.0, None, 400.0, 0.0, 50.0]))
+    stats = module.run_one(synthetic_frame([400.0, 0.0, None, 400.0, 0.0, 50.0])).result
     assert stats.n_stations == 1
     one_station = PmuHeader(station=["C"], channel=["f"], measurement=["f"], units=["Hz"], data_rate=20.0)
-    stats = await module.process(synthetic_frame([49.5], header=one_station))
+    stats = module.run_one(synthetic_frame([49.5], header=one_station)).result
     assert (stats.n_stations, stats.mean_frequency_hz, stats.mean_voltage_kv) == (1, 49.5, None)
     assert module.parameters["stations"] == ["C"]
 

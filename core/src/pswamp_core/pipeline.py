@@ -57,7 +57,7 @@ from .util.tasks import cancel_and_wait, finish
 from .util.time import utcnow
 
 if TYPE_CHECKING:
-    from pswamp_models.common import DataModel, ResultEnvelope
+    from pswamp_models.common import DataModel
 
     from .datagateway import DataGateway
     from .modules import Module
@@ -91,9 +91,10 @@ class Pipeline:
         modules: The module classes, hosted wherever the transport says.
 
     Raises ``ValueError`` when two receivers (the player, a module) take the
-    same command class: a command class is an address. Also when two classes
-    of the pipeline have the same topic, as two of the same name do: a topic
-    carries one class.
+    same command class: a command class is an address. Also when a module
+    sends a command (lists it in its ``outputs``) that nothing in the pipeline
+    takes, and when two classes of the pipeline have the same topic, as two of
+    the same name do: a topic carries one class.
     """
 
     app: str
@@ -107,8 +108,12 @@ class Pipeline:
                 if command in taken:
                     raise ValueError(f"{self.app}: {module.__name__} and {taken[command]} both take {command.__name__}")
                 taken[command] = module.__name__
+        for module in self.modules:
+            for model in module.outputs:
+                if issubclass(model, Command) and model not in taken:
+                    raise ValueError(f"{self.app}: {module.__name__} sends {model.__name__}, which nothing in the pipeline takes")
         on_topic: dict[str, type[DataModel]] = {}
-        for model in (ErrorEvent, PipelineClosed, *taken, *self.inputs, *self.results):
+        for model in (ErrorEvent, PipelineClosed, *taken, *self.inputs, *self.outputs):
             other = on_topic.setdefault(model.topic, model)
             if other is not model:
                 raise ValueError(
@@ -119,12 +124,18 @@ class Pipeline:
     @property
     def inputs(self) -> frozenset[type[DataModel]]:
         """What the modules read: what a run publishes to them."""
-        return frozenset(m.input_model for m in self.modules if m.input_model is not None)
+        return frozenset(model for m in self.modules for model in m.input_models())
 
     @property
-    def results(self) -> tuple[type[ResultEnvelope], ...]:
-        """What the modules publish: what a run listens for."""
-        return tuple(dict.fromkeys(m.output_model for m in self.modules))
+    def outputs(self) -> tuple[type[DataModel], ...]:
+        """Everything the modules publish, commands they send included."""
+        return tuple(dict.fromkeys(model for m in self.modules for model in m.outputs))
+
+    @property
+    def results(self) -> tuple[type[DataModel], ...]:
+        """What the modules publish other than commands: what a run listens
+        for. A command a module sends reaches its receiver on its own topic."""
+        return tuple(model for model in self.outputs if not issubclass(model, Command))
 
     def live_sources(self) -> list[str]:
         """The sources that are live feeds, each of which gets a shared run."""
@@ -151,7 +162,8 @@ def live_key(source: str) -> str:
 
 
 class NewestByClass:
-    """The newest message of each class seen."""
+    """The newest message of each class seen. (Not a module's join, which is
+    ``pswamp_core.inputs.Latest``.)"""
 
     def __init__(self) -> None:
         self._by_class: dict[type[DataModel], DataModel] = {}
