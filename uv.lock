@@ -1113,18 +1113,14 @@ dependencies = [
 kafka = [
     { name = "aiokafka" },
 ]
-remote-data = [
-    { name = "httpx" },
-]
 
 [package.metadata]
 requires-dist = [
     { name = "aiokafka", marker = "extra == 'kafka'", specifier = ">=0.14,<1" },
-    { name = "httpx", marker = "extra == 'remote-data'", specifier = ">=0.28,<1" },
     { name = "pswamp-models", editable = "models" },
     { name = "pydantic", specifier = ">=2.12" },
 ]
-provides-extras = ["kafka", "remote-data"]
+provides-extras = ["kafka"]
 
 [[package]]
 name = "pswamp-excursion"
@@ -1252,7 +1248,7 @@ source = { virtual = "app/server-python" }
 dependencies = [
     { name = "fastapi" },
     { name = "p-swamp" },
-    { name = "pswamp-core", extra = ["kafka", "remote-data"] },
+    { name = "pswamp-core", extra = ["kafka"] },
     { name = "pswamp-excursion" },
     { name = "pswamp-frame-stats" },
     { name = "pswamp-live-synthetic" },
@@ -1276,7 +1272,7 @@ dev = [
 requires-dist = [
     { name = "fastapi", specifier = ">=0.141.1,<0.142" },
     { name = "p-swamp", editable = "desktop" },
-    { name = "pswamp-core", extras = ["kafka", "remote-data"], editable = "core" },
+    { name = "pswamp-core", extras = ["kafka"], editable = "core" },
     { name = "pswamp-excursion", editable = "modules/excursion" },
     { name = "pswamp-frame-stats", editable = "modules/frame-stats" },
     { name = "pswamp-live-synthetic", editable = "modules/live-synthetic" },

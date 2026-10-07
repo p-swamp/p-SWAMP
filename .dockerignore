@@ -52,6 +52,10 @@ models/tests/
 core/tests/
 modules/*/tests/
 modules/*/examples/
+# ...except the remote data stub, which the remote-data-stub service runs from
+# the image (python -m remote_data_stub, PYTHONPATH on this folder).
+!modules/remote-history/examples/remote_data_stub/
+modules/remote-history/examples/remote_data_stub/__pycache__/
 legacy/*/tests/
 # pipelines/ (the pipeline files, pipelines/<app>.toml) is deliberately NOT
 # ignored: the server and the workers load them inside the image.

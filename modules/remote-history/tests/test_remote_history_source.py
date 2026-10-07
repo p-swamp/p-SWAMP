@@ -8,11 +8,13 @@ import httpx
 import pytest
 from remote_data_stub import create_app
 
-from pswamp_core.datagateway import DataClient, TimeRange
+from pydantic import ValidationError
+
 from pswamp_core.playable import Playable
 from pswamp_core.settings import MissingSettingError
-from pswamp_core.sources import SourceSet
+from pswamp_core.sources import SourceModule, SourceSet
 from pswamp_core.testing import SourceConformance
+from pswamp_core.time_range import TimeRange
 from pswamp_models.pmu import PmuFrame, PmuHeader
 from pswamp_modules.remote_history import RemoteHistory
 
@@ -30,17 +32,18 @@ FRAMES = [
 ]
 
 
-class Served(DataClient):
-    """The history the stub serves (the stub still speaks for a ``DataClient``)."""
+class Served(SourceModule):
+    """The history the stub serves: any history source would do."""
 
+    name = "served-frames"
     kind = "history"
 
-    async def coverage(self) -> TimeRange:
+    def coverage(self) -> TimeRange:
         return TimeRange(FRAMES[0].timestamp, FRAMES[-1].timestamp + timedelta(seconds=0.05))
 
-    async def consume(self, time_range: TimeRange):
+    def read(self, start=None, end=None):
         for record in FRAMES:
-            if time_range.contains(record.timestamp):
+            if TimeRange(start, end).contains(record.timestamp):
                 yield record
 
 
@@ -65,6 +68,28 @@ class TestRemoteHistoryOverTheStub(SourceConformance):
     @pytest.fixture
     def conformance_records(self):
         return FRAMES
+
+
+class TestTheSampleRecordingFromTheStub(SourceConformance):
+    """The bundled sample (the sample-replay project), served by the stub and read back."""
+
+    @pytest.fixture
+    def source_under_test(self):
+        sample = pytest.importorskip("pswamp_modules.sample_replay")
+        return over(create_app(sample.SampleReplay()))
+
+    @pytest.fixture
+    def conformance_records(self):
+        return list(pytest.importorskip("pswamp_modules.sample_replay").SampleReplay().recording.frames)
+
+
+def test_a_result_line_has_the_shape_of_its_kind():
+    from pswamp_models.remote_data import RemoteDataResult
+
+    assert RemoteDataResult.for_record(FRAMES[0]).to_line().endswith(b"\n")
+    for bad in ({"kind": "record"}, {"kind": "end"}, {"kind": "error"}):
+        with pytest.raises(ValidationError):
+            RemoteDataResult(**bad)
 
 
 def test_it_is_a_playable_history_source_with_a_required_url():

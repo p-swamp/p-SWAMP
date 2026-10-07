@@ -40,9 +40,9 @@ module-name = "pswamp_modules.remote_history"
 # No [tool.ruff] section: `pswamp check` passes `--select F` explicitly.
 
 # Used by `uv run pswamp test module remote-history`; `uv run pswamp test server` runs
-# these tests too, with the server's config. core/examples holds the remote
-# data stub, which the tests run in-process.
+# these tests too, with the server's config. examples/ holds the remote data
+# stub, which the tests run in-process.
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-pythonpath = ["../../core/examples"]
+pythonpath = ["examples"]
 asyncio_mode = "auto"

@@ -1,5 +1,4 @@
-"""The example sources: the sample recording, the synthetic live feed, and the
-recording again from the remote data stub."""
+"""The example sources: the sample recording and the synthetic live feed."""
 
 from __future__ import annotations
 
@@ -55,23 +54,3 @@ async def test_the_live_feed_ticks_the_sample_s_frames_stamped_now():
     await client.close()
     assert first.mRID == LIVE_STREAM_ID and first.header == load_sample().header
     assert 0.02 < (second.timestamp - first.timestamp).total_seconds() < 0.2
-
-
-# --- the same recording, from the remote data stub ----------------------------------------
-
-
-class TestTheSampleFromTheRemoteDataStub(DataClientConformance):
-    @pytest.fixture
-    def client_under_test(self):
-        import httpx
-        from remote_data_stub import create_app
-
-        from pswamp_core.datagateway.clients.remote_data import RemoteDataClient
-
-        transport = httpx.ASGITransport(app=create_app(SampleRecordingClient()))
-        http = httpx.AsyncClient(transport=transport, base_url="http://stub")
-        return RemoteDataClient("remote", "http://stub", http_client=http)
-
-    @pytest.fixture
-    def conformance_records(self):
-        return list(load_sample().frames)

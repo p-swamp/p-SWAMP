@@ -237,9 +237,9 @@ spec:
           workingDir: /workspace/p-SWAMP/modules
           env:
             - name: PYTHONPATH
-              value: /workspace/p-SWAMP/core/examples
-            - name: REMOTE_DATA_STUB_CLIENT
-              value: sample:pswamp_modules.sources.sample_client:SampleRecordingClient
+              value: /workspace/p-SWAMP/modules/remote-history/examples
+            - name: REMOTE_DATA_STUB_SOURCE
+              value: sample:sample-replay
           ports:
             - name: http
               containerPort: 8100

@@ -16,9 +16,8 @@ dependencies = [
     "fastapi>=0.141.1,<0.142",
     "uvicorn[standard]>=0.52.4,<0.53",
     "p-swamp",
-    # The server data architecture (core/). The extras bring the Kafka transport
-    # and the remote data client.
-    "pswamp-core[kafka,remote-data]",
+    # The server data architecture (core/). The extra brings the Kafka transport.
+    "pswamp-core[kafka]",
     # The modules, one project each (modules/<name>/).
     "pswamp-frame-stats",
     "pswamp-excursion",
@@ -117,8 +116,9 @@ package = false
 # treat the file as config; only a [tool.ruff] section would, and there
 # deliberately isn't one (see the note above).
 [tool.pytest.ini_options]
-# core/examples holds the remote data stub, which the tests run in-process.
-pythonpath = ["src", "../../core/examples"]
+# modules/remote-history/examples holds the remote data stub, which the tests
+# run in-process.
+pythonpath = ["src", "../../modules/remote-history/examples"]
 # models/tests, core/tests and the modules' tests run here too: one runner and
 # one CI job cover every suite. Each module project carries its tests in
 # modules/<name>/tests/, found by recursing into modules/; the transitional
