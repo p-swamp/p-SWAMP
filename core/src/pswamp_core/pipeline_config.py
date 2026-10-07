@@ -10,26 +10,31 @@
 
     [[sources]]                                               # in order; the first is the default
     name = "sample"
-    client = "pswamp_modules.sources.sample_client:SampleRecordingClient"
+    module = "sample-replay"                                  # a source module's entry point
 
     [enrich]
     cim_reference = "n44-cim-stub"                            # "none": no reference
 
 ``load_pipeline(path)`` (also ``Pipeline.load``) reads one into a ``Pipeline``:
 
-- **Modules are found by name**, through the ``pswamp.modules`` entry points
-  every module project declares; a name nothing installs is an error listing
-  the names that are installed. An entry point's name is its module's
-  ``name``.
-- **Sources stay configurable from the environment.** The gateway is built
-  as before, on every call: ``<APP>_DATA_CLIENTS``
-  (``name:module.path:Class,...``), when set, replaces the file's sources;
-  ``<APP>_CIM_REFERENCE`` overrides ``enrich.cim_reference``; and each client
-  reads its own ``{NAME}_{SETTING}`` block. ``<APP>`` is the app's name
-  upper-cased, dashes as underscores (``PMU_TEST_STREAMER``).
+- **Modules and sources are found by name**, through the ``pswamp.modules``
+  entry points every module project declares; a name nothing installs is an
+  error listing the names that are installed. An entry point's name is its
+  module's ``name``. A source is a module of its own kind
+  (``pswamp_core.sources.SourceModule``): ``module = "sample-replay"`` names
+  one, instanced under the source's ``name``.
+- **Sources stay configurable from the environment.** The set of sources is
+  built on every call: ``<APP>_SOURCES`` (``name:entry-point,...``), when set,
+  replaces the file's sources; ``<APP>_CIM_REFERENCE`` overrides
+  ``enrich.cim_reference``; and each source reads its own ``{NAME}_{SETTING}``
+  block (``LIVE_PATH`` for the source named ``live``). ``<APP>`` is the app's
+  name upper-cased, dashes as underscores (``PMU_TEST_STREAMER``). (The
+  ``<APP>_DATA_CLIENTS`` variable of the old data clients is gone, and an
+  error says so if it is still set.)
 - **Everything ``Pipeline`` checks, plus one thing**: every class a module
-  reads has a producer in the pipeline: a source's ``model``, a module's
-  output, or the run itself (``PlayerStatus``, ``ErrorEvent``, ``PipelineClosed``).
+  reads has a producer in the pipeline: a source's ``model`` (its primary
+  output), a module's output, or the run itself (``PlayerStatus``,
+  ``ErrorEvent``, ``PipelineClosed``).
 
 ``PipelineConfig`` is the file's schema. It is configuration, not a message,
 so it lives here and not in ``pswamp_models``.
@@ -53,19 +58,19 @@ from typing import TYPE_CHECKING
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
 
-from .datagateway import CimReferenceEnricher, DataClient, DataGateway, gateway_from_env
-from .settings import MissingSettingError, env_key, load_class, parse_specs
+from .enrich import CimReferenceEnricher
+from .settings import MissingSettingError, env_key
+from .sources import SourceModule, SourceSet
 
 if TYPE_CHECKING:
     from pswamp_models.common import DataModel
 
     from .modules import Module
     from .pipeline import Pipeline
-    from .sources import SourceModule
 
 __all__ = [
     "MODULES_GROUP",
-    "ConfiguredGateway",
+    "ConfiguredSources",
     "PipelineConfig",
     "PipelineConfigError",
     "available_modules",
@@ -85,16 +90,16 @@ class PipelineConfigError(ValueError):
 
 
 class SourceConfig(BaseModel):
-    """One source: a name, and the data client that serves it."""
+    """One source: a name, and the source module that serves it."""
 
     model_config = ConfigDict(extra="forbid")
 
     name: str = Field(pattern=r"^[A-Za-z0-9][A-Za-z0-9_.-]*$", description="The source's name: what a run switches to.")
-    client: str = Field(pattern=r"^[A-Za-z_][\w.]*:[A-Za-z_]\w*$", description="The data client, module.path:Class.")
+    module: str = Field(pattern=_SLUG, description="The source module, by its pswamp.modules entry-point name.")
 
 
 class EnrichConfig(BaseModel):
-    """What the gateway adds to every record."""
+    """What every record from the sources gets on its way to the pipeline."""
 
     model_config = ConfigDict(extra="forbid")
 
@@ -125,51 +130,77 @@ class PipelineConfig(BaseModel):
 
         installed = available_modules()
         modules = tuple(resolve_module(name, installed) for name in self.modules)
-        gateway = ConfiguredGateway(
+        sources = ConfiguredSources(
             app=self.app,
-            default_clients=",".join(f"{s.name}:{s.client}" for s in self.sources),
+            default_sources=",".join(f"{s.name}:{s.module}" for s in self.sources),
             cim_reference=self.enrich.cim_reference,
         )
-        return Pipeline(self.app, gateway, modules=modules, source_models=gateway.source_models())
+        return Pipeline(self.app, sources, modules=modules, source_models=sources.source_models())
 
 
 @dataclass(frozen=True)
-class ConfiguredGateway:
-    """A pipeline file's gateway factory. Reads the environment on every call,
-    so a deployment's ``<APP>_DATA_CLIENTS`` and ``{NAME}_{SETTING}`` apply."""
+class ConfiguredSources:
+    """A pipeline file's ``SourceSet`` factory. Reads the environment on every
+    call, so a deployment's ``<APP>_SOURCES`` and ``{NAME}_{SETTING}`` apply."""
 
     app: str
-    #: The file's sources, as an ``<APP>_DATA_CLIENTS`` value.
-    default_clients: str
+    #: The file's sources, as an ``<APP>_SOURCES`` value.
+    default_sources: str
     cim_reference: str | None = None
 
     @property
-    def clients_variable(self) -> str:
-        return env_key(self.app, "DATA_CLIENTS")
+    def sources_variable(self) -> str:
+        return env_key(self.app, "SOURCES")
 
     @property
     def cim_variable(self) -> str:
         return env_key(self.app, "CIM_REFERENCE")
 
-    def client_specs(self) -> list[tuple[str, str, str]]:
-        """``(name, module.path, Class)`` per source, the environment's if set."""
-        spec = os.environ.get(self.clients_variable, "").strip() or self.default_clients
-        return parse_specs(self.clients_variable, spec)
+    def source_specs(self) -> list[tuple[str, str]]:
+        """``(name, entry point)`` per source, the environment's if set.
+
+        Raises ``PipelineConfigError`` when the retired ``<APP>_DATA_CLIENTS``
+        is still set, or a value is not ``name:entry-point``."""
+        legacy = env_key(self.app, "DATA_CLIENTS")
+        if os.environ.get(legacy, "").strip():
+            raise PipelineConfigError(
+                f"{legacy} is no longer read: sources are modules now. "
+                f"Set {self.sources_variable}=name:entry-point,... instead, e.g. "
+                f"{self.sources_variable}=sample:sample-replay,live:live-synthetic "
+                "(the entry-point names are listed by `uv run pswamp modules list`)"
+            )
+        spec = os.environ.get(self.sources_variable, "").strip() or self.default_sources
+        specs = []
+        for entry in (item.strip() for item in spec.split(",")):
+            if not entry:
+                continue
+            name, _, module = entry.partition(":")
+            if not name or not module or ":" in module:
+                raise PipelineConfigError(f"{self.sources_variable}: {entry!r} is not name:entry-point")
+            specs.append((name, module))
+        if not specs:
+            raise PipelineConfigError(f"{self.sources_variable} names nothing")
+        return specs
+
+    def source_classes(self) -> list[tuple[str, type[SourceModule]]]:
+        """``(name, class)`` per source, the classes resolved through the entry points."""
+        installed = available_modules()
+        classes = []
+        for name, module in self.source_specs():
+            cls = resolve_entry(module, installed)
+            if not issubclass(cls, SourceModule):
+                raise PipelineConfigError(f"{self.sources_variable}: {module!r} is an analysis module, not a source")
+            classes.append((name, cls))
+        return classes
 
     def source_models(self) -> tuple[type[DataModel], ...]:
-        """What the sources serve (each client class's ``model``), without
-        building a client."""
-        return tuple(
-            dict.fromkeys(
-                load_class(self.clients_variable, module, cls, DataClient).model
-                for _, module, cls in self.client_specs()
-            )
-        )
+        """What the sources serve (each class's ``model``), without building one."""
+        return tuple(dict.fromkeys(cls.model for _, cls in self.source_classes()))
 
-    def __call__(self) -> DataGateway:
+    def __call__(self) -> SourceSet:
         reference = os.environ.get(self.cim_variable, "").strip() or self.cim_reference
         enrichers = [] if reference in (None, "none") else [CimReferenceEnricher(reference)]
-        return gateway_from_env(self.clients_variable, self.default_clients, enrichers=enrichers)
+        return SourceSet([cls.from_env(name) for name, cls in self.source_classes()], enrichers=enrichers)
 
 
 def available_modules() -> dict[str, EntryPoint]:
@@ -180,7 +211,6 @@ def available_modules() -> dict[str, EntryPoint]:
 def resolve_entry(name: str, installed: dict[str, EntryPoint] | None = None) -> type[Module] | type[SourceModule]:
     """The class registered as ``name``: an analysis module or a source."""
     from .modules import Module
-    from .sources import SourceModule
 
     installed = available_modules() if installed is None else installed
     point = installed.get(name)
@@ -202,8 +232,6 @@ def resolve_entry(name: str, installed: dict[str, EntryPoint] | None = None) -> 
 
 def resolve_module(name: str, installed: dict[str, EntryPoint] | None = None) -> type[Module]:
     """The analysis module class registered as ``name``."""
-    from .sources import SourceModule
-
     cls = resolve_entry(name, installed)
     if issubclass(cls, SourceModule):
         raise PipelineConfigError(f"{name!r} is a source ({cls.kind}), not an analysis module")
@@ -240,8 +268,6 @@ def _names(models: Sequence[type]) -> str:
 
 
 def _list_modules() -> int:
-    from .sources import SourceModule
-
     installed = available_modules()
     if not installed:
         print(f"No module is installed (entry-point group {MODULES_GROUP}).")
@@ -277,7 +303,7 @@ def _validate(paths: Sequence[str]) -> int:
             print(f"FAIL  {error}")
             failed += 1
             continue
-        sources = [source for source, _, _ in pipeline.gateway.client_specs()]  # type: ignore[attr-defined]
+        sources = [source for source, _ in pipeline.sources.source_specs()]  # type: ignore[attr-defined]
         modules = ", ".join(m.name for m in pipeline.modules) or "none"
         print(f"ok    {name}: app {pipeline.app}, sources {', '.join(sources)}, modules {modules}")
     return 1 if failed else 0

@@ -4,10 +4,10 @@
 """The PMU test streamer's web API: one POST per command, one socket for state.
 
 Each client gets its own run of ``PIPELINE``, read from
-``pipelines/pmu-test-streamer.toml``: a gateway over the sample
-recording and the live feed, a player, and the modules wherever the deployment
-hosts them. Each POST builds one typed command and dispatches it: a player
-command is checked here (404 without a run, 409 when refused), a module command
+``pipelines/pmu-test-streamer.toml``: a set of sources (the sample
+recording, the live feed, the remote history), a router that steers the active
+one, and the modules wherever the deployment hosts them. Each POST builds one
+typed command and dispatches it: a player command is checked here (404 without a run, 409 when refused), a module command
 where the module runs (a refusal comes back as an ``ErrorEvent``). The socket
 pushes one ``PmuStreamState`` on connect and after every change.
 """
@@ -83,7 +83,7 @@ class PmuStreamState(BaseModel):
 
 
 def state_message(run: PipelineRun) -> PmuStreamState:
-    status = run.player.status()
+    status = run.router.status()
     frame = run.frame if isinstance(run.frame, PmuFrame) else None
     index = count = None
     if frame is not None and status.mode == "replay" and status.coverage_start and status.coverage_end:

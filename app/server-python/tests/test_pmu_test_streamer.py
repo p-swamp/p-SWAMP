@@ -1,13 +1,13 @@
 """The PMU test streamer's web API: its socket and its POSTs, with the whole
 server in-process. Its modules are tested in their own projects under
-``modules/``, its sources in ``legacy/pswamp-wiring/tests/``, its pipeline file
+``modules/``, its sources in the source projects under ``modules/``, its pipeline file
 in ``test_pipeline_files.py``."""
 
 from __future__ import annotations
 
 import pytest
 
-from pswamp_modules.sources.live_client import LIVE_STREAM_ID
+from pswamp_modules.live_synthetic import LIVE_STREAM_ID
 
 
 @pytest.fixture

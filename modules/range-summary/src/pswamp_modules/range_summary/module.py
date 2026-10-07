@@ -1,12 +1,12 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright Contributors to the p-SWAMP Project.
 
-"""``RangeSummaryModule``: a batch query, answered by a module reading the gateway.
+"""``RangeSummaryModule``: a batch query, answered by a module reading the sources.
 
 It reads no topic (``inputs = ()``) and only answers
 ``SummarizeRangeCommand``: it reads ``[offset_s, end_offset_s)`` of a
-recording from its own gateway (``reads_gateway``) and publishes a summary.
-Reading the gateway awaits, so it answers in ``ahandle`` rather than
+recording from its own ``SourceSet`` (``reads_sources``) and publishes a summary.
+Reading the sources awaits, so it answers in ``ahandle`` rather than
 ``handle``; from a script, ``run_command`` runs that on a loop of its own.
 It runs wherever its host runs; in compose, in a worker of its own. A range
 it cannot summarize (a live source, nothing in the range) is refused, and the
@@ -30,23 +30,23 @@ class RangeSummaryModule(Module):
     name = "range-summary"
     outputs = (RangeSummaryResult,)
     commands = (SummarizeRangeCommand,)
-    reads_gateway = True
+    reads_sources = True
 
     def validate(self, command: SummarizeRangeCommand) -> None:
-        if command.source not in self.gateway.sources:
+        if command.source not in self.sources.sources:
             raise CommandRefused(f"no source named {command.source!r}")
-        if self.gateway.kind(command.source) != "history":
+        if self.sources.kind(command.source) != "history":
             raise CommandRefused(f"{command.source} is live: there is no range to summarize")
         if command.end_offset_s <= command.offset_s:
             raise CommandRefused("the range is empty")
 
     async def ahandle(self, command: SummarizeRangeCommand) -> RangeSummary:
-        self.gateway.switch(command.source)
-        coverage = await self.gateway.coverage()
+        self.sources.switch(command.source)
+        coverage = await self.sources.coverage()
         start = coverage.start + timedelta(seconds=command.offset_s)
         end = coverage.start + timedelta(seconds=command.end_offset_s)
         frames, frequencies = 0, []
-        async for frame in await self.gateway.consume(start, end):
+        async for frame in await self.sources.consume(start, end):
             if isinstance(frame, PmuFrame):
                 frames += 1
                 values = [frame.values[i] for i in frame.header.columns(measurement="f")]

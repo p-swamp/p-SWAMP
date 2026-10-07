@@ -5,11 +5,13 @@ x-transport: &transport
   PSWAMP_TRANSPORT: "kafka:pswamp_core.transport.kafka:KafkaTransport"
   KAFKA_BOOTSTRAP_SERVERS: "kafka:9092"
 
-# The streamer's sources: the in-image recording, the synthetic live feed, and
-# the same recording from the remote data service below. Whoever reads the
-# gateway (the server, and the worker hosting the range summary) gets these.
+# The streamer's sources, name:entry-point: the in-image recording
+# (sample-replay), the synthetic live feed (live-synthetic), and the same
+# recording from the remote data service below (remote-history, which reads
+# REMOTE_URL). Whoever reads the sources (the server, and the worker hosting the
+# range summary) gets these.
 x-streamer-sources: &streamer-sources
-  PMU_TEST_STREAMER_DATA_CLIENTS: "sample:pswamp_modules.sources.sample_client:SampleRecordingClient,live:pswamp_modules.sources.live_client:LiveSyntheticClient,remote:pswamp_core.datagateway.clients.remote_data:RemoteDataClient"
+  PMU_TEST_STREAMER_SOURCES: "sample:sample-replay,live:live-synthetic,remote:remote-history"
   REMOTE_URL: "http://remote-data-stub:8100"
 
 services:
@@ -193,8 +195,8 @@ services:
 
   # The range summary in a worker of its own: a batch query over a recording,
   # with its own CPU budget, so a heavy one cannot slow the frame-rate modules.
-  # It reads the recording itself, so it needs the same <APP>_DATA_CLIENTS as
-  # the server (here the in-image defaults).
+  # It reads the recording itself, so it needs the same <APP>_SOURCES as the
+  # server.
   batch-worker:
     build: .
     image: p-swamp:latest

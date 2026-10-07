@@ -4,23 +4,23 @@
 """Pipelines: what an app's data flows through, declared once, run per key.
 
 A **``Pipeline``** is the declaration: the app's name (the namespace of its
-topics), its sources (a gateway factory) and its modules. An app declares it
+topics), its sources (a ``SourceSet`` factory) and its modules. An app declares it
 as data, in ``pipelines/<app>.toml``, which ``Pipeline.load`` reads (see
 ``pswamp_core.pipeline_config``)::
 
     PIPELINE = Pipeline.load("pipelines/pmu-test-streamer.toml")
 
-A test may declare one in code: ``Pipeline("app", gateway, modules=(FrameStatsModule,))``.
+A test may declare one in code: ``Pipeline("app", sources, modules=(FrameStatsModule,))``.
 
-A **``PipelineRun``** is one running instance under one key: a gateway, a
-player and an outbox. It publishes the player's frames to the modules and
-listens for their results. The modules themselves run in module hosts,
+A **``PipelineRun``** is one running instance under one key: a set of sources,
+a router over them (``ActiveSource``) and an outbox. It publishes the active
+source's frames to the modules and listens for their results. The modules themselves run in module hosts,
 wherever the deployment puts them (``Pipeline.hosts``, ``pswamp_core.worker``);
 the run and the hosts meet only on the transport::
 
-    DATA DOWN    gateway → player → run.publish → topic <app>.pmu.frame, key → module (hosted)
+    DATA DOWN    active source → run.publish → topic <app>.pmu.frame, key → module (hosted)
                  run.latest ← topic <app>.<result>, key ← module
-    COMMANDS UP  run.dispatch(cmd) → topic <app>.<command>, key → player | module
+    COMMANDS UP  run.dispatch(cmd) → topic <app>.<command>, key → router → active source | module
 
 The run keeps the newest message of each class (``latest``) and wakes readers
 on every change (``changes()``). That is what the web API builds its socket
@@ -51,11 +51,11 @@ from typing import TYPE_CHECKING, Generic, TypeVar
 from pswamp_models.common import Command, ErrorEvent, PipelineClosed
 from pswamp_models.player import PlayerStatus
 
+from .active_source import ROUTER_COMMANDS, ActiveSource
 from .command_routing import CommandInbox, NoReceiver, concrete_commands
 from .host import DEFAULT_IDLE_SECONDS, ModuleHost
 from .keep_up import KeepUp
 from .log import get_logger
-from .player import PLAYER_COMMANDS, Player
 from .subscription import Overflow
 from .transport import Outbox
 from .util.tasks import cancel_and_wait, finish
@@ -64,8 +64,8 @@ from .util.time import utcnow
 if TYPE_CHECKING:
     from pswamp_models.common import DataModel
 
-    from .datagateway import DataGateway
     from .modules import Module
+    from .sources import SourceSet
     from .transport import Transport, TransportSubscription
 
 __all__ = [
@@ -92,7 +92,7 @@ class Pipeline:
 
     Attributes:
         app: The app's name: its topics are ``<app>.<topic>``.
-        gateway: Builds a fresh gateway over the app's sources.
+        sources: Builds a fresh ``SourceSet`` over the app's sources.
         modules: The module classes, hosted wherever the transport says.
 
     Raises ``ValueError`` when two receivers (the player, a module) take the
@@ -104,7 +104,7 @@ class Pipeline:
     """
 
     app: str
-    gateway: Callable[[], DataGateway]
+    sources: Callable[[], SourceSet]
     modules: tuple[type[Module], ...] = ()
     #: What the sources serve. When given (``Pipeline.load`` always gives it),
     #: every class a module reads must have a producer in the pipeline.
@@ -119,7 +119,7 @@ class Pipeline:
         return load_pipeline(path)
 
     def __post_init__(self) -> None:
-        taken: dict[type[Command], str] = {command: "the player" for command in PLAYER_COMMANDS}
+        taken: dict[type[Command], str] = {command: "the player" for command in ROUTER_COMMANDS}
         for module in self.modules:
             for command in concrete_commands(module.__name__, module.commands):
                 if command in taken:
@@ -165,8 +165,8 @@ class Pipeline:
 
     def live_sources(self) -> list[str]:
         """The sources that are live feeds, each of which gets a shared run."""
-        gateway = self.gateway()
-        return [name for name in gateway.sources if gateway.kind(name) == "live"]
+        sources = self.sources()
+        return [name for name in sources.sources if sources.kind(name) == "live"]
 
     def module_for(self, command: type[Command]) -> type[Module] | None:
         return next((m for m in self.modules if command in m.commands), None)
@@ -176,7 +176,7 @@ class Pipeline:
     ) -> list[ModuleHost]:
         """One host per module, or per module named in ``only``."""
         return [
-            ModuleHost(module, transport, app=self.app, idle_seconds=idle_seconds, gateway=self.gateway)
+            ModuleHost(module, transport, app=self.app, idle_seconds=idle_seconds, sources=self.sources)
             for module in self.modules
             if only is None or module.name in only
         ]
@@ -243,7 +243,7 @@ class PipelineRun:
         key: What the run is isolated by: a client id, for a replay.
         pipeline: What it is made of.
         transport: The process's transport.
-        loop: The player starts a recording over at its end.
+        loop: A recording starts over at its end.
         live_source: Make this the shared run of that live source, instead of
             a client's run.
     """
@@ -254,17 +254,17 @@ class PipelineRun:
         self.key = key
         self.pipeline = pipeline
         self.transport = transport
-        self.gateway = pipeline.gateway()
+        self.sources = pipeline.sources()
         self.shared = live_source is not None
         if live_source is not None:
-            self.gateway.switch(live_source)
+            self.sources.switch(live_source)
         self.latest = NewestByClass()
         self.outbox = Outbox(
             transport, app=pipeline.app, key=key, keep_up=KeepUp(), label=f"the server-side publisher for {key}"
         )
         # A client's run leaves live sources to their shared runs.
-        self.player = Player(self.gateway, self, loop=loop, follow_live=not self.shared)
-        #: The frame at the cursor: the player's, or the live run's while following it.
+        self.router = ActiveSource(self.sources, self, loop=loop, follow_live=not self.shared)
+        #: The frame at the cursor: the active source's, or the live run's while following it.
         self.frame: DataModel | None = None
         self._following: TransportSubscription | None = None
         self._waiters: set[asyncio.Event] = set()
@@ -273,17 +273,17 @@ class PipelineRun:
         self._tasks: list[asyncio.Task] = []
         self._started = False
 
-    # -- the player's sink, and the view ----------------------------------------------
+    # -- the router's sink, and the view ----------------------------------------------
 
     def publish(self, message: DataModel) -> None:
-        """What the player publishes: remembered here, and put on the transport
+        """What the active source publishes: remembered here, and put on the transport
         when a module reads it, it is an error, or it is a shared run's frame."""
         if isinstance(message, PlayerStatus):
             self._follow(message)
-        elif message is self.player.last_frame:
+        elif message is self.router.last_frame:
             self.frame = message
         self._remember(message)
-        frame = self.shared and message is self.player.last_frame
+        frame = self.shared and message is self.router.last_frame
         if frame or type(message) in self.pipeline.inputs or isinstance(message, ErrorEvent):
             self.outbox.publish(message)
 
@@ -302,7 +302,7 @@ class PipelineRun:
             event.set()
 
     def _follow(self, status: PlayerStatus) -> None:
-        """Follow the shared run of the live source the player is on; stop
+        """Follow the shared run of the live source the router is on; stop
         following when it leaves it."""
         key = live_key(status.source) if status.mode == "live" and not self.shared else None
         following = None if self._following is None else self._following.key
@@ -314,7 +314,7 @@ class PipelineRun:
         self.latest.forget(*self.pipeline.results)
         if key is None:
             return
-        model = self.gateway.active.model
+        model = self.sources.active.model
         self.frame = None
         self._following = self.transport.subscribe(model, *self.pipeline.results, app=self.pipeline.app, key=key)
         self._tasks.append(asyncio.create_task(self._receive_followed(self._following, model), name=f"{self.key}.follow"))
@@ -329,14 +329,15 @@ class PipelineRun:
     def dispatch(self, command: Command) -> None:
         """Publish ``command`` on its topic, under this run's key.
 
-        A player command is validated first, so a refusal raises
-        ``CommandRefused`` here (the web API's 409) and nothing is published. A
+        A player command (a switch or a playback command) is validated first,
+        by the router, so a refusal raises ``CommandRefused`` here (the web
+        API's 409) and nothing is published. A
         module command is published as it is: the module validates it where
         it runs, and a refusal comes back as an ``ErrorEvent``. A command
         nothing takes raises ``NoReceiver``.
         """
-        if type(command) in PLAYER_COMMANDS:
-            self.player.validate(command)
+        if type(command) in ROUTER_COMMANDS:
+            self.router.validate(command)
         elif self.pipeline.module_for(type(command)) is None:
             raise NoReceiver(f"{self.pipeline.app} has no receiver for {type(command).__name__}")
         self.outbox.publish(command)
@@ -349,9 +350,9 @@ class PipelineRun:
         self._started = True
         app, key, subscribe = self.pipeline.app, self.key, self.transport.subscribe
         await self.transport.open()
-        # The player takes its commands off their topics, so a module can
+        # The router takes its commands off their topics, so a module can
         # command it exactly as the web API does.
-        commands = subscribe(*PLAYER_COMMANDS, app=app, key=key, overflow=Overflow.GROW)
+        commands = subscribe(*ROUTER_COMMANDS, app=app, key=key, overflow=Overflow.GROW)
         self._subscriptions.append(commands)
         if self.pipeline.results:
             results = subscribe(*self.pipeline.results, app=app, key=key)
@@ -361,8 +362,8 @@ class PipelineRun:
         for subscription in self._subscriptions:
             await subscription.ready(_READY_TIMEOUT_S)
         self.outbox.start()
-        await self.player.start()
-        self._inbox = CommandInbox((command async for _, command in commands), self.player, self)
+        await self.router.start()
+        self._inbox = CommandInbox((command async for _, command in commands), self.router, self)
         self._inbox.start()
 
     async def stop(self, reason: str = "stopped") -> None:
@@ -373,14 +374,14 @@ class PipelineRun:
     async def _teardown(self, reason: str) -> None:
         if self._inbox is not None:
             await self._inbox.stop()
-        await self.player.stop()
+        await self.router.stop()
         self._unfollow()
         await cancel_and_wait(*self._tasks)
         for subscription in self._subscriptions:
             subscription.close()
         self.outbox.publish(PipelineClosed(timestamp=utcnow(), reason=reason))
         await self.outbox.close()
-        await self.gateway.close()
+        await self.sources.close()
 
     async def _receive(self, results: TransportSubscription) -> None:
         async for _, result in results:

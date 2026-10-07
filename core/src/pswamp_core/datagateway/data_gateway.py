@@ -23,9 +23,9 @@ from datetime import datetime
 
 from ..log import get_logger
 from .data_client import DataClient
-from .enrich import Enricher
+from ..enrich import Enricher
 from .stream import DataStream
-from .time_range import TimeRange
+from ..time_range import TimeRange
 
 __all__ = ["DataGateway"]
 

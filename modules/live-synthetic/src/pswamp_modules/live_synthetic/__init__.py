@@ -4,6 +4,6 @@
 """The synthetic live source (``live-synthetic``): see ``source.py``. What it
 publishes is in ``pswamp_models.pmu``."""
 
-from .source import LiveSynthetic
+from .source import LIVE_STREAM_ID, LiveSynthetic
 
-__all__ = ["LiveSynthetic"]
+__all__ = ["LIVE_STREAM_ID", "LiveSynthetic"]

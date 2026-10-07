@@ -46,7 +46,7 @@ an undeclared class is an error: there is no other way to publish.
 A module may also answer commands: it lists their concrete classes in
 ``commands``, implements ``handle`` (synchronous too, returning what
 ``process`` would) and, to refuse one, ``validate``. A module whose answer
-must await (reading history through its gateway, say) implements ``ahandle``
+must await (reading history through its sources, say) implements ``ahandle``
 instead. An answer carries the command's ``request_id``.
 
 **Calling a module.** ``run`` is the synchronous call, for a script or a test,
@@ -66,8 +66,8 @@ and publishes its outputs (``pswamp_core.host``); whether the host is in the
 server or in a worker is the deployment's choice.
 
 A module may also read data itself, a batch question over a range, say: it
-sets ``reads_gateway = True`` and its host gives each instance a gateway of
-its own (``self.gateway``) over the pipeline's sources, wherever it runs.
+sets ``reads_sources = True`` and its host gives each instance a ``SourceSet``
+of its own (``self.sources``) over the pipeline's sources, wherever it runs.
 """
 
 from __future__ import annotations
@@ -89,7 +89,7 @@ from .subscription import Overflow
 from .util.time import utcnow
 
 if TYPE_CHECKING:
-    from .datagateway import DataGateway
+    from .sources import SourceSet
 
 __all__ = ["Latest", "Module", "UndeclaredOutput", "on"]
 
@@ -114,7 +114,7 @@ class Module(ABC):
         overflow, maxsize: Its input queue (the trigger's, with a join).
             ``DROP_OLDEST`` by default: a module that falls behind a live
             stream analyses the newest frame.
-        reads_gateway: Its host sets ``self.gateway`` before ``setup``.
+        reads_sources: Its host sets ``self.sources`` before ``setup``.
         keep_up: When falling behind its input is reported; ``None`` never.
     """
 
@@ -126,7 +126,7 @@ class Module(ABC):
     blocking: ClassVar[bool] = False
     overflow: ClassVar[Overflow] = Overflow.DROP_OLDEST
     maxsize: ClassVar[int] = 64
-    reads_gateway: ClassVar[bool] = False
+    reads_sources: ClassVar[bool] = False
     keep_up: ClassVar[KeepUp | None] = KeepUp()
 
     #: Set per class: input class → handler method name (styles 1 and 2).
@@ -226,13 +226,13 @@ class Module(ABC):
         self.identity = AppIdentity(name=self.name, uuid=uuid4().hex)
         #: Settings recorded on every result.
         self.parameters: dict[str, Any] = {}
-        #: The pipeline's sources, for a module that ``reads_gateway``.
-        self.gateway: DataGateway | None = None
+        #: The pipeline's sources, for a module that ``reads_sources``.
+        self.sources: SourceSet | None = None
         #: This instance's join state, for named inputs.
         self._join = type(self).join.bound(self.inputs) if isinstance(self.inputs, Mapping) else None
 
     async def setup(self) -> None:
-        """Called once by a host, after ``gateway`` is set and before any input."""
+        """Called once by a host, after ``sources`` is set and before any input."""
 
     def process(self, *args: Any, **named: Any) -> Any:
         """Analyse one input (or one bundle, by name). Return a body, a

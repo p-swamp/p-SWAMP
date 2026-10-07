@@ -36,7 +36,7 @@ from pswamp_models.remote_data import RemoteDataQuery, RemoteDataResult
 from ...settings import EnvSetting
 from ...util.time import ensure_utc
 from ..data_client import DataClient
-from ..time_range import TimeRange
+from ...time_range import TimeRange
 
 __all__ = ["RemoteDataClient"]
 

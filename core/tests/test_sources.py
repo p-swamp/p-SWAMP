@@ -9,7 +9,7 @@ from pathlib import Path
 import pytest
 from support import AsyncListSource, ListSource, TickingSource, frame
 
-from pswamp_core.datagateway import CimReferenceEnricher
+from pswamp_core.enrich import CimReferenceEnricher
 from pswamp_core.settings import EnvSetting, MissingSettingError
 from pswamp_core.sources import SourceModule, SourceSet
 from pswamp_core.testing import SourceConformance

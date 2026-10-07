@@ -21,7 +21,7 @@ from collections.abc import Iterator
 from datetime import datetime
 from pathlib import Path
 
-from pswamp_core.datagateway import TimeRange
+from pswamp_core.time_range import TimeRange
 from pswamp_core.playable import Playable
 from pswamp_core.settings import EnvSetting
 from pswamp_core.sources import SourceModule

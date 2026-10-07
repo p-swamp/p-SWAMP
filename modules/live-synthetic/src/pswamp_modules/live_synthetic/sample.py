@@ -24,7 +24,7 @@ from datetime import datetime, timedelta
 from functools import lru_cache
 from pathlib import Path
 
-from pswamp_core.datagateway import TimeRange
+from pswamp_core.time_range import TimeRange
 from pswamp_core.util.time import UTC
 from pswamp_models.pmu import PmuFrame, PmuHeader
 

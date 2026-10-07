@@ -21,8 +21,8 @@ if TYPE_CHECKING:
     from pswamp_models.common import DataModel
 
     from .data_client import DataClient
-    from .enrich import Enricher
-    from .time_range import TimeRange
+    from ..enrich import Enricher
+    from ..time_range import TimeRange
 
 __all__ = ["DataStream"]
 

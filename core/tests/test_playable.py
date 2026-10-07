@@ -11,7 +11,7 @@ import pytest
 from support import ListSource, Recorder, at, frame
 
 from pswamp_core.command_routing import CommandRefused
-from pswamp_core.datagateway import CimReferenceEnricher
+from pswamp_core.enrich import CimReferenceEnricher
 from pswamp_core.playable import PLAYBACK_COMMANDS, Playable
 from pswamp_core.sources import SourceModule
 from pswamp_models.common import ErrorEvent

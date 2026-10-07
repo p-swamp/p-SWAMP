@@ -8,9 +8,10 @@ from typing import Literal
 
 from pydantic import BaseModel
 
-from pswamp_core.datagateway import DataClient, TimeRange
+from pswamp_core.datagateway import DataClient
 from pswamp_core.playable import Playable
 from pswamp_core.sources import SourceModule
+from pswamp_core.time_range import TimeRange
 from pswamp_core.util.time import utcnow
 from pswamp_models.common import DataModel, ResultEnvelope
 from pswamp_models.pmu import PmuFrame, PmuHeader
@@ -224,6 +225,10 @@ class TickingSource(SourceModule):
     def __init__(self, source: str = "ticker", interval: float = 0.02) -> None:
         super().__init__(source)
         self.interval = interval
+        self.opened = 0
+
+    def open(self) -> None:
+        self.opened += 1
 
     async def aread(self, start=None, end=None):
         while True:

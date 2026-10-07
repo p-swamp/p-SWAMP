@@ -84,8 +84,8 @@ from typing import Any, ClassVar, Literal
 from pswamp_models.common import Command, DataModel
 from pswamp_models.pmu import PmuFrame
 
-from .datagateway.enrich import Enricher
-from .datagateway.time_range import TimeRange
+from .enrich import Enricher
+from .time_range import TimeRange
 from .log import get_logger
 from .settings import Configurable, EnvSetting, MissingSettingError, parse_setting, read_setting
 

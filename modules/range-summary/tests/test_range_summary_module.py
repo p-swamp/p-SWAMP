@@ -1,7 +1,7 @@
-"""The range summary module: a batch query answered from the module's own gateway.
+"""The range summary module: a batch query answered from the module's own sources.
 
-The gateway is built here, over two small in-memory sources (a recording and
-a live feed), so the test needs nothing but the core and the models."""
+The set of sources is built here, over two small in-memory sources (a recording
+and a live feed), so the test needs nothing but the core and the models."""
 
 from __future__ import annotations
 
@@ -10,7 +10,8 @@ from datetime import datetime, timedelta, timezone
 import pytest
 
 from pswamp_core.command_routing import CommandRefused
-from pswamp_core.datagateway import DataClient, DataGateway, TimeRange
+from pswamp_core.sources import SourceModule, SourceSet
+from pswamp_core.time_range import TimeRange
 from pswamp_models.pmu import PmuFrame, PmuHeader
 from pswamp_models.range_summary import RangeSummaryResult, SummarizeRangeCommand
 from pswamp_modules.range_summary import RangeSummaryModule
@@ -32,40 +33,42 @@ def frame(t: float) -> PmuFrame:
     return PmuFrame(timestamp=T0 + timedelta(seconds=t), mRID="ramp", header=HEADER, values=[400.0, f, 400.0, f])
 
 
-class Recording(DataClient):
+class Recording(SourceModule):
     """Three seconds of the ramp, as a history."""
 
+    name = "test-recording"
     kind = "history"
 
-    def __init__(self, name: str) -> None:
-        super().__init__(name)
+    def __init__(self, source: str) -> None:
+        super().__init__(source)
         self.frames = [frame(n / RATE_HZ) for n in range(int(3 * RATE_HZ))]
 
-    async def coverage(self) -> TimeRange:
+    def coverage(self) -> TimeRange:
         return TimeRange(self.frames[0].timestamp, self.frames[-1].timestamp + timedelta(seconds=1 / RATE_HZ))
 
-    async def consume(self, time_range: TimeRange):
+    def read(self, start=None, end=None):
         for record in self.frames:
-            if time_range.contains(record.timestamp):
+            if TimeRange(start, end).contains(record.timestamp):
                 yield record
 
 
-class Feed(DataClient):
+class Feed(SourceModule):
     """A live feed: the module refuses to summarize it."""
 
+    name = "test-feed"
     kind = "live"
 
-    async def consume(self, time_range: TimeRange):
+    def read(self, start=None, end=None):
         yield frame(0)
 
 
-def gateway() -> DataGateway:
-    return DataGateway([Recording("sample"), Feed("live")])
+def sources() -> SourceSet:
+    return SourceSet([Recording("sample"), Feed("live")])
 
 
-async def test_the_range_summary_reads_its_own_gateway():
+async def test_the_range_summary_reads_its_own_sources():
     module = RangeSummaryModule()
-    module.gateway = gateway()
+    module.sources = sources()
     command = SummarizeRangeCommand(source="sample", offset_s=1.0, end_offset_s=2.0)
     (answer,) = await module.arun_command(command)
     assert isinstance(answer, RangeSummaryResult) and answer.request_id == command.request_id
@@ -84,6 +87,6 @@ async def test_the_range_summary_reads_its_own_gateway():
 
 def test_the_range_summary_answers_from_plain_code():
     module = RangeSummaryModule()
-    module.gateway = gateway()
+    module.sources = sources()
     (answer,) = module.run_command(SummarizeRangeCommand(source="sample", offset_s=0.0, end_offset_s=1.0))
     assert answer.result.frames == 20
