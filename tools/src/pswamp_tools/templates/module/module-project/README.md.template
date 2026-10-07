@@ -1,0 +1,30 @@
+# __SLUG__
+
+`pswamp-__SLUG__`, package `pswamp_modules.__PKG__`, class `__NAME__Module`,
+entry point `__SLUG__` (group `pswamp.modules`).
+
+The __LABEL__ module. For each frame it reports the station with the highest
+frequency, and that frequency.
+
+| | Message | Defined in |
+|---|---|---|
+| Reads | `PmuFrame` | `pswamp_models.pmu` |
+| Emits | `__NAME__Result` (body `__NAME__Body`) | `pswamp_models.__PKG__` |
+| Accepts | no command | |
+
+**Parameters:** none. A frame with no frequency value publishes nothing.
+
+## From a script
+
+No server, transport or event loop: `process` is plain synchronous code.
+
+```python
+from pswamp_modules.__PKG__ import __NAME__Module
+
+result = __NAME__Module().run_one(frame)   # a __NAME__Result
+result.result.station, result.result.frequency_hz
+```
+
+## Tests
+
+`uv run pswamp test module __SLUG__` (also part of `uv run pswamp test server`).

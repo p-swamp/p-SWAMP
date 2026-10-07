@@ -19,6 +19,8 @@ REGISTRIES = [
     Path("app/client-web/src/components/AppLayout.tsx"),
     Path("docker-compose.yml"),
     Path("k8s/p-swamp-local.yaml"),
+    Path("app/server-python/pyproject.toml"),
+    Path("legacy/pswamp-wiring/pyproject.toml"),
 ]
 
 
@@ -29,7 +31,16 @@ def tree(tmp_path):
     for path in REGISTRIES:
         (tmp_path / path).parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(real / path, tmp_path / path)
-    for folder in ("modules/pswamp_modules/pipelines", "models/src/pswamp_models/pmu", "app/server-python/tests", "core/tests", "models/tests"):
+    for folder in (
+        "legacy/pswamp-wiring/src/pswamp_modules/pipelines",
+        "legacy/pswamp-wiring/src/pswamp_modules/sources",
+        "modules/frame-stats/src/pswamp_modules/frame_stats",
+        "modules/frame-stats/tests",
+        "models/src/pswamp_models/pmu",
+        "app/server-python/tests",
+        "core/tests",
+        "models/tests",
+    ):
         (tmp_path / folder).mkdir(parents=True, exist_ok=True)
     (tmp_path / "app/client-web/src/pages").mkdir(parents=True, exist_ok=True)
     return tmp_path
@@ -172,16 +183,34 @@ def test_a_failed_write_rolls_everything_back(tree, monkeypatch):
 # --- the module set ------------------------------------------------------------
 
 
-def test_a_module_also_writes_modules_and_joins_the_module_worker(tree):
+def test_a_module_is_a_project_and_joins_the_module_worker(tree):
     generate.apply(generate.plan(tree, "zz-mod", "ZZ Mod", "module"), echo=lambda _: None)
 
-    assert (tree / "modules/pswamp_modules/zz_mod/module.py").is_file()
+    project = tree / "modules/zz-mod"
+    assert (project / "pyproject.toml").is_file() and (project / "README.md").is_file()
+    assert (project / "src/pswamp_modules/zz_mod/module.py").is_file()
+    assert not (project / "src/pswamp_modules/__init__.py").exists()  # a namespace portion
+    assert (project / "tests/test_zz_mod_module.py").is_file()
+    assert not (project / "tests/__init__.py").exists()
     assert (tree / "models/src/pswamp_models/zz_mod/results.py").is_file()
-    assert (tree / "modules/pswamp_modules/zz_mod/tests/test_module.py").is_file()
-    assert (tree / "modules/pswamp_modules/pipelines/zz_mod.py").is_file()
+    assert (tree / "legacy/pswamp-wiring/src/pswamp_modules/pipelines/zz_mod.py").is_file()
     assert (tree / "app/server-python/tests/test_zz_mod.py").is_file()
 
     import re
+    import tomllib
+
+    manifest = tomllib.loads(text(tree, "modules/zz-mod/pyproject.toml"))
+    assert manifest["project"]["name"] == "pswamp-zz-mod"
+    assert manifest["project"]["entry-points"]["pswamp.modules"] == {"zz-mod": "pswamp_modules.zz_mod:ZzModModule"}
+    assert manifest["tool"]["uv"]["build-backend"]["module-name"] == "pswamp_modules.zz_mod"
+    # A dependency (with its workspace source) of the wiring and of the server.
+    for path in ("legacy/pswamp-wiring/pyproject.toml", "app/server-python/pyproject.toml"):
+        consumer = tomllib.loads(text(tree, path))
+        assert "pswamp-zz-mod" in consumer["project"]["dependencies"], path
+        assert consumer["tool"]["uv"]["sources"]["pswamp-zz-mod"] == {"workspace": True}, path
+    # In the server's module list, not in its dev group.
+    server = tomllib.loads(text(tree, "app/server-python/pyproject.toml"))
+    assert "pswamp-zz-mod" not in server["dependency-groups"]["dev"]
 
     for path, pattern in generate.WORKER_LIST_PATTERNS.items():
         content = text(tree, path.as_posix())
@@ -193,9 +222,16 @@ def test_a_module_also_writes_modules_and_joins_the_module_worker(tree):
     assert text(tree, "docker-compose.yml").count("zz_mod:PIPELINE") == 1
 
 
-def test_a_module_cannot_take_the_name_of_a_package_beside_the_modules(tree):
+@pytest.mark.parametrize("slug", ["pipelines", "sources", "frame-stats"])
+def test_a_module_cannot_take_a_name_in_the_pswamp_modules_namespace(tree, slug):
     with pytest.raises(generate.GenerateError, match="already exists"):
-        generate.plan(tree, "pipelines", "Pipelines", "module")
+        generate.plan(tree, slug, "Taken", "module")
+
+
+@pytest.mark.parametrize("slug", ["core", "tools", "wiring"])
+def test_a_module_cannot_take_the_distribution_name_of_a_workspace_project(tree, slug):
+    with pytest.raises(generate.GenerateError, match=f"pswamp-{slug} already exists"):
+        generate.plan(tree, slug, "Taken", "module")
 
 
 def test_a_module_cannot_take_the_name_of_a_producer_in_the_models(tree):
@@ -203,10 +239,11 @@ def test_a_module_cannot_take_the_name_of_a_producer_in_the_models(tree):
         generate.plan(tree, "pmu", "PMU", "module")
 
 
-@pytest.mark.parametrize("folder", ["core/tests", "models/tests"])
-def test_a_server_test_name_clashing_with_another_test_folder_is_refused(tree, folder):
-    (tree / folder / "test_zz_mod.py").write_text("", encoding="utf-8")
-    with pytest.raises(generate.GenerateError, match=f"{folder}/test_zz_mod.py"):
+@pytest.mark.parametrize("folder", ["core/tests", "models/tests", "modules/frame-stats/tests"])
+@pytest.mark.parametrize("name", ["test_zz_mod.py", "test_zz_mod_module.py"])
+def test_a_test_name_clashing_with_another_test_folder_is_refused(tree, folder, name):
+    (tree / folder / name).write_text("", encoding="utf-8")
+    with pytest.raises(generate.GenerateError, match=f"{folder}/{name}"):
         generate.plan(tree, "zz-mod", "ZZ Mod", "module")
 
 

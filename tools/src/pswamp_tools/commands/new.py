@@ -7,6 +7,7 @@ import typer
 
 from .. import _ui, contract, generate
 from .._paths import repo_root
+from .._proc import require_tools, run
 
 app = typer.Typer(
     help=(
@@ -33,10 +34,21 @@ def _generate(slug: str, label: str, template_set: str, no_check: bool) -> None:
     except generate.GenerateError as exc:
         _ui.error(str(exc))
         raise typer.Exit(1) from None
+    if template_set == "module":
+        require_tools("uv", purpose="to add the module project to the workspace lock")
     generate.apply(plan, echo=lambda line: _ui.console.print(line, markup=False))
     _ui.console.print(f"\n[bold]{generate.summary(plan)}[/bold]", markup=True)
     _ui.info("the api contract is regenerated next — commit doc/api/openapi.json and")
     _ui.info("app/client-web/src/api/schema.ts along with the new app.")
+
+    # A module is a new workspace member (modules/*) and a new dependency of the
+    # wiring and the server, so the one uv.lock must learn of it before anything
+    # runs `uv run` (which would re-lock implicitly) or `uv lock --check`.
+    if template_set == "module":
+        _ui.section("Re-lock the workspace (uv lock)")
+        code = run(["uv", "lock"], cwd=root)
+        if code != 0:
+            raise typer.Exit(code)
 
     # The contract BEFORE the checks: the new page imports its wire type from the
     # TypeScript generated off the new package's WS_MESSAGE, so until this runs
@@ -88,12 +100,16 @@ def module(
 ) -> None:
     """A module over the core pipeline, and the page that shows it.
 
-    The module (with its tests/ beside it) goes to modules/pswamp_modules/<pkg>/
-    and its pipeline to modules/pswamp_modules/pipelines/; the web api to
+    The module is a project of its own, modules/<slug>/ (pyproject.toml with
+    its `pswamp.modules` entry point, README.md, src/pswamp_modules/<pkg>/,
+    tests/); its messages go to models/src/pswamp_models/<pkg>/ and its
+    pipeline to the transitional legacy/pswamp-wiring/; the web api to
     app/server-python/src/<pkg>/ and the page to app/client-web/src/pages/<slug>/.
-    The module is added to the module-worker in docker-compose.yml and
-    k8s/p-swamp-local.yaml. doc/module-cookbook.md walks through every file;
-    `pswamp check-generators` proves the output works.
+    The project becomes a dependency of the wiring and the server, the
+    workspace is re-locked (`uv lock`), and the module is added to the
+    module-worker in docker-compose.yml and k8s/p-swamp-local.yaml.
+    doc/module-cookbook.md walks through every file; `pswamp check-generators`
+    proves the output works.
 
       uv run pswamp new module peak-frequency "Peak frequency"
     """

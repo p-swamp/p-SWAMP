@@ -1,6 +1,6 @@
 """The __LABEL__ app's web API: the page's socket end to end, with the whole
 server in-process. The module itself is tested beside its code, in
-``modules/pswamp_modules/__PKG__/tests/``."""
+``modules/__SLUG__/tests/``."""
 
 import pytest
 
