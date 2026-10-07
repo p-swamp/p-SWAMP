@@ -19,7 +19,7 @@ p-SWAMP is moving towards a client-server architecture. For the near to mid term
 
 Both are kept working for now, and nothing about installing or running the Qt version changes. The intention is that the client-server version takes over at a later point.
 
-Documentation for the new stack lives under [`doc/`](doc/). Start with [`doc/client-server-rig.md`](doc/client-server-rig.md), which covers the architecture, the local development workflow, and how to add a new page or backend api. [`doc/the-client-server-api.md`](doc/the-client-server-api.md) then covers the api itself — the generated contract both halves agree on, the REST layer upstream, the WebSocket layer downstream, and how a call is routed through both.
+Documentation for the new stack lives under [`doc/`](doc/). **New here? Start with [`doc/_getting-started.md`](doc/_getting-started.md)**: how to run the stack locally, and which doc to read next depending on what you are here to do.
 
 The rest of the README describes the current/original python+qt implementation.
 
