@@ -19,7 +19,7 @@ by, the same for every playable source:
     await source.start(sink, loop=True, sources=["sample", "live"])
     source.status()                 # PlayerStatus: unchanged shape
     source.validate(command)        # raise CommandRefused if it does not apply now
-    await source.handle(command)    # queue it, wait until it is applied
+    await source.ahandle(command)   # queue it, wait until it is applied
     await source.stop()             # stop pacing; the source itself stays open
 
 ``commands`` lists what it answers: ``PlayCommand``, ``PauseCommand``,
@@ -42,7 +42,7 @@ Following a shared live run (``follow_live``) is not here: a live source is not
 playable, and the run decides what to follow.
 
 One task does everything: it reads the stream, paces frames, and applies
-commands, which ``handle`` queues for it. So nothing here needs a lock.
+commands, which ``ahandle`` queues for it. So nothing here needs a lock.
 
 The mixin keeps its state in ``speed``, ``paused``, ``ended``, ``error``,
 ``cursor``, ``last_frame``, ``loop`` and attributes prefixed ``_pl_``: names a
@@ -204,8 +204,10 @@ class Playable:
             if start + timedelta(seconds=command.offset_s) >= end:
                 raise CommandRefused(f"offset {command.offset_s}s lies past the end of the recording")
 
-    async def handle(self, command: Command) -> None:
-        """Queue ``command`` for the task, and wait until it is applied."""
+    async def ahandle(self, command: Command) -> None:
+        """Queue ``command`` for the task, and wait until it is applied. It is
+        ``Module.ahandle``: the answer goes out through the sink, so it returns
+        nothing, and it needs the loop that ran ``start``."""
         if self._pl_task is None or self._pl_task.done():
             raise CommandRefused("the player is not running")
         future = asyncio.get_running_loop().create_future()

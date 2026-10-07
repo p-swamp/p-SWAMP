@@ -15,7 +15,7 @@ architecture; `doc/module-cookbook.md` is the recipe for a new module.
 
 The same as `uv run pswamp modules list`, which shows it for whatever is
 installed. A **module** reads message classes from the transport and publishes
-others; a **source** (`SourceModule`, `pswamp_core.sources`) reads nothing and
+others; a **source** (`SourceModule`, `pswamp_core.sources`, a `Module` subclass) reads nothing and
 produces data, and is read from a script with a plain
 `for frame in SampleReplay().read():`. A history source that mixes in `Playable`
 (`pswamp_core.playable`) can also be replayed paced and sought, and answers the

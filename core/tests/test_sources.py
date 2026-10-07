@@ -10,6 +10,7 @@ import pytest
 from support import AsyncListSource, ListSource, TickingSource, frame
 
 from pswamp_core.enrich import CimReferenceEnricher
+from pswamp_core.modules import Module
 from pswamp_core.settings import EnvSetting, MissingSettingError
 from pswamp_core.sources import SourceModule, SourceSet
 from pswamp_core.testing import SourceConformance
@@ -153,6 +154,13 @@ def test_settings_come_from_the_environment_by_instance_name(monkeypatch):
     source = Configured.from_env("sample")
     assert (source.source, source.settings.url, source.settings.rate) == ("sample", "http://env", 2.5)
     assert Configured.from_env("sample", rate=1.0).settings.rate == 1.0  # an override wins
+
+
+def test_a_source_is_a_module_with_no_inputs_that_reports_its_settings():
+    assert issubclass(SourceModule, Module) and Configured.inputs == ()
+    source = Configured("mine", url="u")
+    assert source.identity.name == "configured" and source.source == "mine"
+    assert source.parameters == {"path": Path("default.txt"), "rate": None, "url": "u"}
 
 
 # --- checked when the class is defined ------------------------------------------------------

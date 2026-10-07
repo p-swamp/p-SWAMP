@@ -56,6 +56,7 @@ from .command_routing import CommandInbox, NoReceiver, concrete_commands
 from .host import DEFAULT_IDLE_SECONDS, ModuleHost
 from .keep_up import KeepUp
 from .log import get_logger
+from .sources import SourceModule
 from .subscription import Overflow
 from .transport import Outbox
 from .util.tasks import cancel_and_wait, finish
@@ -119,6 +120,9 @@ class Pipeline:
         return load_pipeline(path)
 
     def __post_init__(self) -> None:
+        for module in self.modules:
+            if issubclass(module, SourceModule):
+                raise ValueError(f"{self.app}: {module.__name__} is a source: list it under [[sources]], not modules")
         taken: dict[type[Command], str] = {command: "the player" for command in ROUTER_COMMANDS}
         for module in self.modules:
             for command in concrete_commands(module.__name__, module.commands):

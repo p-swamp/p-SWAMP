@@ -165,7 +165,7 @@ class ActiveSource:
             await self._activate()
             return
         assert self._playable is not None  # validate refused otherwise
-        await self._playable.handle(command)
+        await self._playable.ahandle(command)
         if isinstance(command, SpeedCommand):
             self.speed = command.speed
 

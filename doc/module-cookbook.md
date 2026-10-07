@@ -225,7 +225,7 @@ name = "live"
 module = "live-synthetic"
 ```
 
-A source is a module of its own kind (`SourceModule`), named by its entry point.
+A source is a module too (a `SourceModule`, which is a `Module` with no inputs), named by its entry point.
 `PEAK_FREQUENCY_SOURCES` (`name:entry-point,...`), when set,
 replaces the `[[sources]]` list, and each source reads its own
 `{NAME}_{SETTING}` variables (`LIVE_PATH` for the source named `live`). An `[enrich]` table with `cim_reference = "..."`
@@ -679,8 +679,9 @@ module in that process.
 
 ### Plug in a data source
 
-A source is a module of its own kind: a `SourceModule`, a project in
-`modules/`, found by its entry point.
+A source is a module too: a `SourceModule` (a `Module` with no inputs, run
+in its run's process rather than by a host), a project in `modules/`, found by
+its entry point.
 
 - **Your own store, over HTTP:** implement
   `doc/remote-data-integration-contract.md` and name `remote-history` in

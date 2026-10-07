@@ -391,13 +391,16 @@ a module is a project under `modules/`, and the
 streamer's are `frame-stats/`, `excursion/` and `range-summary/`.
 
 ### Sources
-*What.* A source is a module of its own kind (`SourceModule`, a project under
-`modules/`, found by its entry point like any module). It reads nothing and
+*What.* A source is a module too (`SourceModule`, a `Module` subclass with no
+inputs, in a project under `modules/`, found by its entry point like any
+module). Unlike other modules it runs in its run's process, read by the run's
+router, never in a `ModuleHost` (ADR-006). It reads nothing and
 produces `PmuFrame`s. It is a `history` (it holds a range, reports it as
 `coverage`, and yields any part of it) or a `live` feed (it yields records as
 they arrive). The author writes one of `read` (plain code, for a script too) or
 `aread`; the base derives the other. A history that mixes in `Playable` is also
-its own player: it paces, seeks, steps, loops and answers the playback commands.
+its own player: it paces, seeks, steps, loops and answers the playback commands
+(in `ahandle`, the slot a `Module` uses for an answer that awaits).
 A `SourceSet` holds a run's sources as named instances, one of them active.
 
 ```python
