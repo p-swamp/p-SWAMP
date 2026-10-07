@@ -9,6 +9,8 @@ from typing import Literal
 from pydantic import BaseModel
 
 from pswamp_core.datagateway import DataClient, TimeRange
+from pswamp_core.playable import Playable
+from pswamp_core.sources import SourceModule
 from pswamp_core.util.time import utcnow
 from pswamp_models.common import DataModel, ResultEnvelope
 from pswamp_models.pmu import PmuFrame, PmuHeader
@@ -163,3 +165,70 @@ def write_pipeline(path, text: str):
     """``text`` written to ``path``, which is returned."""
     path.write_text(text, encoding="utf-8")
     return path
+
+
+class ListSource(Playable, SourceModule):
+    """A playable history source over a list of frames, written as sync ``read``."""
+
+    name = "list-source"
+    kind = "history"
+
+    def __init__(self, source: str = "list", frames=None) -> None:
+        super().__init__(source)
+        self.frames = list(frames if frames is not None else [frame(i / 20) for i in range(20)])
+        self.opened = self.closed = 0
+
+    def open(self) -> None:
+        self.opened += 1
+
+    def close(self) -> None:
+        self.closed += 1
+
+    def coverage(self) -> TimeRange | None:
+        if not self.frames:
+            return None
+        return TimeRange(self.frames[0].timestamp, self.frames[-1].timestamp + timedelta(seconds=0.05))
+
+    def read(self, start=None, end=None):
+        for record in self.frames:
+            if TimeRange(start, end).contains(record.timestamp):
+                yield record
+
+
+class AsyncListSource(SourceModule):
+    """The same history, written as ``aread`` and ``acoverage``."""
+
+    name = "async-list-source"
+    kind = "history"
+
+    def __init__(self, source: str = "async-list", frames=None) -> None:
+        super().__init__(source)
+        self.frames = list(frames if frames is not None else [frame(i / 20) for i in range(20)])
+
+    async def acoverage(self) -> TimeRange | None:
+        return TimeRange(self.frames[0].timestamp, self.frames[-1].timestamp + timedelta(seconds=0.05))
+
+    async def aread(self, start=None, end=None):
+        for record in self.frames:
+            await asyncio.sleep(0)
+            if TimeRange(start, end).contains(record.timestamp):
+                yield record
+
+
+class TickingSource(SourceModule):
+    """A live source, written as ``aread``: a frame stamped now, every ``interval`` seconds."""
+
+    name = "ticking-source"
+    kind = "live"
+
+    def __init__(self, source: str = "ticker", interval: float = 0.02) -> None:
+        super().__init__(source)
+        self.interval = interval
+
+    async def aread(self, start=None, end=None):
+        while True:
+            await asyncio.sleep(self.interval)
+            now = utcnow()
+            if end is not None and now >= end:
+                return
+            yield frame(0).model_copy(update={"timestamp": now})

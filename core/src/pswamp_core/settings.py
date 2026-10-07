@@ -31,6 +31,7 @@ __all__ = [
     "MissingSettingError",
     "env_key",
     "load_class",
+    "parse_setting",
     "parse_specs",
     "read_setting",
 ]
@@ -61,15 +62,9 @@ def env_key(name: str, setting: str) -> str:
     return f"{prefix}_{setting.upper()}"
 
 
-def read_setting(name: str, setting: EnvSetting) -> Any:
-    """The value of one declared setting, parsed per its ``kind``; its default,
-    or ``None``, when unset."""
-    key = env_key(name, setting.setting)
-    raw = os.environ.get(key, "").strip() or setting.default
-    if raw is None:
-        if setting.required:
-            raise MissingSettingError(f"{key} is required to configure {name!r}")
-        return None
+def parse_setting(key: str, setting: EnvSetting, raw: str) -> Any:
+    """``raw`` parsed per ``setting.kind``. ``key`` names the variable in the
+    error a malformed value raises."""
     try:
         if setting.kind == "int":
             return int(raw)
@@ -84,6 +79,18 @@ def read_setting(name: str, setting: EnvSetting) -> Any:
         return raw
     except ValueError as error:
         raise MissingSettingError(f"{key} must be a valid {setting.kind}: {raw!r}") from error
+
+
+def read_setting(name: str, setting: EnvSetting) -> Any:
+    """The value of one declared setting, parsed per its ``kind``; its default,
+    or ``None``, when unset."""
+    key = env_key(name, setting.setting)
+    raw = os.environ.get(key, "").strip() or setting.default
+    if raw is None:
+        if setting.required:
+            raise MissingSettingError(f"{key} is required to configure {name!r}")
+        return None
+    return parse_setting(key, setting, raw)
 
 
 class Configurable:
