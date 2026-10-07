@@ -3,9 +3,16 @@
 
 """``ModuleHost``: runs a module, one instance per run key, off the transport.
 
-    topic <app>.<input>,   key k ─▶ the instance for key k ─▶ Module.process
-    topic <app>.<command>, key k ─▶ its command inbox       ─▶ Module.handle
-    topic <app>.<result>,  key k ◀─ what the instance publishes (and ErrorEvents)
+    topic <app>.<input>,   key k ─▶ the instance for key k ─▶ Module.arun
+    topic <app>.<command>, key k ─▶ its command inbox       ─▶ Module.ahandle
+    topic <app>.<output>,  key k ◀─ each of its outputs (and ErrorEvents)
+
+The host subscribes to every input of the module. Inputs go to the instance's
+queue, which applies the module's overflow policy, and ``serve_module`` reads
+them one at a time. A module joining named inputs queues only its trigger: any
+other input only replaces the newest of its kind in the join (``observe``), so
+a fast stream never backs up behind a slow trigger. Each output of a call is
+published on its own topic, under the key the input came with.
 
 An instance is built on the first message for its key, so a per-client run
 costs one instance per client, and a shared live run one in total. It is
@@ -33,6 +40,7 @@ from typing import TYPE_CHECKING
 from pswamp_models.common import ErrorEvent, PipelineClosed
 
 from .command_routing import CommandInbox, concrete_commands
+from .keep_up import KeepUpMonitor
 from .log import get_logger
 from .subscription import Overflow, Subscription
 from .transport import Outbox
@@ -40,11 +48,23 @@ from .util.tasks import cancel_and_wait, finish
 from .util.time import utcnow
 
 if TYPE_CHECKING:
+    from collections.abc import AsyncIterable
+
+    from pswamp_models.common import Command
+
     from .datagateway import DataGateway
     from .modules import Module
+    from .subscription import Sink
     from .transport import Transport, TransportSubscription
 
-__all__ = ["DEFAULT_IDLE_SECONDS", "DEFAULT_RETRY_SECONDS", "ModuleHost", "serve_hosts"]
+__all__ = [
+    "DEFAULT_IDLE_SECONDS",
+    "DEFAULT_RETRY_SECONDS",
+    "ModuleHost",
+    "command_inbox",
+    "serve_hosts",
+    "serve_module",
+]
 
 logger = get_logger("pswamp_core.host")
 
@@ -57,6 +77,60 @@ DEFAULT_RETRY_SECONDS = 5.0
 #: The shared feed of one topic, across keys: only a hand-off to each key's
 #: own queue, which applies the module's overflow policy.
 _FEED_MAXSIZE = 1024
+
+
+async def serve_module(module: Module, inputs: Subscription, out: Sink) -> None:
+    """Feed ``module`` from ``inputs`` and publish its outputs into ``out``,
+    until cancelled or ``inputs`` closes. A failing call, or an output that is
+    undeclared or does not fit its envelope, is logged, reported as an
+    ``ErrorEvent``, and the next input is read. Falling behind is reported
+    per the module's ``keep_up``."""
+    if not inputs.models:
+        return
+    what = f"is not keeping up with {', '.join(model.topic for model in inputs.models)}"
+    monitor = KeepUpMonitor(module.name, what, module.keep_up)
+    async for message in inputs:
+        try:
+            monitor.observe(inputs, message, out)
+            for output in await module.arun(message):
+                out.publish(output)
+        except Exception as error:
+            logger.exception("module %s failed on %s", module.name, type(message).__name__)
+            out.publish(
+                ErrorEvent(
+                    timestamp=utcnow(),
+                    source=module.name,
+                    message=f"module {module.name} failed on {type(message).__name__}",
+                    detail=f"{type(error).__name__}: {error}",
+                )
+            )
+
+
+class _Answering:
+    """A module as the command inbox sees a receiver."""
+
+    def __init__(self, module: Module) -> None:
+        self.module = module
+        self.name = module.name
+        self.commands = module.commands
+
+    def validate(self, command: Command) -> None:
+        self.module.validate(command)
+
+    async def handle(self, command: Command) -> object:
+        return await self.module.ahandle(command)
+
+
+def command_inbox(module: Module, commands: AsyncIterable[Command], out: Sink) -> CommandInbox:
+    """Applies ``module``'s commands; its answers and refusals go to ``out``.
+    An answer that cannot be published (undeclared, or not fitting its
+    envelope) is reported as applied but unanswered."""
+
+    def answer(command: Command, returned: object) -> None:
+        for output in module.answer_of(command, returned):
+            out.publish(output)
+
+    return CommandInbox(commands, _Answering(module), out, on_result=answer)
 
 
 class _Local:
@@ -74,8 +148,7 @@ class _Slot:
         self.module = module
         # Queues exist before the module is set up, so nothing arriving
         # meanwhile is lost.
-        inputs = (module.input_model,) if module.input_model is not None else ()
-        self.inputs = Subscription(_Local(), inputs, module.overflow, module.maxsize)
+        self.inputs = Subscription(_Local(), module.queued_inputs(), module.overflow, module.maxsize)
         self.commands = Subscription(_Local(), module.commands, Overflow.GROW, 0)
         self.out = Outbox(transport, app=app, key=key)
         self.inbox: CommandInbox | None = None
@@ -114,8 +187,10 @@ class ModuleHost:
         self.retry_seconds = retry_seconds
         template = module()
         self.name = template.name
-        self.input_model = template.input_model
-        self.output_model = template.output_model
+        self.inputs = template.queued_inputs()
+        #: The inputs that only update the newest of their kind (a join's others).
+        self.observed = tuple(m for m in template.input_models() if m not in self.inputs)
+        self.outputs = template.outputs
         self.commands = concrete_commands(type(template).__name__, template.commands)
         self._slots: dict[str, _Slot] = {}
         #: The instances that failed, for ``_reap`` to drop.
@@ -132,8 +207,10 @@ class ModuleHost:
         await self.transport.open()
         subscribe = self.transport.subscribe
         feeds = [self._closed(subscribe(PipelineClosed, app=self.app, overflow=Overflow.GROW))]
-        if self.input_model is not None:
-            feeds.append(self._feed(subscribe(self.input_model, app=self.app, maxsize=_FEED_MAXSIZE), "inputs"))
+        if self.inputs:
+            feeds.append(self._feed(subscribe(*self.inputs, app=self.app, maxsize=_FEED_MAXSIZE), "inputs"))
+        if self.observed:
+            feeds.append(self._feed(subscribe(*self.observed, app=self.app, maxsize=_FEED_MAXSIZE), None))
         if self.commands:
             feeds.append(self._feed(subscribe(*self.commands, app=self.app, overflow=Overflow.GROW), "commands"))
         tasks = [asyncio.create_task(feed, name=f"{self.name}.host") for feed in feeds]
@@ -141,8 +218,9 @@ class ModuleHost:
         tasks.append(asyncio.create_task(self._reap(), name=f"{self.name}.host.reap"))
         logger.info(
             "hosting %s for %s: reads %s, publishes %s, commands %s, over %s",
-            self.name, self.app, self.input_model.topic if self.input_model else "nothing",
-            self.output_model.topic, [c.topic for c in self.commands] or "none", self.transport.name,
+            self.name, self.app, [m.topic for m in (*self.inputs, *self.observed)] or "nothing",
+            [m.topic for m in self.outputs] or "nothing", [c.topic for c in self.commands] or "none",
+            self.transport.name,
         )
         try:
             await asyncio.gather(*tasks)
@@ -151,14 +229,19 @@ class ModuleHost:
             for key in list(self._slots):
                 await self._evict(key, "shutdown")
 
-    async def _feed(self, feed: TransportSubscription, queue: str) -> None:
+    async def _feed(self, feed: TransportSubscription, queue: str | None) -> None:
+        """Hand each message to its key's instance: into ``queue``, or with
+        none, straight into the instance's join."""
         with feed:
             async for key, message in feed:
                 slot = self._slot(key)
                 if slot is None:
                     continue
                 slot.seen = time.monotonic()
-                getattr(slot, queue).offer(message)
+                if queue is None:
+                    slot.module.observe(message)
+                else:
+                    getattr(slot, queue).offer(message)
 
     async def _closed(self, feed: TransportSubscription) -> None:
         with feed:
@@ -182,7 +265,7 @@ class ModuleHost:
         way is logged, reported under the key, and handed to ``_reap``."""
         try:
             await self._start(slot)
-            await slot.module.run(slot.inputs, slot.out)
+            await serve_module(slot.module, slot.inputs, slot.out)
         except Exception as error:
             logger.exception("%s: the instance for key %s failed", self.name, slot.key)
             slot.out.publish(
@@ -201,9 +284,9 @@ class ModuleHost:
         slot.out.start()
         if module.reads_gateway and self._gateway is not None:
             module.gateway = self._gateway()
-        await module.setup(slot.out)
+        await module.setup()
         if module.commands:
-            slot.inbox = module.command_inbox(slot.commands, slot.out)
+            slot.inbox = command_inbox(module, slot.commands, slot.out)
             slot.inbox.start()
         logger.info("%s: instance started for key %s (%d running)", self.name, slot.key, len(self._slots))
 

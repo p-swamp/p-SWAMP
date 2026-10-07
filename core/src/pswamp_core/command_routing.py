@@ -18,7 +18,7 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import AsyncIterable, Callable, Sequence
-from typing import TYPE_CHECKING, ClassVar, Protocol
+from typing import TYPE_CHECKING, Any, ClassVar, Protocol
 
 from pswamp_models.common import ErrorEvent
 
@@ -27,8 +27,6 @@ from .util.tasks import cancel_and_wait
 from .util.time import utcnow
 
 if TYPE_CHECKING:
-    from pydantic import BaseModel
-
     from pswamp_models.common import Command
 
     from .subscription import Sink
@@ -53,7 +51,7 @@ class CommandReceiver(Protocol):
 
     def validate(self, command: Command) -> None: ...
 
-    async def handle(self, command: Command) -> BaseModel | None: ...
+    async def handle(self, command: Command) -> object: ...
 
 
 def concrete_commands(owner: str, commands: Sequence[type[Command]]) -> tuple[type[Command], ...]:
@@ -82,7 +80,7 @@ class CommandInbox:
         receiver: CommandReceiver,
         out: Sink,
         *,
-        on_result: Callable[[Command, BaseModel], None] | None = None,
+        on_result: Callable[[Command, Any], None] | None = None,
     ) -> None:
         self.receiver = receiver
         self._commands = commands

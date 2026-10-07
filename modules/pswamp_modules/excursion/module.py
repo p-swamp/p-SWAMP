@@ -9,8 +9,9 @@ frequency is outside a band around 50 Hz, and counts excursions.
 
 Two commands go through it. ``AutoPauseCommand`` (from the page) turns
 pausing on excursion on or off for this run. When it is on and the frequency
-leaves the band, the module publishes a ``PauseCommand`` itself: a module
-commanding the player, exactly as the web API does.
+leaves the band, the module returns a ``PauseCommand`` beside its result: a
+command is one more declared output, published on its topic as the web API
+publishes it, and the player takes it.
 
 Its messages are in ``pswamp_models.excursion``; what it reads, in
 ``pswamp_models.frame_stats``.
@@ -19,7 +20,6 @@ Its messages are in ``pswamp_models.excursion``; what it reads, in
 from __future__ import annotations
 
 from pswamp_core.modules import Module
-from pswamp_core.subscription import Sink
 from pswamp_models.excursion import AutoPauseCommand, Excursion, ExcursionResult
 from pswamp_models.frame_stats import FrameStatsResult
 from pswamp_models.player import PauseCommand
@@ -32,8 +32,8 @@ BAND_HZ = 0.005
 
 class ExcursionModule(Module):
     name = "excursion"
-    input_model = FrameStatsResult
-    output_model = ExcursionResult
+    inputs = (FrameStatsResult,)
+    outputs = (ExcursionResult, PauseCommand)
     commands = (AutoPauseCommand,)
 
     def __init__(self) -> None:
@@ -43,25 +43,22 @@ class ExcursionModule(Module):
         self.excursions = 0
         self._in_band = True
         self._deviation: float | None = None
-        self._out: Sink | None = None
 
-    async def setup(self, out: Sink) -> None:
-        self._out = out
-
-    async def process(self, stats: FrameStatsResult) -> Excursion | None:
+    def process(self, stats: FrameStatsResult) -> Excursion | list[Excursion | PauseCommand] | None:
         mean = stats.result.mean_frequency_hz
         if mean is None:
             return None
         self._deviation = mean - NOMINAL_HZ
         in_band = abs(self._deviation) <= BAND_HZ
-        if self._in_band and not in_band:
+        left = self._in_band and not in_band
+        if left:
             self.excursions += 1
-            if self.auto_pause and self._out is not None:
-                self._out.publish(PauseCommand())
         self._in_band = in_band
+        if left and self.auto_pause:
+            return [self._state(), PauseCommand()]
         return self._state()
 
-    async def handle(self, command: AutoPauseCommand) -> Excursion:
+    def handle(self, command: AutoPauseCommand) -> Excursion:
         self.auto_pause = command.enabled
         return self._state()
 

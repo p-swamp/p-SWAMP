@@ -25,22 +25,17 @@ class FrameCounter(Module):
     """Counts frames; pauses the player at the fifth, to show a module commanding it."""
 
     name = "counter"
-    input_model = PmuFrame
-    output_model = NumberResult
+    inputs = (PmuFrame,)
+    outputs = (NumberResult, PauseCommand)
 
     def __init__(self) -> None:
         super().__init__()
         self.count = 0
-        self.out = None
 
-    async def setup(self, out) -> None:
-        self.out = out
-
-    async def process(self, frame: PmuFrame) -> Number:
+    def process(self, frame: PmuFrame) -> list:
         self.count += 1
-        if self.count == 5:
-            self.out.publish(PauseCommand())
-        return Number(value=self.count)
+        number = Number(value=self.count)
+        return [number, PauseCommand()] if self.count == 5 else number
 
 
 def gateway() -> DataGateway:
@@ -98,10 +93,20 @@ def test_two_classes_of_one_name_cannot_share_a_topic():
 
     class AlsoNumberResult(Halver):
         commands = ()
-        output_model = type("NumberResult", (ResultEnvelope[Number],), {})
+        outputs = (type("NumberResult", (ResultEnvelope[Number],), {}),)
 
     with pytest.raises(ValueError, match="both on topic number.result"):
         Pipeline("app", gateway, modules=(FrameCounter, AlsoNumberResult))
+
+
+def test_a_command_a_module_sends_needs_a_receiver():
+    class Asker(Halver):
+        outputs = (NumberResult, Unanswered)
+
+    with pytest.raises(ValueError, match="sends Unanswered, which nothing in the pipeline takes"):
+        Pipeline("app", gateway, modules=(Asker,))
+    pipeline = Pipeline("app", gateway, modules=(FrameCounter,))  # PauseCommand: the player takes it
+    assert pipeline.outputs == (NumberResult, PauseCommand) and pipeline.results == (NumberResult,)
 
 
 async def test_frames_reach_the_module_and_its_results_come_back(hosted):

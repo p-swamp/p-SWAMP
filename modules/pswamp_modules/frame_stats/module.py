@@ -7,7 +7,9 @@ on another.
 It reads ``PmuFrame`` and publishes ``FrameStatsResult`` (topic
 ``frame.stats.result``; both in ``pswamp_models.frame_stats``). It finds its columns in the frame's own header, and
 re-derives them only when ``header_id`` changes, so it needs no setup and runs
-the same in the server or a worker.
+the same in the server, a worker or a script::
+
+    FrameStatsModule().run_one(frame).result.mean_frequency_hz
 """
 
 from __future__ import annotations
@@ -23,8 +25,8 @@ class FrameStatsModule(Module):
     """Mean, min and max frequency, voltage angle spread, mean voltage."""
 
     name = "frame-stats"
-    input_model = PmuFrame
-    output_model = FrameStatsResult
+    inputs = (PmuFrame,)
+    outputs = (FrameStatsResult,)
 
     def __init__(self) -> None:
         super().__init__()
@@ -40,7 +42,7 @@ class FrameStatsModule(Module):
         self._angle = header.columns(measurement="V_Angle")
         self.parameters = {"header_id": header.header_id, "stations": header.stations}
 
-    async def process(self, frame: PmuFrame) -> FrameStats:
+    def process(self, frame: PmuFrame) -> FrameStats:
         if frame.header.header_id != self._header_id:
             self._use(frame.header)
         values = frame.values
