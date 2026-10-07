@@ -50,7 +50,7 @@ def validate(
     the pipeline it declares is inconsistent: two receivers of one command, two
     classes on one topic, a command a module sends that nothing takes, or a class
     a module reads that nothing produces. The environment applies, as it does at
-    run time (<APP>_DATA_CLIENTS replaces a file's sources). Exits non-zero if any
+    run time (<APP>_SOURCES replaces a file's sources). Exits non-zero if any
     file fails.
     """
     require_tools("uv", purpose="for the server environment")

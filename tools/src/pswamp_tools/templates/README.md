@@ -72,7 +72,7 @@ called `use__NAME__Socket.ts.template`. The tokens, for the example name
 | `__NAME__` | `GridOverview` | the React component, the hook, the model class |
 | `__WS_PATH_CONST__` | `GRID_OVERVIEW_WS_PATH` | the ws path const in `lib/servers.ts` |
 | `__API_PATH_CONST__` | `GRID_OVERVIEW_API_PATH` | the REST prefix const, same file |
-| `__UPPER__` | `GRID_OVERVIEW` | the environment variable prefix (`<APP>_DATA_CLIENTS`) |
+| `__UPPER__` | `GRID_OVERVIEW` | the environment variable prefix (`<APP>_SOURCES`) |
 | `__LABEL__` | `Grid Overview` | the nav entry and page title |
 
 The rendered Python has to pass `uv run pswamp check` — pyflakes lint plus a

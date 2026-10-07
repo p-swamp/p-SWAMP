@@ -16,8 +16,9 @@ architecture; `doc/module-cookbook.md` is the recipe for a new module.
 The last three are **sources**: a `SourceModule` (`pswamp_core.sources`) reads nothing and
 produces data, from a script with a plain `for frame in SampleReplay().read():`. A history
 source that mixes in `Playable` (`pswamp_core.playable`) can also be replayed paced and
-sought. `uv run pswamp modules list` tells the three kinds apart. Until the run switches
-over to them, the legacy data clients in `legacy/pswamp-wiring/` still serve it.
+sought. `uv run pswamp modules list` tells the three kinds apart. A run reads
+its sources through them (`[[sources]] module = "<entry point>"` in the pipeline
+file); the active one is steered by the run's `ActiveSource` router.
 
 Each module folder holds exactly:
 
@@ -39,9 +40,8 @@ modules/<name>/
   `pswamp_models.<pkg>`, never in the module.
 - **`pswamp-core` imports nothing from here.**
 - **A module folder holds only module code.** The pipelines are files in
-  `pipelines/<app>.toml` at the repo root, naming modules by entry point; the example
-  sources are in the transitional `legacy/pswamp-wiring/` until they are
-  replaced.
+  `pipelines/<app>.toml` at the repo root, naming modules and sources by entry
+  point.
 
 `tools/tests/test_tools_layering.py` checks all three over every
 `modules/*/pyproject.toml`.

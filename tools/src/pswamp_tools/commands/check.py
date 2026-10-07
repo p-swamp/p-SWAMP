@@ -14,7 +14,7 @@ from .._proc import require_tools, run, uv_server
 from .pipelines import pipeline_files, validate_files
 
 # Fully gated: syntax and ruff. `tools` is new with the CLI and starts lint-clean.
-LINTED = ("app", "models", "core", "modules", "legacy", "tools")
+LINTED = ("app", "models", "core", "modules", "tools")
 # Syntax only: the older desktop package ships in the image so it must parse, but
 # it has ~334 pyflakes findings to triage before it can join LINTED.
 # TODO Add the desktop package (desktop/src) to the ruff check once it is lint-clean.
@@ -33,8 +33,8 @@ one fails; the command exits non-zero if any did.
 
 [bold]Python[/bold] (the uv workspace)
   - uv lock --check --offline ... manifests vs the root uv.lock (fix: `uv lock`)
-  - syntax ...... every .py under app/, models/, core/, modules/, legacy/, tools/, + desktop/src/ (syntax only)
-  - ruff check --select F ... pyflakes (real bugs, not style) over app/, models/, core/, modules/, legacy/, tools/,
+  - syntax ...... every .py under app/, models/, core/, modules/, tools/, + desktop/src/ (syntax only)
+  - ruff check --select F ... pyflakes (real bugs, not style) over app/, models/, core/, modules/, tools/,
     with the ruff pinned in app/server-python's dev group
 
 [bold]Pipelines[/bold]

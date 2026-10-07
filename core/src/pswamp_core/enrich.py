@@ -1,11 +1,11 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright Contributors to the p-SWAMP Project.
 
-"""Enrichment: what the gateway adds to a record between provider and pipeline.
+"""Enrichment: what a run adds to a record between its source and the pipeline.
 
-An ``Enricher`` is the gateway's hook for data no provider holds. Every record
-a gateway's stream yields passes through its enrichers, so every reader (the
-player, a module reading a range) sees the same enriched record. ``enrich``
+An ``Enricher`` is the source set's hook for data no source holds. Every record
+a ``SourceSet`` stream yields passes through its enrichers, so every reader (a
+playable source, a module reading a range) sees the same enriched record. ``enrich``
 runs once per record on the event loop: no I/O there.
 
 ``CimReferenceEnricher`` is the stub for the CIM reference. It sets

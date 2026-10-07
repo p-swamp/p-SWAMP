@@ -32,7 +32,7 @@ def tree(tmp_path):
         shutil.copyfile(real / path, tmp_path / path)
     for folder in (
         "pipelines",
-        "legacy/pswamp-wiring/src/pswamp_modules/sources",
+        "modules/sample-replay/src/pswamp_modules/sample_replay",
         "modules/frame-stats/src/pswamp_modules/frame_stats",
         "modules/frame-stats/tests",
         "models/src/pswamp_models/pmu",
@@ -230,13 +230,13 @@ def test_a_module_cannot_take_an_app_s_pipeline_file(tree):
         generate.plan(tree, "zz-mod", "ZZ Mod", "module")
 
 
-@pytest.mark.parametrize("slug", ["sources", "frame-stats"])
+@pytest.mark.parametrize("slug", ["sample-replay", "frame-stats"])
 def test_a_module_cannot_take_a_name_in_the_pswamp_modules_namespace(tree, slug):
     with pytest.raises(generate.GenerateError, match="already exists"):
         generate.plan(tree, slug, "Taken", "module")
 
 
-@pytest.mark.parametrize("slug", ["core", "tools", "wiring"])
+@pytest.mark.parametrize("slug", ["core", "tools", "server"])
 def test_a_module_cannot_take_the_distribution_name_of_a_workspace_project(tree, slug):
     with pytest.raises(generate.GenerateError, match=f"pswamp-{slug} already exists"):
         generate.plan(tree, slug, "Taken", "module")

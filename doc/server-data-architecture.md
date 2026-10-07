@@ -36,16 +36,16 @@ worked example of every piece.
 |---|---|
 | message | A pydantic model with a schema version. Everything that crosses a topic, a socket or a process boundary is one. |
 | `PmuFrame` | One instant of every channel in a stream, carrying its channel layout (`PmuHeader`). |
-| provider (`DataClient`) | One source of data: a *history* (seekable) or a *live* feed (tailed from now). |
-| gateway | A pipeline's providers as named sources, one of them active. Enriches every frame on the way out. |
-| player | Paces the active source: replays a history in real time or tails a live feed. Owns the transport controls. |
+| source (`SourceModule`) | One source of data, written as a module: a *history* (seekable) or a *live* feed (tailed from now). A history that is `Playable` also paces itself and answers the transport controls. |
+| source set (`SourceSet`) | A run's sources as named instances, one of them active. Enriches every frame on the way out. |
+| router (`ActiveSource`) | A run's receiver of `SwitchSourceCommand` and the playback commands: switches the active source and hands the playback commands to it. Reported as "the player" to the page and in errors. |
 | transport | Keyed publish/subscribe: in-memory in one process, or Kafka between processes. |
 | topic | `<app>.<message class>`, e.g. `pmu-test-streamer.pmu.frame`. One class per topic. |
 | key | Which pipeline run a record belongs to: a client id, or `live.<source>`. |
 | module | p-SWAMP's microservice: one analysis that reads one message class, publishes a result class, may answer commands, and can run in a process of its own. |
 | host / worker | A host runs one module instance per key. A worker is a process that runs hosts. |
 | pipeline | The declaration: an app's sources and modules. |
-| run | One running pipeline under one key: a gateway, a player, and the latest message of each class. |
+| run | One running pipeline under one key: a source set, a router over it, and the latest message of each class. |
 | web API | An app's FastAPI package under `/api/<app>/`, which the browser talks to: POSTs become commands, and the socket pushes state. `doc/the-client-server-api.md` describes the convention. |
 | command | A typed message going upstream. Its class decides who handles it. |
 
@@ -54,8 +54,9 @@ worked example of every piece.
 The PMU test streamer (`/pmu-test-streamer`) is the app every example below
 is taken from. It is not part of the core: it is one pipeline built on it,
 kept complete so each piece has a working instance to read. Its modules are
-projects in `modules/` (`frame-stats/`, `excursion/`, `range-summary/`); its
-pipeline and sources are in the transitional `legacy/pswamp-wiring/`. Its parts:
+projects in `modules/` (`frame-stats/`, `excursion/`, `range-summary/`), and so
+are its sources (`sample-replay/`, `live-synthetic/`, `remote-history/`); its
+pipeline is `pipelines/pmu-test-streamer.toml`. Its parts:
 
 | Part | What it is |
 |---|---|
@@ -68,9 +69,9 @@ pipeline and sources are in the transitional `legacy/pswamp-wiring/`. Its parts:
 ## The picture
 
 ```
-DATA DOWN    provider → gateway (enrich) → player → topic <app>.pmu.frame → module → topic <app>.<result>
+DATA DOWN    active source (enrich) → topic <app>.pmu.frame → module → topic <app>.<result>
              → the run's latest → web API → socket → browser
-COMMANDS UP  browser → POST → web API → topic <app>.<command> → player | module
+COMMANDS UP  browser → POST → web API → topic <app>.<command> → router → active source | module
              a module may publish a command too
 WHERE        in-memory transport: modules hosted in the server; Kafka: modules in workers
 ```
@@ -80,11 +81,11 @@ flowchart TB
     classDef data fill:#e8f1fb,stroke:#3b6ea5,color:#000
     classDef web fill:#eeeeee,stroke:#555,color:#000
 
-    sources["Providers<br/>recording · live feed · remote data service"]:::data
+    sources["Sources<br/>recording · live feed · remote data service"]:::data
     subgraph run["Run: one per client for a recording, one per live source"]
         direction TB
-        gw["Gateway<br/>named sources, one active · CIM reference"]:::data
-        player["Player<br/>replay or tail"]:::data
+        gw["Source set<br/>named sources, one active · CIM reference"]:::data
+        player["Router<br/>switch · playback commands"]:::data
         latest["latest<br/>newest message of each class"]:::data
     end
     subgraph transport["Transport: in-memory or Kafka"]
@@ -120,10 +121,11 @@ classes.
 | modules | one instance per client | one instance, results shared |
 
 *What.* Each client has its own run, and picks its source with
-`SwitchSourceCommand`. On a recording, the client's player replays it. Each
+`SwitchSourceCommand`. On a recording, the active source replays it (it is
+`Playable`). Each
 live source has one shared run, keyed `live.<source>`, which `serve_pipeline`
 starts with the app (`start_live_runs`) and stops at shutdown. A client's run
-switched to a live source opens no stream: its player reports "live", and the
+switched to a live source opens no stream: its router reports "live", and the
 run follows the shared run's frame and result topics into its own `latest`.
 The web API reads a client's run the same way in both cases.
 
@@ -134,7 +136,7 @@ as it would in a control room. Topics are shared by every key of an app; the
 record key keeps runs apart.
 
 *Where.* `core/src/pswamp_core/pipeline.py` (`start_live_runs`,
-`PipelineRun._follow`), `player.py` (`follow_live`), `shared.serve_pipeline`.
+`PipelineRun._follow`), `active_source.py` (`follow_live`), `shared.serve_pipeline`.
 
 ## Where it runs
 
@@ -160,9 +162,8 @@ under Deployment, shows the change in compose and in k8s.
 
 ```
 models/   pswamp-models    every message, one package per producer (pydantic only)
-core/     pswamp-core      transport, module contract, gateway, player, pipelines
-modules/<name>/        pswamp-<name>   one project per module (pswamp_modules.<pkg>, a namespace portion)
-legacy/pswamp-wiring/  pswamp-wiring   transitional: the example sources
+core/     pswamp-core      transport, module contract, sources, router, pipelines
+modules/<name>/        pswamp-<name>   one project per module or source (pswamp_modules.<pkg>, a namespace portion)
 pipelines/<app>.toml                   each app's pipeline, as data (not a project)
 app/server-python          the web API of each app, and the server
 ```
@@ -308,8 +309,8 @@ example") show the three things a module can do beyond reading frames:
   `PauseCommand` when the frequency leaves its band and auto-pause is on, and
   the player applies it exactly as one from the web API. A pipeline refuses a
   module that sends a command nothing in it takes.
-- **Read data itself.** A module that sets `reads_gateway = True` gets its
-  own gateway over the pipeline's sources (`self.gateway`). The streamer's
+- **Read data itself.** A module that sets `reads_sources = True` gets its
+  own `SourceSet` over the pipeline's sources (`self.sources`). The streamer's
   `RangeSummaryModule` answers `SummarizeRangeCommand` with it: a batch query,
   which compose and k8s run in a worker of its own.
 
@@ -324,82 +325,93 @@ configuration. `process` runs on the event loop; a CPU-heavy module sets
 a module is a project under `modules/`, and the
 streamer's are `frame-stats/`, `excursion/` and `range-summary/`.
 
-### Gateway and providers
-*What.* A provider implements `DataClient`: it is a `history` (it holds a
-range, reports it as `coverage`, and yields any part of it) or a `live` feed
-(it yields records as they arrive). A `DataGateway` holds a run's providers as
-named sources, one of them active.
+### Sources
+*What.* A source is a module of its own kind (`SourceModule`, a project under
+`modules/`, found by its entry point like any module). It reads nothing and
+produces `PmuFrame`s. It is a `history` (it holds a range, reports it as
+`coverage`, and yields any part of it) or a `live` feed (it yields records as
+they arrive). The author writes one of `read` (plain code, for a script too) or
+`aread`; the base derives the other. A history that mixes in `Playable` is also
+its own player: it paces, seeks, steps, loops and answers the playback commands.
+A `SourceSet` holds a run's sources as named instances, one of them active.
 
 ```python
-class SampleRecordingClient(DataClient):
+class SampleReplay(Playable, SourceModule):
+    name = "sample-replay"
     kind = "history"
-    async def coverage(self): return self.recording.coverage          # [first, end)
-    async def consume(self, time_range):
+    def coverage(self): return self.recording.coverage          # [first, end)
+    def read(self, start=None, end=None):
         for frame in self.recording.frames:
-            if time_range.contains(frame.timestamp):
+            if TimeRange(start, end).contains(frame.timestamp):
                 yield frame
 
-gateway = DataGateway([SampleRecordingClient("sample"), LiveClient("live")])
-gateway.switch("live")                            # only an explicit switch changes the source
-stream = await gateway.consume(start=t0)          # a seek
-chunk = await gateway.consume(start=t0, end=t1)   # exactly [t0, t1)
+sources = SourceSet([SampleReplay("sample"), LiveSynthetic("live")])
+sources.switch("live")                            # only an explicit switch changes the source
+stream = await sources.consume(start=t0)          # a seek
+chunk = await sources.consume(start=t0, end=t1)   # exactly [t0, t1)
 ```
 
-*Why.* A provider is written against the contract alone, so a deployment can
-write its own outside this repo. `pswamp_core.testing.DataClientConformance`
-is the executable contract: inherit it, supply the client, and pytest checks
-it. With one source active at a time, a stream always has exactly one provider
-behind it. "Jump to a time" and "query a chunk" are the same call. The gateway
-opens a client on first use, so a source nobody reads costs nothing. History
-lives with the provider: the repo stores nothing.
+*Why.* A source is written against the contract alone, so a deployment can
+write its own outside this repo. `pswamp_core.testing.SourceConformance` is the executable
+contract: inherit it, supply the source, and pytest checks it. With one source
+active at a time, a stream always has exactly one source behind it. "Jump to a
+time" and "query a chunk" are the same call. The set opens a source on first
+use, so one nobody reads costs nothing. History lives with the source: the
+repo stores nothing.
 
 **Configured, not coded.** An app's sources are the `[[sources]]` of its
-pipeline file (`pipelines/<app>.toml`; the first is the default), which
-`<APP>_DATA_CLIENTS` replaces when set. Each client reads its own
-`{NAME}_{SETTING}` variables:
+pipeline file (`pipelines/<app>.toml`; `name` and `module`, an entry point; the
+first is the default), which `<APP>_SOURCES` (`name:entry-point,...`) replaces
+when set. Each source reads its own `{NAME}_{SETTING}` variables:
 
 ```
-PMU_TEST_STREAMER_DATA_CLIENTS=sample:pswamp_modules.sources.sample_client:SampleRecordingClient,live:acme.pmu:KafkaFeed
+PMU_TEST_STREAMER_SOURCES=sample:sample-replay,live:acme-feed
 LIVE_BOOTSTRAP_SERVERS=kafka.acme:9092
 ```
 
-A deployment plugs in its own provider with one package in the image and one
-variable.
+A deployment plugs in its own source with one package in the image and one
+variable. (`<APP>_DATA_CLIENTS` of the old data clients is no longer read, and
+setting it is an error that says so.)
 
-*Where.* `core/src/pswamp_core/datagateway/`, `settings.py`, `testing.py`;
-the examples are `legacy/pswamp-wiring/src/pswamp_modules/sources/sample_client.py`
-(history) and `live_client.py` (live: the sample re-stamped on the wall clock).
+*Where.* `core/src/pswamp_core/sources.py`, `playable.py`, `settings.py`,
+`testing.py`; the examples are `modules/sample-replay/` (history, playable) and
+`modules/live-synthetic/` (live: the sample re-stamped on the wall clock).
 
 ### CIM reference
-*What.* The gateway sets an optional `PmuHeader.cimReferenceId` on every
+*What.* The source set sets an optional `PmuHeader.cimReferenceId` on every
 frame: an id for the grid (CIM) data that applies to it. Enrichers passed to a
-`DataGateway` run on every record its streams yield. `CimReferenceEnricher`
+`SourceSet` run on every record its streams yield. `CimReferenceEnricher`
 decides the reference once per layout. **It is a stub**: it returns one
 configured id (`PMU_TEST_STREAMER_CIM_REFERENCE`, default `n44-cim-stub`,
 `none` for none). A lookup against a CIM model overrides `reference_for` and
 nothing else changes.
 
-*Why.* Every reader's frames pass through the gateway, so every module sees
+*Why.* Every reader's frames pass through the source set, so every module sees
 the same reference, decided once, early. It travels with the frame, so a module
 in a worker gets it with no configuration of its own. It is a reference, not
 the grid data itself, which would cost kilobytes per frame.
 
-*Where.* `core/src/pswamp_core/datagateway/enrich.py`; wired in
+*Where.* `core/src/pswamp_core/enrich.py`; wired in
 `pipelines/pmu-test-streamer.toml` (`[enrich] cim_reference`).
 
-### Player
-*What.* Paces the run's active source and owns the transport controls.
+### The router and playable sources
+*What.* A run's `ActiveSource` router receives `SwitchSourceCommand` and the
+playback commands. A switch stops the active source and starts the new one; a
+playback command goes to the active source when it is `Playable`, and is
+refused (`<command> does not apply to a live source`) when it is not. A source
+that is not playable is pumped: its frames go out as they arrive.
 
 ```python
-player = Player(gateway, sink, loop=True)
-await player.start()        # a recording: paused at its start; a live feed: followed from now
-player.validate(command)    # raises CommandRefused: the web API's 409
-await player.handle(command)
-player.status()             # PlayerStatus: mode, source, cursor, speed, can_seek, error, ...
+router = ActiveSource(sources, sink, loop=True)
+await router.start()        # a recording: paused at its start; a live feed: followed from now
+router.validate(command)    # raises CommandRefused: the web API's 409
+await router.handle(command)
+router.status()             # PlayerStatus: mode, source, cursor, speed, can_seek, error, ...
 ```
 
-*Why.* A provider yields as fast as it reads, but a person watching a
-disturbance needs real time and needs to scrub. The rules:
+*Why.* A source yields as fast as it reads, but a person watching a
+disturbance needs real time and needs to scrub. The rules, which the
+`Playable` source carries:
 
 - **Mode is the active source's kind.** A recording is replayed: paced, seekable,
   looping at its end. A live feed is followed, with no transport controls. The
@@ -414,8 +426,11 @@ disturbance needs real time and needs to scrub. The rules:
   `ErrorEvent` published. Play tries again.
 - **One task** reads the stream, paces, and applies the commands `handle`
   queues for it. No locks, and a quiet live feed never delays a command.
+- **The speed belongs to the run:** it carries over when another recording is
+  switched to.
 
-*Where.* `core/src/pswamp_core/player.py`.
+*Where.* `core/src/pswamp_core/active_source.py` (the router) and
+`playable.py` (the pacing).
 
 ### Pipelines and runs
 *What.* A `Pipeline` declares an app's pipeline once: the app name (its topic
@@ -423,7 +438,7 @@ namespace), its sources and its modules. A `PipelineRun` is one running
 instance under one key. A `PipelineRegistry` keeps one run per key.
 
 ```python
-PIPELINE = Pipeline.load("pipelines/pmu-test-streamer.toml")   # or Pipeline(app, gateway, modules=...) in a test
+PIPELINE = Pipeline.load("pipelines/pmu-test-streamer.toml")   # or Pipeline(app, sources, modules=...) in a test
 
 REGISTRY = PipelineRegistry(lambda key: PipelineRun(key, PIPELINE, transport))
 run = await REGISTRY.acquire(client_id)       # built on first connect
@@ -434,8 +449,8 @@ REGISTRY.peek(client_id)                      # a command's view: never builds
 
 *Why.* The declaration is what both sides share. The server builds runs from
 it, and a module host, in the server or a worker, hosts its modules from it
-(`PIPELINE.hosts(transport)`). A run holds a gateway and a player, publishes
-the player's frames to the modules, and keeps the newest message of each class
+(`PIPELINE.hosts(transport)`). A run holds a source set and a router, publishes
+the active source's frames to the modules, and keeps the newest message of each class
 it sees. That view is not a bus: the web API builds its message from current
 state, so however much arrived meanwhile, it sends one. The registry lets a
 run outlive its sockets for five minutes, so a reload rejoins it. At its cap
@@ -448,12 +463,12 @@ modules by entry point, the producer check); `pipelines/pmu-test-streamer.toml`.
 
 ### Commands
 *What.* A command's class is its address. Exactly one part of a pipeline
-declares that it handles it: the player, or one module. The command travels on
+declares that it handles it: the router (for the player commands), or one module. The command travels on
 its own topic, `<app>.<command>`, under the run's key.
 
 ```python
 run.dispatch(SeekCommand(client_id=id, offset_s=12))
-#   a player command?  player.validate(cmd)    raises CommandRefused: the POST's 409
+#   a player command?  router.validate(cmd)    raises CommandRefused: the POST's 409
 #   a module command?  published as it is       the module validates it where it runs
 #   nobody takes it?   NoReceiver
 #   then               topic pmu-test-streamer.seek.command, key = the run's key
@@ -463,7 +478,7 @@ run.dispatch(SeekCommand(client_id=id, offset_s=12))
 *Why.* The mental model is one sentence: **anyone may publish a command, its
 one declared receiver applies it, anyone may subscribe to watch it.** The
 arguments are validated fields, not a verb and a dict. `Pipeline` refuses two
-receivers of one class. The player lives in the server, beside the web API,
+receivers of one class. The router lives in the server, beside the web API,
 so its commands are checked before they are published, and a refusal is an
 honest 409. A module may run in another process, so its commands are checked
 where it runs, and a refusal comes back as an `ErrorEvent`. Player commands
@@ -503,7 +518,7 @@ async def ws_endpoint(ws: WebSocket) -> None:
 - `connected_pipeline`: the socket's handshake, with close codes 1008 (no
   client id), 1013 (at capacity) and 1011 (the run failed to start).
 - `push_changes`: one message on connect and one per change, coalesced.
-- `dispatch_command`: 404 without a run, 409 when the player refuses, else a
+- `dispatch_command`: 404 without a run, 409 when the router refuses, else a
   `CommandAck` meaning *accepted*: the command is queued for its receiver. The
   ack carries the command's `request_id`, as does whatever answers or refuses
   it.
@@ -553,35 +568,36 @@ are `ErrorEvent`s, so they reach the error tray.
 *Where.* `core/src/pswamp_core/keep_up.py`; `serve_module` (`host.py`), `Outbox`.
 
 ### Remote data
-*What.* `RemoteDataClient` is a history data client over a deployment's own
+*What.* `RemoteHistory` (`modules/remote-history/`) is a playable history source over a deployment's own
 remote data service: a small REST api in front of whatever store holds its
 history. Coverage is `GET /v1/coverage`. A range is `POST /v1/queries`, and its
 records come back as that call's streamed response, one NDJSON line each,
 closed by an `end` line. **The contract is
 `doc/remote-data-integration-contract.md`**, in HTTP terms alone. In compose
 and k8s, `remote-data-stub` serves the streamer's sample recording over it,
-and the streamer lists it as its third source, `remote`.
+and the streamer lists it as its third source, `remote` (`remote:remote-history`
+in `PMU_TEST_STREAMER_SOURCES`, with `REMOTE_URL`).
 
 *Why.* p-SWAMP asks for a range and gets it back; which store answers is the
 deployment's choice, and the repo stores nothing. The answer comes on the
 connection that asked, so the contract has no correlation ids, no second
 channel and no cancel route: closing the connection cancels. It also gives
 backpressure for free. A command never reaches the service. It stops at the
-player, which seeks, or at a module, which reads a range from its gateway
+player, which seeks, or at a module, which reads a range from its sources
 like anyone else (the range summary).
 
-*Where.* `core/src/pswamp_core/datagateway/clients/remote_data.py`,
-`models/src/pswamp_models/remote_data/`, `core/examples/remote_data_stub/`;
-`core/tests/test_remote_data.py` runs the conformance suite over the stub.
+*Where.* `modules/remote-history/src/pswamp_modules/remote_history/`,
+`models/src/pswamp_models/remote_data/`, `modules/remote-history/examples/remote_data_stub/`;
+`modules/remote-history/tests/` runs the conformance suite over the stub.
 
 ### Deployment
 *What.* One image, several roles, configured by environment:
 
 | Role | Command | Configured by |
 |---|---|---|
-| server | the image's default (`python server.py`) | `PSWAMP_TRANSPORT`, `<APP>_DATA_CLIENTS` and their `{NAME}_*` blocks |
-| worker | `python -m pswamp_core.worker`, run from `pipelines/` | the same transport, `PSWAMP_WORKER_PIPELINES`, `PSWAMP_WORKER_MODULES`; a module that reads the gateway also needs `<APP>_DATA_CLIENTS` |
-| remote data stub | `python -m remote_data_stub` | `REMOTE_DATA_STUB_CLIENT` (and `core/examples` on `PYTHONPATH`) |
+| server | the image's default (`python server.py`) | `PSWAMP_TRANSPORT`, `<APP>_SOURCES` and their `{NAME}_*` blocks |
+| worker | `python -m pswamp_core.worker`, run from `pipelines/` | the same transport, `PSWAMP_WORKER_PIPELINES`, `PSWAMP_WORKER_MODULES`; a module that reads the sources also needs `<APP>_SOURCES` |
+| remote data stub | `python -m remote_data_stub` | `REMOTE_DATA_STUB_SOURCE` (and `modules/remote-history/examples` on `PYTHONPATH`) |
 | broker | `apache/kafka` | one KRaft node, topic auto-creation off, 10 s retention checks |
 
 **The broker is replaceable.** Only `KafkaTransport` knows the broker is
@@ -614,7 +630,7 @@ Kafka is the only broker transport in the repo today.
   apply the retention settings the transport asks for (`LIVE_TOPIC_CONFIGS`)
   or an equivalent broker policy.
 - **Data**: the deployment's remote data service in `REMOTE_URL`, its live
-  feed as a `DataClient` class in `<APP>_DATA_CLIENTS` (an image layered on
+  feed as a `SourceModule` project named in `<APP>_SOURCES` (an image layered on
   this one), and no stub.
 - **Resources**: CPU and memory limits per worker, sized by what its modules
   cost (below).
@@ -707,8 +723,8 @@ spec:
 and, in the `p-swamp-module-worker` Deployment, `PSWAMP_WORKER_MODULES`
 becomes `frame-stats` (step 2).
 
-- **A module that reads the gateway** also needs the app's
-  `<APP>_DATA_CLIENTS` and the settings of the clients it names, as the
+- **A module that reads the sources** also needs the app's
+  `<APP>_SOURCES` and the settings of the sources it names, as the
   `batch-worker` has for the range summary.
 - **What it gives.** The module has its own process, so a slow or crashing
   one cannot stall the modules in other workers, and its own limits, so it can be given more
@@ -755,7 +771,7 @@ sources.
   backend, the web client and the desktop package's dependencies. A deployment
   may build a slimmer image from `models/`, `core/` and `modules/` alone.
 - **A live source over a real feed**, such as a broker's topic read as a
-  `DataClient`.
+  live `SourceModule`.
 - **Cheaper frames**: the header serialised once per layout, and producer
   batching.
 - **A notice when nothing answers a command.** The acknowledgement means

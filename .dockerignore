@@ -46,8 +46,7 @@ tests/
 .idea/
 # The models' and the core's tests (the rules above are anchored to their
 # directories), each module project's tests/ and examples/
-# (modules/<name>/tests/, modules/<name>/examples/), and the transitional
-# wiring's tests.
+# (modules/<name>/tests/, modules/<name>/examples/).
 models/tests/
 core/tests/
 modules/*/tests/
@@ -56,6 +55,5 @@ modules/*/examples/
 # the image (python -m remote_data_stub, PYTHONPATH on this folder).
 !modules/remote-history/examples/remote_data_stub/
 modules/remote-history/examples/remote_data_stub/__pycache__/
-legacy/*/tests/
 # pipelines/ (the pipeline files, pipelines/<app>.toml) is deliberately NOT
 # ignored: the server and the workers load them inside the image.

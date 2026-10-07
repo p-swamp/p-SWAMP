@@ -26,9 +26,6 @@ dependencies = [
     "pswamp-sample-replay",
     "pswamp-live-synthetic",
     "pswamp-remote-history",
-    # Transitional: the example sources (legacy/pswamp-wiring/), which the
-    # pipeline files (pipelines/<app>.toml) name.
-    "pswamp-wiring",
     # The message models (models/): the server imports them directly.
     "pswamp-models",
 ]
@@ -59,8 +56,8 @@ dependencies = [
 [tool.uv.sources]
 p-swamp = { path = "../../desktop", editable = true }
 # The message models at models/, the shared core at core/, the modules at
-# modules/<name>/ and the transitional wiring at legacy/pswamp-wiring/ are members of the uv workspace rooted at the repo root (one uv.lock
-# there). Same one-way rule: nothing under models/, core/, modules/ or legacy/
+# modules/<name>/ are members of the uv workspace rooted at the repo root (one
+# uv.lock there). Same one-way rule: nothing under models/, core/ or modules/
 # imports from app/.
 pswamp-models = { workspace = true }
 pswamp-core = { workspace = true }
@@ -70,7 +67,6 @@ pswamp-range-summary = { workspace = true }
 pswamp-sample-replay = { workspace = true }
 pswamp-live-synthetic = { workspace = true }
 pswamp-remote-history = { workspace = true }
-pswamp-wiring = { workspace = true }
 pswamp-tools = { workspace = true }
 
 # Tooling that must never ship in the image — the Dockerfile exports with
@@ -122,9 +118,9 @@ pythonpath = ["src", "../../modules/remote-history/examples"]
 # models/tests, core/tests and the modules' tests run here too: one runner and
 # one CI job cover every suite. Each module project carries its tests in
 # modules/<name>/tests/, found by recursing into modules/; the transitional
-# wiring's are in legacy/pswamp-wiring/tests/. The repo CLI's tests (tools/tests)
+# repo CLI's tests (tools/tests)
 # run here too. None of these folders is a package, so a test file name must be
 # unique across ALL of them (hence test_models_*, test_tools_*,
-# test_<module>_module.py, test_wiring_*).
-testpaths = ["tests", "../../models/tests", "../../core/tests", "../../modules", "../../legacy", "../../tools/tests"]
+# test_<module>_module.py).
+testpaths = ["tests", "../../models/tests", "../../core/tests", "../../modules", "../../tools/tests"]
 asyncio_mode = "auto"

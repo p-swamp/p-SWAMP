@@ -25,7 +25,6 @@ members = [
     "pswamp-sample-replay",
     "pswamp-server",
     "pswamp-tools",
-    "pswamp-wiring",
 ]
 
 [[package]]
@@ -1256,7 +1255,6 @@ dependencies = [
     { name = "pswamp-range-summary" },
     { name = "pswamp-remote-history" },
     { name = "pswamp-sample-replay" },
-    { name = "pswamp-wiring" },
     { name = "uvicorn", extra = ["standard"] },
 ]
 
@@ -1280,7 +1278,6 @@ requires-dist = [
     { name = "pswamp-range-summary", editable = "modules/range-summary" },
     { name = "pswamp-remote-history", editable = "modules/remote-history" },
     { name = "pswamp-sample-replay", editable = "modules/sample-replay" },
-    { name = "pswamp-wiring", editable = "legacy/pswamp-wiring" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.52.4,<0.53" },
 ]
 
@@ -1305,21 +1302,6 @@ dependencies = [
 requires-dist = [
     { name = "rich", specifier = ">=13.7" },
     { name = "typer", specifier = ">=0.15" },
-]
-
-[[package]]
-name = "pswamp-wiring"
-version = "0.1.0"
-source = { editable = "legacy/pswamp-wiring" }
-dependencies = [
-    { name = "pswamp-core" },
-    { name = "pswamp-models" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "pswamp-core", editable = "core" },
-    { name = "pswamp-models", editable = "models" },
 ]
 
 [[package]]

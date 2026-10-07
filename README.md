@@ -9,10 +9,9 @@ The repository holds two implementations side by side:
 | [`desktop/`](desktop/) | The original single-process Python + Qt application, the `p-swamp` package. Its own README covers installation and the examples. |
 | [`app/`](app/) | The client-server stack: a FastAPI server (`app/server-python/`) and a React web client (`app/client-web/`). |
 | [`models/`](models/) | `pswamp-models`, every message of the server data architecture, one package per producer. |
-| [`core/`](core/) | `pswamp-core`, the server data architecture: transport, modules, gateway, player, pipelines. |
-| [`modules/`](modules/) | The analysis modules, one Python project each (`modules/<name>/`, `pswamp-<name>`). |
+| [`core/`](core/) | `pswamp-core`, the server data architecture: transport, modules, sources, pipelines. |
+| [`modules/`](modules/) | The analysis modules and the data sources, one Python project each (`modules/<name>/`, `pswamp-<name>`). |
 | [`pipelines/`](pipelines/) | One pipeline file per app (`<app>.toml`): its modules, its sources, its enrichment. `uv run pswamp pipelines validate` checks them. |
-| [`legacy/pswamp-wiring/`](legacy/pswamp-wiring/) | Transitional: the example data sources, until they become modules. |
 | [`doc/`](doc/) | Documentation for the client-server stack. Start with [`doc/client-server-rig.md`](doc/client-server-rig.md). |
 
 `models/`, `core/`, `modules/`, `tools/` and `app/server-python/` form one uv workspace with a single

@@ -47,11 +47,11 @@ PIPELINES = Path("pipelines")
 SERVER_MANIFEST = Path("app/server-python/pyproject.toml")
 # Test folders that run in one pytest session with the server's and are not
 # packages, so a test file name must be unique across all of them. The module
-# projects' and the transitional wiring's (legacy/) are globbed.
+# projects' are globbed.
 NON_PACKAGE_TESTS = (SERVER_TESTS, Path("models/tests"), Path("core/tests"), Path("tools/tests"))
-NON_PACKAGE_TEST_GLOBS = ("modules/*/tests", "legacy/*/tests")
+NON_PACKAGE_TEST_GLOBS = ("modules/*/tests",)
 # The workspace's own distribution names: a module's, pswamp-<slug>, must not be one.
-TAKEN_DISTRIBUTIONS = {"pswamp-models", "pswamp-core", "pswamp-tools", "pswamp-server", "pswamp-wiring"}
+TAKEN_DISTRIBUTIONS = {"pswamp-models", "pswamp-core", "pswamp-tools", "pswamp-server"}
 
 # The worker lists a module joins, as patterns whose group 1 is the list's value.
 # check-generators reads the patched lists back with the same patterns.
@@ -220,7 +220,6 @@ def plan(root: Path, slug: str, label: str, template_set: str = "subapp", templa
     if template_set == "module":
         if (root / project_dir).exists():
             raise GenerateError(f"{project_dir.as_posix()} already exists — pick another name.")
-        # Also what refuses `sources`, the transitional wiring's package.
         if names.pkg in namespace_packages(root):
             raise GenerateError(f"pswamp_modules.{names.pkg} already exists — pick another name.")
         if f"pswamp-{names.slug}" in TAKEN_DISTRIBUTIONS:
@@ -298,7 +297,7 @@ def namespace_packages(root: Path) -> set[str]:
     """The packages already in the pswamp_modules namespace, whichever project holds them."""
     return {
         path.name
-        for pattern in ("modules/*/src/pswamp_modules/*", "legacy/*/src/pswamp_modules/*")
+        for pattern in ("modules/*/src/pswamp_modules/*",)
         for path in root.glob(pattern)
         if path.is_dir() and path.name != "__pycache__"
     }

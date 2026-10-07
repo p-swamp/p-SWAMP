@@ -53,9 +53,9 @@ which exist to keep the "adding a page" path honest:
   first, don't grow features on it, and don't use it for p-SWAMP experiments —
   generate a new subapp for those.
 - **`/pmu-test-streamer` is the worked example of the server data
-  architecture** (`core/`, `doc/server-data-architecture.md`): PMU sources → a
-  gateway → a player → modules over a transport → the page, with commands going
-  back up. Its page and its Playwright spec (`e2e/pmu-test-streamer.spec.ts`)
+  architecture** (`core/`, `doc/server-data-architecture.md`): PMU sources → the
+  run's router (the active source) → modules over a transport → the page, with
+  commands going back up. Its page and its Playwright spec (`e2e/pmu-test-streamer.spec.ts`)
   exercise every piece of the core, so keep it complete: a change to the core
   shows up there. A new module over the core is its own app, generated with
   `uv run pswamp new module` (`doc/module-cookbook.md`), not
@@ -120,7 +120,7 @@ Consequences worth knowing before touching anything:
   (`models/tests/`) run through `pswamp test server`.
 - **A third project, `core/` (`pswamp-core`)**, holds the server data
   architecture. It is a workspace member, which the web backend takes as
-  `pswamp-core[kafka,remote-data]`; it has no lockfile of its own, and its
+  `pswamp-core[kafka]`; it has no lockfile of its own, and its
   tests (`core/tests/`) run in the web backend's environment through
   `pswamp test server`. Its only required dependencies are pydantic and
   `pswamp-models`, so a data provider can depend on it alone. It imports nothing from `app/` or from
@@ -152,15 +152,17 @@ Consequences worth knowing before touching anything:
   After editing a module's manifest, run `uv lock` at the repo root.
   **Test file names must be unique across every test folder** —
   `app/server-python/tests/`, `models/tests/`, `core/tests/`, `tools/tests/`,
-  each `modules/<name>/tests/` and `legacy/pswamp-wiring/tests/` — since they
+  and each `modules/<name>/tests/` — since they
   run in one pytest session and none is a package: hence `test_models_*`,
-  `test_tools_*`, `test_<pkg>_module.py`, `test_wiring_*`.
-- **`legacy/pswamp-wiring/` (`pswamp-wiring`) is TRANSITIONAL**: the example
-  data sources (`pswamp_modules.sources`), moved out of `modules/` because they
-  are not module code, as one more portion of the same namespace, so their
-  import path (in the pipeline files, compose, k8s and `<APP>_DATA_CLIENTS`) is
-  unchanged. It depends on the core and the models only. It goes away when
-  sources become modules; don't add anything else to it.
+  `test_tools_*`, `test_<pkg>_module.py`, `test_<pkg>_source.py`.
+- **The sources are modules too**, of their own kind: `sample-replay`,
+  `live-synthetic` and `remote-history` are projects under `modules/`, each a
+  `SourceModule` (`pswamp_core.sources`; a history source that mixes in
+  `Playable`, `pswamp_core.playable`, can be replayed paced and sought). They
+  have no inputs, produce `PmuFrame`, and are found by their entry point like
+  any module: `[[sources]] module = "sample-replay"` in a pipeline file. The
+  old data clients and the `legacy/pswamp-wiring/` project that held the
+  examples are gone.
 - **`pipelines/` holds one pipeline file per app, `pipelines/<app>.toml`**:
   data, not code, and not a project. It names the app's modules by their
   `pswamp.modules` entry points, its sources (the first is the default) and
@@ -168,7 +170,7 @@ Consequences worth knowing before touching anything:
   reads it in the server and in the workers. `uv run pswamp pipelines validate`
   checks every file (and `pswamp check` runs it); `uv run pswamp modules list`
   shows what a file can name.
-- **`uv run pswamp check` gates `app/`, `models/`, `core/`, `modules/`, `legacy/` and `tools/` fully; `desktop/src/` only for syntax.**
+- **`uv run pswamp check` gates `app/`, `models/`, `core/`, `modules/` and `tools/` fully; `desktop/src/` only for syntax.**
   ruff, `tsc` and the lockfile check (the root `uv.lock`) are scoped to those. `desktop/src/` gets a
   **syntax-only** `py_compile` gate (it ships in the image, so it must at least
   parse) — but it is *not* lint-gated: `ruff check` deliberately leaves it out,
@@ -218,11 +220,11 @@ Two deployables, one wire protocol:
   of the server data architecture. The rest of the example is its modules,
   one project each (`modules/frame-stats/`, `modules/excursion/`,
   `modules/range-summary/`), its pipeline file
-  (`pipelines/pmu-test-streamer.toml` at the repo root) and, in the transitional
-  `legacy/pswamp-wiring/src/pswamp_modules/`, its data clients
-  (`sources/sample_client.py`, `sources/live_client.py`). See "The
-  server data architecture" below.
-  `sources/sample_data.txt` is a **one-off sample committed for testing**: 300
+  (`pipelines/pmu-test-streamer.toml` at the repo root) and its sources
+  (`modules/sample-replay/`, `modules/live-synthetic/`, `modules/remote-history/`).
+  See "The server data architecture" below.
+  `sample_data.txt` (in `modules/sample-replay/`, with a copy in
+  `modules/live-synthetic/`) is a **one-off sample committed for testing**: 300
   *simulated* PMU records extracted by hand from the Nordic 44 simulation in
   `examples/nordic44_rtsim/` (voltage phasor + measured frequency, five stations
   at 20 Hz, spanning a line trip). Nothing generates it; don't add tooling to
@@ -471,8 +473,8 @@ Key invariants to preserve:
 source through modules to the browser, and how commands flow back. The code is
 `core/src/pswamp_core/`; every message is in `models/src/pswamp_models/`; the modules built on it
 are `modules/<name>/`, one project each; each app's pipeline is a file,
-`pipelines/<app>.toml`; the example sources are in the transitional
-`legacy/pswamp-wiring/`; the worked example is the PMU test streamer; the recipe
+`pipelines/<app>.toml`; the sources are modules under `modules/` too
+(`sample-replay`, `live-synthetic`, `remote-history`); the worked example is the PMU test streamer; the recipe
 for a new module is `doc/module-cookbook.md`; a deployment's history service
 follows `doc/remote-data-integration-contract.md`. The rules to keep:
 
@@ -480,8 +482,10 @@ follows `doc/remote-data-integration-contract.md`. The rules to keep:
   class name. No dicts, numpy or pickle on a topic or a socket. It lives in
   `pswamp_models`, in its producer's package, and nowhere else.
 - **A command's class is its address.** One receiver per class in a pipeline
-  (the player or one module). Player commands are validated in the web API (409);
-  module commands where the module runs (an `ErrorEvent` on refusal).
+  (the run's `ActiveSource` router, which hands the playback commands to the
+  active `Playable` source, or one module). Player commands are validated in
+  the web API (409) through the router's `validate`; module commands where the
+  module runs (an `ErrorEvent` on refusal).
 - **A module never sees the transport.** Its synchronous `process` takes its
   declared `inputs` and returns its declared `outputs`; a `ModuleHost` runs it, in the server with the in-memory transport or in
   a worker with Kafka. Where a module runs is configuration
@@ -505,11 +509,14 @@ follows `doc/remote-data-integration-contract.md`. The rules to keep:
 - **Recordings are per client, live is shared.** A client's run is keyed by its
   client id; each live source has one always-on run keyed `live.<source>`, which
   client runs follow.
-- **Sources are configured, not coded**: the pipeline file's `[[sources]]`,
-  which `<APP>_DATA_CLIENTS` replaces when set (and `<APP>_CIM_REFERENCE`
-  overrides `[enrich] cim_reference`), plus each client's
-  `{NAME}_{SETTING}` block. A new `DataClient` passes
-  `pswamp_core.testing.DataClientConformance`.
+- **Sources are configured, not coded**: the pipeline file's
+  `[[sources]] name + module` (an entry point), which `<APP>_SOURCES`
+  (`name:entry-point,...`) replaces when set (and `<APP>_CIM_REFERENCE`
+  overrides `[enrich] cim_reference`), plus each source's `{NAME}_{SETTING}`
+  block (`LIVE_PATH`, `REMOTE_URL`). The old `<APP>_DATA_CLIENTS` is an error
+  naming its replacement. A new source passes
+  `pswamp_core.testing.SourceConformance`. One source is active per run, and
+  `SwitchSourceCommand` selects it.
 - **The in-memory transport is not a mock.** It round-trips every message
   through JSON, so the unit tests catch what Kafka would. A new transport passes
   `core/tests/transport_suite.py`.
@@ -842,7 +849,7 @@ socket — `pswamp_web/grid/` — just omits the name.
 nothing in it is there for a reason peculiar to itself. If the app ships a **data
 file** beside its code, that needs no Dockerfile change either — read it once at
 import off `Path(__file__).parent`, as `pswamp_web/data/` does (and
-`pswamp_modules/sources/sample_client.py`, in `legacy/pswamp-wiring/`), since `COPY src/ ./src/`
+`pswamp_modules/sample_replay/sample.py`, in `modules/sample-replay/`), since `COPY src/ ./src/`
 takes the whole tree. Put
 anything a second app would otherwise duplicate in `src/shared.py`; the per-app
 `states` dict, `state_message`, any ticker, and command dispatch deliberately
