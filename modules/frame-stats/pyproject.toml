@@ -19,6 +19,11 @@ readme = "README.md"
 requires-python = ">=3.11"
 dependencies = ["pswamp-core", "pswamp-models"]
 
+# Only for examples/, never the module itself (the image does not install it):
+#   uv run --package pswamp-frame-stats --extra examples python modules/frame-stats/examples/plot_frame_stats.py
+[project.optional-dependencies]
+examples = ["matplotlib>=3.8"]
+
 # How a pipeline finds the module by name: the entry point's name is the
 # module's `name` (its app identity, and what PSWAMP_WORKER_MODULES lists).
 [project.entry-points."pswamp.modules"]

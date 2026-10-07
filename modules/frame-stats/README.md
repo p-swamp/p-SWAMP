@@ -31,6 +31,18 @@ result = stats.run_one(frame)          # a FrameStatsResult
 result.result.mean_frequency_hz
 ```
 
+## Examples
+
+`examples/plot_frame_stats.py` runs the module over a synthetic frequency dip
+and plots the mean, min and max frequency. matplotlib comes from the project's
+`examples` extra (the module itself does not need it):
+
+    uv run --package pswamp-frame-stats --extra examples python modules/frame-stats/examples/plot_frame_stats.py
+    uv run --package pswamp-frame-stats --extra examples python modules/frame-stats/examples/plot_frame_stats.py --save fs.png
+
+Without the extra, `uv run python modules/frame-stats/examples/plot_frame_stats.py`
+prints the statistics instead.
+
 ## Tests
 
 `uv run pswamp test module frame-stats` (also part of `uv run pswamp test server`).

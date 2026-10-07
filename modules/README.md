@@ -19,6 +19,7 @@ modules/<name>/
   src/pswamp_modules/<pkg>/   the code (no src/pswamp_modules/__init__.py:
                               pswamp_modules is a PEP 420 namespace)
   tests/           its tests
+  examples/        runnable scripts using it with no server
 ```
 
 ## Rules
@@ -41,4 +42,9 @@ modules/<name>/
 uv run pswamp test module frame-stats     # one module's tests (folder or entry-point name)
 uv run pswamp test server                 # every suite, these included
 uv run pswamp new module <slug> "<Label>" # a new module project, its models, pipeline, api and page
+uv run python modules/excursion/examples/count_excursions.py   # an example, no server
+uv run --package pswamp-frame-stats --extra examples python modules/frame-stats/examples/plot_frame_stats.py
 ```
+
+An example needing a library the module does not (matplotlib, to plot) declares
+it as the module's `examples` extra, so it never reaches the image.

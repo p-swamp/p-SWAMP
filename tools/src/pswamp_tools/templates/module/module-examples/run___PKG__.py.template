@@ -1,0 +1,29 @@
+"""Run the __LABEL__ module over a few synthetic frames, with no server.
+
+``run`` is a plain synchronous call returning what the module would publish
+when hosted (a list: empty when it publishes nothing for a frame). No server,
+no transport, no event loop.
+
+    uv run python modules/__SLUG__/examples/run___PKG__.py
+"""
+
+from datetime import datetime, timedelta, timezone
+
+from pswamp_models.pmu import PmuFrame, PmuHeader
+from pswamp_modules.__PKG__ import __NAME__Module
+
+T0 = datetime(2026, 1, 1, tzinfo=timezone.utc)
+HEADER = PmuHeader(station=["A", "B", "C"], channel=["f"] * 3, measurement=["f"] * 3, units=["Hz"] * 3, data_rate=50.0)
+READINGS = [[50.00, 50.01, 49.99], [49.98, None, 50.02], [None, None, None], [50.03, 50.00, 50.01]]
+
+
+def main() -> None:
+    module = __NAME__Module()
+    for n, values in enumerate(READINGS):
+        frame = PmuFrame(timestamp=T0 + timedelta(seconds=n / 50), mRID="synthetic", header=HEADER, values=values)
+        published = module.run(frame)
+        print(f"frame {n}: {values} -> {[message.result for message in published]}")
+
+
+if __name__ == "__main__":
+    main()

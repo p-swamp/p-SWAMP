@@ -192,6 +192,7 @@ def test_a_module_is_a_project_and_joins_the_module_worker(tree):
     assert not (project / "src/pswamp_modules/__init__.py").exists()  # a namespace portion
     assert (project / "tests/test_zz_mod_module.py").is_file()
     assert not (project / "tests/__init__.py").exists()
+    assert (project / "examples/run_zz_mod.py").is_file()
     assert (tree / "models/src/pswamp_models/zz_mod/results.py").is_file()
     assert (tree / "legacy/pswamp-wiring/src/pswamp_modules/pipelines/zz_mod.py").is_file()
     assert (tree / "app/server-python/tests/test_zz_mod.py").is_file()
