@@ -36,10 +36,13 @@ recording holds. The host calls `aread` / `acoverage`, derived from the same cod
 
 ## Examples
 
-`examples/replay_stats.py` replays the recording through frame-stats and plots the
-mean, min and max frequency (matplotlib comes from the project's `examples` extra):
+`examples/replay_stats.py` is the repo's canonical script: a source read with a
+`for` loop, a module called like a function, and a plot, top to bottom with no
+event loop. It replays the recording through frame-stats and plots the mean, min
+and max frequency. matplotlib and the frame-stats module come from the project's
+`examples` extra, which the source itself does not need:
 
-    uv run python modules/sample-replay/examples/replay_stats.py
+    uv run --package pswamp-sample-replay --extra examples python modules/sample-replay/examples/replay_stats.py
     uv run --package pswamp-sample-replay --extra examples python modules/sample-replay/examples/replay_stats.py --save fs.png
 
 ## Tests

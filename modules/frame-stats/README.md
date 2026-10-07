@@ -41,7 +41,8 @@ and plots the mean, min and max frequency. matplotlib comes from the project's
     uv run --package pswamp-frame-stats --extra examples python modules/frame-stats/examples/plot_frame_stats.py --save fs.png
 
 Without the extra, `uv run python modules/frame-stats/examples/plot_frame_stats.py`
-prints the statistics instead.
+prints the statistics instead. To run it over the real sample recording instead of
+synthetic frames, see `modules/sample-replay/examples/replay_stats.py`.
 
 ## Tests
 
