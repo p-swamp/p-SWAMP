@@ -8,11 +8,12 @@ The repository holds two implementations side by side:
 |---|---|
 | [`desktop/`](desktop/) | The original single-process Python + Qt application, the `p-swamp` package. Its own README covers installation and the examples. |
 | [`app/`](app/) | The client-server stack: a FastAPI server (`app/server-python/`) and a React web client (`app/client-web/`). |
-| [`core/`](core/) | `pswamp-core`, the server data architecture: messages, transport, modules, gateway, player, pipelines. |
+| [`models/`](models/) | `pswamp-models`, every message of the server data architecture, one package per producer. |
+| [`core/`](core/) | `pswamp-core`, the server data architecture: transport, modules, gateway, player, pipelines. |
 | [`modules/`](modules/) | `pswamp-modules`, the analysis modules, their pipelines and example data sources. |
 | [`doc/`](doc/) | Documentation for the client-server stack. Start with [`doc/client-server-rig.md`](doc/client-server-rig.md). |
 
-`core/`, `modules/` and `app/server-python/` form one uv workspace with a single
+`models/`, `core/`, `modules/`, `tools/` and `app/server-python/` form one uv workspace with a single
 `uv.lock` at the repository root (`uv sync` here). The desktop package keeps its
 own lock in `desktop/`, so Qt never enters the server's resolution.
 
