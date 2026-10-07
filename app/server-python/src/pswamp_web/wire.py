@@ -294,14 +294,19 @@ class LineOutageEvent(BaseModel):
 
 
 class LineOutageLog(BaseModel):
-    """Newest first. The detector is silent unless something changes, so this is
-    a log of transitions rather than a snapshot of present state."""
+    """Newest first. The detector is silent unless something changes, so
+    ``events`` is a log of transitions; ``disconnected`` is the present state
+    they add up to."""
 
     type: Literal["state"] = "state"
     app_uuid: str | None = None
     app_name: str | None = None
     window_length: float | None = None
     events: list[LineOutageEvent]
+    # What is open *now*: every element whose current is zero, named as its
+    # channel names it ("L3244-6500"). Lines, transformers, loads and generators
+    # alike -- a reader after branches matches these against ``GridBranch.name``.
+    disconnected: list[str] = []
 
 
 # --- alarms -----------------------------------------------------------------
@@ -414,6 +419,33 @@ class PmuSite(BaseModel):
     lat: float
 
 
+LonLat = tuple[float, float]
+
+
+class GridDiagram(BaseModel):
+    """How the grid is drawn: the Qt grid view's base layers, as data.
+
+    Separate from the topology beside it because the two disagree on purpose. A
+    single-line diagram places a bus where it is legible, not where the station
+    stands -- up to a few degrees away from its ``PmuSite`` -- and routes a
+    branch along a polyline rather than straight between its ends. So a view
+    that draws this must take every position from here and none from ``pmus``.
+
+    Built ahead of time by ``tools/build_n44_grid_geometry.py``, because the DXF
+    and shapefile readers it needs are not in the server's environment.
+    """
+
+    sld: str  # which single-line diagram this is, e.g. "geo"
+    countries: list[str]
+    # How much taller a degree of latitude is drawn than a degree of longitude.
+    aspect_ratio: float
+    buses: dict[str, LonLat]  # bus name -> where the diagram draws it
+    # Branch name -> its route, from ``from_bus`` to ``to_bus``. A branch the
+    # diagram does not draw is simply absent.
+    branches: dict[str, list[LonLat]]
+    outlines: list[list[LonLat]]  # one closed ring per coastline or border
+
+
 class GridModel(BaseModel):
     """Static topology. Served over HTTP rather than a socket: it never changes,
     it is worth caching, and putting it on the socket would make every page's
@@ -423,3 +455,4 @@ class GridModel(BaseModel):
     branches: list[GridBranch]
     pmus: list[PmuSite]
     bbox: tuple[float, float, float, float]  # lon_min, lat_min, lon_max, lat_max
+    diagram: GridDiagram | None = None

@@ -10,24 +10,39 @@ import { AlarmTable } from './AlarmTable'
 import { useIslandingData } from './islandingContext'
 
 /**
- * The alarm overview — p-SWAMP's Qt alarm dock.
+ * The alarm overview — the Qt main window's "Alarms" dock.
  *
- * Reads the same socket as the islanding map: alarms are derived from the
+ * Reads the same socket as the grid view: alarms are derived from the
  * detector's status, and the server sends both together so a client cannot
  * render them inconsistently.
+ *
+ * Clicking a row opens that alarm's details. Where they open is the caller's
+ * business: the main window hands in `selectedUuid`/`onSelect` and shows them in
+ * a dock of their own along the bottom, as Qt does; rendered on its own, this
+ * panel keeps the selection itself and unfolds the details beneath the table.
  */
 export function AlarmsPanel({
   variant = 'dashboard',
+  selectedUuid: controlledUuid,
+  onSelect,
+  fill,
+  className,
 }: {
   variant?: PanelVariant
+  selectedUuid?: string | null
+  onSelect?: (uuid: string | null) => void
+  fill?: boolean
+  className?: string
 }) {
   const { state, status, connected, acknowledge, silence, annotate } = useIslandingData()
-  const [selectedUuid, setSelectedUuid] = useState<string | null>(null)
+  const [ownUuid, setOwnUuid] = useState<string | null>(null)
+  const detailsElsewhere = onSelect !== undefined
+  const selectedUuid = detailsElsewhere ? (controlledUuid ?? null) : ownUuid
 
   const alarms = state?.alarms.alarms ?? []
-  // Resolved from the live list rather than held in state, so an open pane keeps
+  // Resolved from the live list rather than held in state, so open details keep
   // updating as events land on that alarm. A selection that disappears (the
-  // store is bounded) simply closes the pane.
+  // store is bounded) simply closes them.
   const selected = alarms.find((a) => a.uuid === selectedUuid) ?? null
   const unseen = alarms.filter((a) => a.status === 'unseen').length
   const ready = connected && state !== null
@@ -40,8 +55,10 @@ export function AlarmsPanel({
       ready={ready}
       focusHref="/islanding"
       variant={variant}
+      fill={fill}
+      className={className}
       minBodyClass="min-h-[160px]"
-      contentClassName="px-0 pt-0"
+      contentClassName="p-0"
       badge={
         connected ? (
           <Badge
@@ -63,28 +80,22 @@ export function AlarmsPanel({
         )
       }
     >
-      {/* Capped and scrolled on the dashboard: alarms accumulate over a session,
-          and a growing table would push every panel below it down the page. */}
-      <div
-        className={
-          variant === 'dashboard' ? 'max-h-[220px] overflow-y-auto' : undefined
-        }
-      >
-        <AlarmTable
-          alarms={alarms}
-          selectedUuid={selectedUuid}
-          onSelect={setSelectedUuid}
-          onAcknowledge={acknowledge}
-          onSilence={silence}
-        />
-      </div>
+      <AlarmTable
+        alarms={alarms}
+        selectedUuid={selectedUuid}
+        onSelect={onSelect ?? setOwnUuid}
+        onAcknowledge={acknowledge}
+        onSilence={silence}
+        variant={variant}
+      />
 
-      {selected && (
+      {selected && !detailsElsewhere && (
         <AlarmDetails
           alarm={selected}
           onAcknowledge={acknowledge}
           onSilence={silence}
           onAnnotate={annotate}
+          className="border-t bg-muted/30 px-6 py-4"
         />
       )}
     </Panel>

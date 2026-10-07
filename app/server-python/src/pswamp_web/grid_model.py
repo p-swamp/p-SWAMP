@@ -13,13 +13,20 @@ while the server runs.
 
 import functools
 import importlib.resources as resources
+from pathlib import Path
 
 from pswamp.database import get_from_database
 
-from .wire import GridBranch, GridBus, GridModel, PmuSite
+from .wire import GridBranch, GridBus, GridDiagram, GridModel, PmuSite
 
 DATABASE_PACKAGE = "pswamp.test_utils.sample_datasets.n44"
 DATABASE_NAME = "grid_database.db"
+
+# Country outlines and routed branches for the grid view. A committed fixture,
+# like the recording beside it: tools/build_n44_grid_geometry.py regenerates it
+# from that same database's single-line diagram, but needs ezdxf and pyshp, which
+# are in the root package's [full] extra and not in this server's environment.
+DIAGRAM_PATH = Path(__file__).parent / "data" / "n44_grid_geometry.json"
 
 # Padding around the outermost stations, as a fraction of the bounding box, so
 # markers near an edge are not clipped by the viewport the client derives.
@@ -98,4 +105,5 @@ def load_grid_model() -> GridModel:
             max(lons) + pad_lon,
             max(lats) + pad_lat,
         ),
+        diagram=GridDiagram.model_validate_json(DIAGRAM_PATH.read_text()),
     )

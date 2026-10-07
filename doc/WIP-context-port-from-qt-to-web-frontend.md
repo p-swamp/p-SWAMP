@@ -54,8 +54,8 @@ client + the registry), `replay.py` (source + counting-window subclass),
 `grid_model.py`, `stores.py`, `data/n44_line_trip_50hz.npz`, five page packages,
 and `tools/record_n44_dataset.py` (regenerates the recording under `[full]`).
 
-**Client** — `app/client-web/src/pages/grid-monitor/` (~1900 LOC): one app, five
-routes — dashboard at `/` plus four focused panel routes rendering the *same*
+**Client** — `app/client-web/src/pages/grid-monitor/`: one app, six routes — the
+main window at `/` plus five focused panel routes rendering the *same*
 components at `variant="focused"`.
 
 **Build** — image ~700 MB (scipy 119 + pandas 45 + numpy 56 dominate).
@@ -111,8 +111,8 @@ Re-verified against the running container after the repo merge:
 - islanded stations **6500, 6700, 6701**; island groups summing to exactly **44**
   with no overlap
 - time-window steady state **5.85 KB/s** (vs ~1.4 MB/s naive); phasors 16.3 KB/s @ 5 Hz
-- dashboard opens exactly **4** WebSockets, renders **135** `<line>` (79 map
-  branches + 12 dial spokes + 44 phasor arrows)
+- main window opens exactly **5** WebSockets (app status, time window,
+  islanding, phasors, line outage); `e2e/grid-monitor.spec.ts` asserts it
 
 ---
 
@@ -262,15 +262,16 @@ nohup chromium --headless=new --no-sandbox --user-data-dir=/tmp/x \
   http://127.0.0.1:8124/ >/dev/null 2>&1 &
 sleep 10
 docker logs verify | grep -oE 'WebSocket /api/[a-z-]+/ws' | sort | uniq -c
-# expect exactly 4 — islanding shared by two panels
+# expect exactly 5 — one per stream, however many views read each
 ```
 
 Do **not** use `--dump-dom --virtual-time-budget` for this (§4.12); it's fine for
 static DOM checks where nothing is awaited.
 
 **Live DOM after real time** — launch chromium with `--remote-debugging-port`,
-sleep, drive CDP `Runtime.evaluate` over the debugger WS. Counting SVG is a good
-proxy: 135 `<line>` (§1). On an ARM Linux VM point at the inner binary
+sleep, drive CDP `Runtime.evaluate` over the debugger WS. The grid view is a
+canvas, so count its non-background pixels (`e2e/grid-monitor.spec.ts` does)
+rather than DOM nodes. On an ARM Linux VM point at the inner binary
 (`/snap/chromium/current/usr/lib/chromium-browser/chrome`), not the snap wrapper.
 
 **Bandwidth:** raw websocket client, read first message, time a 10 s window of the
@@ -686,23 +687,31 @@ Status, Alarms, Alarm details). Against that:
 
 | Qt | Web today | Gap |
 |---|---|---|
-| Grid view 2D geo (`geo_plot_2d`, layers) | `IslandMap` — SVG nodes/edges | Partial. No layers, heatmap, or interaction beyond selection |
-| Grid view 3D (`dim_3d`, `surface_plot`) | — | **Missing.** Needs WebGL |
-| Single-line diagram (`single_line_diagram`, DXF) | — | **Missing.** Needs server-side DXF→GeoJSON |
-| Frequency plot (`FreqPlot`) | Live Measurements chart | Done |
-| App status (`AppStatusMonitoringWidget`) | `AppStatusPanel` | Done |
+| Main window layout (`main_window.py`) | `GridMonitorPage` | **Done.** Grid view central, dock column on the right, alarm details in a dock beneath the grid. Docks do not float, close or re-tab |
+| Grid view 3D, base layers (`dim_3d`: countries, lines, buses, bus names) | `grid-view/` — WebGL through three.js | **Done.** Orbit, pan, zoom, per-layer toggles. Additive blending as in Qt; bus names on a 2D canvas over the picture |
+| Grid view 2D (`dim_2d`) | `grid-view/`, 2D mode | **Done** for the same base layers |
+| Grid view, several views as tabs (`GridViewContainer`) | 3D/2D switch on one view | Partial. One view, no named tabs |
+| Single-line diagram, `geo` (`single_line_diagram`, DXF) | `GridModel.diagram`, from `tools/build_n44_grid_geometry.py` | **Done**, converted ahead of time into a committed fixture rather than at request time |
+| Single-line diagram, `other` (schematic `sld.dxf`) | — | Missing. The tool converts only the `geo` diagram |
+| Grid layer: voltage phasors (`dim_3d/layers/phasors`) | — | Missing |
+| Grid layers: bus frequency / bus voltage / dynamic lines by frequency (`dim_3d/layers`) | the field layers of `grid-view/` | **Done.** While a field is on, each bus and the lines between them ride at the bus's own value, with a surface through them, interpolated per pixel on the GPU |
+| FFT spectrum surface (`surface_plot.SurfacePlot`) | — | Missing. It belongs to the FFT application, which is not ported |
+| Frequency plot (`FreqPlot`) | `FrequencyPanel` | **Done.** Every station's frequency, one colour |
+| Time window plot (`time_window_plot*`) | `MeasurementsPanel` at `/time-window` | Done |
+| App status (`AppStatusMonitoringWidget`) | `AppStatusPanel` | Done. No Stop / Open console: both need a command topic |
 | Alarm overview (`AlarmOverview`) | `AlarmsPanel` + `AlarmTable` | **Done.** Click a row for detail |
-| Alarm details (`AlarmHandlingDialogue`) | `AlarmDetails` | **Done.** Info, event log, ack/annotate/silence. Embedded per-app view not repeated — already a panel |
-| Alarm view: islanding | `IslandMapPanel` | Done |
+| Alarm details (`AlarmHandlingDialogue`) | `AlarmDetailsDock` | **Done.** Info, event log, ack/annotate/silence, beside the alarm's view |
+| Alarm view: islanding (`IslandingAlarmView`) | `AlarmView` + the grid view | **Partial.** Frequencies and phasors coloured by island, alarm start/end marked; the grid shows the island colours, the lift and the red branches all the time rather than only while an alarm is open. **No time slider**: it shows the live 30 s window, not a stored history of the alarm. Connectable lines are not marked green |
 | Alarm view: oscillations | — | **Missing.** Needs `n4sid`/`fft` in the hub |
 | Alarm view: voltage stability | — | **Missing**, see below |
 | Phasor plot 2D (`phasor_plot`) | `PhasorDial` | Done |
+| Line outages grid layer (`dim_3d/layers/line_outages`) | red branches in the grid view | Done |
 | Phasor plot 3D (`phasor_plot_3d`) | — | Missing |
-| Frequency heatmap (grid-view layer + launcher) | — | Missing. **The live one** |
-| Voltage heatmap | — | **Dead in Qt** (launcher button commented out). Do not port |
+| Frequency heatmap (grid-view layer + launcher) | "Frequency heat map" in the grid view's Layers | **Done** as a layer: same triangulated interpolation, corner anchors, colours and ±35 mHz limits. No standalone app |
+| Voltage heatmap | "Voltage heat map" in the grid view's Layers | **Dead in Qt** (launcher button commented out): it feeds volts to limits of 0.9–1.1. Ported all the same as a second field, per unit as `Voltage3DLayer` computes it, since it cost one entry beside the frequency one. Remove `voltage` from `FIELDS` to drop it |
 | Channel select/tree | `ChannelPicker` | Done |
 | Line outage detection | `LineOutagePanel` | **Done**, once the recording gained currents |
-| App launcher (start/stop apps) | — | **Missing.** The hub decides today |
+| App launcher (start/stop apps) | `AppsPanel` | **Partial.** Opens an application's view; starting and stopping is still the hub's decision |
 | Multi-TSO alarm docks (`other_tso`) | — | Missing |
 
 **`IslandingApp` and `LineOutageDetectionApp` are wired in.** `monitoring/` also
@@ -772,8 +781,8 @@ makes every panel testable and every §1 number meaningful. A mode, not a phase.
 4. **Remaining analytic apps** — `n4sid`/oscillations, voltage stability once its
    analysis half is found.
 5. **Expensive visualisations** — single-line diagram (server-side DXF→GeoJSON),
-   then 3D grid view (WebGL). `IslandMap` is behind a small nodes/edges/project
-   seam to be swapped, not extended.
+   then 3D grid view (WebGL). *Done with three.js — see §10.1, heat map and
+   surface included.*
 6. **Operational work** — auth, and the external store that lets `replicas` > 1.
 
 Steps 1–2 are worth doing regardless. Step 3 is the decision point.
@@ -871,7 +880,9 @@ Further out:
 - **Everything in §10** — the port is a vertical slice, not a replacement.
 - **Either move in §7.**
 - **Wheel packaging of the data files** (§9.6).
-- **A real look at the dashboard on a laptop viewport** (§6).
+- **Tuning the main window against real viewports.** It fills the viewport
+  from 1024 px wide up and stacks below that; checked at 1512×806 and 820 wide,
+  not on a control-room wall or a phone.
 - **The desktop test suite has never run in CI**, here or before the merge.
 
 ---

@@ -93,7 +93,7 @@ packages contributing bytes to the browser-delivered files:
 
 | License | Browser-delivered packages or assets |
 | --- | --- |
-| MIT | `react`, `react-dom`, `scheduler`, `react-router`, `@radix-ui/react-compose-refs`, `@radix-ui/react-slot`, `clsx`, `tailwind-merge`, `uplot`, Tailwind-generated CSS and `tw-animate-css` |
+| MIT | `react`, `react-dom`, `scheduler`, `react-router`, `@radix-ui/react-compose-refs`, `@radix-ui/react-slot`, `clsx`, `tailwind-merge`, `uplot`, `three` (added 2026-10-07, after the inventory date; draws the grid view), Tailwind-generated CSS and `tw-animate-css` |
 | Apache-2.0 | `class-variance-authority` |
 | ISC | `lucide-react` |
 | OFL-1.1 | Geist `.woff2` font files |

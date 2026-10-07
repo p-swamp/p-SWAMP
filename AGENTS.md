@@ -33,9 +33,9 @@ otherwise. The desktop package at the repo root has its own manifest and is
 covered by neither these conventions nor `error_check.sh` — see the next section.
 
 The web stack ships two things. The **grid monitor** at `/` is the real one: a
-dashboard of panels — measurements, islanding, alarms, phasors, application
-status — over a recorded Nordic 44 PMU stream replayed through p-SWAMP's own
-monitoring applications. Beside it sit the deliberately trivial scaffold demos,
+main window laid out as the Qt one is — the grid view in the middle, docks for
+frequency, status, alarms, phasors and line outages beside it — over a recorded
+Nordic 44 PMU stream replayed through p-SWAMP's own monitoring applications. Beside it sit the deliberately trivial scaffold demos,
 which exist to keep the "adding a page" path honest:
 
 - **`/reference-subapp` is the reference example** — a per-client counter, itself
@@ -179,9 +179,10 @@ Two deployables, one wire protocol:
   `src/pages/<app>/`, holding that app's components, its socket hooks and its
   views together — the client-side mirror of the server's `src/<app>/` packages,
   imported relatively within the folder. Most apps own a single route;
-  **`grid-monitor/` owns six** (the dashboard plus five focused views). The
+  **`grid-monitor/` owns six** (the main window plus five focused views). The
   route table is `src/App.tsx` and the nav + centering shell is
-  `src/components/AppLayout.tsx`. Only genuinely cross-app code sits outside
+  `src/components/AppLayout.tsx`; its `window` prop makes the shell exactly
+  viewport-high, which only the monitor's route sets. Only genuinely cross-app code sits outside
   an app folder: shared UI in `src/components/`
   (`ui/` is vendored shadcn), shared logic in `src/hooks/` (`useServerSocket`) and
   `src/lib/` — `servers.ts` (each app's ws path + the serving-origin url),
@@ -189,13 +190,16 @@ Two deployables, one wire protocol:
   Note `src/lib/` was invisible to git until recently; see the `.gitignore` note
   under "Conventions".
   **`src/pages/grid-monitor/` is the p-SWAMP application**: `/` renders
-  `GridMonitorPage`, a grid of six panels over five p-SWAMP sockets, and
+  `GridMonitorPage` — the grid view as central widget, a column of docks on its
+  right, an alarm's details in a dock beneath it — over five p-SWAMP sockets, and
   `/time-window`, `/phasors`, `/islanding`, `/line-outage`, `/app-status` render
   the *same* panel components full-size (`variant="focused"`) rather than
   copies of them. Its
   subfolders are named after those routes, so the client↔server mirror holds one
   level down: `grid-monitor/time-window/` ↔ `/api/time-window` ↔
-  `pswamp_web/time_window/`. `/reference-subapp` (`ReferenceSubappPage`) is the
+  `pswamp_web/time_window/`. `grid-view/` is the one that is not a route: the
+  canvas the grid is drawn on, which has no socket of its own (see "The grid
+  view"). `/reference-subapp` (`ReferenceSubappPage`) is the
   standalone scaffold demo to copy — a counter over a WebSocket plus two POST
   commands, where the connection half lives once in
   `src/hooks/useServerSocket.ts` and the app's own hook
@@ -471,6 +475,17 @@ What is in there:
   running forever without ever finding anything.
 - **`channels.py`**, **`grid_model.py`**, **`stores.py`** — channel catalogue,
   static topology, alarm/status state machines.
+
+  `grid_model.py` also serves the **diagram** the grid view draws
+  (`GridModel.diagram`): country outlines, where the single-line diagram places
+  each bus, and the polyline it routes each branch along. It is
+  `pswamp_web/data/n44_grid_geometry.json` (~65 kB), a committed fixture like the
+  recording. `tools/build_n44_grid_geometry.py` regenerates it with p-SWAMP's own
+  DXF and shapefile readers, which need `ezdxf` and `pyshp` — in the root
+  `[full]` extra, not in the server's environment — so run it with the root
+  venv: `.venv/bin/python app/server-python/tools/build_n44_grid_geometry.py`.
+  `tests/test_grid_model.py` fails if the fixture no longer matches the
+  database's topology.
 - Page packages: **`app_status/`**, **`grid/`** (HTTP only), **`time_window/`**,
   **`phasors/`**, **`islanding/`**, **`line_outage/`**.
 
@@ -489,16 +504,20 @@ Three things worth knowing before touching it:
   redraws come through the hook's own `subscribe`, never a `setState` — see
   `useServerSocket`'s `onMessage` option, which exists for exactly this. Putting a
   50 Hz stream through React state runs a render pass 10×/s that produces no DOM
-  change. Panels whose payload is small and drawn as SVG (`phasors`, `islanding`)
-  use plain state, which is correct for them — but on one screen those costs add
-  up, which is why each panel owns its own hook rather than the dashboard owning
-  all five.
+  change. Panels whose payload is small (`phasors`, `islanding`) use plain
+  state, which is correct for them — but on one screen those costs add up, which
+  is why each socket is read through its own hook or provider rather than the
+  page owning all five. The grid view follows the same rule for its camera: a
+  drag never touches React state.
 
 Sanity values, for checking a change did not quietly break the pipeline: median
 frequency **50.0009 Hz**, median voltage **418.6 kV**, islanded stations **6500,
 6700, 6701**, island groups summing to exactly **44** stations with no overlap,
-and the dashboard opening exactly **5** WebSockets — for **one** pipeline, however
-many panels are open.
+and the main window opening exactly **5** WebSockets — for **one** pipeline,
+however many views read them. The grid view draws **44** buses and **77** of the
+model's 79 branches (the diagram does not route `L5102-6001` and `T5500-5501`);
+during the trip it paints **7** branches red — the 4 tripped lines plus 3
+transformers left with nothing to carry.
 
 **The disturbance now arrives on the client's own clock.** Each client's replay
 starts at 0 s when it connects, so the trip is roughly half a minute in, every
@@ -528,9 +547,10 @@ Client side, four edits:
    because six panels each writing the ternaries out is six chances to differ.
    Branch on `variant` only for what is genuinely this panel's business, such as
    how tall to draw a canvas.
-2. Place it in the grid in `GridMonitorPage.tsx`. Use `minmax(0,1fr)` columns,
-   never `1fr` — a grid item's default `min-width:auto` lets a canvas or a table
-   force its column wider than the viewport.
+2. Place it in the dock column in `GridMonitorPage.tsx`. From `lg` up the page
+   is a window with the viewport's height, so a dock is as tall as its content
+   and the column scrolls; give a dock `fill` to take the height left over
+   instead. Use `tableDensity(variant)` on a table, so it is compact as a dock.
 3. Add the focused `<Route>` in `App.tsx` rendering the same component with
    `variant="focused"`.
 4. Add a `*_WS_PATH` const in `src/lib/servers.ts` — and, if the panel has
@@ -545,11 +565,69 @@ type exists.
 
 The backend needs no wiring — every socket resolves against the serving origin, so
 all panels on a screen are views of the same server by construction.
-**Each panel owns its own hook** — a panel must never re-render because a
-neighbour's socket ticked. If one socket feeds two panels, hoist it into a
-folder-local context (`islanding/IslandingData.tsx`) rather than opening it twice;
-note the context object and its hook must live in a separate `.ts` file, because
+**A panel must never re-render because a neighbour's socket ticked.** A socket
+only one panel reads is that panel's own hook (`app-status/`). A socket several
+views read is opened once, by a folder-local provider, and read through its
+`use…Data()` hook — `islanding/IslandingData.tsx`,
+`time-window/TimeWindowData.tsx`, `phasors/PhasorsData.tsx`,
+`line-outage/LineOutageData.tsx`. `GridMonitorPage` mounts all four; a focused
+route must mount the ones its panel reads (see `App.tsx`). The context object
+and its hook live in a separate `.ts` file, because
 `react-refresh/only-export-components` is an error here.
+
+### The grid view
+
+**What.** `grid-monitor/grid-view/` draws the Nordic 44 grid the way the Qt grid
+view does: country outlines on the map plane, the network above it on bus stems,
+branches coloured by island, each island raised by
+`(mean frequency − 50) × 5`, a branch carrying no current in red. 3D with an
+orbit camera, or 2D top-down.
+
+Optionally one **field** is spread over the grid — frequency (deviation from
+the grid mean, ±35 mHz) or voltage (per unit, 0.9–1.1): the Qt heat map. In 2D
+it lies flat under the network; in 3D it is a surface through the buses, each
+of which then rides at its own value instead of its island's mean. Off by
+default; chosen in the Layers list.
+
+**How it is drawn.** WebGL through three.js, as the Qt view is OpenGL through
+pyqtgraph. Qt's GL items blend additively with the depth test off, so nothing
+hides anything and crossing lines brighten; the 3D view does the same, with
+Qt's own colours. The 2D view is painted normally, as the Qt 2D plot is. Three
+things follow from WebGL rather than from Qt:
+- **Thick lines are three.js's `LineSegments2`.** WebGL draws 1-pixel lines
+  only, so the network is instanced quads. Country outlines and stems are
+  1-pixel lines.
+- **Bus names are not GL.** They, and the hover ring, are drawn on a 2D canvas
+  laid over the picture. `camera.ts` projects a point on the CPU to the same
+  pixel the GL camera does, which is also what hover and view fitting use.
+- **The canvas is created with `preserveDrawingBuffer`,** so its pixels can be
+  read after the frame that drew them. `e2e/grid-monitor.spec.ts` depends on it.
+
+three.js is larger than the rest of the client together (570 kB against 405 kB
+minified), so `GridViewPanel` loads `GridView` with `lazy()`: a page that shows
+no grid never fetches it. Without WebGL the view says so instead of drawing.
+
+**Where.**
+- `renderer.ts` — state, cameras, pointer, the height animation, the overlay.
+  Not React: it owns its canvases and redraws only when something changed. It
+  decides what each frame *is*; it does not draw it.
+- `glPainter.ts` — the three.js scene. Given a frame, puts it on screen. All
+  three.js code is here.
+- `camera.ts`, `scene.ts` — the two projections; the model as typed arrays.
+- `field.ts`, `triangulate.ts` — a field's limits and lift, and the Delaunay
+  mesh over the buses. Qt's `scipy.griddata(method='linear')` interpolates on
+  the same triangles into an image; here the GPU interpolates per pixel.
+- `GridView.tsx` — the React edge: creates the renderer, forwards props.
+- `GridViewPanel.tsx` — reads three contexts (islanding for colours, line
+  outage for red branches, time window for the lift and the frequency field)
+  and owns the toolbar.
+- `liveValues.ts`, `VoltageFeed.tsx` — samples reach the canvas through a
+  subscribe/read store, not props. `VoltageFeed` is mounted only while the
+  voltage field shows, so the panel is not subscribed to the phasor socket
+  otherwise.
+- `../palette.ts` — Qt's plot background and island colours
+  (`src/pswamp/styles/colors.py`). Every plot keeps that background in light and
+  dark mode, since the palette is chosen against it.
 
 Server side, the backend package under `src/pswamp_web/<app>/` exporting `router`
 (and registered in `APPS`) is unchanged — see "Adding a backend api". Copy
@@ -677,10 +755,10 @@ Notes that matter when touching routing:
   leaving and returning reopens the view sessions with the browser's persistent
   client id. The pipeline survives for its idle grace period, but connection-local
   view state such as the monitor's channel selection starts fresh. The grid
-  monitor holds **five** sockets across its six panels, each at its own rate so a
-  slow one degrades alone. The islanding socket is the exception: it feeds two
-  panels, so it is hoisted into a provider
-  (`grid-monitor/islanding/IslandingData.tsx`) rather than opened twice.
+  monitor holds **five** sockets across its docks, each at its own rate so a
+  slow one degrades alone. Four of them feed more than one view, so they are
+  opened by providers in `GridMonitorPage` rather than once per view; see
+  "Adding a p-SWAMP view".
 
 ## Adding a backend api
 
@@ -893,6 +971,13 @@ things worth knowing before extending it:
   page against this same container, starting with the click-through this script
   stands in for. That is a strict addition: this layer stays valid underneath it
   as the fast, dependency-free one.
+
+  The specs are in `e2e/`: `reference-subapp.spec.ts`, and
+  `grid-monitor.spec.ts` for the main window — its docks, the five sockets, the
+  grid drawn in 3D and 2D, a layer toggled, an alarm opened, acknowledged and
+  annotated, and each focused route. Run them with `npx playwright test` from
+  `e2e/`. **That run ends with `docker compose down`** (`global-teardown.ts`),
+  so it stops a compose stack you already had up.
 
 Note the api-contract check is the one step that needs the **full server
 environment** rather than just the pinned linter, because it imports the FastAPI

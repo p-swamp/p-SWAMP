@@ -28,7 +28,7 @@ export function AppStatusPanel({
 
   return (
     <Panel
-      title="Application Status"
+      title="Status"
       subtitle="Monitoring applications running against the replayed PMU stream"
       status={status}
       ready={ready}
@@ -36,7 +36,7 @@ export function AppStatusPanel({
       focusHref="/app-status"
       variant={variant}
       minBodyClass="min-h-[152px]"
-      contentClassName="px-0 pt-0"
+      contentClassName="p-0"
       badge={
         connected ? (
           <Badge variant={replay?.playing ? 'default' : 'secondary'}>
@@ -58,7 +58,11 @@ export function AppStatusPanel({
           : undefined
       }
     >
-      <AppStatusTable apps={state?.apps ?? []} serverTime={state?.server_time ?? 0} />
+      <AppStatusTable
+        apps={state?.apps ?? []}
+        serverTime={state?.server_time ?? 0}
+        variant={variant}
+      />
     </Panel>
   )
 }

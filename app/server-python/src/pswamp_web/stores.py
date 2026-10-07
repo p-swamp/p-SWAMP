@@ -11,6 +11,7 @@ part; the shapes match, so folding these back into upstream as the pure half of
 those classes is mechanical.
 """
 
+import re
 import time
 from collections import OrderedDict
 
@@ -21,6 +22,11 @@ from .wire import Alarm, AlarmEvent, AppStatus, LineOutageEvent
 # How long an application may go unheard before its row is shown as stale. Same
 # three seconds the Qt status table greys out after.
 STALE_AFTER = 3.0
+
+# "I[L3244-6500]_Magnitude" -> "L3244-6500": the element a current channel
+# measures. The same convention p-SWAMP's own ``models.line.Line`` relies on when
+# it asks for the channel ``I[<line name>]``.
+_MEASURED_ELEMENT = re.compile(r"\[([^\]]+)\]")
 
 
 def island_groups(n_channels: int, raw_islands) -> list[np.ndarray]:
@@ -93,11 +99,16 @@ class LineOutageStore:
     Bounded, like the alarm store: this is a demo replaying a 70 s loop, so
     without a cap the same four-line trip would accumulate an entry every time
     the recording comes round again.
+
+    The log alone cannot say what is disconnected *now* once it has dropped its
+    oldest entries, so that is tracked beside it -- which is what lets the grid
+    view paint an open line without replaying history.
     """
 
     def __init__(self, limit: int = 100) -> None:
         self._limit = limit
         self._events: list[LineOutageEvent] = []
+        self._disconnected: set[str] = set()
         self.app_uuid: str | None = None
         self.app_name: str | None = None
         self.window_length: float | None = None
@@ -114,15 +125,31 @@ class LineOutageStore:
         )
         t = float(payload["time_stamp"])
         for event in payload.get("events") or []:
+            measurements = [str(x) for x in event["measurements"]]
             self._events.append(
                 LineOutageEvent(
                     t=t,
                     kind=event["type"],
                     stations=[str(x) for x in event["stations"]],
-                    measurements=[str(x) for x in event["measurements"]],
+                    measurements=measurements,
                 )
             )
+            elements = {
+                match.group(1)
+                for match in map(_MEASURED_ELEMENT.search, measurements)
+                if match
+            }
+            if event["type"] == "disconnect":
+                self._disconnected |= elements
+            else:
+                self._disconnected -= elements
         del self._events[: max(0, len(self._events) - self._limit)]
+
+    # Above list() on purpose: that method shadows the builtin for the rest of
+    # the class body, so a `list[...]` annotation below it would not evaluate.
+    def disconnected(self) -> list[str]:
+        """Elements carrying no current right now, by the name in their channel."""
+        return sorted(self._disconnected)
 
     def list(self) -> list[LineOutageEvent]:
         """Newest first, matching the alarm overview's ordering."""
