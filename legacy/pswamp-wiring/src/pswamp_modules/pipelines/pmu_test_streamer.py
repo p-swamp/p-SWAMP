@@ -22,9 +22,9 @@ import os
 from pswamp_core.datagateway import CimReferenceEnricher, DataGateway, gateway_from_env
 from pswamp_core.pipeline import Pipeline
 
-from ..excursion import ExcursionModule
-from ..frame_stats import FrameStatsModule
-from ..range_summary import RangeSummaryModule
+from pswamp_modules.excursion import ExcursionModule
+from pswamp_modules.frame_stats import FrameStatsModule
+from pswamp_modules.range_summary import RangeSummaryModule
 
 APP = "pmu-test-streamer"
 

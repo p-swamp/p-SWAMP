@@ -1,40 +1,44 @@
-# pswamp-modules
+# Modules
 
-The analysis modules of the p-SWAMP server data architecture, the pipelines
-that put them together, and the example data sources.
-`doc/server-data-architecture.md` describes the architecture;
-`doc/module-cookbook.md` is the recipe for a new module.
+The analysis modules of the p-SWAMP server data architecture, **one Python
+project per module**. `doc/server-data-architecture.md` describes the
+architecture; `doc/module-cookbook.md` is the recipe for a new module.
 
-- Modules: `pswamp_modules/<module>/` (`module.py`, re-exported by `__init__.py`)
-- Pipelines: `pswamp_modules/pipelines/<app>.py`
-- Example sources: `pswamp_modules/sources/`
-- Tests: a `tests/` package beside the code it tests
-  (`pswamp_modules/<module>/tests/test_module.py`), run by
-  `uv run pswamp test server` (`-k <module>` for one module's)
+| Folder | Distribution | Package | Reads | Emits |
+|---|---|---|---|---|
+| [`frame-stats/`](frame-stats/) | `pswamp-frame-stats` | `pswamp_modules.frame_stats` | `PmuFrame` | `FrameStatsResult` |
+| [`excursion/`](excursion/) | `pswamp-excursion` | `pswamp_modules.excursion` | `FrameStatsResult` | `ExcursionResult`, `PauseCommand` |
+| [`range-summary/`](range-summary/) | `pswamp-range-summary` | `pswamp_modules.range_summary` | (commands only) | `RangeSummaryResult` |
 
-A module is one folder: its code and its tests. Adding, removing or reviewing
-a module touches that folder (and, for a new pipeline, one file in
-`pipelines/`). The `tests/` folders are kept out of the image by
-`.dockerignore`.
+Each module folder holds exactly:
 
-The package sits directly in this folder, with no `src/` level (unlike
-`core/`): `module-root = ""` in `pyproject.toml`.
+```
+modules/<name>/
+  pyproject.toml   the project; its entry point in "pswamp.modules"
+  README.md        what it reads, emits and accepts; its parameters
+  src/pswamp_modules/<pkg>/   the code (no src/pswamp_modules/__init__.py:
+                              pswamp_modules is a PEP 420 namespace)
+  tests/           its tests
+```
 
 ## Rules
 
-- **It depends on `pswamp-core` and `pswamp-models` and nothing else in this repo.** Nothing here
-  imports the web backend (`app/server-python/src/`) or the desktop package
-  (`pswamp`). `pswamp_modules/tests/test_layering.py` checks it.
+- **A module depends on `pswamp-core` and `pswamp-models`** (plus any
+  third-party library it declares) **and nothing else in this repo.** It never
+  imports the web backend or the desktop package. Its messages live in
+  `pswamp_models.<pkg>`, never in the module.
 - **`pswamp-core` imports nothing from here.**
-- **The web backend imports from here**: an app's `api.py` takes its pipeline
-  from this package. Its result classes and commands it takes from
-  `pswamp_models`, where every module's messages live.
+- **A module folder holds only module code.** The pipelines and the example
+  sources are in the transitional `legacy/pswamp-wiring/` until they are
+  replaced.
 
-So a worker (`python -m pswamp_core.worker`) hosts a module with models, core
-and modules alone, from any working directory.
+`tools/tests/test_tools_layering.py` checks all three over every
+`modules/*/pyproject.toml`.
 
-## Adding a module
+## Commands
 
-`uv run pswamp new module <slug> "<Label>"` writes the
-module folder (code and tests) and its pipeline here, and its web API and page
-in `app/`.
+```
+uv run pswamp test module frame-stats     # one module's tests (folder or entry-point name)
+uv run pswamp test server                 # every suite, these included
+uv run pswamp new module <slug> "<Label>" # a new module project, its models, pipeline, api and page
+```

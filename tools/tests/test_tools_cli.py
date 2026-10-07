@@ -15,6 +15,7 @@ HELP_PAGES = [
     ["api", "generate"],
     ["test"],
     ["test", "server"],
+    ["test", "module"],
     ["test", "desktop"],
     ["test", "playwright"],
     ["test", "smoke"],
@@ -61,3 +62,21 @@ def test_extra_arguments_reach_pytest_verbatim(monkeypatch):
     assert seen["argv"][-3:] == ["-k", "lock", "-v"]
     result = runner.invoke(main.app, ["test", "server", "-k", "lock"])
     assert seen["argv"][-2:] == ["-k", "lock"]
+
+
+def test_test_module_runs_one_module_project_s_tests(monkeypatch):
+    seen = {}
+
+    def fake_run(argv, **kwargs):
+        seen["argv"] = argv
+        return 0
+
+    monkeypatch.setattr("pswamp_tools.commands.test.run", fake_run)
+    monkeypatch.setattr("pswamp_tools.commands.test.require_tools", lambda *a, **k: {})
+    for name in ("frame-stats", "frame_stats", "modules/frame-stats/"):
+        result = runner.invoke(main.app, ["test", "module", name, "-k", "layout"])
+        assert result.exit_code == 0, result.output
+        tests = seen["argv"][-3].replace("\\", "/")
+        assert tests.endswith("modules/frame-stats/tests") and seen["argv"][-2:] == ["-k", "layout"]
+    result = runner.invoke(main.app, ["test", "module", "no-such-module"])
+    assert result.exit_code == 2 and "frame-stats" in result.output

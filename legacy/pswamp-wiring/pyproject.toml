@@ -1,0 +1,57 @@
+# pswamp-wiring: TRANSITIONAL. The pipeline declarations and the example data
+# sources that used to sit beside the modules in modules/pswamp_modules/. They
+# are not module code, so they are not in modules/; they live here only until
+# the refactoring replaces them:
+#
+#   src/pswamp_modules/pipelines/   -> pipelines/<app>.toml, loaded through the
+#                                      pswamp.modules entry points (step 6)
+#   src/pswamp_modules/sources/     -> source modules, modules/sample-replay/ and
+#                                      modules/live-synthetic/ (step 7)
+#
+# Both are portions of the pswamp_modules namespace, so their import paths are
+# unchanged: PSWAMP_WORKER_PIPELINES=pswamp_modules.pipelines.<app>:PIPELINE
+# and <APP>_DATA_CLIENTS=...:pswamp_modules.sources.sample_client:... still work
+# in docker-compose.yml, k8s/ and the server. See README.md.
+#
+# A member of the uv workspace rooted at the repo root (one uv.lock there). It
+# depends on the core, the models and the modules its pipelines put together.
+
+[project]
+name = "pswamp-wiring"
+version = "0.1.0"
+description = "Transitional: the pipeline declarations and example data sources, until pipelines become TOML and sources become modules."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "pswamp-core",
+    "pswamp-models",
+    # The modules the pipelines in src/pswamp_modules/pipelines/ import.
+    "pswamp-frame-stats",
+    "pswamp-excursion",
+    "pswamp-range-summary",
+]
+
+[tool.uv.sources]
+pswamp-core = { workspace = true }
+pswamp-models = { workspace = true }
+pswamp-frame-stats = { workspace = true }
+pswamp-excursion = { workspace = true }
+pswamp-range-summary = { workspace = true }
+
+[build-system]
+requires = ["uv_build"]
+build-backend = "uv_build"
+
+# Two namespace portions of pswamp_modules, and no src/pswamp_modules/__init__.py.
+[tool.uv.build-backend]
+module-name = ["pswamp_modules.pipelines", "pswamp_modules.sources"]
+
+# No [tool.ruff] section: `pswamp check` passes `--select F` explicitly.
+
+# Used when pytest is pointed at this folder; `uv run pswamp test server` runs
+# these tests too, with the server's config. core/examples holds the remote
+# data stub, which the sources' tests run in-process.
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["../../core/examples"]
+asyncio_mode = "auto"

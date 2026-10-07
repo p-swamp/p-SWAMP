@@ -5,4 +5,7 @@
 
 A worker hosts an app's modules with
 ``PSWAMP_WORKER_PIPELINES=pswamp_modules.pipelines.<app>:PIPELINE``.
+
+Transitional: a portion of the ``pswamp_modules`` namespace in
+``legacy/pswamp-wiring/``, until pipelines become TOML files (see its README).
 """

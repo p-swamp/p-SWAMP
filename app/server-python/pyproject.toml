@@ -19,8 +19,12 @@ dependencies = [
     # The server data architecture (core/). The extras bring the Kafka transport
     # and the remote data client.
     "pswamp-core[kafka,remote-data]",
-    # The modules, their pipelines and the example sources (modules/).
-    "pswamp-modules",
+    # The modules, one project each (modules/<name>/).
+    "pswamp-frame-stats",
+    "pswamp-excursion",
+    "pswamp-range-summary",
+    # Transitional: the pipelines and the example sources (legacy/pswamp-wiring/).
+    "pswamp-wiring",
     # The message models (models/): the server imports them directly.
     "pswamp-models",
 ]
@@ -50,13 +54,16 @@ dependencies = [
 # `uv lock --upgrade-package p-swamp` at the repo root.
 [tool.uv.sources]
 p-swamp = { path = "../../desktop", editable = true }
-# The message models at models/, the shared core at core/ and the modules at
-# modules/ are members of the uv workspace rooted at the repo root (one uv.lock
-# there). Same one-way rule: nothing under models/, core/ or modules/ imports
-# from app/.
+# The message models at models/, the shared core at core/, the modules at
+# modules/<name>/ and the transitional wiring at legacy/pswamp-wiring/ are members of the uv workspace rooted at the repo root (one uv.lock
+# there). Same one-way rule: nothing under models/, core/, modules/ or legacy/
+# imports from app/.
 pswamp-models = { workspace = true }
 pswamp-core = { workspace = true }
-pswamp-modules = { workspace = true }
+pswamp-frame-stats = { workspace = true }
+pswamp-excursion = { workspace = true }
+pswamp-range-summary = { workspace = true }
+pswamp-wiring = { workspace = true }
 pswamp-tools = { workspace = true }
 
 # Tooling that must never ship in the image — the Dockerfile exports with
@@ -105,9 +112,11 @@ package = false
 # core/examples holds the remote data stub, which the tests run in-process.
 pythonpath = ["src", "../../core/examples"]
 # models/tests, core/tests and the modules' tests run here too: one runner and
-# one CI job cover every suite. Each module carries its tests in a tests/ package
-# beside its code, so those are found under modules/. The repo CLI's tests
-# (tools/tests) run here too. Test file names must be unique across tests/,
-# models/tests, core/tests and tools/tests, which are not packages.
-testpaths = ["tests", "../../models/tests", "../../core/tests", "../../modules", "../../tools/tests"]
+# one CI job cover every suite. Each module project carries its tests in
+# modules/<name>/tests/, found by recursing into modules/; the transitional
+# wiring's are in legacy/pswamp-wiring/tests/. The repo CLI's tests (tools/tests)
+# run here too. None of these folders is a package, so a test file name must be
+# unique across ALL of them (hence test_models_*, test_tools_*,
+# test_<module>_module.py, test_wiring_*).
+testpaths = ["tests", "../../models/tests", "../../core/tests", "../../modules", "../../legacy", "../../tools/tests"]
 asyncio_mode = "auto"

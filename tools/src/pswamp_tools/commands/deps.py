@@ -19,38 +19,45 @@ app = typer.Typer(
     no_args_is_help=True,
 )
 
-# The manifests and lockfiles an update may rewrite: the "dirty" warning and the
-# final diff both cover exactly these.
-MANIFESTS = [
-    "app/client-web/package.json",
-    "app/client-web/package-lock.json",
-    "desktop/pyproject.toml",
-    "desktop/uv.lock",
+# The workspace members' manifests: the fixed ones, plus every module project
+# (modules/*/, one per module) and the transitional wiring (legacy/*/), found by
+# glob so a new module needs no edit here.
+FIXED_MEMBERS = [
     "pyproject.toml",
-    "uv.lock",
     "app/server-python/pyproject.toml",
     "models/pyproject.toml",
     "core/pyproject.toml",
-    "modules/pyproject.toml",
     "tools/pyproject.toml",
 ]
-# (label, lockfile, manifests whose names count as direct dependencies)
-LOCKS = [
-    ("Desktop package", "desktop/uv.lock", ["desktop/pyproject.toml"]),
-    (
-        "Workspace",
+MEMBER_GLOBS = ("modules/*/pyproject.toml", "legacy/*/pyproject.toml")
+
+
+def workspace_manifests(root: Path) -> list[str]:
+    found = sorted(path.relative_to(root).as_posix() for pattern in MEMBER_GLOBS for path in root.glob(pattern))
+    return FIXED_MEMBERS + found
+
+
+def manifests(root: Path) -> list[str]:
+    """The manifests and lockfiles an update may rewrite: the "dirty" warning and
+    the final diff both cover exactly these."""
+    return [
+        "app/client-web/package.json",
+        "app/client-web/package-lock.json",
+        "desktop/pyproject.toml",
+        "desktop/uv.lock",
         "uv.lock",
-        [
-            "pyproject.toml",
-            "app/server-python/pyproject.toml",
-            "models/pyproject.toml",
-            "core/pyproject.toml",
-            "modules/pyproject.toml",
-            "tools/pyproject.toml",
-        ],
-    ),
-    ("Web client", "app/client-web/package-lock.json", ["app/client-web/package.json"]),
-]
+        *workspace_manifests(root),
+    ]
+
+
+def locks(root: Path) -> list[tuple[str, str, list[str]]]:
+    """(label, lockfile, manifests whose names count as direct dependencies)."""
+    return [
+        ("Desktop package", "desktop/uv.lock", ["desktop/pyproject.toml"]),
+        ("Workspace", "uv.lock", workspace_manifests(root)),
+        ("Web client", "app/client-web/package-lock.json", ["app/client-web/package.json"]),
+    ]
+
 # Pinned to a major so a future release can't shift behaviour under us.
 NCU = "npm-check-updates@23"
 
@@ -155,7 +162,7 @@ def update(
 
     # A dirty manifest mixes your edits with this run's in the review diff. Warn
     # rather than refuse: bumping a cap by hand first is the way past a cap.
-    dirty = capture(["git", "diff", "--name-only", "--", *MANIFESTS], cwd=root).stdout.split()
+    dirty = capture(["git", "diff", "--name-only", "--", *manifests(root)], cwd=root).stdout.split()
     if dirty:
         _ui.console.print("[yellow]Note: these manifests already have uncommitted changes:[/yellow]")
         for name in dirty:
@@ -164,7 +171,7 @@ def update(
 
     # Snapshot the lockfiles first: the report compares against these, not
     # HEAD, which is the wrong baseline when a lock was already dirty.
-    before: dict[str, str | None] = {lock: deps_report.read_file(root / lock) for _, lock, _ in LOCKS}
+    before: dict[str, str | None] = {lock: deps_report.read_file(root / lock) for _, lock, _ in locks(root)}
 
     _ui.section(f"Web client (app/client-web) — target: {target.value}")
     report.step(
@@ -180,12 +187,12 @@ def update(
         lambda: run(["uv", "lock", "--upgrade", "--project", "desktop"], cwd=root),
     )
 
-    _ui.section("Workspace (root uv.lock: models, core, modules, tools, app/server-python)")
+    _ui.section("Workspace (root uv.lock: models, core, modules/*, legacy/*, tools, app/server-python)")
     report.step("uv lock --upgrade (workspace: re-resolve uv.lock)", lambda: run(["uv", "lock", "--upgrade"], cwd=root))
 
     _ui.section("Held back by a version range (needs a hand edit)")
     _held_back("Desktop (desktop/pyproject.toml)", "--project", "desktop")
-    _held_back("Workspace (models, core, modules, tools, app/server-python)")
+    _held_back("Workspace (models, core, modules/*, legacy/*, tools, app/server-python)")
     # npm has no such gap (ncu rewrote the ranges), but a peer conflict can
     # still pin something below latest. `npm outdated` exits 1 for having output.
     _ui.console.print("\nWeb client (npm outdated — peer-dependency holdbacks):", markup=False)
@@ -194,19 +201,19 @@ def update(
         _ui.console.print(f"  {line}", markup=False)
 
     _ui.section("What actually moved")
-    for label, lock, manifests in LOCKS:
+    for label, lock, members in locks(root):
         _ui.console.print(f"\n{label} ({lock}):", markup=False)
         after = deps_report.read_file(root / lock)
         old = before[lock]
         if old is None or after is None:
             _ui.console.print("  (no before/after pair to compare)", markup=False)
             continue
-        texts = [t for m in manifests if (t := deps_report.read_file(root / m)) is not None]
+        texts = [t for m in members if (t := deps_report.read_file(root / m)) is not None]
         for line in deps_report.version_delta(old, after, texts, lock.endswith(".json"), verbose):
             _ui.console.print(line, markup=False)
 
     _ui.section("Diff to review")
-    run(["git", "--no-pager", "diff", "--stat", "--", *MANIFESTS], cwd=root)
+    run(["git", "--no-pager", "diff", "--stat", "--", *manifests(root)], cwd=root)
     _ui.console.print(
         "\nThe line counts above are mostly per-wheel hashes, not upgrades: read the\n"
         "list before them for that. What the lockfile diff IS good for is spotting a\n"

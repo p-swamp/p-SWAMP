@@ -45,7 +45,11 @@ tests/
 .ruff_cache/
 .idea/
 # The models' and the core's tests (the rules above are anchored to their
-# directories), and each module's own tests/ folder beside its code.
+# directories), each module project's tests/ and examples/
+# (modules/<name>/tests/, modules/<name>/examples/), and the transitional
+# wiring's tests.
 models/tests/
 core/tests/
-modules/**/tests/
+modules/*/tests/
+modules/*/examples/
+legacy/*/tests/

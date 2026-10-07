@@ -8,8 +8,8 @@
 #
 #   models/   pswamp-models    depends on pydantic only
 #   core/     pswamp-core      depends on pswamp-models
-#   modules/  pswamp-modules   depends on pswamp-core and pswamp-models
-#   app/server-python          depends on all three
+#   modules/<name>/  pswamp-<name>  depends on pswamp-core and pswamp-models
+#   app/server-python          depends on all of them
 #
 # So anything may depend on it, a data provider outside this repo included, and
 # it imports nothing from them (tests/test_models_layering.py checks that).
