@@ -37,6 +37,9 @@ IGNORED_ENTRIES = {"__pycache__", ".venv", ".pytest_cache", ".ruff_cache", ".myp
 FORBIDDEN = {"fastapi", "starlette", "uvicorn", "server", "shared", "pswamp_web", "pswamp"}
 # Every module may use these: the core and the models are its declared base.
 BASE = {"pswamp_core", "pswamp_models"}
+# What a declared dependency imports when it happens to be installed, though it
+# does not require it: httpx loads its command line (click, rich, pygments) if present.
+OPTIONAL_IMPORTS = {"httpx": {"click", "pygments", "rich"}}
 
 # Run in the fresh interpreter: import the package and every submodule of it,
 # then report the top-level names that the import added to sys.modules.
@@ -112,7 +115,9 @@ def imported_by(package: str, cwd: Path) -> set[str]:
 
 
 def test_there_are_module_projects():
-    assert {p.name for p in PROJECTS} >= {"frame-stats", "excursion", "range-summary"}
+    assert {p.name for p in PROJECTS} >= {
+        "frame-stats", "excursion", "range-summary", "sample-replay", "live-synthetic", "remote-history",
+    }
 
 
 @pytest.mark.parametrize("project", PROJECTS, ids=project_id)
@@ -120,7 +125,9 @@ def test_a_module_imports_only_its_declared_dependencies(project, tmp_path):
     package = package_of(project)
     assert package.startswith("pswamp_modules.") and package.count(".") == 1, package
     declared = {requirement_name(r) for r in manifest(project)["project"].get("dependencies", [])}
-    allowed = BASE | top_level_names(dependency_closure(declared)) | set(sys.stdlib_module_names)
+    closure = dependency_closure(declared)
+    optional = set().union(*(OPTIONAL_IMPORTS.get(name, set()) for name in closure))
+    allowed = BASE | top_level_names(closure) | optional | set(sys.stdlib_module_names)
 
     added = imported_by(package, tmp_path)
     tops = {name.partition(".")[0] for name in added}

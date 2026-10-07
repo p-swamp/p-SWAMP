@@ -23,6 +23,10 @@ dependencies = [
     "pswamp-frame-stats",
     "pswamp-excursion",
     "pswamp-range-summary",
+    # The sources (also modules/<name>/): the data a run replays or follows.
+    "pswamp-sample-replay",
+    "pswamp-live-synthetic",
+    "pswamp-remote-history",
     # Transitional: the example sources (legacy/pswamp-wiring/), which the
     # pipeline files (pipelines/<app>.toml) name.
     "pswamp-wiring",
@@ -64,6 +68,9 @@ pswamp-core = { workspace = true }
 pswamp-frame-stats = { workspace = true }
 pswamp-excursion = { workspace = true }
 pswamp-range-summary = { workspace = true }
+pswamp-sample-replay = { workspace = true }
+pswamp-live-synthetic = { workspace = true }
+pswamp-remote-history = { workspace = true }
 pswamp-wiring = { workspace = true }
 pswamp-tools = { workspace = true }
 

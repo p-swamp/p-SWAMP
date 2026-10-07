@@ -18,8 +18,11 @@ members = [
     "pswamp-core",
     "pswamp-excursion",
     "pswamp-frame-stats",
+    "pswamp-live-synthetic",
     "pswamp-models",
     "pswamp-range-summary",
+    "pswamp-remote-history",
+    "pswamp-sample-replay",
     "pswamp-server",
     "pswamp-tools",
     "pswamp-wiring",
@@ -1161,6 +1164,21 @@ requires-dist = [
 provides-extras = ["examples"]
 
 [[package]]
+name = "pswamp-live-synthetic"
+version = "0.1.0"
+source = { editable = "modules/live-synthetic" }
+dependencies = [
+    { name = "pswamp-core" },
+    { name = "pswamp-models" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "pswamp-core", editable = "core" },
+    { name = "pswamp-models", editable = "models" },
+]
+
+[[package]]
 name = "pswamp-models"
 version = "0.1.0"
 source = { editable = "models" }
@@ -1187,6 +1205,47 @@ requires-dist = [
 ]
 
 [[package]]
+name = "pswamp-remote-history"
+version = "0.1.0"
+source = { editable = "modules/remote-history" }
+dependencies = [
+    { name = "httpx" },
+    { name = "pswamp-core" },
+    { name = "pswamp-models" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "httpx", specifier = ">=0.28,<1" },
+    { name = "pswamp-core", editable = "core" },
+    { name = "pswamp-models", editable = "models" },
+]
+
+[[package]]
+name = "pswamp-sample-replay"
+version = "0.1.0"
+source = { editable = "modules/sample-replay" }
+dependencies = [
+    { name = "pswamp-core" },
+    { name = "pswamp-models" },
+]
+
+[package.optional-dependencies]
+examples = [
+    { name = "matplotlib" },
+    { name = "pswamp-frame-stats" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "matplotlib", marker = "extra == 'examples'", specifier = ">=3.8" },
+    { name = "pswamp-core", editable = "core" },
+    { name = "pswamp-frame-stats", marker = "extra == 'examples'", editable = "modules/frame-stats" },
+    { name = "pswamp-models", editable = "models" },
+]
+provides-extras = ["examples"]
+
+[[package]]
 name = "pswamp-server"
 version = "0.1.0"
 source = { virtual = "app/server-python" }
@@ -1196,8 +1255,11 @@ dependencies = [
     { name = "pswamp-core", extra = ["kafka", "remote-data"] },
     { name = "pswamp-excursion" },
     { name = "pswamp-frame-stats" },
+    { name = "pswamp-live-synthetic" },
     { name = "pswamp-models" },
     { name = "pswamp-range-summary" },
+    { name = "pswamp-remote-history" },
+    { name = "pswamp-sample-replay" },
     { name = "pswamp-wiring" },
     { name = "uvicorn", extra = ["standard"] },
 ]
@@ -1217,8 +1279,11 @@ requires-dist = [
     { name = "pswamp-core", extras = ["kafka", "remote-data"], editable = "core" },
     { name = "pswamp-excursion", editable = "modules/excursion" },
     { name = "pswamp-frame-stats", editable = "modules/frame-stats" },
+    { name = "pswamp-live-synthetic", editable = "modules/live-synthetic" },
     { name = "pswamp-models", editable = "models" },
     { name = "pswamp-range-summary", editable = "modules/range-summary" },
+    { name = "pswamp-remote-history", editable = "modules/remote-history" },
+    { name = "pswamp-sample-replay", editable = "modules/sample-replay" },
     { name = "pswamp-wiring", editable = "legacy/pswamp-wiring" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.52.4,<0.53" },
 ]

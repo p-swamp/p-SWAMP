@@ -1,0 +1,48 @@
+# pswamp-remote-history: the remote history source (remote-history): a history served by a remote data service.
+# One module, one project: its code (src/), its tests (tests/), a README and
+# runnable examples (examples/), and nothing else. See modules/README.md.
+#
+# A member of the uv workspace rooted at the repo root (one uv.lock there). It
+# depends on pswamp-core and pswamp-models and nothing else in this repo, plus
+# httpx for the service's REST contract; it never imports the web backend or the
+# desktop package (tools/tests/test_tools_layering.py checks both).
+#
+# The package is a portion of the pswamp_modules namespace (PEP 420): there is
+# deliberately no src/pswamp_modules/__init__.py, so every module project adds
+# its own pswamp_modules.<name> and they all import side by side.
+
+[project]
+name = "pswamp-remote-history"
+version = "0.1.0"
+description = "The remote history source (remote-history): a history served by a remote data service."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = ["pswamp-core", "pswamp-models", "httpx>=0.28,<1"]
+
+# How a pipeline finds the source by name: the entry point's name is the
+# source's `name` (what a pipeline file's [[sources]] `module` says).
+[project.entry-points."pswamp.modules"]
+remote-history = "pswamp_modules.remote_history:RemoteHistory"
+
+[tool.uv.sources]
+pswamp-core = { workspace = true }
+pswamp-models = { workspace = true }
+
+[build-system]
+requires = ["uv_build"]
+build-backend = "uv_build"
+
+# A dotted module-name: uv_build builds the namespace portion
+# src/pswamp_modules/remote_history/ and requires no src/pswamp_modules/__init__.py.
+[tool.uv.build-backend]
+module-name = "pswamp_modules.remote_history"
+
+# No [tool.ruff] section: `pswamp check` passes `--select F` explicitly.
+
+# Used by `uv run pswamp test module remote-history`; `uv run pswamp test server` runs
+# these tests too, with the server's config. core/examples holds the remote
+# data stub, which the tests run in-process.
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["../../core/examples"]
+asyncio_mode = "auto"
