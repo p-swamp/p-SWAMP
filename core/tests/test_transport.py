@@ -8,10 +8,10 @@ import pytest
 from support import Measurement, Number, NumberResult, at, measurement, take
 from transport_suite import TransportSuite
 
-from pswamp_core.messages import PauseCommand
 from pswamp_core.settings import MissingSettingError
 from pswamp_core.subscription import Overflow
 from pswamp_core.transport import InMemoryTransport, Outbox, transport_from_env
+from pswamp_models.player import PauseCommand
 
 
 class TestInMemoryTransport(TransportSuite):
@@ -99,7 +99,7 @@ def test_the_transport_comes_from_the_environment(monkeypatch):
     monkeypatch.setenv("T", "mem:pswamp_core.transport:InMemoryTransport")
     transport = transport_from_env("T")
     assert isinstance(transport, InMemoryTransport) and transport.name == "mem"
-    for bad in ("not-a-spec", "x:pswamp_core.messages:PmuFrame", "x:no.such.module:X"):
+    for bad in ("not-a-spec", "x:pswamp_models.pmu:PmuFrame", "x:no.such.module:X"):
         monkeypatch.setenv("T", bad)
         with pytest.raises(MissingSettingError):
             transport_from_env("T")

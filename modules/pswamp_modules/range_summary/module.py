@@ -19,8 +19,9 @@ from typing import Literal
 from pydantic import BaseModel, Field
 
 from pswamp_core.command_routing import CommandRefused
-from pswamp_core.messages import Command, PmuFrame, ResultEnvelope
 from pswamp_core.modules import Module
+from pswamp_models.common import Command, ResultEnvelope
+from pswamp_models.pmu import PmuFrame
 
 __all__ = ["RangeSummary", "RangeSummaryModule", "RangeSummaryResult", "SummarizeRangeCommand"]
 

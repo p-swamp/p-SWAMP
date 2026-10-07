@@ -30,10 +30,10 @@ import time
 from collections.abc import Callable, Sequence
 from typing import TYPE_CHECKING
 
+from pswamp_models.common import ErrorEvent, PipelineClosed
+
 from .command_routing import CommandInbox, concrete_commands
 from .log import get_logger
-from .messages.control import PipelineClosed
-from .messages.errors import ErrorEvent
 from .subscription import Overflow, Subscription
 from .transport import Outbox
 from .util.tasks import cancel_and_wait, finish

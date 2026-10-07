@@ -8,8 +8,9 @@ import math
 import pytest
 from support import HEADER, Measurement, Number, NumberResult, at, measurement, take
 
-from pswamp_core.messages import PmuFrame, ResultEnvelope, sent_at
 from pswamp_core.subscription import Overflow
+from pswamp_models.common import ResultEnvelope, sent_at
+from pswamp_models.pmu import PmuFrame
 
 
 class TransportSuite:

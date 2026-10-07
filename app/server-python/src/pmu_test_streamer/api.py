@@ -30,18 +30,18 @@ from shared import (
     transport,
 )
 
-from pswamp_core.messages import (
-    Command,
+from pswamp_core.pipeline import PipelineRegistry, PipelineRun
+from pswamp_models.common import Command
+from pswamp_models.player import (
     PauseCommand,
     PlayCommand,
     PlayerStatus,
-    PmuFrame,
     SeekCommand,
     SpeedCommand,
     StepCommand,
     SwitchSourceCommand,
 )
-from pswamp_core.pipeline import PipelineRegistry, PipelineRun
+from pswamp_models.pmu import PmuFrame
 
 from pswamp_modules.excursion import AutoPauseCommand, ExcursionResult
 from pswamp_modules.frame_stats import FrameStatsResult

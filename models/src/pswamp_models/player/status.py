@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright Contributors to the p-SWAMP Project.
 
-"""Control state: what the player is doing, and a run's end."""
+"""``PlayerStatus``: what a run's player is doing."""
 
 from __future__ import annotations
 
@@ -10,9 +10,9 @@ from typing import Literal
 
 from pydantic import Field
 
-from .data_model import DataModel
+from ..common.data_model import DataModel
 
-__all__ = ["PipelineClosed", "PlayerStatus"]
+__all__ = ["PlayerStatus"]
 
 
 class PlayerStatus(DataModel):
@@ -40,12 +40,3 @@ class PlayerStatus(DataModel):
     error: str | None = Field(
         default=None, description="Why the stream stopped, when a provider failed; null otherwise."
     )
-
-
-class PipelineClosed(DataModel):
-    """A run stopped (idle, evicted, shut down). Module hosts drop their
-    instances for its key."""
-
-    version: Literal["v1"] = "v1"
-    timestamp: datetime
-    reason: str = Field(default="stopped", description="idle, capacity or shutdown.")

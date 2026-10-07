@@ -9,8 +9,9 @@ from typing import Literal
 from pydantic import BaseModel
 
 from pswamp_core.datagateway import DataClient, TimeRange
-from pswamp_core.messages import DataModel, PmuFrame, PmuHeader, ResultEnvelope
 from pswamp_core.util.time import utcnow
+from pswamp_models.common import DataModel, ResultEnvelope
+from pswamp_models.pmu import PmuFrame, PmuHeader
 
 T0 = datetime(2026, 1, 1, tzinfo=timezone.utc)
 

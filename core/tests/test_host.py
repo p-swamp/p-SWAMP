@@ -8,11 +8,11 @@ from support import Measurement, Number, NumberResult, measurement, take
 from test_modules import Doubler, HalveCommand, Halver
 
 from pswamp_core.host import ModuleHost
-from pswamp_core.messages import ErrorEvent, PipelineClosed
 from pswamp_core.subscription import Overflow
 from pswamp_core.transport import InMemoryTransport
 from pswamp_core.util.tasks import cancel_and_wait
 from pswamp_core.util.time import utcnow
+from pswamp_models.common import ErrorEvent, PipelineClosed
 
 
 async def settle():

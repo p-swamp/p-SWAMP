@@ -29,6 +29,7 @@ MANIFESTS = [
     "pyproject.toml",
     "uv.lock",
     "app/server-python/pyproject.toml",
+    "models/pyproject.toml",
     "core/pyproject.toml",
     "modules/pyproject.toml",
     "tools/pyproject.toml",
@@ -42,6 +43,7 @@ LOCKS = [
         [
             "pyproject.toml",
             "app/server-python/pyproject.toml",
+            "models/pyproject.toml",
             "core/pyproject.toml",
             "modules/pyproject.toml",
             "tools/pyproject.toml",
@@ -178,12 +180,12 @@ def update(
         lambda: run(["uv", "lock", "--upgrade", "--project", "desktop"], cwd=root),
     )
 
-    _ui.section("Workspace (root uv.lock: core, modules, tools, app/server-python)")
+    _ui.section("Workspace (root uv.lock: models, core, modules, tools, app/server-python)")
     report.step("uv lock --upgrade (workspace: re-resolve uv.lock)", lambda: run(["uv", "lock", "--upgrade"], cwd=root))
 
     _ui.section("Held back by a version range (needs a hand edit)")
     _held_back("Desktop (desktop/pyproject.toml)", "--project", "desktop")
-    _held_back("Workspace (core, modules, tools, app/server-python)")
+    _held_back("Workspace (models, core, modules, tools, app/server-python)")
     # npm has no such gap (ncu rewrote the ranges), but a peer conflict can
     # still pin something below latest. `npm outdated` exits 1 for having output.
     _ui.console.print("\nWeb client (npm outdated — peer-dependency holdbacks):", markup=False)

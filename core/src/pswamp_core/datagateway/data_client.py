@@ -28,11 +28,13 @@ from abc import ABC, abstractmethod
 from collections.abc import AsyncIterator
 from typing import TYPE_CHECKING, ClassVar, Literal
 
-from ..messages.pmu import PmuFrame
+from pswamp_models.pmu import PmuFrame
+
 from ..settings import Configurable
 
 if TYPE_CHECKING:
-    from ..messages.data_model import DataModel
+    from pswamp_models.common import DataModel
+
     from .time_range import TimeRange
 
 __all__ = ["DataClient"]

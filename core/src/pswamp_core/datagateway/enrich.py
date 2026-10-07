@@ -21,11 +21,11 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
-from ..messages.pmu import PmuFrame
+from pswamp_models.pmu import PmuFrame
 
 if TYPE_CHECKING:
-    from ..messages.data_model import DataModel
-    from ..messages.pmu import PmuHeader
+    from pswamp_models.common import DataModel
+    from pswamp_models.pmu import PmuHeader
 
 __all__ = ["CimReferenceEnricher", "Enricher"]
 

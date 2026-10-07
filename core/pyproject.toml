@@ -1,5 +1,5 @@
-# pswamp-core: the shared pieces of the server data architecture (messages,
-# transport, modules, gateway, player, pipelines). See
+# pswamp-core: the shared pieces of the server data architecture (transport,
+# modules, gateway, player, pipelines), over the messages in models/. See
 # doc/server-data-architecture.md.
 #
 # The third Python project in the repo, beside the desktop package
@@ -10,22 +10,26 @@
 # modules/ (pswamp-modules), depends on this one; this one imports nothing
 # from it.
 #
-# pydantic is the only required dependency, so a data provider written outside
-# this repo can depend on the core alone. The extras are imported lazily:
+# pydantic and the message models (models/, pswamp-models, itself pydantic only)
+# are the only required dependencies, so a data provider written outside this
+# repo can depend on the core alone. The extras are imported lazily:
 #   [kafka]        aiokafka, for pswamp_core.transport.kafka
 #   [remote-data]  httpx, for the remote data client
 
 [project]
 name = "pswamp-core"
 version = "0.1.0"
-description = "p-SWAMP server data architecture: messages, transport, modules, gateway, player, pipelines."
+description = "p-SWAMP server data architecture: transport, modules, gateway, player, pipelines."
 readme = "README.md"
 requires-python = ">=3.11"
-dependencies = ["pydantic>=2.12"]
+dependencies = ["pydantic>=2.12", "pswamp-models"]
 
 [project.optional-dependencies]
 kafka = ["aiokafka>=0.14,<1"]
 remote-data = ["httpx>=0.28,<1"]
+
+[tool.uv.sources]
+pswamp-models = { workspace = true }
 
 [build-system]
 requires = ["uv_build"]

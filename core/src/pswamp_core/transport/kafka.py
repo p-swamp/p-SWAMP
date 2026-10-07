@@ -30,13 +30,14 @@ import asyncio
 from collections.abc import Sequence
 from typing import TYPE_CHECKING, Any
 
+from pswamp_models.common import stamp_sent_at
+
 from ..log import get_logger
-from ..messages.data_model import stamp_sent_at
 from ..settings import EnvSetting
 from . import Transport
 
 if TYPE_CHECKING:
-    from ..messages.data_model import DataModel
+    from pswamp_models.common import DataModel
 
 __all__ = ["LIVE_TOPIC_CONFIGS", "KafkaTransport"]
 

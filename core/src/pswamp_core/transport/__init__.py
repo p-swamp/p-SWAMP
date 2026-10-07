@@ -42,19 +42,16 @@ from abc import ABC, abstractmethod
 from collections import deque
 from typing import TYPE_CHECKING, ClassVar
 
+from pswamp_models.common import Command, ErrorEvent, PipelineClosed, ResultEnvelope, stamp_sent_at
+
 from ..keep_up import KeepUp, KeepUpMonitor
 from ..log import get_logger
-from ..messages.commands import Command
-from ..messages.control import PipelineClosed
-from ..messages.data_model import stamp_sent_at
-from ..messages.errors import ErrorEvent
-from ..messages.results import ResultEnvelope
 from ..settings import Configurable, MissingSettingError, load_class, parse_specs
 from ..subscription import Overflow, Subscription
 from ..util.tasks import cancel_and_wait
 
 if TYPE_CHECKING:
-    from ..messages.data_model import DataModel
+    from pswamp_models.common import DataModel
 
 __all__ = [
     "TRANSPORT_VARIABLE",

@@ -22,10 +22,10 @@ from collections.abc import AsyncIterator
 from pathlib import Path
 
 from pswamp_core.datagateway import DataClient, TimeRange
-from pswamp_core.messages import PmuFrame
 from pswamp_core.settings import EnvSetting
 from pswamp_core.util.tasks import cancel_and_wait
 from pswamp_core.util.time import utcnow
+from pswamp_models.pmu import PmuFrame
 
 from .sample_client import DEFAULT_PATH, load_sample
 

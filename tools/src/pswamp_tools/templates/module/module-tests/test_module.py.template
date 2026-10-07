@@ -2,7 +2,7 @@
 
 from datetime import datetime, timezone
 
-from pswamp_core.messages import PmuFrame, PmuHeader
+from pswamp_models.pmu import PmuFrame, PmuHeader
 from pswamp_modules.__PKG__ import __NAME__Module, highest_frequency
 
 

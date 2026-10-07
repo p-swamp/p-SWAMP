@@ -46,6 +46,8 @@ services:
         "--reload-dir",
         "/workspace/p-SWAMP/desktop/src",
         "--reload-dir",
+        "/workspace/p-SWAMP/models/src",
+        "--reload-dir",
         "/workspace/p-SWAMP/core/src",
         "--reload-dir",
         "/workspace/p-SWAMP/modules/pswamp_modules",
@@ -97,7 +99,11 @@ services:
         - path: desktop/src
           action: sync
           target: /workspace/p-SWAMP/desktop/src
-        # The shared core, installed editable in the image like desktop/src/.
+        # The message models and the shared core, installed editable in the
+        # image like desktop/src/.
+        - path: models/src
+          action: sync
+          target: /workspace/p-SWAMP/models/src
         - path: core/src
           action: sync
           target: /workspace/p-SWAMP/core/src
@@ -116,6 +122,8 @@ services:
         - path: app/server-python/pyproject.toml
           action: rebuild
         - path: desktop/pyproject.toml
+          action: rebuild
+        - path: models/pyproject.toml
           action: rebuild
         - path: core/pyproject.toml
           action: rebuild
@@ -148,6 +156,11 @@ services:
         - path: core/src
           action: sync+restart
           target: /workspace/p-SWAMP/core/src
+        - path: models/src
+          action: sync+restart
+          target: /workspace/p-SWAMP/models/src
+        - path: models/pyproject.toml
+          action: rebuild
         - path: core/pyproject.toml
           action: rebuild
         - path: modules/pyproject.toml

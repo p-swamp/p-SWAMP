@@ -12,20 +12,13 @@ from test_modules import HalveCommand, Halver
 from pswamp_core.command_routing import CommandRefused, NoReceiver
 from pswamp_core.datagateway import DataGateway
 from pswamp_core.host import serve_hosts
-from pswamp_core.messages import (
-    Command,
-    ErrorEvent,
-    PauseCommand,
-    PlayCommand,
-    PmuFrame,
-    ResultEnvelope,
-    SeekCommand,
-    SwitchSourceCommand,
-)
 from pswamp_core.modules import Module
 from pswamp_core.pipeline import Pipeline, PipelineRun, start_live_runs
 from pswamp_core.transport import InMemoryTransport
 from pswamp_core.util.tasks import cancel_and_wait
+from pswamp_models.common import Command, ErrorEvent, ResultEnvelope
+from pswamp_models.player import PauseCommand, PlayCommand, SeekCommand, SwitchSourceCommand
+from pswamp_models.pmu import PmuFrame
 
 
 class FrameCounter(Module):

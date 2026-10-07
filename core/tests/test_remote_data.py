@@ -12,8 +12,8 @@ from support import ListClient, frame
 
 from pswamp_core.datagateway import DataGateway, TimeRange
 from pswamp_core.datagateway.clients.remote_data import RemoteDataClient
-from pswamp_core.messages import RemoteDataResult
 from pswamp_core.testing import DataClientConformance
+from pswamp_models.remote_data import RemoteDataResult
 
 SERVED = ListClient("served")
 

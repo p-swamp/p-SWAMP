@@ -52,11 +52,11 @@ from pydantic import BaseModel
 
 from pswamp_core.command_routing import CommandRefused
 from pswamp_core.host import serve_hosts
-from pswamp_core.messages import Command, ErrorEvent
 from pswamp_core.pipeline import CapacityError, Pipeline, PipelineRegistry, PipelineRun, start_live_runs
 from pswamp_core.subscription import Overflow
 from pswamp_core.transport import Transport, transport_from_env
 from pswamp_core.util.tasks import cancel_and_wait
+from pswamp_models.common import Command, ErrorEvent
 
 from pswamp_web.log import get_logger
 from pswamp_web.pump import wait_for_disconnect

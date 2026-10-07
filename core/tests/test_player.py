@@ -10,18 +10,18 @@ from support import ListClient, Recorder, TickingClient, at, frame
 
 from pswamp_core.command_routing import CommandRefused
 from pswamp_core.datagateway import DataGateway, TimeRange
-from pswamp_core.messages import (
-    ErrorEvent,
+from pswamp_core.player import Player
+from pswamp_models.common import ErrorEvent
+from pswamp_models.player import (
     PauseCommand,
     PlayCommand,
     PlayerStatus,
-    PmuFrame,
     SeekCommand,
     SpeedCommand,
     StepCommand,
     SwitchSourceCommand,
 )
-from pswamp_core.player import Player
+from pswamp_models.pmu import PmuFrame
 
 
 def frames(out: Recorder) -> list:
