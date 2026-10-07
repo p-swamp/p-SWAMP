@@ -5,8 +5,9 @@ from __future__ import annotations
 import pytest
 
 from pswamp_core.command_routing import CommandRefused
+from pswamp_models.range_summary import SummarizeRangeCommand
 from pswamp_modules.pipelines.pmu_test_streamer import gateway
-from pswamp_modules.range_summary import RangeSummaryModule, SummarizeRangeCommand
+from pswamp_modules.range_summary import RangeSummaryModule
 
 
 async def test_the_range_summary_reads_its_own_gateway():

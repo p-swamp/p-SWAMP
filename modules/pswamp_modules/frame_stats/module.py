@@ -5,37 +5,18 @@
 on another.
 
 It reads ``PmuFrame`` and publishes ``FrameStatsResult`` (topic
-``frame.stats.result``). It finds its columns in the frame's own header, and
+``frame.stats.result``; both in ``pswamp_models.frame_stats``). It finds its columns in the frame's own header, and
 re-derives them only when ``header_id`` changes, so it needs no setup and runs
 the same in the server or a worker.
 """
 
 from __future__ import annotations
 
-from typing import Literal
-
-from pydantic import BaseModel, Field
-
 from pswamp_core.modules import Module
-from pswamp_models.common import ResultEnvelope
+from pswamp_models.frame_stats import FrameStats, FrameStatsResult
 from pswamp_models.pmu import PmuFrame, PmuHeader
 
-__all__ = ["FrameStats", "FrameStatsModule", "FrameStatsResult"]
-
-
-class FrameStats(BaseModel):
-    """The statistics of one instant."""
-
-    n_stations: int = Field(description="Stations with a frequency value in this frame.")
-    mean_frequency_hz: float | None = Field(description="Mean of the stations' frequencies.")
-    min_frequency_hz: float | None
-    max_frequency_hz: float | None
-    angle_spread_deg: float | None = Field(description="Largest minus smallest voltage angle.")
-    mean_voltage_kv: float | None
-
-
-class FrameStatsResult(ResultEnvelope[FrameStats]):
-    version: Literal["v1"] = "v1"
+__all__ = ["FrameStatsModule"]
 
 
 class FrameStatsModule(Module):

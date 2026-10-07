@@ -11,44 +11,23 @@ Two commands go through it. ``AutoPauseCommand`` (from the page) turns
 pausing on excursion on or off for this run. When it is on and the frequency
 leaves the band, the module publishes a ``PauseCommand`` itself: a module
 commanding the player, exactly as the web API does.
+
+Its messages are in ``pswamp_models.excursion``; what it reads, in
+``pswamp_models.frame_stats``.
 """
 
 from __future__ import annotations
 
-from typing import Literal
-
-from pydantic import BaseModel, Field
-
 from pswamp_core.modules import Module
 from pswamp_core.subscription import Sink
-from pswamp_models.common import Command, ResultEnvelope
+from pswamp_models.excursion import AutoPauseCommand, Excursion, ExcursionResult
+from pswamp_models.frame_stats import FrameStatsResult
 from pswamp_models.player import PauseCommand
 
-from ..frame_stats import FrameStatsResult
-
-__all__ = ["AutoPauseCommand", "Excursion", "ExcursionModule", "ExcursionResult"]
+__all__ = ["ExcursionModule"]
 
 NOMINAL_HZ = 50.0
 BAND_HZ = 0.005
-
-
-class Excursion(BaseModel):
-    in_band: bool = Field(description="The mean frequency is within the band.")
-    deviation_hz: float | None = Field(description="Mean frequency minus nominal.")
-    band_hz: float = Field(description="How far from nominal still counts as in band.")
-    excursions: int = Field(description="Excursions out of the band seen so far.")
-    auto_pause: bool = Field(description="The player is paused when the frequency leaves the band.")
-
-
-class ExcursionResult(ResultEnvelope[Excursion]):
-    version: Literal["v1"] = "v1"
-
-
-class AutoPauseCommand(Command):
-    """Pause the player when the frequency leaves the band, or stop doing so."""
-
-    version: Literal["v1"] = "v1"
-    enabled: bool
 
 
 class ExcursionModule(Module):

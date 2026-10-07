@@ -8,8 +8,9 @@ from datetime import datetime, timedelta, timezone
 from pswamp_core.host import ModuleHost
 from pswamp_core.transport import InMemoryTransport
 from pswamp_core.util.tasks import cancel_and_wait
+from pswamp_models.frame_stats import FrameStatsResult
 from pswamp_models.pmu import PmuFrame, PmuHeader
-from pswamp_modules.frame_stats import FrameStatsModule, FrameStatsResult
+from pswamp_modules.frame_stats import FrameStatsModule
 
 T0 = datetime(2026, 1, 1, tzinfo=timezone.utc)
 

@@ -11,6 +11,9 @@ and the package is the namespace to import it from.
 - ``player``: the player's commands and its ``PlayerStatus``.
 - ``pmu``: ``PmuFrame`` and its ``PmuHeader``, what every PMU source publishes.
 - ``remote_data``: the request and response lines of the remote data contract.
+- ``frame_stats``, ``excursion``, ``range_summary``: what each of those modules
+  publishes, and the commands it takes. A module's code imports its messages
+  from here, and so does everyone else: nobody imports a module for its data.
 
 Depends on pydantic only, so anything may depend on it: the core, the
 modules, the web backend, a data provider outside this repo.

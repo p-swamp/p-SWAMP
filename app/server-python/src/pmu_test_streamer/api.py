@@ -32,6 +32,8 @@ from shared import (
 
 from pswamp_core.pipeline import PipelineRegistry, PipelineRun
 from pswamp_models.common import Command
+from pswamp_models.excursion import AutoPauseCommand, ExcursionResult
+from pswamp_models.frame_stats import FrameStatsResult
 from pswamp_models.player import (
     PauseCommand,
     PlayCommand,
@@ -42,11 +44,9 @@ from pswamp_models.player import (
     SwitchSourceCommand,
 )
 from pswamp_models.pmu import PmuFrame
+from pswamp_models.range_summary import RangeSummaryResult, SummarizeRangeCommand
 
-from pswamp_modules.excursion import AutoPauseCommand, ExcursionResult
-from pswamp_modules.frame_stats import FrameStatsResult
 from pswamp_modules.pipelines.pmu_test_streamer import PIPELINE
-from pswamp_modules.range_summary import RangeSummaryResult, SummarizeRangeCommand
 
 logger = get_logger("pmu")
 
