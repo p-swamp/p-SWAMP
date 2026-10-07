@@ -17,7 +17,7 @@ In each set:
 - `server-python/` → `app/server-python/src/<pkg>/`
 - `client-web/` → `app/client-web/src/pages/<slug>/`
 
-The module set has six more folders. What the module publishes goes to the
+The module set has seven more folders. What the module publishes goes to the
 models (`models/`, pydantic only), where the module, its web API and anyone
 else import it from. The module is a project of its own, `modules/<slug>/`,
 which depends on the core and the models only, so nothing rendered there may
@@ -31,6 +31,8 @@ become TOML files:
 - `module/` → `modules/<slug>/src/pswamp_modules/<pkg>/` (no
   `src/pswamp_modules/__init__.py`: the package is a PEP 420 namespace portion)
 - `module-tests/` → `modules/<slug>/tests/`
+- `module-examples/` → `modules/<slug>/examples/` (a script running the module
+  with no server)
 - `pipeline/` → `legacy/pswamp-wiring/src/pswamp_modules/pipelines/`
 - `tests/` → `app/server-python/tests/`
 

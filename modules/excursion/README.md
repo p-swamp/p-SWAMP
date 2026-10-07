@@ -31,6 +31,13 @@ for message in excursion.run(stats_result):   # an ExcursionResult, and a PauseC
     print(message)
 ```
 
+## Examples
+
+`examples/count_excursions.py` feeds a made-up series of frame statistics
+through the module, with auto-pause on, and prints each result and pause:
+
+    uv run python modules/excursion/examples/count_excursions.py
+
 ## Tests
 
 `uv run pswamp test module excursion` (also part of `uv run pswamp test server`).

@@ -34,6 +34,13 @@ summary.gateway = gateway                  # a pswamp_core DataGateway with a hi
 answer.result.mean_frequency_hz
 ```
 
+## Examples
+
+`examples/summarize_range.py` gives the module a gateway over a small synthetic
+recording (a minimal in-memory `DataClient`) and summarizes four ranges of it:
+
+    uv run python modules/range-summary/examples/summarize_range.py
+
 ## Tests
 
 `uv run pswamp test module range-summary` (also part of `uv run pswamp test server`).

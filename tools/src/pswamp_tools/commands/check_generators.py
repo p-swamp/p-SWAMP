@@ -33,7 +33,8 @@ or not, untracked files included):
   1. `pswamp new subapp` (a counter) and `pswamp new module` (a module and its page);
   2. `pswamp check` over the result;
   3. the generated module's tests (its project's tests/ folder, its page's
-     socket in the server's tests/), and the layering tests over the result;
+     socket in the server's tests/), and the layering tests over the result,
+     then its example script (examples/), run as a plain script;
   4. import the module-worker's pipelines and modules as patched into
      docker-compose.yml and k8s/p-swamp-local.yaml, from outside the server
      tree, as a worker does.
@@ -213,6 +214,11 @@ def check_generators() -> None:
                 "../../tools/tests/test_tools_layering.py",
                 "../../models/tests/test_models_layering.py",
             ],
+            tree,
+        )
+        step(
+            "The generated module's example runs from a plain script",
+            ["uv", "run", "python", f"modules/{MODULE}/examples/run_{module_pkg}.py"],
             tree,
         )
         # The script and its patterns go through files, not the command line,

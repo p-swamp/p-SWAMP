@@ -6,7 +6,7 @@ explains them):
 
 * ``subapp``: a per-client counter, a page and its api;
 * ``module``: a module project over the core pipeline (``modules/<slug>/``:
-  its code, tests and README), its messages (in ``pswamp_models``), its
+  its code, tests, README and a runnable example), its messages (in ``pswamp_models``), its
   pipeline (in the transitional ``legacy/pswamp-wiring/``), its web api, a page
   showing its latest result, and the api's test; the module joins the
   workspace (``modules/*``), becomes a dependency of the wiring and of the
@@ -235,7 +235,8 @@ def plan(root: Path, slug: str, label: str, template_set: str = "subapp", templa
     sources = [(tset / "server-python", api_dir), (tset / "client-web", page_dir)]
     result.new_dirs = [api_dir, page_dir]
     # The module set: the module is a project of its own, modules/<slug>/ (its
-    # manifest and README, its code in the pswamp_modules namespace, its tests),
+    # manifest and README, its code in the pswamp_modules namespace, its tests
+    # and an example script),
     # which depends on the core and the models only; what it publishes goes to
     # the models, where every consumer imports it from; its pipeline goes to the
     # transitional wiring; the web api's test goes into the server's tests/.
@@ -245,10 +246,11 @@ def plan(root: Path, slug: str, label: str, template_set: str = "subapp", templa
             (tset / "module-project", project_dir),
             (tset / "module", package_dir),
             (tset / "module-tests", project_dir / "tests"),
+            (tset / "module-examples", project_dir / "examples"),
             (tset / "pipeline", PIPELINES),
             (tset / "tests", SERVER_TESTS),
         ]
-        result.new_dirs += [models_dir, project_dir, package_dir, project_dir / "tests"]
+        result.new_dirs += [models_dir, project_dir, package_dir, project_dir / "tests", project_dir / "examples"]
 
     # Every template is <filename>.template. A missing suffix is an error, not a
     # no-op, so the convention can't rot into "some of them".

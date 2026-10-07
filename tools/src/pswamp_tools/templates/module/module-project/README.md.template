@@ -25,6 +25,12 @@ result = __NAME__Module().run_one(frame)   # a __NAME__Result
 result.result.station, result.result.frequency_hz
 ```
 
+## Examples
+
+`examples/run___PKG__.py` runs the module over a few synthetic frames:
+
+    uv run python modules/__SLUG__/examples/run___PKG__.py
+
 ## Tests
 
 `uv run pswamp test module __SLUG__` (also part of `uv run pswamp test server`).
