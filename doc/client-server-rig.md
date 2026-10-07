@@ -280,8 +280,9 @@ reference_subapp/ one package per api — the thing you add
   api.py          the endpoints: the /ws websocket and the POST commands
   model.py        the app's own domain logic
 pmu_test_streamer/  the web API (api.py) of the server data architecture's
-                    worked example. Its pipeline, modules and data clients are
-                    in modules/pswamp_modules/, with the recording
+                    worked example. Its modules are projects in modules/<name>/;
+                    its pipeline and data clients are in
+                    legacy/pswamp-wiring/src/pswamp_modules/, with the recording
                     (sources/sample_data.txt: 300 lines of *simulated* PMU data
                     from the Nordic 44 sim, committed as a static test fixture)
 errors/           the error tray's backend

@@ -127,30 +127,42 @@ Consequences worth knowing before touching anything:
   the desktop package. After editing `core/pyproject.toml`, run `uv lock` at
   the repo root.
   `pswamp check` gates it fully, like `app/`.
-- **A fourth project, `modules/` (`pswamp-modules`)**, holds the analysis
-  modules (`pswamp_modules/<module>/`), the pipeline declarations
-  (`pipelines/<app>.py`) and the example data sources (`sources/`). **Each
-  module is one folder that carries its own tests**, in a `tests/` package
-  beside its code (`<module>/tests/test_module.py`); `pipelines/` and
-  `sources/` do the same, so there is no `modules/tests/`. The project is
-  laid out flat: the package sits directly in `modules/`, with no `src/` level
-  (unlike `core/`; `module-root = ""` in its manifest). The
-  layering runs one way: **`models` ← `core` ← `modules` ← the web backend.** `modules/`
-  depends on `pswamp-core` and `pswamp-models` only and imports nothing from `app/` or the desktop
-  package; `core/` imports nothing from `modules/`; an app's `api.py` in the
-  server imports its pipeline from `pswamp_modules`, and its results and
-  commands from `pswamp_models`.
-  `pswamp_modules/tests/test_layering.py` checks both rules. Why: a worker hosting
-  modules then loads core and modules alone, no FastAPI and no `pswamp_web`.
-  Like core it is a workspace member with no lockfile of its own, its tests run through `pswamp test server`
-  (found under `modules/`; `-k <module>` selects one module's), and
-  `pswamp check` gates it fully. `.dockerignore` keeps the `tests/` folders
-  out of the image. After editing `modules/pyproject.toml`, run `uv lock` at
-  the repo root. Test
-  file names must be unique across `app/server-python/tests/`, `models/tests/`,
-  `core/tests/` and `tools/tests/`, which run in the same pytest session and are not packages; a
-  module's tests are a package, so they cannot clash.
-- **`uv run pswamp check` gates `app/`, `models/`, `core/`, `modules/` and `tools/` fully; `desktop/src/` only for syntax.**
+- **The modules are one project each, `modules/<name>/`** (distribution
+  `pswamp-<name>`, e.g. `modules/frame-stats/` = `pswamp-frame-stats`), every one
+  a workspace member through the `"modules/*"` glob. A module folder holds
+  only `pyproject.toml` (with its `[project.entry-points."pswamp.modules"]`
+  entry, named after the module's `name`), `README.md` (what it reads, emits
+  and accepts; its parameters), `src/pswamp_modules/<pkg>/`, `tests/` and
+  `examples/` (scripts running it with no server). **`pswamp_modules` is a
+  PEP 420 namespace**: there is no `src/pswamp_modules/__init__.py` anywhere,
+  so each project adds its own `pswamp_modules.<pkg>` and imports stay
+  `pswamp_modules.<pkg>`. Built by `uv_build` with a dotted
+  `module-name = "pswamp_modules.<pkg>"`. The layering runs one way:
+  **`models` ← `core` ← each module ← the web backend.** A module depends on
+  `pswamp-core` and `pswamp-models` (plus any third-party library it declares)
+  and imports nothing from `app/`, the desktop package or another module;
+  `core/` imports no module. `tools/tests/test_tools_layering.py` checks every
+  `modules/*/pyproject.toml` for that, for the folder's contents and for the
+  entry point. Why: a worker hosting modules then loads core and modules alone,
+  no FastAPI and no `pswamp_web`. A library only an example needs (matplotlib)
+  is an `examples` extra, never a dependency.
+  Their tests run through `pswamp test server` (which recurses into `modules/`)
+  or one module's alone with `pswamp test module <name>`; `pswamp check` gates
+  them fully; `.dockerignore` keeps `tests/` and `examples/` out of the image.
+  After editing a module's manifest, run `uv lock` at the repo root.
+  **Test file names must be unique across every test folder** —
+  `app/server-python/tests/`, `models/tests/`, `core/tests/`, `tools/tests/`,
+  each `modules/<name>/tests/` and `legacy/pswamp-wiring/tests/` — since they
+  run in one pytest session and none is a package: hence `test_models_*`,
+  `test_tools_*`, `test_<pkg>_module.py`, `test_wiring_*`.
+- **`legacy/pswamp-wiring/` (`pswamp-wiring`) is TRANSITIONAL**: the pipeline
+  declarations (`pswamp_modules.pipelines.<app>`) and the example data sources
+  (`pswamp_modules.sources`), moved out of `modules/` because they are not
+  module code, as two more portions of the same namespace, so their import
+  paths (in compose, k8s, `<APP>_DATA_CLIENTS` and the server) are unchanged.
+  It depends on the modules its pipelines import. It goes away when pipelines
+  become TOML and sources become modules; don't add anything else to it.
+- **`uv run pswamp check` gates `app/`, `models/`, `core/`, `modules/`, `legacy/` and `tools/` fully; `desktop/src/` only for syntax.**
   ruff, `tsc` and the lockfile check (the root `uv.lock`) are scoped to those. `desktop/src/` gets a
   **syntax-only** `py_compile` gate (it ships in the image, so it must at least
   parse) — but it is *not* lint-gated: `ruff check` deliberately leaves it out,
@@ -197,10 +209,12 @@ Two deployables, one wire protocol:
   subapp: no ticker, no data file, no lifespan, so what remains is exactly the
   wiring every app needs.
   **`src/pmu_test_streamer/`** is the web API (`api.py`) of the worked example
-  of the server data architecture. The rest of the example is in
-  `modules/pswamp_modules/`: its pipeline (`pipelines/pmu_test_streamer.py`),
-  its modules (`frame_stats/`, `excursion/`, `range_summary/`) and its data
-  clients (`sources/sample_client.py`, `sources/live_client.py`). See "The
+  of the server data architecture. The rest of the example is its modules,
+  one project each (`modules/frame-stats/`, `modules/excursion/`,
+  `modules/range-summary/`), and, in the transitional
+  `legacy/pswamp-wiring/src/pswamp_modules/`, its pipeline
+  (`pipelines/pmu_test_streamer.py`) and its data clients
+  (`sources/sample_client.py`, `sources/live_client.py`). See "The
   server data architecture" below.
   `sources/sample_data.txt` is a **one-off sample committed for testing**: 300
   *simulated* PMU records extracted by hand from the Nordic 44 simulation in
@@ -449,8 +463,9 @@ Key invariants to preserve:
 
 `doc/server-data-architecture.md` is the account: how PMU data flows from a
 source through modules to the browser, and how commands flow back. The code is
-`core/src/pswamp_core/`; every message is in `models/src/pswamp_models/`; the modules, pipelines and example sources built on it
-are `modules/pswamp_modules/`; the worked example is the PMU test streamer; the recipe
+`core/src/pswamp_core/`; every message is in `models/src/pswamp_models/`; the modules built on it
+are `modules/<name>/`, one project each, and the pipelines and example sources the
+transitional `legacy/pswamp-wiring/`; the worked example is the PMU test streamer; the recipe
 for a new module is `doc/module-cookbook.md`; a deployment's history service
 follows `doc/remote-data-integration-contract.md`. The rules to keep:
 
@@ -465,8 +480,9 @@ follows `doc/remote-data-integration-contract.md`. The rules to keep:
   a worker with Kafka. Where a module runs is configuration
   (`PSWAMP_TRANSPORT`, `PSWAMP_WORKER_PIPELINES`, `PSWAMP_WORKER_MODULES`), never
   code.
-- **A module lives in `modules/`, its web API in the server.** The module, its
-  pipeline and its tests go under `modules/` and import the core and the models only; the
+- **A module lives in `modules/<name>/`, its web API in the server.** The module
+  and its tests go in its own project under `modules/` and import the core and
+  the models only (its pipeline, for now, in `legacy/pswamp-wiring/`); the
   app's `api.py` and its page stay under `app/`. A worker runs from `modules/`,
   not the server's `src/`, so a module that imports the web backend fails at
   start.
@@ -808,7 +824,7 @@ socket — `pswamp_web/grid/` — just omits the name.
 nothing in it is there for a reason peculiar to itself. If the app ships a **data
 file** beside its code, that needs no Dockerfile change either — read it once at
 import off `Path(__file__).parent`, as `pswamp_web/data/` does (and
-`pswamp_modules/sources/sample_client.py`, in `modules/`), since `COPY src/ ./src/`
+`pswamp_modules/sources/sample_client.py`, in `legacy/pswamp-wiring/`), since `COPY src/ ./src/`
 takes the whole tree. Put
 anything a second app would otherwise duplicate in `src/shared.py`; the per-app
 `states` dict, `state_message`, any ticker, and command dispatch deliberately
@@ -924,6 +940,7 @@ Quality checks (cover both halves of the codebase):
 ```
 uv run pswamp check             # READ-ONLY static gate, NO test suites: uv lock --check + py_compile + ruff check F (python), tsc -b + eslint (web), api contract vs code. Runs all checks even if one fails, exits non-zero on any failure.
 uv run pswamp test server # the server, core and modules unit tests (app/server-python/tests/, core/tests/, each module's tests/ under modules/), fast + hermetic; args pass through to pytest (-k, -v, a node id).
+uv run pswamp test module frame-stats # one module project's tests (modules/<name>/tests/)
 uv run pswamp test desktop   # the desktop "core" tests (desktop/tests/) in the [full] env; needs Kafka/NQKafka/MQTT/Qt infra — run deliberately, not in CI.
 uv run pswamp check-generators        # both generators, in a throwaway worktree: their output passes pswamp check and its tests
 KAFKA_TEST_BOOTSTRAP_SERVERS=127.0.0.1:19092 uv run pswamp test server -k kafka   # the transport suite against the compose broker (docker compose up -d kafka)
