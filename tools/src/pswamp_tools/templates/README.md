@@ -1,8 +1,8 @@
-# Subapp and module templates
+# Subapp, module and source templates
 
 What the generators copy into a new app. Edit these to change what every new
 page/api starts life as; the generator (`../generate.py`) only derives names and patches the
-registries. Two sets:
+registries. Three sets:
 
 - `subapp/`, for `uv run pswamp new subapp`: a per-client counter, like the
   checked-in reference subapp (`app/server-python/src/reference_subapp/`).
@@ -11,6 +11,10 @@ registries. Two sets:
   result, and unit tests. The project joins the workspace, the server's
   dependencies and the lock, and the module and its pipeline file are added to the
   module-worker in compose and k8s. `doc/module-cookbook.md` walks through it.
+- `source/`, for `uv run pswamp new module <slug> <label> --source [--playable]`:
+  a data source, with no page, api or messages: a `SourceModule` project and a
+  pipeline file that reads it. The project joins the workspace and the server's
+  dependencies and the lock.
 
 In each set:
 
@@ -35,6 +39,24 @@ its entry point:
   with no server)
 - `pipeline/` → `pipelines/` (`<slug>.toml`)
 - `tests/` → `app/server-python/tests/`
+
+The source set has five folders, no page and no api:
+
+- `source-project/` → `modules/<slug>/` (`pyproject.toml` with the
+  `pswamp.modules` entry point, `README.md`)
+- `source/` → `modules/<slug>/src/pswamp_modules/<pkg>/` (`source.py`, a
+  history yielding synthetic frames, and its `__init__.py`)
+- `source-tests/` → `modules/<slug>/tests/` (`test_<pkg>_source.py`, running
+  `SourceConformance`)
+- `source-examples/` → `modules/<slug>/examples/` (a script reading the source
+  with no server)
+- `pipeline/` → `pipelines/` (`<slug>.toml`, with `[[sources]] module = "<slug>"`)
+
+`--playable` is three more tokens, written by the generator rather than the
+slug: `__SOURCE_BASES__` (`SourceModule`, or `Playable, SourceModule`),
+`__PLAYABLE_IMPORT__` (the `Playable` import line, or nothing: it is written at
+the start of the line it replaces, so keep the next import on that line) and
+`__IS_PLAYABLE__` (`True` or `False`).
 
 A module's `tests/` is not a package, and runs in one pytest session with every
 other test folder, so its test file is named after the module

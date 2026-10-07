@@ -1,0 +1,41 @@
+# pswamp-__SLUG__: the __LABEL__ source. One module, one project: its code
+# (src/), its tests (tests/), a README and runnable examples (examples/), and
+# nothing else. See modules/README.md.
+#
+# A member of the uv workspace rooted at the repo root (one uv.lock there). It
+# depends on pswamp-core and pswamp-models and nothing else in this repo. A
+# third-party library the source needs (an httpx client, a broker's) goes in
+# `dependencies` below.
+#
+# The package is a portion of the pswamp_modules namespace (PEP 420): there is
+# no src/pswamp_modules/__init__.py.
+
+[project]
+name = "pswamp-__SLUG__"
+version = "0.1.0"
+description = "The __LABEL__ source (__SLUG__)."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = ["pswamp-core", "pswamp-models"]
+
+# How a pipeline finds the source by name: the entry point's name is the
+# source's `name` (what a pipeline file's [[sources]] `module` says).
+[project.entry-points."pswamp.modules"]
+__SLUG__ = "pswamp_modules.__PKG__:__NAME__Source"
+
+[tool.uv.sources]
+pswamp-core = { workspace = true }
+pswamp-models = { workspace = true }
+
+[build-system]
+requires = ["uv_build"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-name = "pswamp_modules.__PKG__"
+
+# Used by `uv run pswamp test module __SLUG__`; `uv run pswamp test server`
+# runs these tests too, with the server's config.
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"

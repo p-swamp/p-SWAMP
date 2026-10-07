@@ -96,6 +96,8 @@ def test_no_template_token_survives_rendering():
     for template in generate.TEMPLATES_DIR.rglob("*.template"):
         rendered = names.render(template.read_text(encoding="utf-8"))
         assert "__SLUG__" not in rendered and "__NAME__" not in rendered and "__PKG__" not in rendered, template
+        assert "__SOURCE_BASES__" not in rendered and "__PLAYABLE_IMPORT__" not in rendered, template
+        assert "__IS_PLAYABLE__" not in rendered, template
 
 
 # --- the subapp set ------------------------------------------------------------
@@ -255,6 +257,69 @@ def test_a_test_name_clashing_with_another_test_folder_is_refused(tree, folder, 
         generate.plan(tree, "zz-mod", "ZZ Mod", "module")
 
 
+# --- the source set ------------------------------------------------------------
+
+
+def test_a_source_is_a_project_and_a_pipeline_and_nothing_else(tree):
+    before = snapshot(tree)
+    generate.apply(generate.plan(tree, "zz-src", "ZZ Src", "source"), echo=lambda _: None)
+
+    project = tree / "modules/zz-src"
+    assert (project / "pyproject.toml").is_file() and (project / "README.md").is_file()
+    assert (project / "src/pswamp_modules/zz_src/source.py").is_file()
+    assert (project / "src/pswamp_modules/zz_src/__init__.py").is_file()
+    assert not (project / "src/pswamp_modules/__init__.py").exists()  # a namespace portion
+    assert (project / "tests/test_zz_src_source.py").is_file()
+    assert (project / "examples/read_zz_src.py").is_file()
+    assert (tree / "pipelines/zz-src.toml").is_file()
+
+    import tomllib
+
+    manifest = tomllib.loads(text(tree, "modules/zz-src/pyproject.toml"))
+    assert manifest["project"]["name"] == "pswamp-zz-src"
+    assert manifest["project"]["entry-points"]["pswamp.modules"] == {"zz-src": "pswamp_modules.zz_src:ZzSrcSource"}
+    pipeline = tomllib.loads(text(tree, "pipelines/zz-src.toml"))
+    assert pipeline["sources"] == [{"name": "zz-src", "module": "zz-src"}]
+    # A dependency of the server, under the sources, with its workspace source.
+    server = tomllib.loads(text(tree, "app/server-python/pyproject.toml"))
+    assert "pswamp-zz-src" in server["project"]["dependencies"]
+    assert server["tool"]["uv"]["sources"]["pswamp-zz-src"] == {"workspace": True}
+    # No web api, page, model or worker: those are the module set's.
+    after = snapshot(tree)
+    changed = {path for path in before if before[path] != after.get(path)}
+    assert changed == {"app/server-python/pyproject.toml"}
+    assert not (tree / "models/src/pswamp_models/zz_src").exists()
+    assert not (tree / "app/server-python/src/zz_src").exists()
+
+
+@pytest.mark.parametrize("playable", [False, True])
+def test_a_source_is_replayable_only_when_asked(tree, playable):
+    generate.apply(generate.plan(tree, "zz-src", "ZZ Src", "source", playable=playable), echo=lambda _: None)
+    source = text(tree, "modules/zz-src/src/pswamp_modules/zz_src/source.py")
+    tests = text(tree, "modules/zz-src/tests/test_zz_src_source.py")
+    assert ("class ZzSrcSource(Playable, SourceModule):" in source) is playable
+    assert ("class ZzSrcSource(SourceModule):" in source) is not playable
+    assert ("from pswamp_core.playable import Playable\n" in source) is playable
+    assert f"is {playable}\n" in tests
+
+
+def test_playable_is_only_for_a_source(tree):
+    with pytest.raises(generate.GenerateError, match="--playable only applies to a source"):
+        generate.plan(tree, "zz-mod", "ZZ Mod", "module", playable=True)
+
+
+@pytest.mark.parametrize("slug", ["sample-replay", "frame-stats"])
+def test_a_source_cannot_take_a_name_in_the_pswamp_modules_namespace(tree, slug):
+    with pytest.raises(generate.GenerateError, match="already exists"):
+        generate.plan(tree, slug, "Taken", "source")
+
+
+def test_a_source_test_name_clashing_with_another_test_folder_is_refused(tree):
+    (tree / "core/tests/test_zz_src_source.py").write_text("", encoding="utf-8")
+    with pytest.raises(generate.GenerateError, match="core/tests/test_zz_src_source.py"):
+        generate.plan(tree, "zz-src", "ZZ Src", "source")
+
+
 # --- the CLI -------------------------------------------------------------------
 
 
@@ -263,6 +328,11 @@ def test_help_renders(command):
     result = CliRunner().invoke(main.app, [*command, "--help"])
     assert result.exit_code == 0, result.output
     assert "Usage:" in result.output
+
+
+def test_the_module_command_offers_the_source_flags():
+    result = CliRunner().invoke(main.app, ["new", "module", "--help"])
+    assert "--source" in result.output and "--playable" in result.output
 
 
 def test_a_bad_name_is_one_error_line_and_exit_1(monkeypatch, tree):

@@ -1,7 +1,7 @@
 """The subapp and module generators: derive a name's spellings, render templates, patch registries.
 
 The port of the Python that scripts/generate-new-subapp.sh carried in a heredoc.
-Two template sets live in ``templates/`` beside this file (``templates/README.md``
+Three template sets live in ``templates/`` beside this file (``templates/README.md``
 explains them):
 
 * ``subapp``: a per-client counter, a page and its api;
@@ -12,7 +12,13 @@ explains them):
   workspace (``modules/*``), becomes a dependency of the server (which finds
   it through its entry point), and its pipeline file and name are added to the
   module-worker in docker-compose.yml and k8s/p-swamp-local.yaml. The caller
-  re-locks (``uv lock``) afterwards.
+  re-locks (``uv lock``) afterwards;
+* ``source``: a data source, a ``SourceModule`` project over the core
+  (``modules/<slug>/``: its code, tests, README and a runnable example) and a
+  pipeline file (``pipelines/<slug>.toml``) that reads it. It has no messages,
+  no web api and no page; it joins the workspace and the server's dependencies
+  (which find it through its entry point). With ``playable`` it is a history
+  that is replayable (the ``Playable`` mixin).
 
 Everything is computed in memory first, every rendered file and every registry
 patch, and only then written. So a bad name, a taken name or a missing anchor
@@ -34,7 +40,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 TEMPLATES_DIR = Path(__file__).parent / "templates"
-TEMPLATE_SETS = ("subapp", "module")
+TEMPLATE_SETS = ("subapp", "module", "source")
 SUFFIX = ".template"
 
 WEB = Path("app/client-web/src")
@@ -81,6 +87,11 @@ class Names:
     upper          GRID_OVERVIEW          environment variable prefix (module set)
     ============== ====================== ===========================================
 
+    The source set also has ``__SOURCE_BASES__`` (``SourceModule``, or
+    ``Playable, SourceModule``), ``__PLAYABLE_IMPORT__`` (the import line, or
+    nothing: written at the start of the line it replaces) and ``__IS_PLAYABLE__``
+    (``True``/``False``), which follow ``playable``.
+
     Two path consts because the two directions use two transports: state down
     the socket, commands up as POSTs (see AGENTS.md).
     """
@@ -92,6 +103,7 @@ class Names:
     ws_path_const: str
     api_path_const: str
     upper: str
+    playable: bool = False
 
     def tokens(self) -> tuple[tuple[str, str], ...]:
         return (
@@ -102,6 +114,9 @@ class Names:
             ("__API_PATH_CONST__", self.api_path_const),
             ("__UPPER__", self.upper),
             ("__LABEL__", self.label),
+            ("__SOURCE_BASES__", "Playable, SourceModule" if self.playable else "SourceModule"),
+            ("__PLAYABLE_IMPORT__", "from pswamp_core.playable import Playable\n" if self.playable else ""),
+            ("__IS_PLAYABLE__", str(self.playable)),
         )
 
     def render(self, text: str) -> str:
@@ -110,7 +125,7 @@ class Names:
         return text
 
 
-def derive_names(slug: str, label: str) -> Names:
+def derive_names(slug: str, label: str, playable: bool = False) -> Names:
     """Validate ``slug`` and ``label`` and derive every spelling, or :class:`GenerateError`."""
     pkg = slug.replace("-", "_")
     # The 32-char cap keeps the rendered Python lines short and readable.
@@ -146,6 +161,7 @@ def derive_names(slug: str, label: str) -> Names:
         ws_path_const=f"{upper}_WS_PATH",
         api_path_const=f"{upper}_API_PATH",
         upper=upper,
+        playable=playable,
     )
 
 
@@ -203,11 +219,20 @@ class Plan:
         self.patches[path] = text[:at] + addition + text[at:]
 
 
-def plan(root: Path, slug: str, label: str, template_set: str = "subapp", templates: Path = TEMPLATES_DIR) -> Plan:
+def plan(
+    root: Path,
+    slug: str,
+    label: str,
+    template_set: str = "subapp",
+    templates: Path = TEMPLATES_DIR,
+    playable: bool = False,
+) -> Plan:
     """Compute every file and registry edit for a new app under ``root``; writes nothing."""
     if template_set not in TEMPLATE_SETS:
-        raise GenerateError(f"template set {template_set!r}: use 'subapp' or 'module'.")
-    names = derive_names(slug, label)
+        raise GenerateError(f"template set {template_set!r}: use 'subapp', 'module' or 'source'.")
+    if playable and template_set != "source":
+        raise GenerateError("--playable only applies to a source (--source).")
+    names = derive_names(slug, label, playable)
     result = Plan(root=root, names=names, template_set=template_set)
 
     page_dir = WEB / "pages" / names.slug
@@ -215,15 +240,16 @@ def plan(root: Path, slug: str, label: str, template_set: str = "subapp", templa
     project_dir = module_project(names)
     package_dir = module_package(names)
     models_dir = MODELS / names.pkg
-    if (root / page_dir).exists() or (root / api_dir).exists():
+    if template_set != "source" and ((root / page_dir).exists() or (root / api_dir).exists()):
         raise GenerateError(f"{names.slug} already exists as a page or an api package — pick another name.")
-    if template_set == "module":
+    if template_set in ("module", "source"):
         if (root / project_dir).exists():
             raise GenerateError(f"{project_dir.as_posix()} already exists — pick another name.")
         if names.pkg in namespace_packages(root):
             raise GenerateError(f"pswamp_modules.{names.pkg} already exists — pick another name.")
         if f"pswamp-{names.slug}" in TAKEN_DISTRIBUTIONS:
             raise GenerateError(f"pswamp-{names.slug} already exists as a workspace project — pick another name.")
+    if template_set == "module":
         # And what refuses the producers already in the models (`common`, `pmu`, …).
         if (root / models_dir).exists():
             raise GenerateError(f"{models_dir.as_posix()} already exists — pick another name.")
@@ -231,6 +257,18 @@ def plan(root: Path, slug: str, label: str, template_set: str = "subapp", templa
     tset = templates / template_set
     sources = [(tset / "server-python", api_dir), (tset / "client-web", page_dir)]
     result.new_dirs = [api_dir, page_dir]
+    # The source set: no web api, no page and no messages, only the source's
+    # project (its manifest and README, its code, tests and an example script)
+    # and a pipeline file that reads it.
+    if template_set == "source":
+        sources = [
+            (tset / "source-project", project_dir),
+            (tset / "source", package_dir),
+            (tset / "source-tests", project_dir / "tests"),
+            (tset / "source-examples", project_dir / "examples"),
+            (tset / "pipeline", PIPELINES),
+        ]
+        result.new_dirs = [project_dir, package_dir, project_dir / "tests", project_dir / "examples"]
     # The module set: the module is a project of its own, modules/<slug>/ (its
     # manifest and README, its code in the pswamp_modules namespace, its tests
     # and an example script),
@@ -305,6 +343,15 @@ def namespace_packages(root: Path) -> set[str]:
 
 def _plan_registries(p: Plan) -> None:
     n = p.names
+    if p.template_set == "source":
+        # Only a dependency of the server (with its workspace source), so the
+        # entry point resolves where a pipeline file names it. Anchored on the
+        # comment that heads the server's list of sources.
+        dist = f"pswamp-{n.slug}"
+        heading = r"^    # The sources \(also modules/<name>/\)[^\n]*"
+        p.edit(SERVER_MANIFEST, heading + r'\n(?:    "pswamp-[a-z0-9-]+",\n)*', f'    "{dist}",\n')
+        p.edit(SERVER_MANIFEST, r"^pswamp-[a-z0-9-]+ = \{ workspace = true \}\n", f"{dist} = {{ workspace = true }}\n")
+        return
     server_py = PY_SRC / "server.py"
     p.edit(server_py, r"^import [a-z_][a-z0-9_]*\n", f"import {n.pkg}\n")
     # The description is /docs' group heading for this app; the label is a best
@@ -390,6 +437,12 @@ def apply(p: Plan, echo: Callable[[str], None] = print) -> None:
 
 def summary(p: Plan) -> str:
     n = p.names
+    if p.template_set == "source":
+        kind = "playable history" if n.playable else "history"
+        return (
+            f"{n.label}: {kind} source, project {module_project(n).as_posix()}/ "
+            f"({module_package(n).as_posix()}/source.py), pipeline {(PIPELINES / (n.slug + '.toml')).as_posix()}"
+        )
     if p.template_set == "module":
         return (
             f"{n.label}: page /{n.slug}, socket /api/{n.slug}/ws, module project {module_project(n).as_posix()}/ "

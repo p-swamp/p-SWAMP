@@ -1,0 +1,66 @@
+# __SLUG__
+
+`pswamp-__SLUG__`, package `pswamp_modules.__PKG__`, class `__NAME__Source`,
+entry point `__SLUG__` (group `pswamp.modules`).
+
+The __LABEL__ source. A **source** has no inputs: it produces. This one is a
+*history* of synthetic frames (two stations at 20 Hz, a slow swing around
+50 Hz), a placeholder to replace with a read of your own data.
+It is a `SourceModule`; whether it can be replayed paced and sought, as the
+player does, depends on its `Playable` mixin (see below).
+
+| | Message | Topic | Defined in |
+|---|---|---|---|
+| Reads | nothing | | |
+| Emits | `PmuFrame` (the primary stream) | `pmu.frame` | `pswamp_models.pmu` |
+
+**Settings:** `seconds`, how much synthetic data it holds (default 3). A
+deployment sets `{SOURCE}_SECONDS` (`__UPPER___SECONDS` for the source named
+`__SLUG__` in `pipelines/__SLUG__.toml`); a script passes
+`__NAME__Source(seconds=10)`. Declare your own in `env_settings`.
+
+## From a script
+
+`read` is a plain generator: no server, no transport, no event loop.
+
+```python
+from pswamp_modules.__PKG__ import __NAME__Source
+
+source = __NAME__Source()
+frames = list(source.read())              # every frame, in order
+chunk = list(source.read(start, end))     # a half-open range [start, end)
+source.coverage()                         # what it holds: [first, end)
+```
+
+The host calls `aread` / `acoverage`, derived from the same code. A source that
+talks to something asynchronous implements `aread` / `acoverage` instead and
+gets the synchronous forms for free.
+
+## Replayable, or live
+
+- A history becomes **replayable** (play, pause, step, seek, speed, loop, as the
+  streamer's recording is) by adding the `Playable` mixin to its bases:
+  `class __NAME__Source(Playable, SourceModule)`.
+  `pswamp new module <name> <label> --source --playable` generates it that way.
+- A **live** feed sets `kind = "live"`, has no `coverage`, and yields frames
+  stamped now as they arrive, until `end` or for ever. It is not `Playable`:
+  `modules/live-synthetic/` is the example.
+
+## Using it in a pipeline
+
+`pipelines/__SLUG__.toml` names it in `[[sources]]` and reads it with the frame
+statistics module. `__UPPER___SOURCES` (`name:entry-point,...`) replaces the list in
+a deployment. `uv run pswamp modules list` shows what is installed.
+
+## Examples
+
+`examples/read___PKG__.py` reads the source from a plain script:
+
+    uv run python modules/__SLUG__/examples/read___PKG__.py
+
+## Tests
+
+`uv run pswamp test module __SLUG__` (also part of `uv run pswamp test server`).
+The source passes `pswamp_core.testing.SourceConformance`: the contract every
+source keeps (ordered UTC timestamps, half-open ranges, a seek lands on the
+record, a stream closed early can be read again, sync and async reads agree).

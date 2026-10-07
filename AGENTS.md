@@ -514,7 +514,8 @@ follows `doc/remote-data-integration-contract.md`. The rules to keep:
   (`name:entry-point,...`) replaces when set (and `<APP>_CIM_REFERENCE`
   overrides `[enrich] cim_reference`), plus each source's `{NAME}_{SETTING}`
   block (`LIVE_PATH`, `REMOTE_URL`). The old `<APP>_DATA_CLIENTS` is an error
-  naming its replacement. A new source passes
+  naming its replacement. A new source is `uv run pswamp new module <slug>
+  <label> --source [--playable]` and passes
   `pswamp_core.testing.SourceConformance`. One source is active per run, and
   `SwitchSourceCommand` selects it.
 - **The in-memory transport is not a mock.** It round-trips every message

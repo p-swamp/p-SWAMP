@@ -583,13 +583,19 @@ module in that process.
   `doc/remote-data-integration-contract.md` and name `remote-history` in
   `<APP>_SOURCES` (`remote:remote-history`) with `REMOTE_URL`. Nothing in this
   repo changes.
-- **In Python:** subclass `SourceModule` (`kind = "history"` or `"live"`, `read`
-  or `aread`, `coverage` for a history, `env_settings`; add `Playable` to a
-  history to make it replayable), prove it with
-  `pswamp_core.testing.SourceConformance`, put the package in the image, and
-  name its entry point in the pipeline file's `[[sources]]` (or
-  `<APP>_SOURCES`). `modules/sample-replay/` and `modules/live-synthetic/` are
-  the examples.
+- **In Python:** `uv run pswamp new module my-recording "My recording" --source
+  [--playable]` writes the project (`modules/my-recording/`: a `SourceModule`
+  yielding synthetic frames, its entry point, a README, tests that run
+  `pswamp_core.testing.SourceConformance`, and an `examples/` script reading it
+  with a plain `for frame in source.read()`) and a pipeline file that names it
+  in `[[sources]]`. Replace the synthetic data with a read of yours:
+  `kind = "history"` or `"live"`, `read` (or `aread` when the data is
+  asynchronous), `coverage` for a history, `env_settings` for what a deployment
+  sets (`{SOURCE}_{SETTING}`). `--playable` adds the `Playable` mixin, so a
+  history is replayed paced, seekable and looping in a run; a live source is
+  not playable. Put the package in the image and name its entry point in the
+  pipeline file's `[[sources]]` (or `<APP>_SOURCES`). `modules/sample-replay/`
+  and `modules/live-synthetic/` are the worked examples.
 
 ## When it does not work
 

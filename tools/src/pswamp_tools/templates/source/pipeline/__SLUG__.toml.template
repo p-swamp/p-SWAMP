@@ -1,0 +1,13 @@
+# The __LABEL__ pipeline: the __SLUG__.* topics, the source, and the frame
+# statistics module reading its frames. Loaded by `pswamp pipelines validate`,
+# and by an app's web API or a worker that names it.
+#
+# __UPPER___SOURCES, when set (name:entry-point,...), replaces the sources; each
+# source reads its own {NAME}_{SETTING} variables (__UPPER___SECONDS here).
+
+app = "__SLUG__"
+modules = ["frame-stats"]
+
+[[sources]]
+name = "__SLUG__"
+module = "__SLUG__"
