@@ -2,6 +2,7 @@
 
 from datetime import datetime, timezone
 
+from pswamp_models.__PKG__ import __NAME__Result
 from pswamp_models.pmu import PmuFrame, PmuHeader
 from pswamp_modules.__PKG__ import __NAME__Module, highest_frequency
 
@@ -19,7 +20,8 @@ def frame(values: list[float | None]) -> PmuFrame:
     return PmuFrame(mRID="test", timestamp=datetime.now(timezone.utc), header=header, values=values)
 
 
-async def test_the_module_reads_the_frequency_columns():
-    body = await __NAME__Module().process(frame([49.9, 50.1, None]))
-    assert (body.station, body.frequency_hz) == ("s1", 50.1)
-    assert await __NAME__Module().process(frame([None])) is None
+def test_the_module_reads_the_frequency_columns():
+    result = __NAME__Module().run_one(frame([49.9, 50.1, None]))
+    assert isinstance(result, __NAME__Result)
+    assert (result.result.station, result.result.frequency_hz) == ("s1", 50.1)
+    assert __NAME__Module().run(frame([None])) == []  # nothing to publish
