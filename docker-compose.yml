@@ -53,6 +53,11 @@ services:
         "/workspace/p-SWAMP/modules",
         "--reload-dir",
         "/workspace/p-SWAMP/legacy",
+        # The pipeline files are read at import, so an edit to one reloads too.
+        "--reload-dir",
+        "/workspace/p-SWAMP/pipelines",
+        "--reload-include",
+        "*.toml",
       ]
     # The server has no external dependencies, so "is the process serving?" is
     # the whole health story — /healthz covers it. curl returns non-zero if the
@@ -110,7 +115,7 @@ services:
           action: sync
           target: /workspace/p-SWAMP/core/src
         # The module projects (modules/<name>/) and the transitional wiring
-        # (legacy/: the pipelines and example sources), likewise. Whole folders,
+        # (legacy/: the example sources), likewise. Whole folders,
         # so an edit to any module syncs with no change here; a NEW module
         # project needs the rebuild that its uv.lock change triggers below.
         - path: modules
@@ -119,6 +124,10 @@ services:
         - path: legacy
           action: sync
           target: /workspace/p-SWAMP/legacy
+        # The pipeline files (pipelines/<app>.toml), read at import.
+        - path: pipelines
+          action: sync
+          target: /workspace/p-SWAMP/pipelines
         # Dependency changes are the exception: new packages have to be
         # installed, which a file sync can't do. These rebuild the image and
         # recreate the container instead — slower, on purpose. Without this,
@@ -141,16 +150,18 @@ services:
   # Hosts the pipelines' modules, off Kafka: the same image (the second
   # `build: .` is a cache hit), running pswamp_core.worker instead of the
   # server. A plain process with no reloader, so compose watch restarts it.
-  # It runs from modules/, outside the server's src/: a worker needs core and
+  # It runs from pipelines/, outside the server's src/: a worker needs core and
   # modules only, and a module reaching for the web backend fails at start.
+  # PSWAMP_WORKER_PIPELINES names pipeline files relative to that working
+  # directory (the repo's pipelines/, copied into the image at the same path).
   module-worker:
     build: .
     image: p-swamp:latest
     command: ["python", "-m", "pswamp_core.worker"]
-    working_dir: /workspace/p-SWAMP/modules
+    working_dir: /workspace/p-SWAMP/pipelines
     environment:
       <<: *transport
-      PSWAMP_WORKER_PIPELINES: "pswamp_modules.pipelines.pmu_test_streamer:PIPELINE"
+      PSWAMP_WORKER_PIPELINES: "pmu-test-streamer.toml"
       PSWAMP_WORKER_MODULES: "frame-stats,excursion"
     depends_on:
       kafka:
@@ -164,6 +175,9 @@ services:
         - path: legacy
           action: sync+restart
           target: /workspace/p-SWAMP/legacy
+        - path: pipelines
+          action: sync+restart
+          target: /workspace/p-SWAMP/pipelines
         - path: core/src
           action: sync+restart
           target: /workspace/p-SWAMP/core/src
@@ -185,10 +199,10 @@ services:
     build: .
     image: p-swamp:latest
     command: ["python", "-m", "pswamp_core.worker"]
-    working_dir: /workspace/p-SWAMP/modules
+    working_dir: /workspace/p-SWAMP/pipelines
     environment:
       <<: [*transport, *streamer-sources]
-      PSWAMP_WORKER_PIPELINES: "pswamp_modules.pipelines.pmu_test_streamer:PIPELINE"
+      PSWAMP_WORKER_PIPELINES: "pmu-test-streamer.toml"
       PSWAMP_WORKER_MODULES: "range-summary"
     depends_on:
       kafka:
@@ -200,7 +214,8 @@ services:
   # A dummy remote data service (core/examples/remote_data_stub): the sample
   # recording served over the remote data contract, standing where a
   # deployment's own service in front of its store would. Same image, run
-  # from modules/ like the workers: the sample client is an installed package.
+  # from modules/, outside the server's src/ like the workers: the sample
+  # client is an installed package.
   remote-data-stub:
     build: .
     image: p-swamp:latest

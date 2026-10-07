@@ -33,6 +33,7 @@ web API side of the server data architecture (doc/server-data-architecture.md),
 which every app over a core pipeline uses:
 
     transport()           the process's transport, from PSWAMP_TRANSPORT
+    app_pipeline(app)     an app's pipeline, from pipelines/<app>.toml
     serve_pipeline(...)   an app's lifespan: its shared live runs, its errors
                           forwarded to the tray, its modules hosted here when the
                           transport is in-memory, and every run stopped on the way out
@@ -44,7 +45,9 @@ which every app over a core pipeline uses:
 import asyncio
 import contextlib
 import logging
+import os
 from collections.abc import AsyncIterator, Callable
+from pathlib import Path
 
 from errors import HUB
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
@@ -74,7 +77,9 @@ __all__ = [
     "COMMAND_RESPONSES",
     "ClientId",
     "CommandAck",
+    "PIPELINES_DIR_VARIABLE",
     "SocketRegistry",
+    "app_pipeline",
     "connected_pipeline",
     "dispatch_command",
     "get_logger",
@@ -147,6 +152,22 @@ class SocketRegistry(SessionRegistry[WebSocket]):
 
 
 # --- the web API side of the server data architecture -------------------------------
+
+#: Where the pipeline files are. Unset, the repo's pipelines/ folder, found from
+#: this file: app/server-python/src/ is three levels below the repo root, both
+#: in a checkout and in the image (which mirrors the repo at /workspace/p-SWAMP).
+PIPELINES_DIR_VARIABLE = "PSWAMP_PIPELINES_DIR"
+_DEFAULT_PIPELINES_DIR = Path(__file__).resolve().parents[3] / "pipelines"
+
+
+def app_pipeline(app: str) -> Pipeline:
+    """The app's pipeline, read from ``<pipelines dir>/<app>.toml``.
+
+    Raises ``PipelineConfigError`` (at import of the app's package, so a bad
+    file stops the server from starting, and fails the image's import check)."""
+    folder = Path(os.environ.get(PIPELINES_DIR_VARIABLE, "").strip() or _DEFAULT_PIPELINES_DIR)
+    return Pipeline.load(folder / f"{app}.toml")
+
 
 _TRANSPORT: Transport | None = None
 

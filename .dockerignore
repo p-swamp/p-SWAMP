@@ -53,3 +53,5 @@ core/tests/
 modules/*/tests/
 modules/*/examples/
 legacy/*/tests/
+# pipelines/ (the pipeline files, pipelines/<app>.toml) is deliberately NOT
+# ignored: the server and the workers load them inside the image.

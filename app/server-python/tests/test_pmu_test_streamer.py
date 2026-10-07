@@ -1,6 +1,7 @@
 """The PMU test streamer's web API: its socket and its POSTs, with the whole
 server in-process. Its modules are tested in their own projects under
-``modules/``, its sources and pipeline in ``legacy/pswamp-wiring/tests/``."""
+``modules/``, its sources in ``legacy/pswamp-wiring/tests/``, its pipeline file
+in ``test_pipeline_files.py``."""
 
 from __future__ import annotations
 

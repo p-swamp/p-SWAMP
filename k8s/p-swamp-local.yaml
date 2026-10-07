@@ -137,15 +137,17 @@ spec:
           image: p-swamp:latest
           imagePullPolicy: Never
           command: ["python", "-m", "pswamp_core.worker"]
-          # Outside the server's src/: a worker needs core and modules only.
-          workingDir: /workspace/p-SWAMP/modules
+          # Outside the server's src/: a worker needs core and modules only. From
+          # pipelines/ (copied into the image at the repo path), so
+          # PSWAMP_WORKER_PIPELINES names the files there.
+          workingDir: /workspace/p-SWAMP/pipelines
           env:
             - name: PSWAMP_TRANSPORT
               value: kafka:pswamp_core.transport.kafka:KafkaTransport
             - name: KAFKA_BOOTSTRAP_SERVERS
               value: p-swamp-kafka:9092
             - name: PSWAMP_WORKER_PIPELINES
-              value: pswamp_modules.pipelines.pmu_test_streamer:PIPELINE
+              value: pmu-test-streamer.toml
             - name: PSWAMP_WORKER_MODULES
               value: frame-stats,excursion
           resources:
@@ -184,14 +186,14 @@ spec:
           image: p-swamp:latest
           imagePullPolicy: Never
           command: ["python", "-m", "pswamp_core.worker"]
-          workingDir: /workspace/p-SWAMP/modules
+          workingDir: /workspace/p-SWAMP/pipelines
           env:
             - name: PSWAMP_TRANSPORT
               value: kafka:pswamp_core.transport.kafka:KafkaTransport
             - name: KAFKA_BOOTSTRAP_SERVERS
               value: p-swamp-kafka:9092
             - name: PSWAMP_WORKER_PIPELINES
-              value: pswamp_modules.pipelines.pmu_test_streamer:PIPELINE
+              value: pmu-test-streamer.toml
             - name: PSWAMP_WORKER_MODULES
               value: range-summary
             - name: PMU_TEST_STREAMER_DATA_CLIENTS

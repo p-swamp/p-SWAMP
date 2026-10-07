@@ -164,9 +164,6 @@ def test_hosts_can_be_limited_to_named_modules():
     assert [h.name for h in pipeline.hosts(InMemoryTransport(), only={"halver"})] == ["halver"]
 
 
-PIPELINE_FOR_WORKER = Pipeline("app", gateway, modules=(FrameCounter, Halver))
-
-
 def two_sources() -> DataGateway:
     return DataGateway([ListClient("rec"), TickingClient("tick")])
 

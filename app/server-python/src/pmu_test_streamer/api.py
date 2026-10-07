@@ -3,7 +3,8 @@
 
 """The PMU test streamer's web API: one POST per command, one socket for state.
 
-Each client gets its own run of ``PIPELINE``: a gateway over the sample
+Each client gets its own run of ``PIPELINE``, read from
+``pipelines/pmu-test-streamer.toml``: a gateway over the sample
 recording and the live feed, a player, and the modules wherever the deployment
 hosts them. Each POST builds one typed command and dispatches it: a player
 command is checked here (404 without a run, 409 when refused), a module command
@@ -22,6 +23,7 @@ from shared import (
     COMMAND_RESPONSES,
     ClientId,
     CommandAck,
+    app_pipeline,
     connected_pipeline,
     dispatch_command,
     get_logger,
@@ -46,9 +48,10 @@ from pswamp_models.player import (
 from pswamp_models.pmu import PmuFrame
 from pswamp_models.range_summary import RangeSummaryResult, SummarizeRangeCommand
 
-from pswamp_modules.pipelines.pmu_test_streamer import PIPELINE
-
 logger = get_logger("pmu")
+
+#: Frames → frame stats → excursion, plus a range summary answering commands.
+PIPELINE = app_pipeline("pmu-test-streamer")
 
 REGISTRY: PipelineRegistry[PipelineRun] = PipelineRegistry(
     lambda client_id: PipelineRun(client_id, PIPELINE, transport(), loop=True)
