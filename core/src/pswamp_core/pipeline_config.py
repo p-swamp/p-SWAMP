@@ -20,9 +20,10 @@
 - **Modules and sources are found by name**, through the ``pswamp.modules``
   entry points every module project declares; a name nothing installs is an
   error listing the names that are installed. An entry point's name is its
-  module's ``name``. A source is a module of its own kind
-  (``pswamp_core.sources.SourceModule``): ``module = "sample-replay"`` names
-  one, instanced under the source's ``name``.
+  module's ``name``. A source is a module too (a
+  ``pswamp_core.sources.SourceModule``, which runs in its run's process, not
+  in a host): ``module = "sample-replay"`` names one, instanced under the
+  source's ``name``.
 - **Sources stay configurable from the environment.** The set of sources is
   built on every call: ``<APP>_SOURCES`` (``name:entry-point,...``), when set,
   replaces the file's sources; ``<APP>_CIM_REFERENCE`` overrides
@@ -208,7 +209,7 @@ def available_modules() -> dict[str, EntryPoint]:
     return {point.name: point for point in entry_points(group=MODULES_GROUP)}
 
 
-def resolve_entry(name: str, installed: dict[str, EntryPoint] | None = None) -> type[Module] | type[SourceModule]:
+def resolve_entry(name: str, installed: dict[str, EntryPoint] | None = None) -> type[Module]:
     """The class registered as ``name``: an analysis module or a source."""
     from .modules import Module
 
@@ -223,8 +224,8 @@ def resolve_entry(name: str, installed: dict[str, EntryPoint] | None = None) -> 
         cls = point.load()
     except Exception as error:  # an import error in the module's own code
         raise PipelineConfigError(f"module {name!r} ({point.value}) does not import: {error}") from error
-    if not (isinstance(cls, type) and issubclass(cls, Module | SourceModule)):
-        raise PipelineConfigError(f"module {name!r} ({point.value}) is not a Module or a SourceModule")
+    if not (isinstance(cls, type) and issubclass(cls, Module)):
+        raise PipelineConfigError(f"module {name!r} ({point.value}) is not a Module (an analysis module or a source)")
     if cls.name != name:
         raise PipelineConfigError(f"module {name!r} ({point.value}) is named {cls.name!r}; the two must match")
     return cls

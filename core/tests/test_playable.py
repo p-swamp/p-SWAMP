@@ -41,7 +41,7 @@ async def running(source, *, loop=False, speed=None, **start) -> tuple[Playable,
 
 async def command(player: Playable, cmd) -> None:
     player.validate(cmd)
-    await player.handle(cmd)
+    await player.ahandle(cmd)
 
 
 async def until(condition, timeout: float = 5.0) -> None:
@@ -183,11 +183,25 @@ async def test_what_does_not_apply_is_refused():
     await player.stop()
 
 
+def test_a_playable_is_a_module_whose_commands_need_its_running_player():
+    source = ListSource()
+    assert source._overrides("ahandle") and not source._overrides("handle")
+    with pytest.raises(CommandRefused, match="not running"):
+        source.run_command(PlayCommand())  # a fresh loop: no player there
+
+
+async def test_arun_command_drives_a_started_playable_and_answers_through_its_sink():
+    player, out = await running(ListSource())
+    assert await player.arun_command(SeekCommand(offset_s=0.5)) == []
+    await until(lambda: player.status().cursor == at(0.5))
+    await player.stop()
+
+
 async def test_a_command_to_a_stopped_playable_is_refused_and_it_can_start_again():
     player, out = await running(ListSource(), speed=4)
     await player.stop()
     with pytest.raises(CommandRefused, match="not running"):
-        await player.handle(PlayCommand())
+        await player.ahandle(PlayCommand())
     await player.start(out)  # as a run does on switching back
     status = player.status()
     assert (status.paused, status.cursor, status.speed) == (True, at(0), 4.0)  # speed carries over

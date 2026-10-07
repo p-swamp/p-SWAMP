@@ -6,7 +6,7 @@ entry point `__SLUG__` (group `pswamp.modules`).
 The __LABEL__ source. A **source** has no inputs: it produces. This one is a
 *history* of synthetic frames (two stations at 20 Hz, a slow swing around
 50 Hz), a placeholder to replace with a read of your own data.
-It is a `SourceModule`; whether it can be replayed paced and sought, as the
+It is a `SourceModule` (a `Module` with no inputs); whether it can be replayed paced and sought, as the
 player does, depends on its `Playable` mixin (see below).
 
 | | Message | Topic | Defined in |

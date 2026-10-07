@@ -74,6 +74,11 @@ async def hosted():
         await cancel_and_wait(hosts)
 
 
+def test_a_source_is_not_hosted_as_a_module():
+    with pytest.raises(ValueError, match="ListSource is a source"):
+        Pipeline("app", sources, modules=(ListSource,))
+
+
 def test_a_command_class_has_one_receiver():
     class Seeker(Halver):
         commands = (SeekCommand,)

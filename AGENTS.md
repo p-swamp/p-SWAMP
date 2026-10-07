@@ -157,11 +157,13 @@ under "The server data architecture"):
   then loads core and modules alone, no FastAPI and no `pswamp_web`.
   `tools/tests/test_tools_layering.py` checks every `modules/*/pyproject.toml`
   for that, for the folder's contents and for the entry point.
-- **Sources are modules too**, of their own kind: `sample-replay`,
+- **Sources are modules too**, in the code as well as on disk: `sample-replay`,
   `live-synthetic` and `remote-history` are projects under `modules/`, each a
-  `SourceModule` (a history that mixes in `Playable` can be replayed paced and
-  sought). They have no inputs and produce `PmuFrame`, and are found by their
-  entry point like any module.
+  `SourceModule`, which is a `Module` subclass (a history that mixes in
+  `Playable` can be replayed paced and sought). They have no inputs and produce
+  `PmuFrame`, and are found by their entry point like any module. What sets them
+  apart is where they run: in their run's process, never in a `ModuleHost`
+  (ADR-006).
 - **`pipelines/<app>.toml` is one file per app**: data, not code, and not a
   project. It names the app's modules and sources by their `pswamp.modules`
   entry points, and its enrichment. `uv run pswamp pipelines validate` checks
@@ -538,19 +540,21 @@ The rules to keep:
   active `Playable` source, or one module). Player commands are validated in
   the web API (409) through the router's `validate`; module commands where the
   module runs (an `ErrorEvent` on refusal).
-- **Sources are modules.** A `SourceModule` has no inputs and produces `PmuFrame`
+- **Sources are modules.** A `SourceModule` is a `Module` with no inputs that produces `PmuFrame`
   (`kind = "history"` or `"live"`). Its author writes **one** of `read(start, end)`
   (plain code; a script iterates it) or `aread` (async, when the data is); the
   base derives the other, plus `coverage` for a history. A history that mixes
   in `Playable` is its own player — paced, seekable, looping, answering
-  `Play`/`Pause`/`Step`/`Seek`/`Speed` — and a live source simply has no
+  `Play`/`Pause`/`Step`/`Seek`/`Speed` in its `ahandle` — and a live source simply has no
   transport. A run holds its sources in a `SourceSet` (named instances, one
   active) and an **`ActiveSource` router** that receives `SwitchSourceCommand`
   and routes the playback commands to the active source (refusing them, with the
   same 409, for a live one). The sources run **in-process, in the server or the
   worker that reads them** — not as worker-hosted modules on the transport of
   their own: that would put every frame on a second hop and a second pacing
-  layer for no gain (ADR-005). `pswamp_core.testing.SourceConformance` is a
+  layer for no gain (ADR-005, ADR-006). `Pipeline` refuses a source listed
+  among its modules, so this holds for a pipeline declared in code too.
+  `pswamp_core.testing.SourceConformance` is a
   source's executable contract.
 - **A pipeline is data.** `pipelines/<app>.toml` names modules and sources by
   entry point, never by import path; a module joins a pipeline by being installed

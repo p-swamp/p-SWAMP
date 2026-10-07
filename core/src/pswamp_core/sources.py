@@ -3,9 +3,13 @@
 
 """``SourceModule``: where a pipeline's data comes from, written as a module.
 
-A source is a module project like any other (``modules/<name>/``, an entry
-point in ``pswamp.modules``), but it has no inputs: it *produces* messages,
-``PmuFrame`` by default. It is of one of two ``kind``s:
+A source is a module like any other: a ``Module`` subclass, in a project of
+its own (``modules/<name>/``, an entry point in ``pswamp.modules``). It has no
+inputs: it *produces* messages, ``PmuFrame`` by default. Where it differs is
+where it runs: in the process that owns its run, read by the run's
+``ActiveSource`` router, never in a ``ModuleHost`` on the transport (ADR-005,
+ADR-006). For a source, ``blocking`` governs ``read``, ``coverage``, ``open``
+and ``close``. It is of one of two ``kind``s:
 
 - ``history``: holds a range of records (a recording, a store).
   ``coverage()`` says which; ``read(start, end)`` yields the records in a
@@ -74,7 +78,6 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
-from abc import ABC
 from collections.abc import AsyncIterator, Iterator, Sequence
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -85,9 +88,10 @@ from pswamp_models.common import Command, DataModel
 from pswamp_models.pmu import PmuFrame
 
 from .enrich import Enricher
-from .time_range import TimeRange
 from .log import get_logger
+from .modules import Module
 from .settings import Configurable, EnvSetting, MissingSettingError, parse_setting, read_setting
+from .time_range import TimeRange
 
 __all__ = ["SourceModule", "SourceSet", "SourceStream"]
 
@@ -142,7 +146,7 @@ def _coerce(setting: EnvSetting, value: Any) -> Any:
     return value
 
 
-class SourceModule(Configurable, ABC):
+class SourceModule(Module, Configurable):
     """One data source. Subclass it; see the module docstring for the contract.
 
     Class attributes:
@@ -168,7 +172,6 @@ class SourceModule(Configurable, ABC):
     outputs: ClassVar[tuple[type[DataModel], ...]] = (PmuFrame,)
     blocking: ClassVar[bool] = False
     commands: ClassVar[tuple[type[Command], ...]] = ()
-    inputs: ClassVar[tuple[type[DataModel], ...]] = ()
     abstract: ClassVar[bool] = False
     #: The primary output class; set per class from ``outputs``.
     model: ClassVar[type[DataModel]] = PmuFrame
@@ -201,6 +204,7 @@ class SourceModule(Configurable, ABC):
         cls.model = outputs[0]
 
     def __init__(self, source: str | None = None, **settings: Any) -> None:
+        super().__init__()
         self.source: str = source or self.name
         declared = {setting.setting.lower(): setting for setting in self.env_settings}
         unknown = sorted(set(settings) - set(declared))
@@ -218,6 +222,7 @@ class SourceModule(Configurable, ABC):
                 values[keyword] = None
         #: The settings in force, by lower-cased keyword: ``self.settings.path``.
         self.settings = SimpleNamespace(**values)
+        self.parameters = dict(values)
 
     @classmethod
     def from_env(cls, name: str, **overrides: Any):
