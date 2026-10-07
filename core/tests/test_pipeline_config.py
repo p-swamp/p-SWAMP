@@ -12,7 +12,7 @@ from test_modules import HalveCommand
 
 from pswamp_core.modules import Module
 from pswamp_core.pipeline import Pipeline
-from pswamp_core.pipeline_config import ConfiguredGateway, PipelineConfigError, load_pipeline, main
+from pswamp_core.pipeline_config import ConfiguredGateway, PipelineConfigError, load_pipeline, main, resolve_module
 from pswamp_models.pmu import PmuFrame
 
 PIPELINE = """
@@ -163,3 +163,17 @@ def test_a_byte_order_mark_is_not_an_error(tmp_path):
     path = tmp_path / "app.toml"
     path.write_bytes(b"\xef\xbb\xbf" + PIPELINE.encode("utf-8"))
     assert Pipeline.load(path).app == "app"
+
+
+def test_a_source_is_listed_with_its_kind_and_is_not_an_analysis_module(monkeypatch, capsys):
+    install_modules(
+        monkeypatch,
+        **{"list-source": "support:ListSource", "ticking-source": "support:TickingSource", "halver": "test_modules:Halver"},
+    )
+    assert main(["modules"]) == 0
+    out = capsys.readouterr().out
+    assert "kind:     source (history, playable)" in out
+    assert "kind:     source (live, not playable)" in out
+    assert "kind:     module" in out
+    with pytest.raises(PipelineConfigError, match="is a source"):
+        resolve_module("list-source")

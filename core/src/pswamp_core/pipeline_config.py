@@ -61,6 +61,7 @@ if TYPE_CHECKING:
 
     from .modules import Module
     from .pipeline import Pipeline
+    from .sources import SourceModule
 
 __all__ = [
     "MODULES_GROUP",
@@ -69,6 +70,7 @@ __all__ = [
     "PipelineConfigError",
     "available_modules",
     "load_pipeline",
+    "resolve_entry",
     "resolve_module",
 ]
 
@@ -175,9 +177,10 @@ def available_modules() -> dict[str, EntryPoint]:
     return {point.name: point for point in entry_points(group=MODULES_GROUP)}
 
 
-def resolve_module(name: str, installed: dict[str, EntryPoint] | None = None) -> type[Module]:
-    """The module class registered as ``name``."""
+def resolve_entry(name: str, installed: dict[str, EntryPoint] | None = None) -> type[Module] | type[SourceModule]:
+    """The class registered as ``name``: an analysis module or a source."""
     from .modules import Module
+    from .sources import SourceModule
 
     installed = available_modules() if installed is None else installed
     point = installed.get(name)
@@ -190,10 +193,20 @@ def resolve_module(name: str, installed: dict[str, EntryPoint] | None = None) ->
         cls = point.load()
     except Exception as error:  # an import error in the module's own code
         raise PipelineConfigError(f"module {name!r} ({point.value}) does not import: {error}") from error
-    if not (isinstance(cls, type) and issubclass(cls, Module)):
-        raise PipelineConfigError(f"module {name!r} ({point.value}) is not a Module")
+    if not (isinstance(cls, type) and issubclass(cls, Module | SourceModule)):
+        raise PipelineConfigError(f"module {name!r} ({point.value}) is not a Module or a SourceModule")
     if cls.name != name:
         raise PipelineConfigError(f"module {name!r} ({point.value}) is named {cls.name!r}; the two must match")
+    return cls
+
+
+def resolve_module(name: str, installed: dict[str, EntryPoint] | None = None) -> type[Module]:
+    """The analysis module class registered as ``name``."""
+    from .sources import SourceModule
+
+    cls = resolve_entry(name, installed)
+    if issubclass(cls, SourceModule):
+        raise PipelineConfigError(f"{name!r} is a source ({cls.kind}), not an analysis module")
     return cls
 
 
@@ -227,6 +240,8 @@ def _names(models: Sequence[type]) -> str:
 
 
 def _list_modules() -> int:
+    from .sources import SourceModule
+
     installed = available_modules()
     if not installed:
         print(f"No module is installed (entry-point group {MODULES_GROUP}).")
@@ -236,15 +251,18 @@ def _list_modules() -> int:
         distribution = point.dist.name if point.dist is not None else "?"
         print(f"{name}  ({distribution}, {point.value})")
         try:
-            cls = resolve_module(name, installed)
+            cls = resolve_entry(name, installed)
         except PipelineConfigError as error:
             print(f"    error:    {error}")
             failed += 1
             continue
-        # Every entry point is an analysis module for now: sources are still
-        # data clients, named in a pipeline's [[sources]], not entry points.
-        print("    kind:     module")
-        print(f"    reads:    {_names(cls.input_models())}")
+        if issubclass(cls, SourceModule):
+            playable = "playable" if cls.commands else "not playable"
+            print(f"    kind:     source ({cls.kind}, {playable})")
+            print("    reads:    -")
+        else:
+            print("    kind:     module")
+            print(f"    reads:    {_names(cls.input_models())}")
         print(f"    emits:    {_names(cls.outputs)}")
         print(f"    commands: {_names(cls.commands)}")
     return 1 if failed else 0
