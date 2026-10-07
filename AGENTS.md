@@ -12,8 +12,24 @@ The p-SWAMP repository. It holds **two implementations side by side**:
   code in `desktop/` (`desktop/src/pswamp/`, `desktop/examples/`,
   `desktop/tests/`, and `desktop/pyproject.toml` + `desktop/uv.lock`), and
 - the **client-server stack** — a FastAPI server plus a React web client under
-  `app/`, with its dev tooling and deploy path (`Dockerfile`,
-  `docker-compose.yml`, `k8s/`, `tools/` (the `pswamp` CLI), `.github/`, `doc/`).
+  `app/`, the server data architecture behind it (`models/`, `core/`,
+  `modules/`, `pipelines/`), and its tooling and deploy path (`tools/` — the
+  `pswamp` CLI —, `Dockerfile`, `docker-compose.yml`, `k8s/`, `.github/`, `doc/`).
+
+Where things are:
+
+| Path | What it is |
+|---|---|
+| `desktop/` | The desktop `p-swamp` package (PySide6, pyqtgraph, Kafka). Own manifest and lock, outside the uv workspace. |
+| `app/server-python/` | The web backend, `pswamp-server`. `src/server.py` is the one entrypoint; `src/pswamp_web/` is the grid monitor's layer over `desktop/`. |
+| `app/client-web/` | The React/TS/Vite web client. |
+| `models/` | `pswamp-models`: every message of the server data architecture, one package per producer. |
+| `core/` | `pswamp-core`: transport, the `Module` contract, sources, the run's router, pipelines. |
+| `modules/<name>/` | One project per analysis module or data source (`pswamp-<name>`). |
+| `pipelines/<app>.toml` | One pipeline file per app: its modules, its sources, its enrichment. Data, not a project. |
+| `tools/` | `pswamp-tools`: the `pswamp` CLI, which is all of the repo's automation. |
+| `e2e/` | The Playwright browser specs. |
+| `doc/` | The documentation; `doc/adr/` holds the decision records. |
 
 The second started life as a separate proof-of-concept repo for working out the
 client-server shape of P-SWAMP — tech stack, repo structure, local dev
@@ -23,7 +39,7 @@ the Qt implementation rather than replacing it. `doc/client-server-rig.md` holds
 the driving goals and constraints behind it; `desktop/README.md` is the desktop
 package's, and the root `README.md` is a short map of the repository.
 
-The two are no longer disconnected. The web stack's **grid monitor** is a front
+The two are not disconnected. The web stack's **grid monitor** is a front
 end over the desktop package's analysis core: `app/server-python/src/pswamp_web/`
 imports `pswamp.*` and the web backend declares the desktop package as an
 editable path dependency. See "The Python projects in one repo" for what that does and
@@ -72,129 +88,139 @@ have no volume.
 ## The Python projects in one repo
 
 The root `pyproject.toml` is a **virtual uv workspace root** (no package of its
-own) whose members are `core/`, `modules/` and `app/server-python/`; they share
-**one lockfile, the root `uv.lock`**, and one `.venv` at the root. The
-**desktop `p-swamp` package** lives in `desktop/` (`desktop/src/pswamp/`,
-imported as `pswamp`; PySide6, pyqtgraph, Kafka) with its own
-`desktop/pyproject.toml` + `desktop/uv.lock`, and is deliberately **not** a
-workspace member: the two still resolve **separately** — which is the point,
-since Qt + Kafka and FastAPI + uvicorn have no business being solved as one
-dependency problem. Don't make the desktop package a member.
+own); its members are `models/`, `core/`, `modules/*`, `tools/` and
+`app/server-python/`, and they share **one lockfile, the root `uv.lock`**, and
+one `.venv` at the root (`uv sync` there installs all of them). The **desktop
+`p-swamp` package** lives in `desktop/` (`desktop/src/pswamp/`, imported as
+`pswamp`; PySide6, pyqtgraph, Kafka) with its own `desktop/pyproject.toml` +
+`desktop/uv.lock`, and is deliberately **not** a member: the two resolve
+**separately** — which is the point, since Qt + Kafka and FastAPI + uvicorn have
+no business being solved as one dependency problem. Don't make the desktop
+package a member.
 
-They are not, however, independent. **The dependency runs one way, web →
-desktop:**
+```
+models/ ← core/ ← modules/<name>/ ← app/server-python/    (each depends only on those to its left)
+tools/                                                     (imports none of them; runs them as subprocesses)
+desktop/ ← app/server-python/src/pswamp_web/               (web → desktop, never the reverse; outside the workspace)
+```
+
+| Member | Distribution | Holds | Depends on |
+|---|---|---|---|
+| `models/` | `pswamp-models` | every message, one package per producer | pydantic only |
+| `core/` | `pswamp-core` | transport, `Module`, `SourceModule`, `ActiveSource`, pipelines | pydantic, `pswamp-models` |
+| `modules/<name>/` | `pswamp-<name>` | one analysis module, or one source | `pswamp-core`, `pswamp-models`, and what it declares |
+| `tools/` | `pswamp-tools` | the `pswamp` CLI | Typer, rich |
+| `app/server-python/` | `pswamp-server` | the web backend (non-packaged) | everything above, and `p-swamp` |
+
+**The web → desktop seam is one stanza.** `pswamp_web/` imports `pswamp.*`;
+nothing under `desktop/src/pswamp/` imports anything from `app/`, and nothing
+may start:
 
 ```toml
 # app/server-python/pyproject.toml
-dependencies = ["fastapi…", "uvicorn…", "p-swamp"]
+dependencies = ["fastapi…", "uvicorn…", "p-swamp", "pswamp-core[kafka]", "pswamp-frame-stats", …]
 
 [tool.uv.sources]
 p-swamp = { path = "../../desktop", editable = true }   # outside the workspace
+pswamp-core = { workspace = true }
 ```
 
-That single stanza is the whole seam. `pswamp_web/` imports `pswamp.*`; nothing
-under `desktop/src/pswamp/` imports anything from `app/`, and nothing may start.
 Editable, so an edit to `desktop/src/pswamp/` is live in the server with no
 reinstall — locally through the venv, and in the container through the compose
 watch that syncs `desktop/src/` into it.
 
-Consequences worth knowing before touching anything:
+**Models, modules, sources, pipelines — the rules** (the architecture itself is
+under "The server data architecture"):
 
-- **`src/` is ambiguous — always qualify it.** `desktop/src/` is the desktop
-  package; `app/server-python/src/` is the server. This file always means the latter unless
-  it says otherwise.
-- **`desktop/src/` is IN the image**, installed editable at
-  `/workspace/p-SWAMP/desktop/src`. It follows that `.dockerignore` has to keep
-  `desktop/build/` (~1.6 GB), `desktop/examples/` and `desktop/tests/` out of the
-  build context by hand. It also follows
-  that the image mirrors the *repo root*, not just the server dir — see the
-  workspace note at the top of the Dockerfile's runtime stage for why the depth is
-  required rather than a matter of taste.
-- **`models/` (`pswamp-models`)** holds every message of the server data
-  architecture, one package per producer (`pswamp_models.common`, `.player`,
-  `.pmu`, `.remote_data`, and one per module: `.frame_stats`, `.excursion`,
-  `.range_summary`). It depends on pydantic only and imports nothing else from
-  this repo (`models/tests/test_models_layering.py` checks it); everyone,
-  a module's own code included, imports a message from here, never from the
-  module that produces it. A workspace member like core; its tests
-  (`models/tests/`) run through `pswamp test server`.
-- **A third project, `core/` (`pswamp-core`)**, holds the server data
-  architecture. It is a workspace member, which the web backend takes as
-  `pswamp-core[kafka]`; it has no lockfile of its own, and its
-  tests (`core/tests/`) run in the web backend's environment through
-  `pswamp test server`. Its only required dependencies are pydantic and
-  `pswamp-models`, so a data provider can depend on it alone. It imports nothing from `app/` or from
-  the desktop package. After editing `core/pyproject.toml`, run `uv lock` at
-  the repo root.
-  `pswamp check` gates it fully, like `app/`.
-- **The modules are one project each, `modules/<name>/`** (distribution
-  `pswamp-<name>`, e.g. `modules/frame-stats/` = `pswamp-frame-stats`), every one
-  a workspace member through the `"modules/*"` glob. A module folder holds
-  only `pyproject.toml` (with its `[project.entry-points."pswamp.modules"]`
-  entry, named after the module's `name`), `README.md` (what it reads, emits
-  and accepts; its parameters), `src/pswamp_modules/<pkg>/`, `tests/` and
-  `examples/` (scripts running it with no server). **`pswamp_modules` is a
-  PEP 420 namespace**: there is no `src/pswamp_modules/__init__.py` anywhere,
-  so each project adds its own `pswamp_modules.<pkg>` and imports stay
-  `pswamp_modules.<pkg>`. Built by `uv_build` with a dotted
-  `module-name = "pswamp_modules.<pkg>"`. The layering runs one way:
-  **`models` ← `core` ← each module ← the web backend.** A module depends on
-  `pswamp-core` and `pswamp-models` (plus any third-party library it declares)
-  and imports nothing from `app/`, the desktop package or another module;
-  `core/` imports no module. `tools/tests/test_tools_layering.py` checks every
-  `modules/*/pyproject.toml` for that, for the folder's contents and for the
-  entry point. Why: a worker hosting modules then loads core and modules alone,
-  no FastAPI and no `pswamp_web`. A library only an example needs (matplotlib)
-  is an `examples` extra, never a dependency.
-  Their tests run through `pswamp test server` (which recurses into `modules/`)
-  or one module's alone with `pswamp test module <name>`; `pswamp check` gates
-  them fully; `.dockerignore` keeps `tests/` and `examples/` out of the image.
-  After editing a module's manifest, run `uv lock` at the repo root.
-  **Test file names must be unique across every test folder** —
-  `app/server-python/tests/`, `models/tests/`, `core/tests/`, `tools/tests/`,
-  and each `modules/<name>/tests/` — since they
-  run in one pytest session and none is a package: hence `test_models_*`,
-  `test_tools_*`, `test_<pkg>_module.py`, `test_<pkg>_source.py`.
-- **The sources are modules too**, of their own kind: `sample-replay`,
+- **`models/` holds every message, one package per producer**
+  (`pswamp_models.common`, `.player`, `.pmu`, `.remote_data`, and one per module:
+  `.frame_stats`, `.excursion`, `.range_summary`). A message's class lives with
+  whoever publishes it, and **never in a module**: the core, other modules, the
+  web backend and the api contract all import it from here, so nobody imports a
+  module to get at its data. `models/tests/test_models_layering.py` checks that
+  it imports pydantic and the stdlib only.
+- **A module is one project, `modules/<name>/`** (`modules/frame-stats/` =
+  `pswamp-frame-stats`), a workspace member through the `"modules/*"` glob. The
+  folder holds **only** `pyproject.toml` (with its entry point in
+  `[project.entry-points."pswamp.modules"]`, named after the module's `name`),
+  `README.md` (what it reads, emits and accepts; its parameters),
+  `src/pswamp_modules/<pkg>/`, `tests/` and `examples/` (scripts running it with
+  no server). A data file the code reads (`sample_data.txt`) goes under `src/`,
+  beside that code. **`pswamp_modules` is a PEP 420 namespace**: there is no
+  `src/pswamp_modules/__init__.py` anywhere, so each project adds its own
+  `pswamp_modules.<pkg>`; `uv_build` builds it with a dotted
+  `module-name = "pswamp_modules.<pkg>"`. A library only an example needs
+  (matplotlib) is an `examples` extra, never a dependency.
+- **A module depends on `pswamp-core` and `pswamp-models`** (plus any third-party
+  library it declares) **and imports nothing from `app/`, the desktop package
+  or another module**; `core/` imports no module. Why: a worker hosting modules
+  then loads core and modules alone, no FastAPI and no `pswamp_web`.
+  `tools/tests/test_tools_layering.py` checks every `modules/*/pyproject.toml`
+  for that, for the folder's contents and for the entry point.
+- **Sources are modules too**, of their own kind: `sample-replay`,
   `live-synthetic` and `remote-history` are projects under `modules/`, each a
-  `SourceModule` (`pswamp_core.sources`; a history source that mixes in
-  `Playable`, `pswamp_core.playable`, can be replayed paced and sought). They
-  have no inputs, produce `PmuFrame`, and are found by their entry point like
-  any module: `[[sources]] module = "sample-replay"` in a pipeline file. The
-  old data clients and the `legacy/pswamp-wiring/` project that held the
-  examples are gone.
-- **`pipelines/` holds one pipeline file per app, `pipelines/<app>.toml`**:
-  data, not code, and not a project. It names the app's modules by their
-  `pswamp.modules` entry points, its sources (the first is the default) and
-  its enrichment; `Pipeline.load` (`core/src/pswamp_core/pipeline_config.py`)
-  reads it in the server and in the workers. `uv run pswamp pipelines validate`
-  checks every file (and `pswamp check` runs it); `uv run pswamp modules list`
-  shows what a file can name.
-- **`uv run pswamp check` gates `app/`, `models/`, `core/`, `modules/` and `tools/` fully; `desktop/src/` only for syntax.**
-  ruff, `tsc` and the lockfile check (the root `uv.lock`) are scoped to those. `desktop/src/` gets a
-  **syntax-only** `py_compile` gate (it ships in the image, so it must at least
-  parse) — but it is *not* lint-gated: `ruff check` deliberately leaves it out,
-  with a `TODO` beside the syntax-only step in `tools/src/pswamp_tools/commands/check.py`. Widening ruff to `src/` means
-  first dealing with the existing desktop code's lint state (~334 pyflakes
-  findings), which is a real piece of work and not a one-line scope change.
+  `SourceModule` (a history that mixes in `Playable` can be replayed paced and
+  sought). They have no inputs and produce `PmuFrame`, and are found by their
+  entry point like any module.
+- **`pipelines/<app>.toml` is one file per app**: data, not code, and not a
+  project. It names the app's modules and sources by their `pswamp.modules`
+  entry points, and its enrichment. `uv run pswamp pipelines validate` checks
+  every file (`pswamp check` runs it); `uv run pswamp modules list` shows what
+  a file can name. The Dockerfile copies `pipelines/` into the image.
+- **Test file names are unique across every test folder** —
+  `app/server-python/tests/`, `models/tests/`, `core/tests/`, `tools/tests/` and
+  each `modules/<name>/tests/` — since they run in one pytest session and none
+  is a package: hence `test_models_*`, `test_tools_*`, `test_<pkg>_module.py`,
+  `test_<pkg>_source.py`. Run one module's alone with
+  `uv run pswamp test module <name>`; `pswamp test server` runs them all.
+
+**Locking.** After editing any member's manifest, `uv lock` at the repo root.
+After editing `desktop/pyproject.toml`, **both**: `(cd desktop && uv lock)` for
+its own lock, then `uv lock --upgrade-package p-swamp` at the repo root, which
+refreshes the workspace's view of it (a plain `uv lock` reports "Resolved N
+packages" without re-reading that path dependency). A dependency for the web
+backend goes in `app/server-python/pyproject.toml`, never the desktop one — and
+vice versa. The dev tooling (ruff, pytest, pytest-asyncio) is the dev group of
+`app/server-python/pyproject.toml`, not of the root: the root is virtual, so
+`uv sync`/`uv run` there install every member with its dev group, and from
+`app/server-python` they install that member with its own; a group on the
+virtual root would be dropped by the latter.
+
+**The image.** The Dockerfile mirrors the *repo root* at `/workspace/p-SWAMP` —
+the depth is what makes `../../desktop` mean the same thing on a laptop and in
+the image (uv refuses to normalise a relative path above its base directory). It
+exports the server's locked third-party dependencies (`uv export --locked
+--package pswamp-server --no-emit-workspace --no-dev --no-emit-package p-swamp
+--no-emit-package synchrophasor`) into one cached layer, then installs
+`models/`, `core/`, every `modules/*/` (one loop over their manifests, so a new
+module needs no Dockerfile edit), `desktop/src/` (editable, no extras) and
+`pipelines/` from their own layers. A `module-manifests` stage copies each
+module's `pyproject.toml` and README alone, because `uv export --locked` needs
+every member's manifest to validate the lock. Two consequences:
+
+- **`.dockerignore` has to earn its keep**: the build context is the repo root,
+  so `desktop/build/` (~1.6 GB), `desktop/examples/`, `desktop/tests/` and every
+  `tests/` and `examples/` folder are kept out by hand.
 - **The web backend takes p-swamp with no extras.** `[full]` is what carries
-  PySide6, pyqtgraph, kafka-python, nqkafka and tops-rt; none of that belongs in a
-  headless server image. `synchrophasor` is a *base* desktop dependency but is
-  excluded from the image too (`--no-emit-package` in the Dockerfile): only the
-  live-PMU and playback paths import it, and it is the one dependency fetched from
-  git rather than an index. The Dockerfile's `import server` smoke test is what
-  makes both exclusions checked decisions rather than hopeful ones.
-- **A dependency for the web backend goes in `app/server-python/pyproject.toml`**,
-  never the desktop one — and vice versa. After editing the desktop manifest,
-  re-lock **both**: `(cd desktop && uv lock)` for its own lock, then
-  `uv lock --upgrade-package p-swamp` at the repo root, which is what refreshes
-  the workspace's view of the desktop manifest. A plain `uv lock` will report
-  "Resolved N packages" without re-reading that path dependency.
-- **The dev tooling (ruff, pytest, pytest-asyncio) is the dev group of
-  `app/server-python/pyproject.toml`**, not of the root. The root is virtual, so
-  `uv sync`/`uv run` there install every member with its dev group, and from
-  `app/server-python` they install that member with its dev group; a group on the
-  virtual root would be dropped by the latter.
+  PySide6, pyqtgraph, kafka-python, nqkafka and tops-rt; none of that belongs in
+  a headless server image. `synchrophasor` is a *base* desktop dependency but is
+  excluded from the image too: only the live-PMU and playback paths import it,
+  and it is the one dependency fetched from git rather than an index. The
+  Dockerfile's `import server` smoke test makes both exclusions checked
+  decisions rather than hopeful ones.
+
+**What `pswamp check` gates.** `app/`, `models/`, `core/`, `modules/` and
+`tools/` fully (ruff `--select F`, `tsc`, the lockfile check, the pipeline files,
+the api contract); `desktop/src/` only for syntax. `desktop/src/` gets a
+**syntax-only** `py_compile` gate (it ships in the image, so it must at least
+parse) but is *not* lint-gated: `ruff check` deliberately leaves it out, with a
+`TODO` beside the step in `tools/src/pswamp_tools/commands/check.py`. Widening
+ruff to it means first dealing with the desktop code's lint state (~334 pyflakes
+findings), a real piece of work and not a one-line scope change.
+
+**`src/` is ambiguous — always qualify it.** `desktop/src/` is the desktop
+package; `app/server-python/src/` is the server. This file means the latter
+unless it says otherwise.
 
 ## Architecture
 
@@ -239,14 +265,12 @@ Two deployables, one wire protocol:
   appears in `APPS`.
   Note the spelling split: a package dir must be a Python identifier
   (`reference_subapp`) while its URL prefix is hyphenated to match the page route
-  (`/api/reference-subapp`). The image mirrors the **repo root** —
-  `<repo>/` → `/workspace/p-SWAMP`, so this directory lands at
-  `/workspace/p-SWAMP/app/server-python` with `WORKDIR …/src`, and `server.py`,
-  `server:app` and `import reference_subapp` all resolve off the working
-  directory. The depth is not cosmetic: it is what makes `../../desktop` in `[tool.uv.sources]` mean the
-  same thing on a laptop and in the image (uv refuses to normalise a relative path
-  above its base directory). Everything under `src/` shares the one
-  `pyproject.toml` one level up, locked in the workspace's root `uv.lock`.
+  (`/api/reference-subapp`). In the image this directory lands at
+  `/workspace/p-SWAMP/app/server-python` with `WORKDIR …/src` (see "The Python
+  projects in one repo"), so `server.py`, `server:app` and `import
+  reference_subapp` all resolve off the working directory. Everything under
+  `src/` shares the one `pyproject.toml` one level up, locked in the workspace's
+  root `uv.lock`.
 - **`app/client-web/`** — a thin React/TS/Vite renderer (shadcn/ui + Tailwind v4).
   Holds no state; sends commands, renders whatever the server pushes. In the
   shipped image it is **baked into the server image** and served from the same
@@ -471,76 +495,111 @@ Key invariants to preserve:
 
 `doc/server-data-architecture.md` is the account: how PMU data flows from a
 source through modules to the browser, and how commands flow back. The code is
-`core/src/pswamp_core/`; every message is in `models/src/pswamp_models/`; the modules built on it
-are `modules/<name>/`, one project each; each app's pipeline is a file,
-`pipelines/<app>.toml`; the sources are modules under `modules/` too
-(`sample-replay`, `live-synthetic`, `remote-history`); the worked example is the PMU test streamer; the recipe
-for a new module is `doc/module-cookbook.md`; a deployment's history service
-follows `doc/remote-data-integration-contract.md`. The rules to keep:
+`core/src/pswamp_core/`; every message is in `models/src/pswamp_models/`; the
+modules and the sources built on it are `modules/<name>/`, one project each; each
+app's pipeline is a file, `pipelines/<app>.toml`; the worked example is the PMU
+test streamer. The recipe for a new module or source is `doc/module-cookbook.md`;
+a deployment's history service follows `doc/remote-data-integration-contract.md`.
+The rules to keep:
 
 - **Every message is a `DataModel`** with a pinned `version`; its topic is its
   class name. No dicts, numpy or pickle on a topic or a socket. It lives in
   `pswamp_models`, in its producer's package, and nowhere else.
+- **A module declares what it reads and publishes, and writes synchronous
+  code.** `inputs` and `outputs` are tuples of message classes; `process` is a
+  plain method. **Three input styles, one base class** (`pswamp_core.modules`):
+  one input and `process(msg)`; several independent inputs with an `@on(Model)`
+  handler each; or **named inputs combined by a join**,
+  `inputs = {"pmu": PmuFrame, "se": StateEstimate}` with
+  `join = Latest(trigger="se", max_age={"pmu": 1.0}, missing="skip")` and
+  `process(self, *, pmu, se)`. The join's age check compares **message
+  timestamps**, never the wall clock, so a replay behaves as the live feed it
+  recorded; in a host only the trigger input is queued, the others just replace
+  the newest of their kind, so a 50 Hz stream cannot back up behind a slow one.
+  A handler returns a result *body* (the base wraps it in the declared
+  `ResultEnvelope[T]`, so the wire is the same as ever), any other declared
+  output as it is (a command is just one more output), a list, or `None`. A
+  class not in `outputs` is an error: there is no `emit()`.
+- **A module is called the same way everywhere.** `run(msg)` / `run_one(msg)` /
+  `run_command(cmd)` are the synchronous calls — a script, a test — and return
+  exactly what a host would publish; `await arun(msg)` and `await arun_command(cmd)`
+  are what a `ModuleHost` calls (inline, or in a thread with `blocking = True`).
+  A module whose answer must await overrides `ahandle`. Test modules with `run`:
+  no loop, no transport.
+- **A module never sees the transport.** A `ModuleHost` runs it, in the server
+  with the in-memory transport or in a worker with Kafka. Where a module runs is
+  configuration (`PSWAMP_TRANSPORT`, `PSWAMP_WORKER_PIPELINES`,
+  `PSWAMP_WORKER_MODULES`), never code. `PSWAMP_WORKER_PIPELINES` names pipeline
+  files, relative to the worker's working directory or absolute; compose and k8s
+  run the workers from `/workspace/p-SWAMP/pipelines`, so the entries are bare
+  `<app>.toml`.
 - **A command's class is its address.** One receiver per class in a pipeline
   (the run's `ActiveSource` router, which hands the playback commands to the
   active `Playable` source, or one module). Player commands are validated in
   the web API (409) through the router's `validate`; module commands where the
   module runs (an `ErrorEvent` on refusal).
-- **A module never sees the transport.** Its synchronous `process` takes its
-  declared `inputs` and returns its declared `outputs`; a `ModuleHost` runs it, in the server with the in-memory transport or in
-  a worker with Kafka. Where a module runs is configuration
-  (`PSWAMP_TRANSPORT`, `PSWAMP_WORKER_PIPELINES`, `PSWAMP_WORKER_MODULES`), never
-  code. `PSWAMP_WORKER_PIPELINES` names pipeline files, relative to the
-  worker's working directory or absolute; compose and k8s run the workers from
-  `/workspace/p-SWAMP/pipelines` (the repo's `pipelines/`, copied into the
-  image), so the entries are bare `<app>.toml`.
-- **A pipeline is data.** `pipelines/<app>.toml` names modules by entry point,
-  never by import path; a module joins a pipeline by being installed and
-  listed. `Pipeline.load` keeps every check (one receiver per command class,
-  one class per topic, a sent command has a receiver) and adds one: every
-  class a module reads has a producer. The server finds the files from
-  `shared.py` (the repo root's `pipelines/`, in a checkout and in the image),
-  or from `PSWAMP_PIPELINES_DIR`.
+- **Sources are modules.** A `SourceModule` has no inputs and produces `PmuFrame`
+  (`kind = "history"` or `"live"`). Its author writes **one** of `read(start, end)`
+  (plain code; a script iterates it) or `aread` (async, when the data is); the
+  base derives the other, plus `coverage` for a history. A history that mixes
+  in `Playable` is its own player — paced, seekable, looping, answering
+  `Play`/`Pause`/`Step`/`Seek`/`Speed` — and a live source simply has no
+  transport. A run holds its sources in a `SourceSet` (named instances, one
+  active) and an **`ActiveSource` router** that receives `SwitchSourceCommand`
+  and routes the playback commands to the active source (refusing them, with the
+  same 409, for a live one). The sources run **in-process, in the server or the
+  worker that reads them** — not as worker-hosted modules on the transport of
+  their own: that would put every frame on a second hop and a second pacing
+  layer for no gain (ADR-005). `pswamp_core.testing.SourceConformance` is a
+  source's executable contract.
+- **A pipeline is data.** `pipelines/<app>.toml` names modules and sources by
+  entry point, never by import path; a module joins a pipeline by being installed
+  and listed. `Pipeline.load` (`core/src/pswamp_core/pipeline_config.py`) keeps
+  every check — one receiver per command class, one class per topic, a sent
+  command has a receiver — and adds one: every class a module reads has a
+  producer. The server finds the files from `shared.py` (the repo root's
+  `pipelines/`, in a checkout and in the image), or from `PSWAMP_PIPELINES_DIR`.
+- **Sources are configured, not coded**: the file's `[[sources]] name + module`,
+  which `<APP>_SOURCES` (`name:entry-point,...`) replaces when set
+  (`<APP>_CIM_REFERENCE` overrides `[enrich] cim_reference`), plus each source's
+  `{NAME}_{SETTING}` block (`LIVE_PATH`, `REMOTE_URL`). The old
+  `<APP>_DATA_CLIENTS` is an error naming its replacement. A new source is
+  `uv run pswamp new module <slug> <label> --source [--playable]`.
 - **A module lives in `modules/<name>/`, its web API in the server.** The module
-  and its tests go in its own project under `modules/` and import the core and
-  the models only; the app's `api.py` and its page stay under `app/`. A worker
-  runs outside the server's `src/`, so a module that imports the web backend
-  fails at start.
+  and its tests go in its own project and import the core and the models only;
+  the app's `api.py` and its page stay under `app/`. A worker runs outside the
+  server's `src/`, so a module that imports the web backend fails at start.
 - **Recordings are per client, live is shared.** A client's run is keyed by its
   client id; each live source has one always-on run keyed `live.<source>`, which
   client runs follow.
-- **Sources are configured, not coded**: the pipeline file's
-  `[[sources]] name + module` (an entry point), which `<APP>_SOURCES`
-  (`name:entry-point,...`) replaces when set (and `<APP>_CIM_REFERENCE`
-  overrides `[enrich] cim_reference`), plus each source's `{NAME}_{SETTING}`
-  block (`LIVE_PATH`, `REMOTE_URL`). The old `<APP>_DATA_CLIENTS` is an error
-  naming its replacement. A new source is `uv run pswamp new module <slug>
-  <label> --source [--playable]` and passes
-  `pswamp_core.testing.SourceConformance`. One source is active per run, and
-  `SwitchSourceCommand` selects it.
 - **The in-memory transport is not a mock.** It round-trips every message
   through JSON, so the unit tests catch what Kafka would. A new transport passes
   `core/tests/transport_suite.py`.
+- **A script is a first-class caller.** `modules/sample-replay/examples/replay_stats.py`
+  is the canonical one: `for frame in SampleReplay().read()` into
+  `FrameStatsModule().run_one(frame)`, then plot. Keep every module's
+  `examples/` that short and free of asyncio; if a module cannot be used that
+  way, the module is wrong.
 - The grid monitor (`pswamp_web/`) still runs on its own thread-based Hub/Bus,
-  beside this. Don't mix the two in one app.
+  beside this, with its wire models in `pswamp_web/wire.py`. Don't mix the two
+  in one app.
 
 ## The p-SWAMP web layer
 
 `app/server-python/src/pswamp_web/` is the web front end over the analysis core of
-the **desktop `p-swamp` package** at the repo root. It is the only code in `app/`
+the **desktop `p-swamp` package** (`desktop/`). It is the only code in `app/`
 that imports `pswamp.*`.
 
 **It is kept self-contained, because it has to be movable.** Two things are
 settled: the client-server stack is the direction this project is going, and the
-analysis core at the repo root stays whatever happens to the front ends. The open
+analysis core in `desktop/` stays whatever happens to the front ends. The open
 question is **how long the Qt desktop path lives alongside them** — and that is
 what decides where the shared Python ends up, which is why this package must be
 cheap to move. §7 of `doc/WIP-context-port-from-qt-to-web-frontend.md` lays out
 the two mutually exclusive moves: while Qt stays, this package moves in under
 `pswamp/` as a third presentation adapter beside `gui/` and `visualization/`; once
 Qt is gone, "the core" and "the web backend's only Python dependency" are the same
-thing, so the root package moves in *here* instead and the root becomes repo
-furniture. Don't write either destination down as decided. What both rely on is
+thing, so the desktop package moves in *here* instead and `desktop/` disappears. Don't write either destination down as decided. What both rely on is
 the same, so the package obeys two rules that are otherwise unusual here:
 *nothing inside it imports from the rest of the web backend* (not `shared.py`, not `server.py`), and
 *every import between its own modules is relative*. That is what makes moving it a
@@ -593,7 +652,7 @@ What is in there:
   reconnection**, so every panel has a real disturbance to show. It is a committed
   fixture; `tools/record_n44_dataset.py` regenerates it, but not from the server's
   own environment — it needs `tops-rt` and `synchrophasor`, neither of which is in
-  the server's dependency set. A venv with the desktop package plus those two is
+  the server's dependency set. A venv with the desktop package (`desktop/`) plus those two is
   enough (the full `[full]` extra, Qt included, is not required), and the tool
   additionally needs `fastapi` on the path purely because it imports
   `pswamp_web.recorded_io`, whose package `__init__` pulls in the whole web stack
@@ -735,7 +794,7 @@ this**, plus the backend section below: from the url-name it derives the other
 spellings (`grid_overview`, `GridOverview`, `GRID_OVERVIEW`), renders
 `tools/src/pswamp_tools/templates/` into both folders, inserts into the four registries by
 anchor, regenerates the api contract, and runs `pswamp check` on the result
-(`NO_CHECK=1` skips the checks, but still regenerates the contract — a stale one
+(`--no-check` skips the checks, but still regenerates the contract — a stale one
 would just be a broken tree). What it
 leaves is a working per-client counter — POST to bump it, socket to see it — a
 placeholder to replace, not a stub to fill in; change what that is by editing the templates, not
@@ -930,7 +989,9 @@ before touching the api:
 Scaffolding (see "Adding a page" above for what it writes):
 
 ```
-uv run pswamp new subapp grid-overview "Grid Overview"   # url-name + nav label, both required (NO_CHECK=1 skips the pswamp check run)
+uv run pswamp new subapp grid-overview "Grid Overview"   # url-name + nav label, both required (--no-check skips the pswamp check run)
+uv run pswamp new module peak-frequency "Peak frequency" # a module project, its models, pipeline file, web api and page (doc/module-cookbook.md)
+uv run pswamp new module my-feed "My feed" --source [--playable]   # a data source project and its pipeline file
 ```
 
 Restart `pswamp dev server` afterwards rather than relying on compose watch: a
@@ -961,30 +1022,42 @@ The second form is not optional and not interchangeable with the first. A plain
 dependency change, or a change to where the path points, is silently ignored
 until `--upgrade-package p-swamp` forces it.
 
+Modules and sources run from a plain script, with no server (see the data
+architecture rules above); the canonical example replays the sample recording
+through `frame-stats` and plots it, and `--save` writes a PNG instead of opening
+a window:
+
+```
+uv run --package pswamp-sample-replay --extra examples python modules/sample-replay/examples/replay_stats.py [--save fs.png]
+uv run python modules/excursion/examples/count_excursions.py     # an example that needs nothing extra
+```
+
 Quality checks (cover both halves of the codebase):
 
 ```
 uv run pswamp check             # READ-ONLY static gate, NO test suites: uv lock --check + py_compile + ruff check F (python), tsc -b + eslint (web), pipeline files (pipelines validate), api contract vs code. Runs all checks even if one fails, exits non-zero on any failure.
-uv run pswamp test server # the server, core and modules unit tests (app/server-python/tests/, core/tests/, each module's tests/ under modules/), fast + hermetic; args pass through to pytest (-k, -v, a node id).
+uv run pswamp test server # the server, models, core, modules and tools unit tests (app/server-python/tests/, models/tests/, core/tests/, tools/tests/, each modules/<name>/tests/), fast + hermetic; args pass through to pytest (-k, -v, a node id).
 uv run pswamp test module frame-stats # one module project's tests (modules/<name>/tests/)
-uv run pswamp test desktop   # the desktop "core" tests (desktop/tests/) in the [full] env; needs Kafka/NQKafka/MQTT/Qt infra — run deliberately, not in CI.
+uv run pswamp test desktop   # the desktop package's tests (desktop/tests/) in its `full` env; needs Kafka/NQKafka/MQTT/Qt infra — run deliberately, not in CI.
+uv run pswamp test smoke | playwright   # the real container: wire-level smoke test, browser specs (need docker or podman)
 uv run pswamp check-generators        # both generators, in a throwaway worktree: their output passes pswamp check and its tests
 uv run pswamp pipelines validate      # load and check every pipelines/*.toml (or the files given), as the server and workers do
 uv run pswamp modules list            # every installed module (pswamp.modules entry points): reads, emits, commands, distribution
 KAFKA_TEST_BOOTSTRAP_SERVERS=127.0.0.1:19092 uv run pswamp test server -k kafka   # the transport suite against the compose broker (docker compose up -d kafka)
 ```
 
-Note the naming clash: `pswamp test desktop` runs the *desktop* package's
-tests. The server data architecture's `models/tests/`, `core/tests/` and the modules' own
-`tests/` folders run with the server's, in `pswamp test server`.
+Note the naming: `pswamp test desktop` runs the *desktop* package's tests. The
+server data architecture's `models/tests/`, `core/tests/`, `tools/tests/` and the
+modules' own `tests/` folders all run with the server's, in `pswamp test server`.
 
 Test suites are their own step, **not** part of `pswamp check` — that gate is
-strictly static (lockfile / AST / lint / api contract) and starts nothing. Two
+strictly static (lockfile / AST / lint / pipelines / api contract) and starts nothing. Two
 commands run the two Python projects' tests, kept separate because they live in
 separate envs and are hermetic to very different degrees:
 
 - **`uv run pswamp test server`** — the server tests under
-  `app/server-python/tests/`. Fast and hermetic: `HubRegistry` is driven with a
+  `app/server-python/tests/` (and every other Python test folder of the
+  workspace). Fast and hermetic: `HubRegistry` is driven with a
   **stubbed Hub**, so nothing binds a port. The first suite,
   `test_hub_registry.py`, pins the registry's resource bounds — the per-client
   pipeline cap holds under a concurrent-connect burst, and the per-client lock is
@@ -1045,10 +1118,10 @@ per clone with `git config core.hooksPath .githooks`. Bypass with
 runs the same command (see "CI" below), so skipping it locally just moves the
 failure to a slower place.
 
-Dependency upgrades (all four manifests + all three lockfiles, in one pass):
+Dependency upgrades (every manifest and all three lockfiles — the web client's, the workspace's and the desktop's — in one pass):
 
 ```
-uv run pswamp deps update          # TARGET=minor for no major jumps; NO_CHECK=1 skips the pswamp check run
+uv run pswamp deps update          # --target minor for no major jumps; --no-check skips the pswamp check run; --verbose lists transitive moves
 ```
 
 It produces a *candidate diff*, never a decision: `npm-check-updates -u --peer`
@@ -1060,7 +1133,7 @@ which is only true because `--upgrade` implies `--refresh`.
 
 It reports twice. First "What actually moved" — every version change in all
 three lockfiles, direct dependencies listed and transitive ones counted
-(`VERBOSE=1` lists them). Read that instead of the lockfile diff, which is ~95%
+(`--verbose` lists them). Read that instead of the lockfile diff, which is ~95%
 per-wheel sha256 hashes and a poor summary of an upgrade. Then `uv tree
 --outdated --depth 1` for both Python projects, which is the one gap the command
 cannot close on its own: uv has no npm-check-updates, so `uv lock --upgrade`
@@ -1081,10 +1154,10 @@ uv run pswamp deploy logs     # follow server logs (kubectl logs -f, bound to on
 ```
 
 `pswamp deploy minikube` is the single *local* k8s test path: it
-checks the committed api contract still matches the code (`NO_CHECK=1` skips
+checks the committed api contract still matches the code (`--no-check` skips
 that), builds the image straight from your working tree into minikube, opens the
-web client once `/healthz` answers (`NO_BROWSER=1` skips that), then tails the
-pod's logs until Ctrl-C (`NO_LOGS=1` skips that). NodePort is 30080.
+web client once `/healthz` answers (`--no-browser` skips that), then tails the
+pod's logs until Ctrl-C (`--no-logs` skips that). NodePort is 30080.
 
 **Why that contract preflight is here and not left to `pswamp check`:** it is
 the one staleness this path cannot otherwise catch. The image build runs `tsc -b`,
@@ -1189,19 +1262,22 @@ mind when editing that command (`tools/src/pswamp_tools/commands/deploy.py`):
   rules since gitignore is last-match-wins. When adding a folder under `app/`, run
   `git check-ignore -v <path>` before assuming it is tracked, and `git status`
   is not enough — an ignored file simply never shows up.
-- **`.dockerignore` now has to earn its keep.** The build context is the repo root
+- **`.dockerignore` has to earn its keep.** The build context is the repo root
   and the image installs `desktop/src/` (see "The Python projects in one repo"), so
   everything else in `desktop/` would otherwise be uploaded to the daemon on every
   build — `desktop/build/` alone is ~1.6 GB. It is excluded there, along with
-  `desktop/examples/`, `desktop/tests/` and the cache dirs. Two entries are deliberately *not* excluded and
-  will break the build if added: root `pyproject.toml` and root `README.md`, which
-  uv reads to generate the desktop package's metadata while resolving.
+  `desktop/examples/`, `desktop/tests/`, the `tests/` and `examples/` of the
+  other projects and the cache dirs. Entries are deliberately *not* excluded and
+  will break the build if added: `desktop/pyproject.toml` and `desktop/README.md`
+  (uv reads them to generate the desktop package's metadata while resolving) and
+  the root `pyproject.toml` + `uv.lock`; the Dockerfile's `module-manifests`
+  stage needs every module's `pyproject.toml` and `README.md`.
 - **Dockerfile base images are digest-pinned**, with the readable tag kept as a
   comment and refresh instructions inline. Those digests are multi-arch indexes,
   so the Dockerfile builds natively on amd64 and arm64 alike — which is what lets
   an arm64 laptop build it locally. What **CI builds is amd64 only**; see "CI".
 - **The deployable is named `p-swamp` everywhere** — local image tag, k8s
-  Deployment/Service/Ingress, `app:` labels and selectors, container name, and k8s
+  Deployment/Service/Ingress, `app:` labels and selectors, and container name.
 - **The minikube NodePort is 30080**, set in `k8s/p-swamp-local.yaml` and
   repeated as `NODE_PORT` in `pswamp deploy minikube`; keep
   the two in sync. It assumes p-swamp is the only thing claiming that port in the
@@ -1210,14 +1286,38 @@ mind when editing that command (`tools/src/pswamp_tools/commands/deploy.py`):
   than replacing them, and a stale Service keeps its nodePort claimed until it is
   deleted by name. (The Python module names — `server.py`, the app packages —
   are internal to the image and collide with nothing.)
-- **Automation is the `pswamp` CLI, not shell scripts.** Every former
-  `scripts/*.sh` is a subcommand of `uv run pswamp` (`tools/`), so it runs natively
-  on Windows, macOS and Linux; `uv run pswamp --help` is the reference. Don't add
-  shell scripts back (the one-line `.githooks/pre-push` is the exception). One
-  lesson from the scripts still holds: a check that *silently does nothing* is
-  worse than one that fails (bash 3.2's missing `mapfile` once made the gate print
-  "All checks passed" having checked no Python at all), so prefer a construct
-  that errors loudly to one that degrades.
+- **Automation is the `pswamp` CLI, not shell scripts.** All of it is a subcommand
+  of `uv run pswamp` (`tools/`): `check`, `api generate`, `test
+  server|module|desktop|smoke|playwright`, `new subapp|module`, `modules list`,
+  `pipelines validate`, `check-generators`, `dev server|client`, `deploy
+  minikube|logs`, `deps update`. **`uv run pswamp --help` and each group's
+  `--help` are the reference** — the help text is the documentation, so change it
+  with the command. Don't add shell scripts (the one-line `.githooks/pre-push`,
+  which Git for Windows runs through its bundled sh, is the exception).
+- **The CLI is Windows-native, and says what is missing.** Every external tool is
+  resolved through `require_tool` (`tools/src/pswamp_tools/_proc.py`; `shutil.which`,
+  so `npm.cmd` is found) and a missing one is a one-line error with an install
+  hint, not a traceback. The container engine is detected, not assumed
+  (`_docker.py`): docker, podman, or podman behind a `docker` alias, with the
+  compose command that actually answers (`docker compose`, `podman compose`,
+  `podman-compose`, `docker-compose`). Rules for editing the CLI: never run bare
+  `python`/`python3` (on Windows it can be the Store stub — use `sys.executable`
+  or `uv run`); child processes get `PYTHONUTF8=1` and no `VIRTUAL_ENV`; compare
+  generated files with line endings normalised (`core.autocrlf` checks out CRLF);
+  keep a worktree's path short (`git worktree` fails on long Windows paths); and
+  stop a child by process group (Windows) or session (POSIX) in a `finally`. One
+  lesson from the old scripts still holds: a check that *silently does nothing* is
+  worse than one that fails, so prefer a construct that errors loudly to one that
+  degrades.
+- **A module folder holds only `pyproject.toml`, `README.md`, `src/`, `tests/` and
+  `examples/`; its messages live in `pswamp_models`, never in the module; test
+  file basenames are unique repo-wide.** Details under "The Python projects in
+  one repo"; all three are enforced by tests, not by good intentions.
+- **A new module or source comes from the generator.** `uv run pswamp new module`
+  and `uv run pswamp new module --source` write a working project from
+  `tools/src/pswamp_tools/templates/`; `uv run pswamp check-generators` proves
+  they still do. A change to the `Module` or `SourceModule` contract updates the
+  templates in the same commit.
 - **Lint is explicitly `--select F`** (pyflakes only — real bugs, not style) in
   `pswamp check`. This gate checks correctness, not formatting: pycodestyle `E`
   and `ruff format` were deliberately dropped, and ruff's other opinionated
@@ -1240,9 +1340,12 @@ mind when editing that command (`tools/src/pswamp_tools/commands/deploy.py`):
 
 - **`quality-checks.yml`** runs on every pull request (and from the Actions tab):
   four independent merge gates, `dependency-review`, `static-errorcheck`,
-  `unit-tests` and `e2e-smoke-test`, and a fifth job, `playwright-e2e`, which
-  runs once the last two pass: the Playwright specs against the compose stack
-  (the server, Kafka and both workers). It is not yet a required check. The
+  `unit-tests` and `e2e-smoke-test`, and two more jobs: `playwright-e2e`, which
+  runs once the last two pass (the Playwright specs against the compose stack:
+  the server, Kafka and both workers), and **`windows-checks`**, which runs
+  `uv run pswamp check` and `uv run pswamp test server` on `windows-latest`, so
+  that the CLI's Windows promise is enforced rather than hoped for. Neither is
+  yet a required check. Every job drives the repo through the `pswamp` CLI. The
   workflow publishes nothing. `dependency-review` checks only dependency changes
   between the pull request's base and head, using
   `.github/dependency-review-config.yml`; it is not an all-branch push scan.
@@ -1313,11 +1416,11 @@ What has to hold in the `static-errorcheck` job:
   A CI job that duplicates the checks will drift from the local one. It also
   installs `node_modules` itself on a cold checkout, so there is no separate
   `npm ci` step to keep in sync.
-- **Runner needs `node`, `npx`, `uv`, `python3`** — `pswamp check` preflights
-  exactly those and fails fast with a clear message otherwise. `python3` is
-  already on `ubuntu-latest`. Node must be **24**, matching the Dockerfile's
-  `web-build` stage. `uv` (not `uvx`) is required since ruff now comes from the
-  locked `dev` dependency group.
+- **Runner needs `node`, `npm`, `npx` and `uv`** — `pswamp check` preflights
+  exactly those (through `require_tools`) and fails fast with a clear message
+  otherwise; Python itself comes from uv. Node must be **24**, matching the
+  Dockerfile's `web-build` stage. `uv` (not `uvx`) is required since ruff comes
+  from the locked `dev` dependency group.
 - **A real Python 3.11 must be on the runner *before* the check runs.** Passing
   the preflight isn't enough: `uv lock --check` resolves against the project's
   `requires-python` and wants 3.11 (per the root `.python-version`), and
@@ -1359,8 +1462,9 @@ What has to hold in the `static-errorcheck` job:
   edit plus a QEMU/binfmt step, not a rewrite. Don't drop lock hashes to "fix" a
   cross-arch failure.
 - **Build context is the repo root**, as in compose and the minikube path — the
-  `web-build` stage needs `app/client-web/` and the runtime stage needs root
-  `src/` — so it can't be narrowed to `app/server-python/`.
+  `web-build` stage needs `app/client-web/` and the runtime stage needs
+  `models/`, `core/`, `modules/`, `pipelines/` and `desktop/src/` — so it can't be
+  narrowed to `app/server-python/`.
 - **`push: false` + `load: true` in `build-container.yml` is the whole
   "nothing published" guarantee**, together with the job's `contents: read`-only
   permissions: there is no registry login and no `packages: write`, so a push

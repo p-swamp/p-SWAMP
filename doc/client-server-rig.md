@@ -42,8 +42,8 @@ at least for a "reference app" to ensure the basic structure of the repo/project
 Folder structure for client-server specific bits
 ==
 
-This project started as a single local python project. These folders are what gets *added* alongside the existing
-desktop code:
+This project started as a single local python project. The desktop code now lives
+in `desktop/`, and these folders are what was *added* alongside it:
 
 ```text
 app/          the two deployables — everything that ends up in the container
@@ -52,25 +52,37 @@ app/          the two deployables — everything that ends up in the container
                   baked into the server image; no separate frontend service.
   server-python/  FastAPI state server. src/server.py is the only entrypoint (wiring
                   only); one package per api under src/<app>/.
-doc/          markdown notes on how the rig works, plus things to follow up later.
+models/       pswamp-models: every message of the server data architecture, one
+              package per producer (pydantic only).
+core/         pswamp-core: transport, the Module and SourceModule contracts, the
+              run's router, pipelines.
+modules/      one Python project per analysis module or data source
+              (modules/<name>/: code, tests, README, examples).
+pipelines/    one pipeline file per app (<app>.toml): its modules and sources.
+desktop/      the original Python + Qt application, with its own lock.
+doc/          markdown notes on how the rig works, plus things to follow up later;
+              doc/adr/ holds the architecture decision records.
 k8s/          Kubernetes manifests
 tools/        the `pswamp` CLI (`uv run pswamp --help`), the stable developer
               interface — start the server, start the web client, run in minikube,
               etc. Call it rather than the underlying docker/npm/uv commands; it
               stays the same if the tooling changes, and runs on Windows too.
-.github/      CI: workflows/quality-checks.yml (checks + tests on pull requests) and
-              workflows/build-container.yml (checks the image still builds on main;
-              publishes nothing)
+e2e/          Playwright browser specs (`uv run pswamp test playwright`)
+.github/      CI: workflows/quality-checks.yml (checks + tests on pull requests, on
+              Linux and Windows) and workflows/build-container.yml (checks the image
+              still builds on main; publishes nothing)
 .githooks/    pre-push hook running uv run pswamp check. Opt in per clone with
               `git config core.hooksPath .githooks`.
 ```
 
 Loose root files that go with the above: `Dockerfile` and `docker-compose.yml`
-(build/run the one container), `.dockerignore`, and `AGENTS.md` / `CLAUDE.md` /
+(build/run the one container), `.dockerignore`, `pyproject.toml` + `uv.lock` (the uv
+workspace that ties `models/`, `core/`, `modules/*`, `tools/` and
+`app/server-python/` under one lockfile), and `AGENTS.md` / `CLAUDE.md` /
 `.github/copilot-instructions.md` (agent guidance — `AGENTS.md` is the real one, the
-other two point to it). Keeping the web backend's `pyproject.toml` inside
-`app/server-python/` rather than at the root is what stops the two Python projects
-colliding.
+other two point to it). The desktop package keeps its own `pyproject.toml` and lock in
+`desktop/` rather than joining the workspace, which is what stops Qt and the web
+backend colliding in one dependency resolution.
 
 
 How to run this locally
