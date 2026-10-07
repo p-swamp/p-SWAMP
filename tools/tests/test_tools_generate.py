@@ -29,7 +29,7 @@ def tree(tmp_path):
     for path in REGISTRIES:
         (tmp_path / path).parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(real / path, tmp_path / path)
-    for folder in ("modules/pswamp_modules/pipelines", "app/server-python/tests", "core/tests"):
+    for folder in ("modules/pswamp_modules/pipelines", "models/src/pswamp_models/pmu", "app/server-python/tests", "core/tests", "models/tests"):
         (tmp_path / folder).mkdir(parents=True, exist_ok=True)
     (tmp_path / "app/client-web/src/pages").mkdir(parents=True, exist_ok=True)
     return tmp_path
@@ -176,6 +176,7 @@ def test_a_module_also_writes_modules_and_joins_the_module_worker(tree):
     generate.apply(generate.plan(tree, "zz-mod", "ZZ Mod", "module"), echo=lambda _: None)
 
     assert (tree / "modules/pswamp_modules/zz_mod/module.py").is_file()
+    assert (tree / "models/src/pswamp_models/zz_mod/results.py").is_file()
     assert (tree / "modules/pswamp_modules/zz_mod/tests/test_module.py").is_file()
     assert (tree / "modules/pswamp_modules/pipelines/zz_mod.py").is_file()
     assert (tree / "app/server-python/tests/test_zz_mod.py").is_file()
@@ -197,9 +198,15 @@ def test_a_module_cannot_take_the_name_of_a_package_beside_the_modules(tree):
         generate.plan(tree, "pipelines", "Pipelines", "module")
 
 
-def test_a_server_test_name_clashing_with_core_tests_is_refused(tree):
-    (tree / "core/tests/test_zz_mod.py").write_text("", encoding="utf-8")
-    with pytest.raises(generate.GenerateError, match="core/tests/test_zz_mod.py"):
+def test_a_module_cannot_take_the_name_of_a_producer_in_the_models(tree):
+    with pytest.raises(generate.GenerateError, match="models/src/pswamp_models/pmu already exists"):
+        generate.plan(tree, "pmu", "PMU", "module")
+
+
+@pytest.mark.parametrize("folder", ["core/tests", "models/tests"])
+def test_a_server_test_name_clashing_with_another_test_folder_is_refused(tree, folder):
+    (tree / folder / "test_zz_mod.py").write_text("", encoding="utf-8")
+    with pytest.raises(generate.GenerateError, match=f"{folder}/test_zz_mod.py"):
         generate.plan(tree, "zz-mod", "ZZ Mod", "module")
 
 

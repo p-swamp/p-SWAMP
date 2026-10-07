@@ -1,5 +1,6 @@
-"""The __LABEL__ module (``__SLUG__``): see ``module.py``."""
+"""The __LABEL__ module (``__SLUG__``): see ``module.py``. What it publishes is
+in ``pswamp_models.__PKG__``."""
 
-from .module import __NAME__Body, __NAME__Module, __NAME__Result, highest_frequency
+from .module import __NAME__Module, highest_frequency
 
-__all__ = ["__NAME__Body", "__NAME__Module", "__NAME__Result", "highest_frequency"]
+__all__ = ["__NAME__Module", "highest_frequency"]

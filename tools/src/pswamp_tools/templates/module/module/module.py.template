@@ -3,18 +3,15 @@
 The analysis is a placeholder: the station with the highest frequency in each
 frame. It is a plain function, ``highest_frequency``; ``process`` only adapts a
 frame to it and its answer to a result. Replace the function and the
-``__NAME__Body`` it fills with yours, keeping that split.
+``__NAME__Body`` it fills (in ``pswamp_models.__PKG__``) with yours, keeping
+that split.
 """
 
-from typing import Literal
-
-from pydantic import BaseModel, Field
-
 from pswamp_core.modules import Module
-from pswamp_models.common import ResultEnvelope
+from pswamp_models.__PKG__ import __NAME__Body, __NAME__Result
 from pswamp_models.pmu import PmuFrame
 
-__all__ = ["__NAME__Body", "__NAME__Module", "__NAME__Result", "highest_frequency"]
+__all__ = ["__NAME__Module", "highest_frequency"]
 
 
 def highest_frequency(stations: list[str], frequencies: list[float | None]) -> tuple[str, float] | None:
@@ -25,15 +22,6 @@ def highest_frequency(stations: list[str], frequencies: list[float | None]) -> t
         return None
     hz, station = max(readings)
     return station, hz
-
-
-class __NAME__Body(BaseModel):
-    station: str = Field(description="The station with the highest frequency in the frame.")
-    frequency_hz: float = Field(description="Its frequency, in Hz.")
-
-
-class __NAME__Result(ResultEnvelope[__NAME__Body]):
-    version: Literal["v1"] = "v1"
 
 
 class __NAME__Module(Module):

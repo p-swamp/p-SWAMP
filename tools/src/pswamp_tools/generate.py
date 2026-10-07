@@ -5,8 +5,9 @@ Two template sets live in ``templates/`` beside this file (``templates/README.md
 explains them):
 
 * ``subapp``: a per-client counter, a page and its api;
-* ``module``: a module over the core pipeline, its pipeline, its web api, a
-  page showing its latest result, and tests; the module is also added to the
+* ``module``: a module over the core pipeline, its messages (in
+  ``pswamp_models``), its pipeline, its web api, a page showing its latest
+  result, and tests; the module is also added to the
   module-worker in docker-compose.yml and k8s/p-swamp-local.yaml.
 
 Everything is computed in memory first, every rendered file and every registry
@@ -35,8 +36,11 @@ SUFFIX = ".template"
 WEB = Path("app/client-web/src")
 PY_SRC = Path("app/server-python/src")
 MODULES = Path("modules/pswamp_modules")
+MODELS = Path("models/src/pswamp_models")
 SERVER_TESTS = Path("app/server-python/tests")
-CORE_TESTS = Path("core/tests")
+# Test folders that run in one pytest session with the server's and are not
+# packages, so a test file name must be unique across all of them.
+NON_PACKAGE_TESTS = (Path("models/tests"), Path("core/tests"))
 
 # The worker lists a module joins, as patterns whose group 1 is the list's value.
 # check-generators reads the patched lists back with the same patterns.
@@ -198,26 +202,32 @@ def plan(root: Path, slug: str, label: str, template_set: str = "subapp", templa
     page_dir = WEB / "pages" / names.slug
     api_dir = PY_SRC / names.pkg
     module_dir = MODULES / names.pkg
+    models_dir = MODELS / names.pkg
     if (root / page_dir).exists() or (root / api_dir).exists():
         raise GenerateError(f"{names.slug} already exists as a page or an api package — pick another name.")
     # Also what refuses `pipelines` and `sources`, the two packages beside the modules.
     if template_set == "module" and (root / module_dir).exists():
         raise GenerateError(f"{module_dir.as_posix()} already exists — pick another name.")
+    # And what refuses the producers already in the models (`common`, `pmu`, …).
+    if template_set == "module" and (root / models_dir).exists():
+        raise GenerateError(f"{models_dir.as_posix()} already exists — pick another name.")
 
     tset = templates / template_set
     sources = [(tset / "server-python", api_dir), (tset / "client-web", page_dir)]
     result.new_dirs = [api_dir, page_dir]
     # The module set: the module, its tests/ beside it and its pipeline go to
-    # modules/ (which depends on the core only); the web api's test goes into the
-    # server's tests/.
+    # modules/ (which depends on the core and the models only); what it publishes
+    # goes to the models, where every consumer imports it from; the web api's
+    # test goes into the server's tests/.
     if template_set == "module":
         sources += [
+            (tset / "models", models_dir),
             (tset / "module", module_dir),
             (tset / "module-tests", module_dir / "tests"),
             (tset / "pipeline", MODULES / "pipelines"),
             (tset / "tests", SERVER_TESTS),
         ]
-        result.new_dirs += [module_dir, module_dir / "tests"]
+        result.new_dirs += [models_dir, module_dir, module_dir / "tests"]
 
     # Every template is <filename>.template. A missing suffix is an error, not a
     # no-op, so the convention can't rot into "some of them".
@@ -233,10 +243,12 @@ def plan(root: Path, slug: str, label: str, template_set: str = "subapp", templa
             dest = dest_dir / names.render(template.name).removesuffix(SUFFIX)
             if (root / dest).exists():
                 raise GenerateError(f"{dest.as_posix()} already exists — pick another name.")
-            # The server's and the core's tests run as one pytest session and are
-            # not packages, so a test file's name must be unique across the two.
-            if dest_dir == SERVER_TESTS and (root / CORE_TESTS / dest.name).exists():
-                raise GenerateError(f"core/tests/{dest.name} already exists — pick another name.")
+            # The server's, the models' and the core's tests run as one pytest
+            # session and are not packages, so a test file's name must be unique
+            # across them.
+            for other in NON_PACKAGE_TESTS:
+                if dest_dir == SERVER_TESTS and (root / other / dest.name).exists():
+                    raise GenerateError(f"{(other / dest.name).as_posix()} already exists — pick another name.")
             text, _ = read_text(template)
             result.rendered[dest] = names.render(text)
 
@@ -321,5 +333,8 @@ def apply(p: Plan, echo: Callable[[str], None] = print) -> None:
 def summary(p: Plan) -> str:
     n = p.names
     if p.template_set == "module":
-        return f"{n.label}: page /{n.slug}, socket /api/{n.slug}/ws, module {(MODULES / n.pkg).as_posix()}/module.py"
+        return (
+            f"{n.label}: page /{n.slug}, socket /api/{n.slug}/ws, module {(MODULES / n.pkg).as_posix()}/module.py, "
+            f"messages {(MODELS / n.pkg).as_posix()}/"
+        )
     return f"{n.label}: page /{n.slug}, socket /api/{n.slug}/ws, commands POST /api/{n.slug}/count/…"

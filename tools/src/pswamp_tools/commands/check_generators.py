@@ -211,6 +211,7 @@ def check_generators() -> None:
                 f"tests/test_{module_pkg}.py",
                 f"../../modules/pswamp_modules/{module_pkg}/tests",
                 "../../modules/pswamp_modules/tests/test_layering.py",
+                "../../models/tests/test_models_layering.py",
             ],
             tree,
         )
