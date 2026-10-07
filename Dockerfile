@@ -30,6 +30,22 @@ ENV VITE_GIT_SHA=$GIT_SHA
 COPY app/client-web/ ./
 RUN npm run build
 
+# --- module manifests stage -------------------------------------------------
+#
+# Every module is its own workspace member (modules/<name>/, one project each),
+# and so is the transitional legacy/pswamp-wiring/. `uv export --locked` below
+# needs every member's pyproject.toml (and the README.md it names) to validate
+# the lock, but a COPY glob would flatten modules/*/pyproject.toml into one
+# directory. So this stage copies the two folders whole and deletes everything
+# but each project's own manifest and README; the server stage copies the
+# result. Its output only changes when a manifest does, so the dependency
+# install below stays cached across source edits, and a new module needs no
+# edit here. Same base image as the server stage (already pulled), for `find`.
+FROM ghcr.io/astral-sh/uv:python3.11-bookworm-slim@sha256:4f5d923c9dcea037f57bda425dd209f3ec643da2f0b74227f68d09dab0b3bb36 AS module-manifests
+COPY modules/ /manifests/modules/
+COPY legacy/ /manifests/legacy/
+RUN find /manifests -maxdepth 2 -type f -delete     && find /manifests -mindepth 4 -type f -delete     && find /manifests -type f ! -name pyproject.toml ! -name README.md -delete     && find /manifests -type d -empty -delete
+
 # --- server stage -----------------------------------------------------------
 #
 # Base: Astral's official uv image (Python 3.11 on Debian 12 "bookworm" slim).
@@ -48,7 +64,8 @@ FROM ghcr.io/astral-sh/uv:python3.11-bookworm-slim@sha256:4f5d923c9dcea037f57bda
 # matter of taste.
 #
 # The repo root is a uv workspace (root pyproject.toml + the one uv.lock), with
-# models/, core/, modules/ and app/server-python/ as members, so the root manifest and
+# models/, core/, every modules/<name>/, legacy/pswamp-wiring/, tools/ and
+# app/server-python/ as members, so the root manifest and
 # lock land at ${REPO_DIR} and each member at its own path below it.
 # app/server-python/pyproject.toml also declares p-swamp -- the desktop package
 # in desktop/, outside the workspace -- as an editable path dependency,
@@ -94,8 +111,9 @@ COPY models/pyproject.toml models/README.md ${REPO_DIR}/models/
 # The shared core (core/), the next member: same again.
 COPY core/pyproject.toml core/README.md ${REPO_DIR}/core/
 
-# The modules (modules/): same again.
-COPY modules/pyproject.toml modules/README.md ${REPO_DIR}/modules/
+# The module projects (modules/<name>/) and the transitional wiring
+# (legacy/pswamp-wiring/): every manifest and README, from the stage above.
+COPY --from=module-manifests /manifests/ ${REPO_DIR}/
 
 # The repo CLI (tools/, pswamp-tools): manifest only, and never installed. It is
 # a workspace member (and in the server's dev group), so `uv export --locked`
@@ -170,11 +188,15 @@ RUN uv pip install --system --no-deps -e ${REPO_DIR}/models
 COPY core/ ${REPO_DIR}/core/
 RUN uv pip install --system --no-deps -e ${REPO_DIR}/core
 
-# The modules, their pipelines and the example sources, installed the same
-# way. They depend on the core and the models only, so a worker imports them
-# from any working directory. Each module's tests/ folder is kept out by .dockerignore.
+# The module projects, one per module, and the transitional wiring (the
+# pipelines and example sources), installed the same way: every project found,
+# so a new module needs no edit here. Each is a portion of the pswamp_modules
+# namespace and depends on the core and the models only, so a worker imports
+# them from any working directory. tests/ and examples/ are kept out by
+# .dockerignore.
 COPY modules/ ${REPO_DIR}/modules/
-RUN uv pip install --system --no-deps -e ${REPO_DIR}/modules
+COPY legacy/ ${REPO_DIR}/legacy/
+RUN uv pip install --system --no-deps       $(for manifest in ${REPO_DIR}/modules/*/pyproject.toml ${REPO_DIR}/legacy/*/pyproject.toml; do           printf -- '-e %s ' "$(dirname "$manifest")";         done)
 
 # Server source last, so editing it doesn't invalidate the dependency layer
 # above. The image mirrors the repo, so server.py and the app packages beside it

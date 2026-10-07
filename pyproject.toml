@@ -4,9 +4,10 @@
 #
 #   models/              pswamp-models    every message, one package per producer (pydantic only)
 #   core/                pswamp-core      the server data architecture
-#   modules/             pswamp-modules   the analysis modules, over the core
+#   modules/<name>/      pswamp-<name>    one project per analysis module, over the core
+#   legacy/pswamp-wiring pswamp-wiring    TRANSITIONAL: the pipelines and example sources
 #   tools/               pswamp-tools     the `pswamp` repo CLI (`uv run pswamp --help`)
-#   app/server-python/   pswamp-server    the web backend, over all three
+#   app/server-python/   pswamp-server    the web backend, over all of them
 #
 # The desktop package (desktop/, p-swamp) is deliberately NOT a member: it keeps
 # its own desktop/uv.lock, so its Qt/Kafka [full] extra never enters the
@@ -18,7 +19,9 @@
 #   uv sync                                   every member plus the dev group, into ./.venv
 
 [tool.uv.workspace]
-members = ["models", "core", "modules", "tools", "app/server-python"]
+# "modules/*": every module project, so a new module (`pswamp new module`) joins
+# the workspace with no edit here.
+members = ["models", "core", "modules/*", "legacy/pswamp-wiring", "tools", "app/server-python"]
 
 # No [dependency-groups] here, on purpose. The dev tooling (ruff, pytest,
 # pytest-asyncio) is the dev group of app/server-python/pyproject.toml. Because

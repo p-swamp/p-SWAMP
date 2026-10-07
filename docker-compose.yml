@@ -50,7 +50,9 @@ services:
         "--reload-dir",
         "/workspace/p-SWAMP/core/src",
         "--reload-dir",
-        "/workspace/p-SWAMP/modules/pswamp_modules",
+        "/workspace/p-SWAMP/modules",
+        "--reload-dir",
+        "/workspace/p-SWAMP/legacy",
       ]
     # The server has no external dependencies, so "is the process serving?" is
     # the whole health story — /healthz covers it. curl returns non-zero if the
@@ -107,14 +109,22 @@ services:
         - path: core/src
           action: sync
           target: /workspace/p-SWAMP/core/src
-        # The modules, their pipelines and the example sources, likewise.
-        - path: modules/pswamp_modules
+        # The module projects (modules/<name>/) and the transitional wiring
+        # (legacy/: the pipelines and example sources), likewise. Whole folders,
+        # so an edit to any module syncs with no change here; a NEW module
+        # project needs the rebuild that its uv.lock change triggers below.
+        - path: modules
           action: sync
-          target: /workspace/p-SWAMP/modules/pswamp_modules
+          target: /workspace/p-SWAMP/modules
+        - path: legacy
+          action: sync
+          target: /workspace/p-SWAMP/legacy
         # Dependency changes are the exception: new packages have to be
         # installed, which a file sync can't do. These rebuild the image and
         # recreate the container instead — slower, on purpose. Without this,
-        # editing pyproject.toml would appear to do nothing.
+        # editing pyproject.toml would appear to do nothing. A module project's
+        # manifest is not listed (watch takes no glob): any dependency change
+        # there re-locks, and the uv.lock rule rebuilds.
         - path: pyproject.toml
           action: rebuild
         - path: uv.lock
@@ -126,8 +136,6 @@ services:
         - path: models/pyproject.toml
           action: rebuild
         - path: core/pyproject.toml
-          action: rebuild
-        - path: modules/pyproject.toml
           action: rebuild
 
   # Hosts the pipelines' modules, off Kafka: the same image (the second
@@ -150,9 +158,12 @@ services:
     restart: unless-stopped
     develop: &worker-watch
       watch:
-        - path: modules/pswamp_modules
+        - path: modules
           action: sync+restart
-          target: /workspace/p-SWAMP/modules/pswamp_modules
+          target: /workspace/p-SWAMP/modules
+        - path: legacy
+          action: sync+restart
+          target: /workspace/p-SWAMP/legacy
         - path: core/src
           action: sync+restart
           target: /workspace/p-SWAMP/core/src
@@ -162,8 +173,6 @@ services:
         - path: models/pyproject.toml
           action: rebuild
         - path: core/pyproject.toml
-          action: rebuild
-        - path: modules/pyproject.toml
           action: rebuild
         - path: uv.lock
           action: rebuild

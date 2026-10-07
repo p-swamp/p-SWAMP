@@ -16,10 +16,13 @@ resolution-markers = [
 [manifest]
 members = [
     "pswamp-core",
+    "pswamp-excursion",
+    "pswamp-frame-stats",
     "pswamp-models",
-    "pswamp-modules",
+    "pswamp-range-summary",
     "pswamp-server",
     "pswamp-tools",
+    "pswamp-wiring",
 ]
 
 [[package]]
@@ -584,6 +587,36 @@ requires-dist = [
 provides-extras = ["kafka", "remote-data"]
 
 [[package]]
+name = "pswamp-excursion"
+version = "0.1.0"
+source = { editable = "modules/excursion" }
+dependencies = [
+    { name = "pswamp-core" },
+    { name = "pswamp-models" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "pswamp-core", editable = "core" },
+    { name = "pswamp-models", editable = "models" },
+]
+
+[[package]]
+name = "pswamp-frame-stats"
+version = "0.1.0"
+source = { editable = "modules/frame-stats" }
+dependencies = [
+    { name = "pswamp-core" },
+    { name = "pswamp-models" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "pswamp-core", editable = "core" },
+    { name = "pswamp-models", editable = "models" },
+]
+
+[[package]]
 name = "pswamp-models"
 version = "0.1.0"
 source = { editable = "models" }
@@ -595,9 +628,9 @@ dependencies = [
 requires-dist = [{ name = "pydantic", specifier = ">=2.12" }]
 
 [[package]]
-name = "pswamp-modules"
+name = "pswamp-range-summary"
 version = "0.1.0"
-source = { editable = "modules" }
+source = { editable = "modules/range-summary" }
 dependencies = [
     { name = "pswamp-core" },
     { name = "pswamp-models" },
@@ -617,8 +650,11 @@ dependencies = [
     { name = "fastapi" },
     { name = "p-swamp" },
     { name = "pswamp-core", extra = ["kafka", "remote-data"] },
+    { name = "pswamp-excursion" },
+    { name = "pswamp-frame-stats" },
     { name = "pswamp-models" },
-    { name = "pswamp-modules" },
+    { name = "pswamp-range-summary" },
+    { name = "pswamp-wiring" },
     { name = "uvicorn", extra = ["standard"] },
 ]
 
@@ -635,8 +671,11 @@ requires-dist = [
     { name = "fastapi", specifier = ">=0.141.1,<0.142" },
     { name = "p-swamp", editable = "desktop" },
     { name = "pswamp-core", extras = ["kafka", "remote-data"], editable = "core" },
+    { name = "pswamp-excursion", editable = "modules/excursion" },
+    { name = "pswamp-frame-stats", editable = "modules/frame-stats" },
     { name = "pswamp-models", editable = "models" },
-    { name = "pswamp-modules", editable = "modules" },
+    { name = "pswamp-range-summary", editable = "modules/range-summary" },
+    { name = "pswamp-wiring", editable = "legacy/pswamp-wiring" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.52.4,<0.53" },
 ]
 
@@ -661,6 +700,27 @@ dependencies = [
 requires-dist = [
     { name = "rich", specifier = ">=13.7" },
     { name = "typer", specifier = ">=0.15" },
+]
+
+[[package]]
+name = "pswamp-wiring"
+version = "0.1.0"
+source = { editable = "legacy/pswamp-wiring" }
+dependencies = [
+    { name = "pswamp-core" },
+    { name = "pswamp-excursion" },
+    { name = "pswamp-frame-stats" },
+    { name = "pswamp-models" },
+    { name = "pswamp-range-summary" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "pswamp-core", editable = "core" },
+    { name = "pswamp-excursion", editable = "modules/excursion" },
+    { name = "pswamp-frame-stats", editable = "modules/frame-stats" },
+    { name = "pswamp-models", editable = "models" },
+    { name = "pswamp-range-summary", editable = "modules/range-summary" },
 ]
 
 [[package]]

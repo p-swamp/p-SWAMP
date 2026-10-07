@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import os
+import tomllib
 from pathlib import Path
 from typing import Optional
 
@@ -32,10 +34,11 @@ def server(ctx: typer.Context) -> None:
 
     Runs pytest from app/server-python with its config (`-c pyproject.toml`),
     whose `testpaths` names app/server-python/tests, models/tests, core/tests,
-    each module's tests/ under modules/, and tools/tests; a new test_*.py there
-    is picked up with no change here. Test file names must be unique across the
-    non-package test folders (app/server-python/tests, models/tests, core/tests,
-    tools/tests).
+    each module project's tests/ under modules/, the transitional
+    legacy/pswamp-wiring/tests, and tools/tests; a new test_*.py there is picked
+    up with no change here. None of those folders is a package, so a test file
+    name must be unique across all of them. One module's tests alone:
+    `pswamp test module <name>`.
 
     Every extra argument goes to pytest verbatim:
 
@@ -49,6 +52,45 @@ def server(ctx: typer.Context) -> None:
     # `-c pyproject.toml` pins the config: otherwise pytest picks it from the
     # common ancestor of the paths it is given and loses pythonpath/asyncio_mode.
     raise typer.Exit(run(["uv", "run", "pytest", "-c", "pyproject.toml", *ctx.args], cwd=server_dir()))
+
+
+def find_module_project(name: str, root: Path) -> Path | None:
+    """The module project ``name`` names: its folder under modules/ (``frame-stats``),
+    its entry-point name or its package name (``frame_stats``); ``None`` if none does."""
+    wanted = name.strip().strip("/\\").removeprefix("modules/").lower()
+    for manifest in sorted((root / "modules").glob("*/pyproject.toml")):
+        project = manifest.parent
+        data = tomllib.loads(manifest.read_text(encoding="utf-8"))
+        names = {project.name, project.name.replace("-", "_")}
+        names |= set(data.get("project", {}).get("entry-points", {}).get("pswamp.modules", {}))
+        if wanted in {n.lower() for n in names}:
+            return project
+    return None
+
+
+@app.command(context_settings=PASS_THROUGH)
+def module(
+    ctx: typer.Context,
+    name: str = typer.Argument(..., help="The module: its folder under modules/ or its entry-point name (frame-stats)."),
+) -> None:
+    """One module's tests (modules/<name>/tests/), with the server's pytest config.
+
+    The same tests `pswamp test server` runs, narrowed to one module project.
+    Extra arguments go to pytest verbatim:
+
+      pswamp test module frame-stats
+
+      pswamp test module range-summary -- -k plain -v
+    """
+    require_tools("uv", purpose="for the server test environment")
+    root = repo_root()
+    project = find_module_project(name, root)
+    if project is None:
+        known = ", ".join(sorted(p.parent.name for p in (root / "modules").glob("*/pyproject.toml")))
+        _ui.error(f"no module project named {name!r} under modules/ (there are: {known})")
+        raise typer.Exit(2)
+    tests = os.path.relpath(project / "tests", server_dir())
+    raise typer.Exit(run(["uv", "run", "pytest", "-c", "pyproject.toml", tests, *ctx.args], cwd=server_dir()))
 
 
 @app.command(context_settings=PASS_THROUGH)

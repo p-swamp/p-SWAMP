@@ -6,9 +6,9 @@
 # (desktop/pyproject.toml) and the web backend (app/server-python/pyproject.toml).
 # It is a member of the uv workspace rooted at the repo root, locked in the one
 # uv.lock there, and its tests run with the web backend's, so there is no
-# lockfile here. The fourth,
-# modules/ (pswamp-modules), depends on this one; this one imports nothing
-# from it.
+# lockfile here. The module projects,
+# modules/<name>/ (pswamp-<name>), depend on this one; this one imports nothing
+# from them.
 #
 # pydantic and the message models (models/, pswamp-models, itself pydantic only)
 # are the only required dependencies, so a data provider written outside this
