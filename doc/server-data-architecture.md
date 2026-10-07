@@ -42,7 +42,8 @@ worked example of every piece.
 | transport | Keyed publish/subscribe: in-memory in one process, or Kafka between processes. |
 | topic | `<app>.<message class>`, e.g. `pmu-test-streamer.pmu.frame`. One class per topic. |
 | key | Which pipeline run a record belongs to: a client id, or `live.<source>`. |
-| module | p-SWAMP's microservice: one analysis that reads one message class, publishes a result class, may answer commands, and can run in a process of its own. |
+| module | p-SWAMP's microservice: one analysis that declares the message classes it reads (`inputs`) and publishes (`outputs`), may answer commands, and can run in a process of its own. Plain synchronous code; callable from a script with `run`. |
+| join (`Latest`) | How a module with several simultaneous inputs gets one call: a trigger input starts it, the newest of each other input comes along, age judged in message time. |
 | host / worker | A host runs one module instance per key. A worker is a process that runs hosts. |
 | pipeline | The declaration: an app's sources and modules. |
 | run | One running pipeline under one key: a source set, a router over it, and the latest message of each class. |
@@ -170,7 +171,7 @@ app/server-python          the web API of each app, and the server
 
 Each depends only on those above it. A module imports the core and the models
 and nothing else (not another module), and so do the sources, so
-a worker imports models, core, the modules and the wiring, from any working
+a worker imports models, core and the module projects, from any working
 directory. An app's web API loads its pipeline file (`Pipeline.load`), which
 names its modules by entry point, and imports its results and commands from
 `pswamp_models`.
@@ -270,12 +271,76 @@ class FrameStatsModule(Module):
     def process(self, frame: PmuFrame) -> FrameStats | None: ...
 ```
 
-It reads its inputs in one of three styles: one input and `process`; several
-independent ones, each with an `@on(Model)` handler; or named inputs that a
-join (`Latest(trigger=..., max_age=..., missing=...)`) combines into one
-`process(*, name=...)` call. A handler returns a body (wrapped in the declared
-envelope), any other declared output as it is, a list, or `None`. The same
-module runs from a script: `FrameStatsModule().run_one(frame)`.
+A module reads its inputs in one of three styles, all on the same base class:
+
+```python
+# 1. One input: the common case. `process` is the handler.
+class FrameStatsModule(Module):
+    name = "frame-stats"
+    inputs = (PmuFrame,)
+    outputs = (FrameStatsResult,)
+    def process(self, frame: PmuFrame) -> FrameStats | None: ...
+
+# 2. Several independent inputs: one handler each; the module keeps any state.
+class Monitor(Module):
+    inputs = (PmuFrame, AlarmEvent)
+    outputs = (MonitorResult,)
+    @on(PmuFrame)
+    def on_frame(self, frame): ...
+    @on(AlarmEvent)
+    def on_alarm(self, alarm): ...
+
+# 3. Simultaneous inputs: named, and combined by a join into one call.
+class SecurityMargin(Module):
+    name = "security-margin"
+    inputs = {"pmu": PmuFrame, "scada": ScadaSnapshot, "se": StateEstimate}
+    join = Latest(trigger="se",                         # one call per StateEstimate
+                  max_age={"pmu": 1.0, "scada": 10.0},  # seconds, in message time
+                  missing="skip")                       # or "none": pass None for a missing or stale input
+    outputs = (MarginResult,)
+    def process(self, *, pmu: PmuFrame, scada: ScadaSnapshot, se: StateEstimate) -> Margin: ...
+```
+
+(Style 3 is illustrative: there is no SCADA or state-estimation producer in
+`pswamp_models` yet. `core/tests/test_modules.py` and `test_inputs.py` exercise
+it with stand-in messages, and `doc/module-cookbook.md` spells one out.)
+
+**The join** (`Latest`, `core/src/pswamp_core/inputs.py`) keeps the newest
+message of each non-trigger input. Each trigger message builds one bundle, one
+keyword per input, for one call of `process`. **Age is message time, not wall
+time**: an input is stale when the trigger's `timestamp` is more than its
+`max_age` seconds after its own, so a replay behaves exactly like the live feed
+it recorded. What a stale or never-seen input does is `missing`: `"skip"` drops
+the call, `"none"` passes `None`. In a host, only the trigger input has a
+queue (and an overflow policy); the other inputs just replace the newest of
+their kind, so a 50 Hz PMU stream cannot back up behind a slow state
+estimator. A script bypasses the join and passes the bundle by name.
+
+**What `process` returns** is a result *body* (wrapped in the declared
+`ResultEnvelope[T]` whose `T` it is, so `FrameStats` becomes `FrameStatsResult`
+exactly as on the wire), any other declared output as it is (an envelope built by
+hand, a command for another part of the pipeline), a list of these, or `None`.
+A class that is not in `outputs` is an error, so there is no `emit()`: a command
+a module sends is just one more declared output.
+
+**The same code is called two ways.** The base class provides both:
+
+```python
+stats = FrameStatsModule()
+stats.run_one(frame).result.mean_frequency_hz     # synchronous: a script, a test
+stats.run(frame)                                  # the list a host would publish
+stats.run_command(AutoPauseCommand(enabled=True)) # a command, likewise
+margin.run(pmu=f, scada=s, se=e)                  # a joined module: the bundle by name
+
+await stats.arun(frame)                           # what a ModuleHost calls, one message
+await stats.arun_command(command)                 # (in a thread when blocking = True)
+```
+
+`run` returns exactly what the host would publish, so a test that passes sees
+the wire. A module whose answer must await (reading history, say) overrides
+`ahandle`; `run_command` then drives it on a private event loop and refuses to
+do so from inside a running one. Setting `blocking = True` runs the module's code
+in a thread, off the event loop, for a CPU-heavy analysis.
 
 A module that answers commands lists their concrete classes in `commands`
 and implements `handle` (or `async def ahandle`, when the answer must await),
@@ -350,6 +415,17 @@ sources.switch("live")                            # only an explicit switch chan
 stream = await sources.consume(start=t0)          # a seek
 chunk = await sources.consume(start=t0, end=t1)   # exactly [t0, t1)
 ```
+
+**Sources run in-process, not as hosted modules.** A source has no inputs and
+produces frames, which makes it look like a module with `inputs = ()` that a
+worker could host on the transport like any other. It is not run that way: the
+run's router reads the active source directly, in the server or the worker that
+owns the run. A source's frames are paced for a person watching, per client, and
+switched and sought on command; as a transport-hosted module that would put
+every frame on a second hop, give a second pacing layer a second clock, and turn
+a seek into a round trip. What sources share with modules is the project shape,
+the entry point and the way a script calls them. (This was decided against a
+uniform, worker-hosted design: `doc/adr/005-workspace-models-modules-cli.md`.)
 
 *Why.* A source is written against the contract alone, so a deployment can
 write its own outside this repo (`uv run pswamp new module <slug> <label> --source

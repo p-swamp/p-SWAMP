@@ -9,8 +9,8 @@ It goes in two parts, then recipes:
 1. **The module**: the server side. Write the analysis and test it, without
    the pipeline running.
 2. **The frontend**: the web API and the page that show the module's results.
-3. **Further recipes**: commands, chaining, batch queries, a worker of its
-   own, scaling, data sources.
+3. **Further recipes**: commands, chaining, several inputs, batch queries, a
+   worker of its own, scaling, data sources and adding to a pipeline.
 
 The examples come from two apps:
 - **`peak-frequency`**: what the generator writes below. One module, one page.
@@ -106,7 +106,8 @@ class PeakFrequencyModule(Module):
   `@on(B)` handler each, or named inputs combined by a join,
   `inputs = {"pmu": PmuFrame, "se": StateEstimate}` with
   `join = Latest(trigger="se", max_age={"pmu": 1.0})` and
-  `def process(self, *, pmu, se)`. See `core/src/pswamp_core/modules.py`.
+  `def process(self, *, pmu, se)`. See "Read several inputs", below, and
+  `core/src/pswamp_core/modules.py`.
 
 - The layout is in `frame.header`. A module that derives something from it
   (column indexes) re-derives it when `frame.header.header_id` changes; the
@@ -127,7 +128,7 @@ This runs the module's own `tests/` and nothing else, with the server's pytest
 config. `uv run python modules/peak-frequency/examples/run_peak_frequency.py`
 runs it from a plain script.
 
-Three levels, bottom up. The generated `tests/test_module.py` has the first
+Three levels, bottom up. The generated `tests/test_peak_frequency_module.py` has the first
 two:
 
 1. **The analysis**: call the function with plain values.
@@ -147,7 +148,7 @@ two:
 
    A module with state, or one that sends a command, is driven the same way:
    `run` and `run_command` in the order under test, checking every output.
-   `excursion/tests/test_module.py` does.
+   `modules/excursion/tests/test_excursion_module.py` does.
 
 3. **The module, hosted**: a `ModuleHost` over an `InMemoryTransport`. Publish
    a frame on the input topic and read the result off the output topic. There
@@ -180,6 +181,34 @@ two:
 For more, see the streamer's tests, in each module project: a chained module
 (`modules/excursion/tests/`), a batch query (`modules/range-summary/tests/`),
 and the sources (`modules/sample-replay/tests/` and the others).
+
+### Run it from a script
+
+A module is plain synchronous code, so a script needs no server, no transport and
+no event loop. The canonical example is
+`modules/sample-replay/examples/replay_stats.py`: it replays the sample
+recording through `frame-stats` and plots the mean frequency.
+
+```python
+from pswamp_modules.frame_stats import FrameStatsModule
+from pswamp_modules.sample_replay import SampleReplay
+
+stats = FrameStatsModule()
+results = [stats.run_one(frame).result for frame in SampleReplay().read()]
+plt.plot([r.mean_frequency_hz for r in results]); plt.show()
+```
+
+```
+uv run --package pswamp-sample-replay --extra examples python modules/sample-replay/examples/replay_stats.py
+uv run --package pswamp-sample-replay --extra examples python modules/sample-replay/examples/replay_stats.py --save fs.png
+```
+
+(`--extra examples` brings matplotlib and the frame-stats module, which the
+source itself does not need.) `SampleReplay().read()` is an iterator of
+`PmuFrame`s; `run_one` is `run` for the common single-output case, and returns
+the envelope the host would publish, so `.result` is the body. The generated
+`modules/peak-frequency/examples/run_peak_frequency.py` is the same shape for
+your module. If a module cannot be driven like this, it is doing too much.
 
 ### Its pipeline file, and its sources
 
@@ -457,6 +486,77 @@ So the streamer's data runs frame → frame stats → excursion.
 - **Each link is a hop over the transport**, so a chained module sees an
   instant a little later than the module before it.
 
+### Read several inputs
+
+A module that needs more than one kind of message picks one of two styles.
+
+**Independent inputs**: each message is handled on its own, and the module keeps
+whatever state it needs between them.
+
+```python
+class Monitor(Module):
+    name = "monitor"
+    inputs = (PmuFrame, AlarmEvent)         # two classes, so each needs a handler
+    outputs = (MonitorResult,)
+
+    @on(PmuFrame)
+    def on_frame(self, frame: PmuFrame) -> Reading | None: ...
+
+    @on(AlarmEvent)
+    def on_alarm(self, alarm: AlarmEvent) -> None: ...
+```
+
+**Simultaneous inputs**: the inputs are named, and a **join** combines them into
+one call. `Latest` makes one call per message of the trigger input, with the
+newest message of each other input beside it. This is illustrative, since there
+is no SCADA or state-estimation producer in `pswamp_models` yet (the two are
+stand-in messages; `PmuFrame` is real):
+
+```python
+class ScadaSnapshot(DataModel):          # a stand-in: a real one lives in pswamp_models/<producer>/
+    version: Literal["v1"] = "v1"
+    breakers_open: int
+
+class StateEstimate(DataModel):
+    version: Literal["v1"] = "v1"
+    voltage_kv: float
+
+class Margin(BaseModel):
+    margin_kv: float
+    breakers_open: int
+
+class MarginResult(ResultEnvelope[Margin]):
+    version: Literal["v1"] = "v1"
+
+class SecurityMargin(Module):
+    name = "security-margin"
+    inputs = {"pmu": PmuFrame, "scada": ScadaSnapshot, "se": StateEstimate}
+    join = Latest(trigger="se",                         # one call per StateEstimate
+                  max_age={"pmu": 1.0, "scada": 10.0},  # seconds, against the trigger's timestamp
+                  missing="skip")                       # or "none": pass None for a missing or stale input
+    outputs = (MarginResult,)
+
+    def process(self, *, pmu: PmuFrame, scada: ScadaSnapshot, se: StateEstimate) -> Margin:
+        return Margin(margin_kv=se.voltage_kv - 380.0, breakers_open=scada.breakers_open)
+```
+
+From a script or a test, hand the bundle over by name, or feed the messages as a
+host would and let the join decide:
+
+```python
+m = SecurityMargin()
+m.run_one(pmu=frame, scada=scada, se=estimate).result   # the bundle by name: no join
+m.run(frame); m.run(scada)                              # [] and []: only the trigger makes a call
+m.run(estimate)                                         # the join: [MarginResult], or [] if an input is stale
+```
+
+- **Age is message time**, not wall time, so a replay behaves like the live feed
+  it recorded. An input newer than the trigger counts as fresh.
+- **Only the trigger is queued** in a host; the other inputs just replace the
+  newest of their kind. A fast stream cannot back up behind a slow trigger.
+- Every input class needs a producer in the pipeline, or `Pipeline.load`
+  refuses it (`uv run pswamp pipelines validate`).
+
 ### Read data yourself: a batch query
 
 A module that sets `reads_sources = True` gets `self.sources` (a `SourceSet`
@@ -579,6 +679,9 @@ module in that process.
 
 ### Plug in a data source
 
+A source is a module of its own kind: a `SourceModule`, a project in
+`modules/`, found by its entry point.
+
 - **Your own store, over HTTP:** implement
   `doc/remote-data-integration-contract.md` and name `remote-history` in
   `<APP>_SOURCES` (`remote:remote-history`) with `REMOTE_URL`. Nothing in this
@@ -587,15 +690,63 @@ module in that process.
   [--playable]` writes the project (`modules/my-recording/`: a `SourceModule`
   yielding synthetic frames, its entry point, a README, tests that run
   `pswamp_core.testing.SourceConformance`, and an `examples/` script reading it
-  with a plain `for frame in source.read()`) and a pipeline file that names it
-  in `[[sources]]`. Replace the synthetic data with a read of yours:
-  `kind = "history"` or `"live"`, `read` (or `aread` when the data is
-  asynchronous), `coverage` for a history, `env_settings` for what a deployment
-  sets (`{SOURCE}_{SETTING}`). `--playable` adds the `Playable` mixin, so a
-  history is replayed paced, seekable and looping in a run; a live source is
-  not playable. Put the package in the image and name its entry point in the
-  pipeline file's `[[sources]]` (or `<APP>_SOURCES`). `modules/sample-replay/`
-  and `modules/live-synthetic/` are the worked examples.
+  with a plain `for frame in source.read()`) and a pipeline file,
+  `pipelines/my-recording.toml`, that names it in `[[sources]]`. Replace the
+  synthetic data with a read of yours:
+
+  ```python
+  class MyRecording(Playable, SourceModule):      # drop Playable for a live source
+      name = "my-recording"
+      kind = "history"                            # or "live"
+      outputs = (PmuFrame,)
+      env_settings = (EnvSetting("PATH", "The file to serve", kind="path"),)   # {SOURCE}_PATH
+
+      def coverage(self) -> TimeRange:            # a history says what it holds: [first, end)
+          return self.recording.coverage
+
+      def read(self, start=None, end=None):       # plain code; or `async def aread` when the data is async
+          for frame in self.recording.frames:
+              if TimeRange(start, end).contains(frame.timestamp):
+                  yield frame
+  ```
+
+  Write `read` **or** `aread`; the base derives the other, so a script iterates
+  `source.read()` and the host awaits `aread`. A history says what it holds in
+  `coverage`. `--playable` adds the `Playable` mixin, so a history is replayed
+  paced, seekable and looping in a run (play, pause, step, seek, speed); a live
+  source is not playable and a run simply follows it. Set `blocking = True` on a
+  source that waits on a file or a socket. `modules/sample-replay/` (history,
+  playable) and `modules/live-synthetic/` (live) are the worked examples.
+- **Using it:** it is installed with the workspace (`uv sync`), and a pipeline
+  names it, by entry point, in its `[[sources]]`, or `<APP>_SOURCES` replaces the
+  list at run time (`PMU_TEST_STREAMER_SOURCES=sample:sample-replay,mine:my-recording`).
+  Each source reads its own `{NAME}_{SETTING}` variables (`MINE_PATH` for the
+  source named `mine`). Run **one source at a time** per run: the page's
+  `SwitchSourceCommand` selects it.
+
+### Add it to a pipeline
+
+A pipeline is the file `pipelines/<app>.toml`. To add a module to an existing app,
+install the project (it is a workspace member, so it already is) and list its
+entry-point name:
+
+```toml
+# pipelines/pmu-test-streamer.toml
+app = "pmu-test-streamer"
+modules = ["frame-stats", "excursion", "range-summary", "peak-frequency"]   # + the new one
+
+[[sources]]
+name = "sample"
+module = "sample-replay"
+```
+
+Then `uv run pswamp pipelines validate`. It loads the file as the server and the
+workers do, and refuses the mistakes that would only surface at run time: a name
+that is not installed, a class two modules both publish, a command nothing
+takes, a class a module reads that nothing produces. Add the module to the
+worker's `PSWAMP_WORKER_MODULES` if a worker should host it, and to the app's
+dependencies (`app/server-python/pyproject.toml`) if the server loads the
+project. `uv run pswamp modules list` shows every name a file can use.
 
 ## When it does not work
 
