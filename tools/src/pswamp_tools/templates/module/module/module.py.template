@@ -5,6 +5,11 @@ frame. It is a plain function, ``highest_frequency``; ``process`` only adapts a
 frame to it and its answer to a result. Replace the function and the
 ``__NAME__Body`` it fills (in ``pswamp_models.__PKG__``) with yours, keeping
 that split.
+
+``process`` is plain synchronous code returning the body; the base class wraps
+it in ``__NAME__Result``. The same module runs hosted, or from a script::
+
+    __NAME__Module().run_one(frame).result
 """
 
 from pswamp_core.modules import Module
@@ -26,10 +31,10 @@ def highest_frequency(stations: list[str], frequencies: list[float | None]) -> t
 
 class __NAME__Module(Module):
     name = "__SLUG__"
-    input_model = PmuFrame
-    output_model = __NAME__Result
+    inputs = (PmuFrame,)
+    outputs = (__NAME__Result,)
 
-    async def process(self, frame: PmuFrame) -> __NAME__Body | None:
+    def process(self, frame: PmuFrame) -> __NAME__Body | None:
         columns = frame.header.columns(measurement="f")
         peak = highest_frequency([frame.header.station[i] for i in columns], [frame.values[i] for i in columns])
         if peak is None:
