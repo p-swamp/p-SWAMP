@@ -19,6 +19,10 @@ HELP_PAGES = [
     ["test", "desktop"],
     ["test", "playwright"],
     ["test", "smoke"],
+    ["modules"],
+    ["modules", "list"],
+    ["pipelines"],
+    ["pipelines", "validate"],
 ]
 
 
@@ -80,3 +84,19 @@ def test_test_module_runs_one_module_project_s_tests(monkeypatch):
         assert tests.endswith("modules/frame-stats/tests") and seen["argv"][-2:] == ["-k", "layout"]
     result = runner.invoke(main.app, ["test", "module", "no-such-module"])
     assert result.exit_code == 2 and "frame-stats" in result.output
+
+
+def test_pipelines_validate_checks_every_pipeline_file_by_default(monkeypatch):
+    seen = {}
+
+    def fake_run(argv, **kwargs):
+        seen["argv"] = argv
+        return 0
+
+    monkeypatch.setattr("pswamp_tools.commands.pipelines.run", fake_run)
+    monkeypatch.setattr("pswamp_tools.commands.pipelines.require_tools", lambda *a, **k: {})
+    result = runner.invoke(main.app, ["pipelines", "validate"])
+    assert result.exit_code == 0, result.output
+    argv = seen["argv"]
+    assert argv[argv.index("pswamp_core.pipeline_config") + 1] == "validate"
+    assert any(arg.replace("\\", "/").endswith("pipelines/pmu-test-streamer.toml") for arg in argv)

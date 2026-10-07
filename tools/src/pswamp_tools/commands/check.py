@@ -11,6 +11,7 @@ import typer
 from .. import _ui, contract
 from .._paths import client_dir, repo_root
 from .._proc import require_tools, run, uv_server
+from .pipelines import pipeline_files, validate_files
 
 # Fully gated: syntax and ruff. `tools` is new with the CLI and starts lint-clean.
 LINTED = ("app", "models", "core", "modules", "legacy", "tools")
@@ -35,6 +36,10 @@ one fails; the command exits non-zero if any did.
   - syntax ...... every .py under app/, models/, core/, modules/, legacy/, tools/, + desktop/src/ (syntax only)
   - ruff check --select F ... pyflakes (real bugs, not style) over app/, models/, core/, modules/, legacy/, tools/,
     with the ruff pinned in app/server-python's dev group
+
+[bold]Pipelines[/bold]
+  - pipelines validate ... every pipelines/*.toml loads: its modules are installed,
+    its sources import, and the pipeline is consistent (`pswamp pipelines validate`)
 
 [bold]Api contract[/bold]
   - doc/api/openapi.json and app/client-web/src/api/schema.ts match the code
@@ -114,6 +119,9 @@ def check(
         # identical linter. --select F is explicit and deliberately narrow.
         ruff = uv_server("--only-group", "dev", "ruff", "check", "--select", "F", *LINTED)
         report.step("ruff check (Python lint)", lambda: run(ruff, cwd=root))
+
+    _ui.section("Pipelines (pipelines/*.toml)")
+    report.step("pipelines validate (pipeline files load)", lambda: validate_files(pipeline_files(root)))
 
     _ui.section("Api contract")
     report.step("api contract (spec matches code)", lambda: contract.generate(check=True))

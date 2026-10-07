@@ -6,13 +6,13 @@ from typing import Literal
 
 from fastapi import APIRouter, FastAPI, WebSocket
 from pydantic import BaseModel, Field
-from shared import connected_pipeline, push_changes, serve_pipeline, transport
+from shared import app_pipeline, connected_pipeline, push_changes, serve_pipeline, transport
 
 from pswamp_core.pipeline import PipelineRegistry, PipelineRun
 from pswamp_models.__PKG__ import __NAME__Result
 from pswamp_models.player import PlayerStatus
 
-from pswamp_modules.pipelines.__PKG__ import PIPELINE
+PIPELINE = app_pipeline("__SLUG__")
 
 REGISTRY: PipelineRegistry[PipelineRun] = PipelineRegistry(
     lambda client_id: PipelineRun(client_id, PIPELINE, transport())

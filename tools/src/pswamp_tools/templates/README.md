@@ -8,8 +8,8 @@ registries. Two sets:
   checked-in reference subapp (`app/server-python/src/reference_subapp/`).
 - `module/`, for `uv run pswamp new module`: a module project over the
   core pipeline, its messages, its pipeline and its web API, a page showing its latest
-  result, and unit tests. The project joins the workspace, the wiring's and the
-  server's dependencies and the lock, and the module is added to the
+  result, and unit tests. The project joins the workspace, the server's
+  dependencies and the lock, and the module and its pipeline file are added to the
   module-worker in compose and k8s. `doc/module-cookbook.md` walks through it.
 
 In each set:
@@ -22,8 +22,8 @@ models (`models/`, pydantic only), where the module, its web API and anyone
 else import it from. The module is a project of its own, `modules/<slug>/`,
 which depends on the core and the models only, so nothing rendered there may
 import from the web backend; only the web API goes into the server. Its
-pipeline goes to the transitional `legacy/pswamp-wiring/`, until pipelines
-become TOML files:
+pipeline is a TOML file in `pipelines/` at the repo root, naming the module by
+its entry point:
 
 - `models/` → `models/src/pswamp_models/<pkg>/`
 - `module-project/` → `modules/<slug>/` (`pyproject.toml` with the
@@ -33,7 +33,7 @@ become TOML files:
 - `module-tests/` → `modules/<slug>/tests/`
 - `module-examples/` → `modules/<slug>/examples/` (a script running the module
   with no server)
-- `pipeline/` → `legacy/pswamp-wiring/src/pswamp_modules/pipelines/`
+- `pipeline/` → `pipelines/` (`<slug>.toml`)
 - `tests/` → `app/server-python/tests/`
 
 A module's `tests/` is not a package, and runs in one pytest session with every

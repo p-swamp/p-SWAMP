@@ -1,42 +1,34 @@
-# pswamp-wiring: TRANSITIONAL. The pipeline declarations and the example data
-# sources that used to sit beside the modules in modules/pswamp_modules/. They
-# are not module code, so they are not in modules/; they live here only until
-# the refactoring replaces them:
+# pswamp-wiring: TRANSITIONAL. The example data sources that used to sit beside
+# the modules in modules/pswamp_modules/. They are not module code, so they are
+# not in modules/; they live here only until the refactoring replaces them:
 #
-#   src/pswamp_modules/pipelines/   -> pipelines/<app>.toml (done: removed), loaded through the
-#                                      pswamp.modules entry points (step 6)
 #   src/pswamp_modules/sources/     -> source modules, modules/sample-replay/ and
 #                                      modules/live-synthetic/ (step 7)
 #
-# Both are portions of the pswamp_modules namespace, so their import paths are
-# unchanged: PSWAMP_WORKER_PIPELINES=pswamp_modules.pipelines.<app>:PIPELINE
-# and <APP>_DATA_CLIENTS=...:pswamp_modules.sources.sample_client:... still work
-# in docker-compose.yml, k8s/ and the server. See README.md.
+# (The pipeline declarations that were here are now data: pipelines/<app>.toml
+# at the repo root.)
+#
+# A portion of the pswamp_modules namespace, so its import path is unchanged:
+# <APP>_DATA_CLIENTS=...:pswamp_modules.sources.sample_client:... and the
+# pipeline files' [[sources]] still name it. See README.md.
 #
 # A member of the uv workspace rooted at the repo root (one uv.lock there). It
-# depends on the core, the models and the modules its pipelines put together.
+# depends on the core and the models only.
 
 [project]
 name = "pswamp-wiring"
 version = "0.1.0"
-description = "Transitional: the pipeline declarations and example data sources, until pipelines become TOML and sources become modules."
+description = "Transitional: the example data sources, until sources become modules."
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
     "pswamp-core",
     "pswamp-models",
-    # The modules the pipelines in src/pswamp_modules/pipelines/ import.
-    "pswamp-frame-stats",
-    "pswamp-excursion",
-    "pswamp-range-summary",
 ]
 
 [tool.uv.sources]
 pswamp-core = { workspace = true }
 pswamp-models = { workspace = true }
-pswamp-frame-stats = { workspace = true }
-pswamp-excursion = { workspace = true }
-pswamp-range-summary = { workspace = true }
 
 [build-system]
 requires = ["uv_build"]
