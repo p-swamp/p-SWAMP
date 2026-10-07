@@ -65,7 +65,7 @@ if TYPE_CHECKING:
 
 __all__ = [
     "CapacityError",
-    "Latest",
+    "NewestByClass",
     "Pipeline",
     "PipelineRegistry",
     "PipelineRun",
@@ -150,7 +150,7 @@ def live_key(source: str) -> str:
     return f"live.{source}"
 
 
-class Latest:
+class NewestByClass:
     """The newest message of each class seen."""
 
     def __init__(self) -> None:
@@ -216,7 +216,7 @@ class PipelineRun:
         self.shared = live_source is not None
         if live_source is not None:
             self.gateway.switch(live_source)
-        self.latest = Latest()
+        self.latest = NewestByClass()
         self.outbox = Outbox(
             transport, app=pipeline.app, key=key, keep_up=KeepUp(), label=f"the server-side publisher for {key}"
         )
