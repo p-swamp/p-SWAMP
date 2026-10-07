@@ -4,7 +4,7 @@
     REMOTE_URL=http://127.0.0.1:8100 uv run python modules/remote-history/examples/read_remote.py
 
 The service speaks the remote data contract (doc/remote-data-integration-contract.md);
-core/examples/remote_data_stub is one to try this against. ``read`` is the
+examples/remote_data_stub, beside this script, is one to try this against. ``read`` is the
 synchronous form: it drives the source's async code on a private event loop.
 """
 

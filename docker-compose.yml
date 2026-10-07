@@ -213,19 +213,19 @@ services:
     cpus: 1.0
     develop: *worker-watch
 
-  # A dummy remote data service (core/examples/remote_data_stub): the sample
-  # recording served over the remote data contract, standing where a
+  # A dummy remote data service (modules/remote-history/examples/remote_data_stub):
+  # the sample recording served over the remote data contract, standing where a
   # deployment's own service in front of its store would. Same image, run
   # from modules/, outside the server's src/ like the workers: the sample
-  # client is an installed package.
+  # source (sample-replay) is an installed package.
   remote-data-stub:
     build: .
     image: p-swamp:latest
     command: ["python", "-m", "remote_data_stub"]
     working_dir: /workspace/p-SWAMP/modules
     environment:
-      PYTHONPATH: "/workspace/p-SWAMP/core/examples"
-      REMOTE_DATA_STUB_CLIENT: "sample:pswamp_modules.sources.sample_client:SampleRecordingClient"
+      PYTHONPATH: "/workspace/p-SWAMP/modules/remote-history/examples"
+      REMOTE_DATA_STUB_SOURCE: "sample:sample-replay"
     healthcheck:
       test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8100/healthz"]
       interval: 5s

@@ -52,8 +52,9 @@ no connection between reads.
 
     uv run python modules/remote-history/examples/read_remote.py --url http://127.0.0.1:8100
 
-The remote data stub (`core/examples/remote_data_stub/`, `python -m remote_data_stub`) is
-a service to try it against.
+The remote data stub (`examples/remote_data_stub/`, `python -m remote_data_stub` with
+`examples/` on the `PYTHONPATH`) is a service to try it against: it serves the records of any
+history source, `sample-replay` by default (`REMOTE_DATA_STUB_SOURCE=name:entry-point`).
 
 ## Tests
 
