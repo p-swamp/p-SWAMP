@@ -7,7 +7,7 @@ registries. Two sets:
 - `subapp/`, for `uv run pswamp new subapp`: a per-client counter, like the
   checked-in reference subapp (`app/server-python/src/reference_subapp/`).
 - `module/`, for `uv run pswamp new module`: a module over the
-  core pipeline, its pipeline and its web API, a page showing its latest
+  core pipeline, its messages, its pipeline and its web API, a page showing its latest
   result, and unit tests. It is also added to the module-worker in compose and
   k8s. `doc/module-cookbook.md` walks through it.
 
@@ -16,10 +16,13 @@ In each set:
 - `server-python/` → `app/server-python/src/<pkg>/`
 - `client-web/` → `app/client-web/src/pages/<slug>/`
 
-The module set has four more folders. The module, its tests and its pipeline
-go to `modules/`, which depends on the core only, so nothing rendered there may
+The module set has five more folders. What the module publishes goes to the
+models (`models/`, pydantic only), where the module, its web API and anyone
+else import it from. The module, its tests and its pipeline go to `modules/`,
+which depends on the core and the models only, so nothing rendered there may
 import from the web backend; only the web API goes into the server:
 
+- `models/` → `models/src/pswamp_models/<pkg>/`
 - `module/` → `modules/pswamp_modules/<pkg>/`
 - `module-tests/` → `modules/pswamp_modules/<pkg>/tests/`
 - `pipeline/` → `modules/pswamp_modules/pipelines/`

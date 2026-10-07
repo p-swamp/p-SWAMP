@@ -1,0 +1,18 @@
+"""``__NAME__Result``: the __LABEL__ module's result, one per frame."""
+
+from typing import Literal
+
+from pydantic import BaseModel, Field
+
+from ..common import ResultEnvelope
+
+__all__ = ["__NAME__Body", "__NAME__Result"]
+
+
+class __NAME__Body(BaseModel):
+    station: str = Field(description="The station with the highest frequency in the frame.")
+    frequency_hz: float = Field(description="Its frequency, in Hz.")
+
+
+class __NAME__Result(ResultEnvelope[__NAME__Body]):
+    version: Literal["v1"] = "v1"
