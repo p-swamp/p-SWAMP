@@ -15,8 +15,8 @@ It goes in two parts, then recipes:
 The examples come from two apps:
 - **`peak-frequency`**: what the generator writes below. One module, one page.
 - **The PMU test streamer** (the projects `modules/frame-stats/`,
-  `modules/excursion/` and `modules/range-summary/`, its pipeline
-  `pipelines/pmu_test_streamer.py` in the transitional
+  `modules/excursion/` and `modules/range-summary/`, its pipeline file
+  `pipelines/pmu-test-streamer.toml`, its sources in the transitional
   `legacy/pswamp-wiring/src/pswamp_modules/`; its web API in
   `app/server-python/src/pmu_test_streamer/`): the reference
   example, with three modules. `FrameStatsModule` computes each
@@ -43,10 +43,11 @@ The module, a project of its own in `modules/peak-frequency/`. Part 1 is about t
 | `modules/peak-frequency/src/pswamp_modules/peak_frequency/module.py` | the module: what it reads, what it publishes, `process`. Its analysis is a placeholder: the station with the highest frequency |
 | `modules/peak-frequency/tests/test_peak_frequency_module.py` | the module's tests |
 | `modules/peak-frequency/examples/run_peak_frequency.py` | the module run from a plain script, no server |
-| `legacy/pswamp-wiring/src/pswamp_modules/pipelines/peak_frequency.py` | the pipeline: the app's name, its sources, its modules (transitional, until pipelines become TOML) |
+| `pipelines/peak-frequency.toml` | the pipeline file: the app's name, its modules (by entry-point name), its sources |
 
 The project joins the workspace by itself (`"modules/*"`), becomes a
-dependency of the wiring and the server, and the generator re-locks (`uv lock`).
+dependency of the server (so its entry point is installed where the pipeline
+file is loaded), and the generator re-locks (`uv lock`).
 
 A starting frontend, in `app/`:
 
@@ -180,18 +181,32 @@ For more, see the streamer's tests, in each module project: a chained module
 (`modules/excursion/tests/`), a batch query (`modules/range-summary/tests/`),
 and the sources (`legacy/pswamp-wiring/tests/`).
 
-### Choose its sources
+### Its pipeline file, and its sources
 
-`pswamp_modules/pipelines/peak_frequency.py` (in `legacy/pswamp-wiring/src/`) names them in
-`<APP>_DATA_CLIENTS`, with a default:
+`pipelines/peak-frequency.toml` is the app's pipeline, as data. It names the
+modules by their entry-point names (`uv run pswamp modules list` shows what is
+installed) and the sources, the first being the one a run starts on:
 
-```python
-DEFAULT_DATA_CLIENTS = "live:pswamp_modules.sources.live_client:LiveSyntheticClient"
+```toml
+app = "peak-frequency"
+modules = ["peak-frequency"]
+
+[[sources]]
+name = "live"
+client = "pswamp_modules.sources.live_client:LiveSyntheticClient"
 ```
+
+`PEAK_FREQUENCY_DATA_CLIENTS` (`name:module.path:Class,...`), when set,
+replaces the `[[sources]]` list, and each client reads its own
+`{NAME}_{SETTING}` variables. An `[enrich]` table with `cim_reference = "..."`
+sets a CIM reference on every frame (the streamer's file has one).
+`uv run pswamp pipelines validate` loads the file as the server does and says
+what is wrong with it: a module that is not installed, or one that reads a
+class nothing in the pipeline produces.
 
 - A **live** source is shared: one run, one module instance, results for
   everyone.
-- A **recording** (`sample:pswamp_modules.sources.sample_client:SampleRecordingClient`)
+- A **recording** (`pswamp_modules.sources.sample_client:SampleRecordingClient`)
   gets a run per client, starting paused, so its page needs the player's
   controls (part 2).
 
@@ -200,7 +215,7 @@ DEFAULT_DATA_CLIENTS = "live:pswamp_modules.sources.live_client:LiveSyntheticCli
 Restart `uv run pswamp dev server` (a new package
 needs a rebuild) and open `http://127.0.0.1:8000/peak-frequency`, the
 generated page as built into the image. Results arrive at once, from the one
-shared live run. From then on, a saved edit under `modules/` (or `legacy/`)
+shared live run. From then on, a saved edit under `modules/`, `pipelines/` (or `legacy/`)
 reloads the server and restarts the workers.
 
 - **Logs.** The host logs `hosting peak-frequency for peak-frequency: reads
@@ -421,8 +436,11 @@ class ExcursionModule(Module):
     def process(self, stats: FrameStatsResult) -> Excursion | list | None:
         mean = stats.result.mean_frequency_hz
         ...
+```
 
-PIPELINE = Pipeline(APP, gateway, modules=(FrameStatsModule, ExcursionModule, ...))
+```toml
+# pipelines/pmu-test-streamer.toml
+modules = ["frame-stats", "excursion", "range-summary"]
 ```
 
 So the streamer's data runs frame → frame stats → excursion.
@@ -456,8 +474,8 @@ the clients that names (`REMOTE_URL`, ...), since it builds the gateway itself.
 ### Run it in its own worker
 
 A worker is the server's image running `python -m pswamp_core.worker`. It
-hosts the modules named in `PSWAMP_WORKER_MODULES`, from the pipelines named
-in `PSWAMP_WORKER_PIPELINES`. The generator put `peak-frequency` in the shared
+hosts the modules named in `PSWAMP_WORKER_MODULES`, from the pipeline files named
+in `PSWAMP_WORKER_PIPELINES` (relative to its working directory, `pipelines/`). The generator put `peak-frequency` in the shared
 `module-worker`, beside the streamer's modules. To give it a process of its
 own:
 
@@ -468,10 +486,10 @@ own:
     build: .
     image: p-swamp:latest
     command: ["python", "-m", "pswamp_core.worker"]
-    working_dir: /workspace/p-SWAMP/modules      # outside the server's src/
+    working_dir: /workspace/p-SWAMP/pipelines    # outside the server's src/; the pipeline files are here
     environment:
       <<: *transport
-      PSWAMP_WORKER_PIPELINES: "pswamp_modules.pipelines.peak_frequency:PIPELINE"
+      PSWAMP_WORKER_PIPELINES: "peak-frequency.toml"
       PSWAMP_WORKER_MODULES: "peak-frequency"
     depends_on:
       kafka:
@@ -493,7 +511,7 @@ same two variables:
             - name: KAFKA_BOOTSTRAP_SERVERS
               value: p-swamp-kafka:9092
             - name: PSWAMP_WORKER_PIPELINES
-              value: pswamp_modules.pipelines.peak_frequency:PIPELINE
+              value: peak-frequency.toml
             - name: PSWAMP_WORKER_MODULES
               value: peak-frequency
           resources:
@@ -566,7 +584,7 @@ module in that process.
 - **In Python:** subclass `DataClient` (`kind = "history"` or `"live"`,
   `coverage`, `consume`, `env_settings`), prove it with
   `pswamp_core.testing.DataClientConformance`, put the package in the image,
-  and name it in `<APP>_DATA_CLIENTS`. `sample_client.py` and `live_client.py`
+  and name it in the pipeline file's `[[sources]]` (or `<APP>_DATA_CLIENTS`). `sample_client.py` and `live_client.py`
   in `legacy/pswamp-wiring/src/pswamp_modules/sources/` are the examples.
 
 ## When it does not work
@@ -578,5 +596,5 @@ module in that process.
 | A result field never reaches the page | The contract is stale: run `uv run pswamp api generate`. |
 | A POST answers 404 | The page's socket is not open: a command never builds a run. |
 | A module command does nothing | It was refused where the module runs: see the tray, or the worker's log. |
-| The worker exits with code 2 | No broker (`PSWAMP_TRANSPORT` unset: the server hosts modules then), or nothing to host. |
+| The worker exits with code 2 | No broker (`PSWAMP_TRANSPORT` unset: the server hosts modules then), a pipeline file it cannot load (it says why; `uv run pswamp pipelines validate`), or nothing to host. |
 | Tests or builds fail oddly | Docker's disk is full: `docker system df`. |

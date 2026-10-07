@@ -29,7 +29,8 @@ modules/<name>/
   imports the web backend or the desktop package. Its messages live in
   `pswamp_models.<pkg>`, never in the module.
 - **`pswamp-core` imports nothing from here.**
-- **A module folder holds only module code.** The pipelines and the example
+- **A module folder holds only module code.** The pipelines are files in
+  `pipelines/<app>.toml` at the repo root, naming modules by entry point; the example
   sources are in the transitional `legacy/pswamp-wiring/` until they are
   replaced.
 

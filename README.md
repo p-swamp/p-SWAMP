@@ -11,7 +11,8 @@ The repository holds two implementations side by side:
 | [`models/`](models/) | `pswamp-models`, every message of the server data architecture, one package per producer. |
 | [`core/`](core/) | `pswamp-core`, the server data architecture: transport, modules, gateway, player, pipelines. |
 | [`modules/`](modules/) | The analysis modules, one Python project each (`modules/<name>/`, `pswamp-<name>`). |
-| [`legacy/pswamp-wiring/`](legacy/pswamp-wiring/) | Transitional: the pipelines and example data sources, until they become TOML and modules. |
+| [`pipelines/`](pipelines/) | One pipeline file per app (`<app>.toml`): its modules, its sources, its enrichment. `uv run pswamp pipelines validate` checks them. |
+| [`legacy/pswamp-wiring/`](legacy/pswamp-wiring/) | Transitional: the example data sources, until they become modules. |
 | [`doc/`](doc/) | Documentation for the client-server stack. Start with [`doc/client-server-rig.md`](doc/client-server-rig.md). |
 
 `models/`, `core/`, `modules/`, `tools/` and `app/server-python/` form one uv workspace with a single

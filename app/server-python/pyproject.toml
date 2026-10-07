@@ -23,7 +23,8 @@ dependencies = [
     "pswamp-frame-stats",
     "pswamp-excursion",
     "pswamp-range-summary",
-    # Transitional: the pipelines and the example sources (legacy/pswamp-wiring/).
+    # Transitional: the example sources (legacy/pswamp-wiring/), which the
+    # pipeline files (pipelines/<app>.toml) name.
     "pswamp-wiring",
     # The message models (models/): the server imports them directly.
     "pswamp-models",

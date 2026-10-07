@@ -5,7 +5,8 @@
 #   models/              pswamp-models    every message, one package per producer (pydantic only)
 #   core/                pswamp-core      the server data architecture
 #   modules/<name>/      pswamp-<name>    one project per analysis module, over the core
-#   legacy/pswamp-wiring pswamp-wiring    TRANSITIONAL: the pipelines and example sources
+#   legacy/pswamp-wiring pswamp-wiring    TRANSITIONAL: the example sources
+#   pipelines/           (not a project)  one pipeline file per app, pipelines/<app>.toml
 #   tools/               pswamp-tools     the `pswamp` repo CLI (`uv run pswamp --help`)
 #   app/server-python/   pswamp-server    the web backend, over all of them
 #
