@@ -20,8 +20,7 @@ app = typer.Typer(
 )
 
 # The workspace members' manifests: the fixed ones, plus every module project
-# (modules/*/, one per module) and the transitional wiring (legacy/*/), found by
-# glob so a new module needs no edit here.
+# (modules/*/, one per module), found by glob so a new module needs no edit here.
 FIXED_MEMBERS = [
     "pyproject.toml",
     "app/server-python/pyproject.toml",
@@ -29,7 +28,7 @@ FIXED_MEMBERS = [
     "core/pyproject.toml",
     "tools/pyproject.toml",
 ]
-MEMBER_GLOBS = ("modules/*/pyproject.toml", "legacy/*/pyproject.toml")
+MEMBER_GLOBS = ("modules/*/pyproject.toml",)
 
 
 def workspace_manifests(root: Path) -> list[str]:
@@ -187,12 +186,12 @@ def update(
         lambda: run(["uv", "lock", "--upgrade", "--project", "desktop"], cwd=root),
     )
 
-    _ui.section("Workspace (root uv.lock: models, core, modules/*, legacy/*, tools, app/server-python)")
+    _ui.section("Workspace (root uv.lock: models, core, modules/*, tools, app/server-python)")
     report.step("uv lock --upgrade (workspace: re-resolve uv.lock)", lambda: run(["uv", "lock", "--upgrade"], cwd=root))
 
     _ui.section("Held back by a version range (needs a hand edit)")
     _held_back("Desktop (desktop/pyproject.toml)", "--project", "desktop")
-    _held_back("Workspace (models, core, modules/*, legacy/*, tools, app/server-python)")
+    _held_back("Workspace (models, core, modules/*, tools, app/server-python)")
     # npm has no such gap (ncu rewrote the ranges), but a peer conflict can
     # still pin something below latest. `npm outdated` exits 1 for having output.
     _ui.console.print("\nWeb client (npm outdated — peer-dependency holdbacks):", markup=False)

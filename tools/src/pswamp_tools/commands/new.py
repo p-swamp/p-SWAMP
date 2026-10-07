@@ -42,7 +42,7 @@ def _generate(slug: str, label: str, template_set: str, no_check: bool) -> None:
     _ui.info("app/client-web/src/api/schema.ts along with the new app.")
 
     # A module is a new workspace member (modules/*) and a new dependency of the
-    # wiring and the server, so the one uv.lock must learn of it before anything
+    # server, so the one uv.lock must learn of it before anything
     # runs `uv run` (which would re-lock implicitly) or `uv lock --check`.
     if template_set == "module":
         _ui.section("Re-lock the workspace (uv lock)")
@@ -103,9 +103,9 @@ def module(
     The module is a project of its own, modules/<slug>/ (pyproject.toml with
     its `pswamp.modules` entry point, README.md, src/pswamp_modules/<pkg>/,
     tests/); its messages go to models/src/pswamp_models/<pkg>/ and its
-    pipeline to the transitional legacy/pswamp-wiring/; the web api to
+    pipeline to pipelines/<slug>.toml; the web api to
     app/server-python/src/<pkg>/ and the page to app/client-web/src/pages/<slug>/.
-    The project becomes a dependency of the wiring and the server, the
+    The project becomes a dependency of the server, the
     workspace is re-locked (`uv lock`), and the module is added to the
     module-worker in docker-compose.yml and k8s/p-swamp-local.yaml.
     doc/module-cookbook.md walks through every file; `pswamp check-generators`

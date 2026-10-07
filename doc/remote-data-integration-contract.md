@@ -1,6 +1,6 @@
 # Remote data integration contract
 
-**Status:** preliminary. It is implemented by `RemoteDataClient` and the stub
+**Status:** preliminary. It is implemented by the `RemoteHistory` source and the stub
 in this repo. Security, limits and schema governance are still open (see
 "Not settled yet").
 
@@ -21,7 +21,7 @@ The connection that asks is the one that answers. Closing it cancels the
 query. p-SWAMP never sees the store, its schema or its location.
 
 ```text
-p-SWAMP (RemoteDataClient)                 deployment
+p-SWAMP (RemoteHistory)                    deployment
    |  GET  /v1/coverage?model=pmu.frame        |
    |  POST /v1/queries                         |
    +------------------------------------------>| remote data service ──> any store
@@ -30,10 +30,12 @@ p-SWAMP (RemoteDataClient)                 deployment
 ```
 
 In this repo:
-- the client: `core/src/pswamp_core/datagateway/clients/remote_data.py`;
+- the client, a playable history source (`remote-history`):
+  `modules/remote-history/src/pswamp_modules/remote_history/source.py`;
 - the request and line models: `models/src/pswamp_models/remote_data/`;
-- a stub service: `core/examples/remote_data_stub/`, serving the streamer's
-  sample recording.
+- a stub service: `modules/remote-history/examples/remote_data_stub/`, serving
+  the streamer's sample recording (any history source, by
+  `REMOTE_DATA_STUB_SOURCE`).
 
 ## Data
 
@@ -123,14 +125,14 @@ between does not buffer the stream into one blob.
 - `values` has one entry per header column; `null` where there is no value.
 - `mRID` identifies the stream.
 - The header rides in every record. Leave `cimReferenceId` out: p-SWAMP's
-  gateway sets it.
+  source set sets it.
 - The authoritative schema is `PmuFrame` in the api contract
   (`doc/api/openapi.json`, `components.schemas`).
 
 ## The client
 
 ```
-PMU_TEST_STREAMER_DATA_CLIENTS=...,remote:pswamp_core.datagateway.clients.remote_data:RemoteDataClient
+PMU_TEST_STREAMER_SOURCES=...,remote:remote-history
 REMOTE_URL=http://remote-data:8100      # required
 REMOTE_TIMEOUT=30                       # seconds; default 30
 ```
@@ -144,21 +146,21 @@ REMOTE_TIMEOUT=30                       # seconds; default 30
 
 ## Checking a service
 
-The conformance suite that every data client passes is the acceptance test.
-Point `RemoteDataClient` at your service and run it:
+The conformance suite that every data source passes is the acceptance test.
+Point `RemoteHistory` at your service and run it:
 
 ```python
-class TestOurService(DataClientConformance):
+class TestOurService(SourceConformance):
     @pytest.fixture
-    def client_under_test(self):
-        return RemoteDataClient("remote", "http://our-service:8100")
+    def source_under_test(self):
+        return RemoteHistory("remote", url="http://our-service:8100")
 
     @pytest.fixture
     def conformance_records(self):
         return [...]    # what the service holds, in order
 ```
 
-`core/tests/test_remote_data.py` does exactly this against the stub.
+`modules/remote-history/tests/` does exactly this against the stub.
 
 ## Not settled yet
 

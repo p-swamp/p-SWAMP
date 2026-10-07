@@ -1,4 +1,4 @@
-"""Configuring components from the environment: settings, specs, data clients."""
+"""Configuring components from the environment: settings and specs."""
 
 from __future__ import annotations
 
@@ -6,9 +6,7 @@ from datetime import timedelta
 from pathlib import Path
 
 import pytest
-from support import ListClient, TickingClient
 
-from pswamp_core.datagateway import clients_from_env, gateway_from_env
 from pswamp_core.settings import Configurable, EnvSetting, MissingSettingError, env_key, parse_specs, read_setting
 
 
@@ -52,15 +50,3 @@ def test_specs_are_name_module_class_triples():
     for bad in ("", "a:b", "a::C"):
         with pytest.raises(MissingSettingError):
             parse_specs("V", bad)
-
-
-def test_clients_come_from_the_variable_or_the_default(monkeypatch):
-    default = "one:support:ListClient,two:support:TickingClient"
-    monkeypatch.delenv("APP_DATA_CLIENTS", raising=False)
-    one, two = clients_from_env("APP_DATA_CLIENTS", default)
-    assert (type(one), one.name, type(two), two.name) == (ListClient, "one", TickingClient, "two")
-    monkeypatch.setenv("APP_DATA_CLIENTS", "only:support:ListClient")
-    assert gateway_from_env("APP_DATA_CLIENTS", default).sources == ["only"]
-    monkeypatch.setenv("APP_DATA_CLIENTS", "x:support:Thing")
-    with pytest.raises(MissingSettingError, match="not a DataClient"):
-        clients_from_env("APP_DATA_CLIENTS", default)

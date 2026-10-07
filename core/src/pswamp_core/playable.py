@@ -10,9 +10,10 @@ A mixin for a ``SourceModule`` of kind ``history``::
         kind = "history"
         ...
 
-It carries the pacing and the controls that ``Player`` gives a run's active
-source today, so the source *is* its own player, and a live source (which does
-not mix it in) simply has no transport controls. The interface a run drives it
+It carries the pacing and the controls of a run's active source, so the source
+*is* its own player, and a live source (which does not mix it in) simply has no
+transport controls. The run's ``ActiveSource`` router (``pswamp_core.active_source``)
+sends the playback commands to it. The interface a run drives it
 by, the same for every playable source:
 
     await source.start(sink, loop=True, sources=["sample", "live"])
@@ -49,10 +50,6 @@ source class using it should not reuse. It needs from its host class what a
 ``SourceModule`` has: ``source``, ``kind``, ``aread``, ``acoverage``, and
 ``_ensure_open``. It reads the source through a ``SourceStream``, so the
 frames are guarded and enriched the same way a ``SourceSet`` does.
-
-(``Player`` in ``player.py`` is the same state machine for the data clients
-still in use; it goes when the run switches to sources, and this is its
-replacement.)
 """
 
 from __future__ import annotations

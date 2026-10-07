@@ -34,8 +34,7 @@ def server(ctx: typer.Context) -> None:
 
     Runs pytest from app/server-python with its config (`-c pyproject.toml`),
     whose `testpaths` names app/server-python/tests, models/tests, core/tests,
-    each module project's tests/ under modules/, the transitional
-    legacy/pswamp-wiring/tests, and tools/tests; a new test_*.py there is picked
+    each module project's tests/ under modules/, and tools/tests; a new test_*.py there is picked
     up with no change here. None of those folders is a package, so a test file
     name must be unique across all of them. One module's tests alone:
     `pswamp test module <name>`.

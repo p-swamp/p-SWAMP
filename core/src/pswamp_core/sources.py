@@ -336,7 +336,6 @@ class SourceStream:
     downstream: a record without a timestamp is dropped, nothing at or past the
     range's end is yielded, every record passes through the enrichers, and
     closing the stream closes the source's iterator. A seek is a new stream.
-    (``DataStream``'s counterpart for sources; that one goes with ``DataClient``.)
     """
 
     def __init__(self, source: SourceModule, time_range: TimeRange, enrichers: Sequence[Enricher] = ()) -> None:
@@ -389,9 +388,8 @@ class SourceSet:
 
     One at a time, and only an explicit switch changes it, so a stream always
     has exactly one source behind it. A source is opened on first use, so one
-    nobody reads costs nothing. The slim successor of ``DataGateway``: same
-    surface (``sources``, ``source``, ``live``, ``kind``, ``switch``,
-    ``coverage``, ``consume``, ``close``), over ``SourceModule`` instances.
+    nobody reads costs nothing. A run holds one (``PipelineRun.sources``), and
+    a module that ``reads_sources`` is given one (``Module.sources``).
 
     Args:
         sources: The instances, in order; the first is active unless ``active``

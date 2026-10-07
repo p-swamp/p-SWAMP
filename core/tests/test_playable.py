@@ -1,6 +1,6 @@
-"""``Playable``: paced replay, the controls, and failures. ``test_player.py``'s
-cases, against a playable source. (What the run decides rather than the source,
-switching to a live feed and the live refusals, stays out.)"""
+"""``Playable``: paced replay, the controls, and failures, against a playable source.
+(What the run decides rather than the source, switching to a live feed and the
+live refusals, is ``test_active_source.py``'s.)"""
 
 from __future__ import annotations
 

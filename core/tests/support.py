@@ -8,7 +8,6 @@ from typing import Literal
 
 from pydantic import BaseModel
 
-from pswamp_core.datagateway import DataClient
 from pswamp_core.playable import Playable
 from pswamp_core.sources import SourceModule
 from pswamp_core.time_range import TimeRange
@@ -99,55 +98,6 @@ def queue(*models, overflow=None, maxsize: int = 64):
     from pswamp_core.subscription import Overflow, Subscription
 
     return Subscription(_NoOwner(), models, overflow or Overflow.GROW, maxsize)
-
-
-class ListClient(DataClient):
-    """A history client over a list of frames."""
-
-    kind = "history"
-
-    def __init__(self, name: str = "list", frames=None) -> None:
-        super().__init__(name)
-        self.frames = list(frames if frames is not None else [frame(i / 20) for i in range(20)])
-        self.opened = self.closed = 0
-
-    async def open(self) -> None:
-        self.opened += 1
-
-    async def close(self) -> None:
-        self.closed += 1
-
-    async def coverage(self) -> TimeRange | None:
-        if not self.frames:
-            return None
-        return TimeRange(self.frames[0].timestamp, self.frames[-1].timestamp + timedelta(seconds=0.05))
-
-    async def consume(self, time_range: TimeRange):
-        for record in self.frames:
-            if time_range.contains(record.timestamp):
-                yield record
-
-
-class TickingClient(DataClient):
-    """A live client: a frame stamped now, every ``interval`` seconds."""
-
-    kind = "live"
-
-    def __init__(self, name: str = "ticker", interval: float = 0.02) -> None:
-        super().__init__(name)
-        self.interval = interval
-        self.opened = 0
-
-    async def open(self) -> None:
-        self.opened += 1
-
-    async def consume(self, time_range: TimeRange):
-        while True:
-            await asyncio.sleep(self.interval)
-            now = utcnow()
-            if time_range.end is not None and now >= time_range.end:
-                return
-            yield frame(0).model_copy(update={"timestamp": now})
 
 
 def install_modules(monkeypatch, **modules: str) -> None:

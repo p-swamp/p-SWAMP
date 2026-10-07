@@ -16,8 +16,8 @@ The examples come from two apps:
 - **`peak-frequency`**: what the generator writes below. One module, one page.
 - **The PMU test streamer** (the projects `modules/frame-stats/`,
   `modules/excursion/` and `modules/range-summary/`, its pipeline file
-  `pipelines/pmu-test-streamer.toml`, its sources in the transitional
-  `legacy/pswamp-wiring/src/pswamp_modules/`; its web API in
+  `pipelines/pmu-test-streamer.toml`, its sources `modules/sample-replay/`,
+  `modules/live-synthetic/` and `modules/remote-history/`; its web API in
   `app/server-python/src/pmu_test_streamer/`): the reference
   example, with three modules. `FrameStatsModule` computes each
   frame's statistics, `ExcursionModule` watches those statistics for the
@@ -179,7 +179,7 @@ two:
 
 For more, see the streamer's tests, in each module project: a chained module
 (`modules/excursion/tests/`), a batch query (`modules/range-summary/tests/`),
-and the sources (`legacy/pswamp-wiring/tests/`).
+and the sources (`modules/sample-replay/tests/` and the others).
 
 ### Its pipeline file, and its sources
 
@@ -193,12 +193,13 @@ modules = ["peak-frequency"]
 
 [[sources]]
 name = "live"
-client = "pswamp_modules.sources.live_client:LiveSyntheticClient"
+module = "live-synthetic"
 ```
 
-`PEAK_FREQUENCY_DATA_CLIENTS` (`name:module.path:Class,...`), when set,
-replaces the `[[sources]]` list, and each client reads its own
-`{NAME}_{SETTING}` variables. An `[enrich]` table with `cim_reference = "..."`
+A source is a module of its own kind (`SourceModule`), named by its entry point.
+`PEAK_FREQUENCY_SOURCES` (`name:entry-point,...`), when set,
+replaces the `[[sources]]` list, and each source reads its own
+`{NAME}_{SETTING}` variables (`LIVE_PATH` for the source named `live`). An `[enrich]` table with `cim_reference = "..."`
 sets a CIM reference on every frame (the streamer's file has one).
 `uv run pswamp pipelines validate` loads the file as the server does and says
 what is wrong with it: a module that is not installed, or one that reads a
@@ -206,7 +207,7 @@ class nothing in the pipeline produces.
 
 - A **live** source is shared: one run, one module instance, results for
   everyone.
-- A **recording** (`pswamp_modules.sources.sample_client:SampleRecordingClient`)
+- A **recording** (`sample-replay`, a `Playable` history source)
   gets a run per client, starting paused, so its page needs the player's
   controls (part 2).
 
@@ -215,7 +216,7 @@ class nothing in the pipeline produces.
 Restart `uv run pswamp dev server` (a new package
 needs a rebuild) and open `http://127.0.0.1:8000/peak-frequency`, the
 generated page as built into the image. Results arrive at once, from the one
-shared live run. From then on, a saved edit under `modules/`, `pipelines/` (or `legacy/`)
+shared live run. From then on, a saved edit under `modules/`, `pipelines/`
 reloads the server and restarts the workers.
 
 - **Logs.** The host logs `hosting peak-frequency for peak-frequency: reads
@@ -282,7 +283,7 @@ class PeakFrequencyState(BaseModel):
 
 
 def state_message(run: PipelineRun) -> PeakFrequencyState:
-    return PeakFrequencyState(player=run.player.status(), result=run.latest.get(PeakFrequencyResult))
+    return PeakFrequencyState(player=run.router.status(), result=run.latest.get(PeakFrequencyResult))
 ```
 
 - To show more, add a field and fill it in `state_message`. Another module's
@@ -458,18 +459,18 @@ So the streamer's data runs frame → frame stats → excursion.
 
 ### Read data yourself: a batch query
 
-A module that sets `reads_gateway = True` gets `self.gateway` (a gateway over
-the pipeline's sources, of its own) before `setup`. It can answer a command by
+A module that sets `reads_sources = True` gets `self.sources` (a `SourceSet`
+over the pipeline's sources, of its own) before `setup`. It can answer a command by
 reading a range:
 
 ```python
-async for frame in await self.gateway.consume(start, end): ...
+async for frame in await self.sources.consume(start, end): ...
 ```
 
 `RangeSummaryModule` is the example: command-only (no `inputs`). Reading the
-gateway awaits, so it answers in `async def ahandle` instead of `handle`. The
-worker hosting it needs the app's `<APP>_DATA_CLIENTS`, and the settings of
-the clients that names (`REMOTE_URL`, ...), since it builds the gateway itself.
+sources awaits, so it answers in `async def ahandle` instead of `handle`. The
+worker hosting it needs the app's `<APP>_SOURCES`, and the settings of
+the sources that names (`REMOTE_URL`, ...), since it builds the set itself.
 
 ### Run it in its own worker
 
@@ -536,8 +537,8 @@ workers is run by both: every result arrives twice.
 k8s/p-swamp-local.yaml`. The image, the module, its web API and its page are
 unchanged. The new worker logs `hosting peak-frequency for peak-frequency: …`.
 
-A module that reads the gateway also needs its sources there: the app's
-`<APP>_DATA_CLIENTS` and the settings of the clients it names. The streamer's
+A module that reads the sources also needs them there: the app's
+`<APP>_SOURCES` and the settings of the sources it names. The streamer's
 `batch-worker`, which hosts `range-summary`, is the example.
 
 ### Scale it
@@ -579,13 +580,16 @@ module in that process.
 ### Plug in a data source
 
 - **Your own store, over HTTP:** implement
-  `doc/remote-data-integration-contract.md` and name `RemoteDataClient` in
-  `<APP>_DATA_CLIENTS` with `REMOTE_URL`. Nothing in this repo changes.
-- **In Python:** subclass `DataClient` (`kind = "history"` or `"live"`,
-  `coverage`, `consume`, `env_settings`), prove it with
-  `pswamp_core.testing.DataClientConformance`, put the package in the image,
-  and name it in the pipeline file's `[[sources]]` (or `<APP>_DATA_CLIENTS`). `sample_client.py` and `live_client.py`
-  in `legacy/pswamp-wiring/src/pswamp_modules/sources/` are the examples.
+  `doc/remote-data-integration-contract.md` and name `remote-history` in
+  `<APP>_SOURCES` (`remote:remote-history`) with `REMOTE_URL`. Nothing in this
+  repo changes.
+- **In Python:** subclass `SourceModule` (`kind = "history"` or `"live"`, `read`
+  or `aread`, `coverage` for a history, `env_settings`; add `Playable` to a
+  history to make it replayable), prove it with
+  `pswamp_core.testing.SourceConformance`, put the package in the image, and
+  name its entry point in the pipeline file's `[[sources]]` (or
+  `<APP>_SOURCES`). `modules/sample-replay/` and `modules/live-synthetic/` are
+  the examples.
 
 ## When it does not work
 

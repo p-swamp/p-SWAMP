@@ -53,8 +53,6 @@ services:
         "/workspace/p-SWAMP/core/src",
         "--reload-dir",
         "/workspace/p-SWAMP/modules",
-        "--reload-dir",
-        "/workspace/p-SWAMP/legacy",
         # The pipeline files are read at import, so an edit to one reloads too.
         "--reload-dir",
         "/workspace/p-SWAMP/pipelines",
@@ -116,16 +114,13 @@ services:
         - path: core/src
           action: sync
           target: /workspace/p-SWAMP/core/src
-        # The module projects (modules/<name>/) and the transitional wiring
-        # (legacy/: the example sources), likewise. Whole folders,
-        # so an edit to any module syncs with no change here; a NEW module
-        # project needs the rebuild that its uv.lock change triggers below.
+        # The module projects (modules/<name>/: modules and sources), likewise.
+        # The whole folder, so an edit to any module syncs with no change
+        # here; a NEW module project needs the rebuild that its uv.lock change
+        # triggers below.
         - path: modules
           action: sync
           target: /workspace/p-SWAMP/modules
-        - path: legacy
-          action: sync
-          target: /workspace/p-SWAMP/legacy
         # The pipeline files (pipelines/<app>.toml), read at import.
         - path: pipelines
           action: sync
@@ -174,9 +169,6 @@ services:
         - path: modules
           action: sync+restart
           target: /workspace/p-SWAMP/modules
-        - path: legacy
-          action: sync+restart
-          target: /workspace/p-SWAMP/legacy
         - path: pipelines
           action: sync+restart
           target: /workspace/p-SWAMP/pipelines
