@@ -460,8 +460,8 @@ follows `doc/remote-data-integration-contract.md`. The rules to keep:
 - **A command's class is its address.** One receiver per class in a pipeline
   (the player or one module). Player commands are validated in the web API (409);
   module commands where the module runs (an `ErrorEvent` on refusal).
-- **A module never sees the transport.** It reads a queue and publishes into a
-  sink; a `ModuleHost` runs it, in the server with the in-memory transport or in
+- **A module never sees the transport.** Its synchronous `process` takes its
+  declared `inputs` and returns its declared `outputs`; a `ModuleHost` runs it, in the server with the in-memory transport or in
   a worker with Kafka. Where a module runs is configuration
   (`PSWAMP_TRANSPORT`, `PSWAMP_WORKER_PIPELINES`, `PSWAMP_WORKER_MODULES`), never
   code.

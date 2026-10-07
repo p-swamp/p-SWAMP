@@ -252,58 +252,69 @@ broker as `kafka` (Apache Kafka, one KRaft node, no volume).
 `KAFKA_TEST_BOOTSTRAP_SERVERS=127.0.0.1:19092`).
 
 ### Modules
-*What.* A module is p-SWAMP's microservice: one analysis with a declared input
-and output, which runs inside the server or in a process of its own. It reads
-one message class and publishes a result class; it may also answer commands.
+*What.* A module is p-SWAMP's microservice: one analysis with declared inputs
+and outputs, which runs inside the server or in a process of its own. Its
+code is synchronous; it may also answer commands.
 
 ```python
 class FrameStatsModule(Module):
     name = "frame-stats"
-    input_model = PmuFrame
-    output_model = FrameStatsResult            # a ResultEnvelope subclass
+    inputs = (PmuFrame,)
+    outputs = (FrameStatsResult,)              # a ResultEnvelope[FrameStats]
 
-    async def process(self, frame: PmuFrame) -> FrameStats | None: ...
+    def process(self, frame: PmuFrame) -> FrameStats | None: ...
 ```
 
-A module that answers commands lists their concrete classes in `commands`
-and implements `handle`, and `validate` if it can refuse one. What `handle`
-returns is published like a `process` result, carrying the command's
-`request_id`. A refusal or failure is published as an `ErrorEvent` carrying it
-too.
+It reads its inputs in one of three styles: one input and `process`; several
+independent ones, each with an `@on(Model)` handler; or named inputs that a
+join (`Latest(trigger=..., max_age=..., missing=...)`) combines into one
+`process(*, name=...)` call. A handler returns a body (wrapped in the declared
+envelope), any other declared output as it is, a list, or `None`. The same
+module runs from a script: `FrameStatsModule().run_one(frame)`.
 
-A `ModuleHost` runs a module. It subscribes to the module's input and command
-topics for every key, and builds one instance per run key on that key's first
-message. It drops the instance when the run publishes `PipelineClosed`, or
+A module that answers commands lists their concrete classes in `commands`
+and implements `handle` (or `async def ahandle`, when the answer must await),
+and `validate` if it can refuse one. What it returns is published like a
+`process` result, carrying the command's `request_id`. A refusal or failure is
+published as an `ErrorEvent` carrying it too.
+
+A `ModuleHost` runs a module. It subscribes to every input and command topic
+of the module for every key, and builds one instance per run key on that
+key's first message. With a join, only the trigger input is queued; the others
+only replace the newest of their kind. It drops the instance when the run publishes `PipelineClosed`, or
 after five minutes with nothing for it.
 
 An instance that fails (its `setup` raises, say) is logged, reported as an
 `ErrorEvent` under its key, and dropped. The first message for that key five
 seconds later builds a new one; what arrives before is ignored. A `process`
-that raises, or returns a body that does not fit the envelope, costs only that
-input: it is reported and the next one is read.
+that raises, or returns a body that does not fit the envelope or a class it
+does not declare, costs only that input: it is reported and the next one is
+read.
 
 **A pipeline of modules.** The streamer's three modules ("The reference
 example") show the three things a module can do beyond reading frames:
 
-- **Read another module's results.** Setting `input_model` to another
+- **Read another module's results.** Listing in `inputs` another
   module's result class chains them. The streamer's `ExcursionModule` reads
   what its `FrameStatsModule` publishes: `PmuFrame` → `FrameStatsModule` →
   `FrameStatsResult` → `ExcursionModule` → `ExcursionResult`. The link is the
   topic, so the two may run in different workers.
-- **Command the player.** A module may publish a command into its sink.
-  `ExcursionModule` publishes `PauseCommand` when the frequency leaves its
-  band and auto-pause is on, and the player applies it exactly as one from
-  the web API.
+- **Command the player.** A command is one more declared output.
+  `ExcursionModule` (`outputs = (ExcursionResult, PauseCommand)`) returns
+  `PauseCommand` when the frequency leaves its band and auto-pause is on, and
+  the player applies it exactly as one from the web API. A pipeline refuses a
+  module that sends a command nothing in it takes.
 - **Read data itself.** A module that sets `reads_gateway = True` gets its
   own gateway over the pipeline's sources (`self.gateway`). The streamer's
   `RangeSummaryModule` answers `SummarizeRangeCommand` with it: a batch query,
   which compose and k8s run in a worker of its own.
 
 *Why.* A contributor writes the analysis and three class attributes. The
-module never sees the transport: it reads a queue and publishes into a sink.
-That lets the same module run in the server or in a worker. Reading the layout
-off `frame.header` means it needs no configuration. `process` runs on the
-event loop; a CPU-heavy module runs its analysis in a thread or process pool.
+module never sees the transport: `process` takes messages and returns
+messages. That lets the same module run in the server, in a worker or in a
+plain script. Reading the layout off `frame.header` means it needs no
+configuration. `process` runs on the event loop; a CPU-heavy module sets
+`blocking = True` to run it in a thread.
 
 *Where.* `core/src/pswamp_core/modules.py`, `host.py`, `command_routing.py`;
 a module is a package under `modules/pswamp_modules/`, and the
@@ -533,7 +544,7 @@ the same when it has to drop what it cannot publish.
 load, that silence hides exactly what an operator needs to know. The reports
 are `ErrorEvent`s, so they reach the error tray.
 
-*Where.* `core/src/pswamp_core/keep_up.py`; `Module.run`, `Outbox`.
+*Where.* `core/src/pswamp_core/keep_up.py`; `serve_module` (`host.py`), `Outbox`.
 
 ### Remote data
 *What.* `RemoteDataClient` is a history data client over a deployment's own
