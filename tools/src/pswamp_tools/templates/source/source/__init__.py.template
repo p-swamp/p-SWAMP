@@ -1,0 +1,6 @@
+"""The __LABEL__ source (``__SLUG__``): see ``source.py``. What it publishes is
+in ``pswamp_models.pmu``."""
+
+from .source import __NAME__Source, synthetic_frames
+
+__all__ = ["__NAME__Source", "synthetic_frames"]

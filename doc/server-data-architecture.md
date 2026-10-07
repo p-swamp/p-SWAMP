@@ -352,7 +352,8 @@ chunk = await sources.consume(start=t0, end=t1)   # exactly [t0, t1)
 ```
 
 *Why.* A source is written against the contract alone, so a deployment can
-write its own outside this repo. `pswamp_core.testing.SourceConformance` is the executable
+write its own outside this repo (`uv run pswamp new module <slug> <label> --source
+[--playable]` generates one). `pswamp_core.testing.SourceConformance` is the executable
 contract: inherit it, supply the source, and pytest checks it. With one source
 active at a time, a stream always has exactly one source behind it. "Jump to a
 time" and "query a chunk" are the same call. The set opens a source on first

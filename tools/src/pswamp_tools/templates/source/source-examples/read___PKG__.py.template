@@ -1,0 +1,25 @@
+"""Read the __LABEL__ source from a plain script: no server, no transport, no event loop.
+
+``read`` is a plain generator, and ``coverage`` says what the source holds.
+
+    uv run python modules/__SLUG__/examples/read___PKG__.py
+"""
+
+from datetime import timedelta
+
+from pswamp_modules.__PKG__ import __NAME__Source
+
+
+def main() -> None:
+    source = __NAME__Source()
+    coverage = source.coverage()
+    print(f"holds [{coverage.start}, {coverage.end})")
+    frames = list(source.read())
+    print(f"{len(frames)} frames; the first at {frames[0].timestamp}, with {len(frames[0].values)} values")
+    start = coverage.start + timedelta(seconds=1)
+    chunk = list(source.read(start, start + timedelta(seconds=0.5)))
+    print(f"[1.0 s, 1.5 s) holds {len(chunk)} frames, mean frequency {sum(f.values[0] for f in chunk) / len(chunk):.4f} Hz")
+
+
+if __name__ == "__main__":
+    main()

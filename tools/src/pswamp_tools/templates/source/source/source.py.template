@@ -1,0 +1,67 @@
+"""The __LABEL__ source: a history of synthetic PMU frames.
+
+The data is a placeholder: two stations at 20 Hz whose frequency swings slowly
+around 50 Hz. ``read`` is plain synchronous code, so a script needs no event
+loop::
+
+    for frame in __NAME__Source().read():
+        ...
+
+``read(start, end)`` yields the frames in the half-open range ``[start, end)``,
+in order; ``coverage()`` says what the source holds. Replace ``synthetic_frames``
+with a read of your own data, keeping those two promises (and ``SourceConformance``
+in the tests checks them). Mixing in ``Playable`` makes a history replayable,
+paced and seekable, in a run.
+"""
+
+from __future__ import annotations
+
+import math
+from collections.abc import Iterator
+from datetime import datetime, timedelta, timezone
+
+__PLAYABLE_IMPORT__from pswamp_core.settings import EnvSetting
+from pswamp_core.sources import SourceModule
+from pswamp_core.time_range import TimeRange
+from pswamp_models.pmu import PmuFrame, PmuHeader
+
+__all__ = ["__NAME__Source", "synthetic_frames"]
+
+RATE_HZ = 20.0
+START = datetime(2026, 1, 1, tzinfo=timezone.utc)
+HEADER = PmuHeader(
+    station=["A", "B"], channel=["f", "f"], measurement=["f", "f"], units=["Hz", "Hz"], data_rate=RATE_HZ
+)
+
+
+def synthetic_frames(seconds: float) -> list[PmuFrame]:
+    """``seconds`` of frames from ``START``: a ±20 mHz swing around 50 Hz, station
+    B 1 mHz above station A."""
+    frames = []
+    for n in range(int(seconds * RATE_HZ)):
+        t = n / RATE_HZ
+        f = 50.0 + 0.02 * math.sin(2 * math.pi * t / 3.0)
+        frames.append(PmuFrame(timestamp=START + timedelta(seconds=t), mRID="__SLUG__", header=HEADER, values=[f, f + 0.001]))
+    return frames
+
+
+class __NAME__Source(__SOURCE_BASES__):
+    name = "__SLUG__"
+    kind = "history"
+    outputs = (PmuFrame,)
+    env_settings = (EnvSetting("SECONDS", "How many seconds of synthetic data it holds", default="3", kind="float"),)
+
+    def __init__(self, source: str | None = None, **settings) -> None:
+        super().__init__(source, **settings)
+        self.frames = synthetic_frames(self.settings.seconds)
+
+    def coverage(self) -> TimeRange | None:
+        if not self.frames:
+            return None
+        return TimeRange(self.frames[0].timestamp, self.frames[-1].timestamp + timedelta(seconds=1.0 / RATE_HZ))
+
+    def read(self, start: datetime | None = None, end: datetime | None = None) -> Iterator[PmuFrame]:
+        window = TimeRange(start, end)
+        for frame in self.frames:
+            if window.contains(frame.timestamp):
+                yield frame

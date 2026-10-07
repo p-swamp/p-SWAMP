@@ -1,4 +1,4 @@
-"""``pswamp check-generators``: prove both generators still produce working apps (was check-generators.sh)."""
+"""``pswamp check-generators``: prove the generators still produce working apps (was check-generators.sh)."""
 
 from __future__ import annotations
 
@@ -19,22 +19,25 @@ from .._proc import capture, require_tools, run
 
 COUNTER = "check-counter"
 MODULE = "check-module"
+SOURCE = "check-source"
 # Above this, a temp root plus a worktree's deepest path (node_modules aside, which
 # is linked, not copied) risks Windows' 260-char limit even with core.longpaths,
 # because not every tool (npm, tsc) honours it.
 MAX_TEMP_ROOT = 48
 
 HELP = """\
-Prove both generators still produce working apps, without touching this working tree.
+Prove the generators still produce working apps, without touching this working tree.
 
 In a throwaway git worktree holding a snapshot of this working tree (committed
 or not, untracked files included):
 
-  1. `pswamp new subapp` (a counter) and `pswamp new module` (a module and its page);
+  1. `pswamp new subapp` (a counter), `pswamp new module` (a module and its page)
+     and `pswamp new module --source --playable` (a replayable data source);
   2. `pswamp check` over the result;
   3. the generated module's tests (its project's tests/ folder, its page's
-     socket in the server's tests/), and the layering tests over the result,
-     then its example script (examples/), run as a plain script;
+     socket in the server's tests/), the generated source's tests (its project's
+     tests/ folder, which run SourceConformance), and the layering tests over the
+     result, then both example scripts (examples/), run as plain scripts;
   4. load the module-worker's pipeline files and modules as patched into
      docker-compose.yml and k8s/p-swamp-local.yaml, from the pipelines/
      folder, as a worker does (its pipeline files are relative to it).
@@ -179,6 +182,7 @@ def check_generators() -> None:
     work = Path(tempfile.mkdtemp(prefix="pswamp-gen-", dir=short_temp_root()))
     tree = work / "tree"
     module_pkg = MODULE.replace("-", "_")
+    source_pkg = SOURCE.replace("-", "_")
     # The worktree's own uv environment: copied, not hardlinked, from the uv cache.
     # A throwaway env gains nothing from links, and hardlinking fails outright on
     # some Windows setups (os error 396 when the cache is under a cloud-synced profile).
@@ -198,10 +202,14 @@ def check_generators() -> None:
             linked = link_dir(real_modules, tree / "app" / "client-web" / "node_modules")
             _ui.info("node_modules: linked" if linked else "node_modules: could not link; `pswamp check` will npm ci")
 
-        _ui.section("Generate a counter subapp and a module app")
-        for kind, slug, label in (("subapp", COUNTER, "Check counter"), ("module", MODULE, "Check module")):
-            if run(["uv", "run", "pswamp", "new", kind, slug, label, "--no-check"], cwd=tree, env=env) != 0:
-                _ui.error(f"pswamp new {kind} failed")
+        _ui.section("Generate a counter subapp, a module app and a source")
+        for kind, slug, label, flags in (
+            ("subapp", COUNTER, "Check counter", []),
+            ("module", MODULE, "Check module", []),
+            ("module", SOURCE, "Check source", ["--source", "--playable"]),
+        ):
+            if run(["uv", "run", "pswamp", "new", kind, slug, label, *flags, "--no-check"], cwd=tree, env=env) != 0:
+                _ui.error(f"pswamp new {kind} {' '.join(flags)} failed")
                 raise typer.Exit(1)
 
         step("Static checks over the generated tree", ["uv", "run", "pswamp", "check"], tree)
@@ -217,8 +225,18 @@ def check_generators() -> None:
             tree,
         )
         step(
+            "The generated source's tests (SourceConformance)",
+            ["uv", "run", "pswamp", "test", "server", "-q", f"../../modules/{SOURCE}/tests"],
+            tree,
+        )
+        step(
             "The generated module's example runs from a plain script",
             ["uv", "run", "python", f"modules/{MODULE}/examples/run_{module_pkg}.py"],
+            tree,
+        )
+        step(
+            "The generated source's example runs from a plain script",
+            ["uv", "run", "python", f"modules/{SOURCE}/examples/read_{source_pkg}.py"],
             tree,
         )
         # The script and its patterns go through files, not the command line,
@@ -243,4 +261,4 @@ def check_generators() -> None:
         _ui.section("Remove the worktree")
         cleanup(repo, work, tree)
 
-    _ui.console.print("\n[green]Both generators produce working apps.[/green]")
+    _ui.console.print("\n[green]The generators produce working apps and sources.[/green]")
