@@ -3,7 +3,7 @@
 # are not module code, so they are not in modules/; they live here only until
 # the refactoring replaces them:
 #
-#   src/pswamp_modules/pipelines/   -> pipelines/<app>.toml, loaded through the
+#   src/pswamp_modules/pipelines/   -> pipelines/<app>.toml (done: removed), loaded through the
 #                                      pswamp.modules entry points (step 6)
 #   src/pswamp_modules/sources/     -> source modules, modules/sample-replay/ and
 #                                      modules/live-synthetic/ (step 7)
@@ -42,9 +42,9 @@ pswamp-range-summary = { workspace = true }
 requires = ["uv_build"]
 build-backend = "uv_build"
 
-# Two namespace portions of pswamp_modules, and no src/pswamp_modules/__init__.py.
+# A namespace portion of pswamp_modules, and no src/pswamp_modules/__init__.py.
 [tool.uv.build-backend]
-module-name = ["pswamp_modules.pipelines", "pswamp_modules.sources"]
+module-name = "pswamp_modules.sources"
 
 # No [tool.ruff] section: `pswamp check` passes `--select F` explicitly.
 

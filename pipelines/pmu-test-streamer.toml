@@ -1,0 +1,33 @@
+# The PMU test streamer's pipeline: data, not code. Loaded by
+# `Pipeline.load` (core/src/pswamp_core/pipeline_config.py) in the server
+# (app/server-python/src/pmu_test_streamer/api.py) and in every worker that
+# names it (PSWAMP_WORKER_PIPELINES=pmu-test-streamer.toml, run from this
+# folder). `uv run pswamp pipelines validate` checks it.
+
+# The app: the namespace of its topics (<app>.<topic>) and the prefix of its
+# environment variables (PMU_TEST_STREAMER_...).
+app = "pmu-test-streamer"
+
+# Its modules, by their `pswamp.modules` entry-point names
+# (`uv run pswamp modules list`). Where each one runs is configuration
+# (PSWAMP_TRANSPORT, PSWAMP_WORKER_MODULES), not this file.
+modules = ["frame-stats", "excursion", "range-summary"]
+
+# Its sources, in order: the first is the one a run starts on. Each names a
+# data client as module.path:Class, configured from its own {NAME}_{SETTING}
+# variables (SAMPLE_PATH, LIVE_PATH, ...). PMU_TEST_STREAMER_DATA_CLIENTS, when
+# set (name:module.path:Class,...), replaces this whole list.
+# Transitional: once sources are modules, `client` gives way to a module name.
+[[sources]]
+name = "sample"
+client = "pswamp_modules.sources.sample_client:SampleRecordingClient"
+
+[[sources]]
+name = "live"
+client = "pswamp_modules.sources.live_client:LiveSyntheticClient"
+
+# What the gateway adds to every frame. cim_reference: the CIM reference id
+# set on each frame's header ("none": no reference).
+# PMU_TEST_STREAMER_CIM_REFERENCE, when set, overrides it.
+[enrich]
+cim_reference = "n44-cim-stub"

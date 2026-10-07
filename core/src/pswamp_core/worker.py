@@ -5,26 +5,32 @@
 
     python -m pswamp_core.worker
 
-run from anywhere the pipelines import (``pswamp_modules`` is installed, so
-any working directory), with the transport the server uses::
+with the transport the server uses, and the pipeline files whose modules to
+host::
 
     PSWAMP_TRANSPORT=kafka:pswamp_core.transport.kafka:KafkaTransport
     KAFKA_BOOTSTRAP_SERVERS=kafka:9092
-    PSWAMP_WORKER_PIPELINES=pswamp_modules.pipelines.pmu_test_streamer:PIPELINE
-    PSWAMP_WORKER_MODULES=range-summary        # optional: only these modules
+    PSWAMP_WORKER_PIPELINES=pmu-test-streamer.toml   # pipeline files, comma-separated
+    PSWAMP_WORKER_MODULES=range-summary              # optional: only these modules
+
+A pipeline file is a path, relative to the working directory or absolute. In
+the image the workers run from the pipelines folder (``/workspace/p-SWAMP/pipelines``,
+the repo's ``pipelines/``), so each entry is a bare ``<app>.toml``. Its modules
+are found through the ``pswamp.modules`` entry points, so any working
+directory works for them (every module project is installed).
 
 One worker may host every module, or a heavy module gets a worker (and a CPU
 limit) of its own. A module that reads the gateway gets one built from the
 same ``<APP>_DATA_CLIENTS`` the server reads, so those go to its worker too.
 
 Exits 2, saying why, when the transport is in-memory (the server hosts the
-modules itself then) or no pipeline is named. Stops on SIGINT/SIGTERM.
+modules itself then), a pipeline file is unusable, or no module is named.
+Stops on SIGINT/SIGTERM.
 """
 
 from __future__ import annotations
 
 import asyncio
-import importlib
 import os
 import signal
 import sys
@@ -32,31 +38,32 @@ import sys
 from .host import serve_hosts
 from .log import get_logger
 from .pipeline import Pipeline
+from .pipeline_config import load_pipeline
 from .transport import TRANSPORT_VARIABLE, transport_from_env
 
 __all__ = ["MODULES_VARIABLE", "PIPELINES_VARIABLE", "load_pipelines", "main"]
 
 logger = get_logger("pswamp_core.worker")
 
-#: Comma-separated ``module.path:NAME`` references to ``Pipeline`` objects.
+#: Comma-separated pipeline files (``<app>.toml``), relative to the working directory or absolute.
 PIPELINES_VARIABLE = "PSWAMP_WORKER_PIPELINES"
 #: Optional comma-separated module names: host only these.
 MODULES_VARIABLE = "PSWAMP_WORKER_MODULES"
 
 
 def load_pipelines(spec: str) -> list[Pipeline]:
-    """The pipelines ``spec`` names, imported."""
+    """The pipelines in the files ``spec`` names. Raises ``ValueError``
+    (``PipelineConfigError``) saying which file and why."""
     pipelines = []
-    for reference in (part.strip() for part in spec.split(",")):
-        if not reference:
+    for path in (part.strip() for part in spec.split(",")):
+        if not path:
             continue
-        module_path, _, name = reference.partition(":")
-        if not module_path or not name:
-            raise ValueError(f"{PIPELINES_VARIABLE}: {reference!r} is not module.path:NAME")
-        pipeline = getattr(importlib.import_module(module_path), name, None)
-        if not isinstance(pipeline, Pipeline):
-            raise ValueError(f"{PIPELINES_VARIABLE}: {reference} is not a Pipeline")
-        pipelines.append(pipeline)
+        if not path.endswith(".toml"):
+            raise ValueError(
+                f"{PIPELINES_VARIABLE}: {path!r} is not a pipeline file; name <app>.toml files "
+                "(the module.path:PIPELINE form is gone with the Python pipelines)"
+            )
+        pipelines.append(load_pipeline(path))
     return pipelines
 
 
@@ -73,11 +80,15 @@ def main() -> int:
         print(f"  {TRANSPORT_VARIABLE}=kafka:pswamp_core.transport.kafka:KafkaTransport  (and KAFKA_BOOTSTRAP_SERVERS)", file=sys.stderr)
         return 2
     only = _names(os.environ.get(MODULES_VARIABLE, ""))
-    pipelines = load_pipelines(os.environ.get(PIPELINES_VARIABLE, ""))
+    try:
+        pipelines = load_pipelines(os.environ.get(PIPELINES_VARIABLE, ""))
+    except ValueError as error:
+        print(error, file=sys.stderr)
+        return 2
     hosts = [host for pipeline in pipelines for host in pipeline.hosts(transport, only=only)]
     if not hosts:
         print(f"{PIPELINES_VARIABLE} (and {MODULES_VARIABLE}) name no module to host, e.g.", file=sys.stderr)
-        print(f"  {PIPELINES_VARIABLE}=pswamp_modules.pipelines.pmu_test_streamer:PIPELINE", file=sys.stderr)
+        print(f"  {PIPELINES_VARIABLE}=pipelines/pmu-test-streamer.toml", file=sys.stderr)
         return 2
 
     async def run() -> None:

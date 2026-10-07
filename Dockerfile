@@ -189,7 +189,7 @@ COPY core/ ${REPO_DIR}/core/
 RUN uv pip install --system --no-deps -e ${REPO_DIR}/core
 
 # The module projects, one per module, and the transitional wiring (the
-# pipelines and example sources), installed the same way: every project found,
+# example sources), installed the same way: every project found,
 # so a new module needs no edit here. Each is a portion of the pswamp_modules
 # namespace and depends on the core and the models only, so a worker imports
 # them from any working directory. tests/ and examples/ are kept out by
@@ -197,6 +197,13 @@ RUN uv pip install --system --no-deps -e ${REPO_DIR}/core
 COPY modules/ ${REPO_DIR}/modules/
 COPY legacy/ ${REPO_DIR}/legacy/
 RUN uv pip install --system --no-deps       $(for manifest in ${REPO_DIR}/modules/*/pyproject.toml ${REPO_DIR}/legacy/*/pyproject.toml; do           printf -- '-e %s ' "$(dirname "$manifest")";         done)
+
+# The pipeline files (pipelines/<app>.toml): data, read by the server at import
+# (found from shared.py at the repo-mirrored path, or PSWAMP_PIPELINES_DIR) and
+# by each worker, which runs from this folder and names them relative to it
+# (PSWAMP_WORKER_PIPELINES=pmu-test-streamer.toml). The import check below
+# loads them, so a missing or broken file fails the build.
+COPY pipelines/ ${REPO_DIR}/pipelines/
 
 # Server source last, so editing it doesn't invalidate the dependency layer
 # above. The image mirrors the repo, so server.py and the app packages beside it
