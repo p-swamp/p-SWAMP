@@ -4,21 +4,28 @@ The analysis modules of the p-SWAMP server data architecture, **one Python
 project per module**. `doc/server-data-architecture.md` describes the
 architecture; `doc/module-cookbook.md` is the recipe for a new module.
 
-| Folder | Distribution | Package | Reads | Emits |
-|---|---|---|---|---|
-| [`frame-stats/`](frame-stats/) | `pswamp-frame-stats` | `pswamp_modules.frame_stats` | `PmuFrame` | `FrameStatsResult` |
-| [`excursion/`](excursion/) | `pswamp-excursion` | `pswamp_modules.excursion` | `FrameStatsResult` | `ExcursionResult`, `PauseCommand` |
-| [`range-summary/`](range-summary/) | `pswamp-range-summary` | `pswamp_modules.range_summary` | (commands only) | `RangeSummaryResult` |
-| [`sample-replay/`](sample-replay/) | `pswamp-sample-replay` | `pswamp_modules.sample_replay` | source (history, playable) | `PmuFrame` |
-| [`live-synthetic/`](live-synthetic/) | `pswamp-live-synthetic` | `pswamp_modules.live_synthetic` | source (live) | `PmuFrame` |
-| [`remote-history/`](remote-history/) | `pswamp-remote-history` | `pswamp_modules.remote_history` | source (history, playable; a remote service) | `PmuFrame` |
+| Folder | Distribution | Kind | Reads | Emits | Accepts |
+|---|---|---|---|---|---|
+| [`excursion/`](excursion/) | `pswamp-excursion` | module | `FrameStatsResult` | `ExcursionResult`, `PauseCommand` | `AutoPauseCommand` |
+| [`frame-stats/`](frame-stats/) | `pswamp-frame-stats` | module | `PmuFrame` | `FrameStatsResult` | — |
+| [`live-synthetic/`](live-synthetic/) | `pswamp-live-synthetic` | source (live, not playable) | — | `PmuFrame` | — |
+| [`range-summary/`](range-summary/) | `pswamp-range-summary` | module | — | `RangeSummaryResult` | `SummarizeRangeCommand` |
+| [`remote-history/`](remote-history/) | `pswamp-remote-history` | source (history, playable) | — | `PmuFrame` | `PlayCommand`, `PauseCommand`, `StepCommand`, `SeekCommand`, `SpeedCommand` |
+| [`sample-replay/`](sample-replay/) | `pswamp-sample-replay` | source (history, playable) | — | `PmuFrame` | `PlayCommand`, `PauseCommand`, `StepCommand`, `SeekCommand`, `SpeedCommand` |
 
-The last three are **sources**: a `SourceModule` (`pswamp_core.sources`) reads nothing and
-produces data, from a script with a plain `for frame in SampleReplay().read():`. A history
-source that mixes in `Playable` (`pswamp_core.playable`) can also be replayed paced and
-sought. `uv run pswamp modules list` tells the three kinds apart. A run reads
-its sources through them (`[[sources]] module = "<entry point>"` in the pipeline
-file); the active one is steered by the run's `ActiveSource` router.
+The same as `uv run pswamp modules list`, which shows it for whatever is
+installed. A **module** reads message classes from the transport and publishes
+others; a **source** (`SourceModule`, `pswamp_core.sources`) reads nothing and
+produces data, and is read from a script with a plain
+`for frame in SampleReplay().read():`. A history source that mixes in `Playable`
+(`pswamp_core.playable`) can also be replayed paced and sought, and answers the
+player commands; a live source cannot. A run reads its sources through the
+pipeline file (`[[sources]] module = "<entry point>"`); the active one is steered
+by the run's `ActiveSource` router.
+
+**Running one from a script** needs no server and no event loop. The canonical
+example replays the sample recording through `frame-stats` and plots it:
+`sample-replay/examples/replay_stats.py`.
 
 Each module folder holds exactly:
 
@@ -53,7 +60,9 @@ uv run pswamp test module frame-stats     # one module's tests (folder or entry-
 uv run pswamp test server                 # every suite, these included
 uv run pswamp new module <slug> "<Label>" # a new module project, its models, pipeline, api and page
 uv run python modules/excursion/examples/count_excursions.py   # an example, no server
+uv run --package pswamp-sample-replay --extra examples python modules/sample-replay/examples/replay_stats.py   # the canonical script: source -> module -> plot
 uv run --package pswamp-frame-stats --extra examples python modules/frame-stats/examples/plot_frame_stats.py
+uv run pswamp modules list                # the table above, for what is installed
 ```
 
 An example needing a library the module does not (matplotlib, to plot) declares

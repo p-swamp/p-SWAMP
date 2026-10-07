@@ -16,6 +16,8 @@ it from here, never from the producer's code.
 | `pswamp_models.excursion` | `Excursion`, `ExcursionResult`, `AutoPauseCommand` |
 | `pswamp_models.range_summary` | `RangeSummary`, `RangeSummaryResult`, `SummarizeRangeCommand` |
 
+- A new module's messages go in a new package here (`uv run pswamp new module` writes it);
+  see `doc/module-cookbook.md`. Class names are topic names, so renaming one is a wire change.
 - Source: `src/pswamp_models/`
 - Depends on pydantic only, and imports nothing else from this repo.
 - Tests: `tests/`, run by `uv run pswamp test server`
