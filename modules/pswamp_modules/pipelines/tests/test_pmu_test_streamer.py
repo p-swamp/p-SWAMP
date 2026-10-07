@@ -9,9 +9,9 @@ from pswamp_core.host import serve_hosts
 from pswamp_core.pipeline import PipelineRun
 from pswamp_core.transport import InMemoryTransport
 from pswamp_core.util.tasks import cancel_and_wait
+from pswamp_models.frame_stats import FrameStatsResult
 from pswamp_models.player import PlayCommand, SpeedCommand
 from pswamp_models.pmu import PmuFrame
-from pswamp_modules.frame_stats import FrameStatsResult
 from pswamp_modules.pipelines.pmu_test_streamer import PIPELINE, gateway
 from pswamp_modules.sources.sample_client import DEFAULT_PATH, EPOCH
 

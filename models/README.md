@@ -12,6 +12,9 @@ it from here, never from the producer's code.
 | `pswamp_models.player` | `PlayerCommand`, `PlayCommand`, `PauseCommand`, `StepCommand`, `SeekCommand`, `SpeedCommand`, `SwitchSourceCommand`, `PlayerStatus` |
 | `pswamp_models.pmu` | `PmuHeader`, `PmuFrame` |
 | `pswamp_models.remote_data` | `RemoteDataQuery`, `RemoteDataResult` |
+| `pswamp_models.frame_stats` | `FrameStats`, `FrameStatsResult` |
+| `pswamp_models.excursion` | `Excursion`, `ExcursionResult`, `AutoPauseCommand` |
+| `pswamp_models.range_summary` | `RangeSummary`, `RangeSummaryResult`, `SummarizeRangeCommand` |
 
 - Source: `src/pswamp_models/`
 - Depends on pydantic only, and imports nothing else from this repo.

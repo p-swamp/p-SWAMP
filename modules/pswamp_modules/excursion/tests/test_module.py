@@ -4,9 +4,10 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
 
+from pswamp_models.excursion import AutoPauseCommand
+from pswamp_models.frame_stats import FrameStats, FrameStatsResult
 from pswamp_models.player import PauseCommand
-from pswamp_modules.excursion import AutoPauseCommand, ExcursionModule
-from pswamp_modules.frame_stats import FrameStats, FrameStatsResult
+from pswamp_modules.excursion import ExcursionModule
 
 T0 = datetime(2026, 1, 1, tzinfo=timezone.utc)
 

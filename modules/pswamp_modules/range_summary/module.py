@@ -8,45 +8,20 @@ It reads no topic (``input_model = None``) and only answers
 recording from its own gateway (``reads_gateway``) and publishes a summary.
 It runs wherever its host runs; in compose, in a worker of its own. A range
 it cannot summarize (a live source, nothing in the range) is refused, and the
-refusal comes back as an ``ErrorEvent``.
+refusal comes back as an ``ErrorEvent``. Its messages are in
+``pswamp_models.range_summary``.
 """
 
 from __future__ import annotations
 
 from datetime import timedelta
-from typing import Literal
-
-from pydantic import BaseModel, Field
 
 from pswamp_core.command_routing import CommandRefused
 from pswamp_core.modules import Module
-from pswamp_models.common import Command, ResultEnvelope
 from pswamp_models.pmu import PmuFrame
+from pswamp_models.range_summary import RangeSummary, RangeSummaryResult, SummarizeRangeCommand
 
-__all__ = ["RangeSummary", "RangeSummaryModule", "RangeSummaryResult", "SummarizeRangeCommand"]
-
-
-class SummarizeRangeCommand(Command):
-    """Summarize ``[offset_s, end_offset_s)`` of a recording."""
-
-    version: Literal["v1"] = "v1"
-    source: str = Field(description="The recording: a history source of the pipeline.")
-    offset_s: float = Field(ge=0, description="Seconds from the start of the recording.")
-    end_offset_s: float = Field(gt=0, description="Exclusive end, in seconds from the start.")
-
-
-class RangeSummary(BaseModel):
-    source: str
-    offset_s: float
-    end_offset_s: float
-    frames: int = Field(description="Frames in the range.")
-    min_frequency_hz: float
-    max_frequency_hz: float
-    mean_frequency_hz: float
-
-
-class RangeSummaryResult(ResultEnvelope[RangeSummary]):
-    version: Literal["v1"] = "v1"
+__all__ = ["RangeSummaryModule"]
 
 
 class RangeSummaryModule(Module):
