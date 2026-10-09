@@ -4,7 +4,7 @@ reference clients passing the conformance suite."""
 from __future__ import annotations
 
 import pytest
-from support import ListClient, TickingClient, at, frame
+from support import ListClient, TickingClient, at, frame, measurement
 
 from pswamp_core.datagateway import DataGateway
 from pswamp_core.testing import DataClientConformance
@@ -60,3 +60,22 @@ async def test_a_stream_is_one_range_of_the_active_source():
     assert chunk == [at(1), at(2)]
     onwards = [f.timestamp async for f in await gateway.consume(at(3))]
     assert onwards == [at(3), at(4)]
+
+
+async def test_a_stream_stamps_its_id_and_a_running_number_on_each_frame():
+    gateway = DataGateway([ListClient("sample", [frame(i) for i in range(5)])])
+    first = await gateway.consume(at(0), at(4))
+    read = [f async for f in first]
+    assert {f.stream for f in read} == {first.id}
+    assert [f.seq for f in read] == [0, 1, 2, 3]
+    again = await gateway.consume(at(2), at(4))  # the same instants, read in another pass
+    reread = [f async for f in again]
+    assert again.id != first.id and {f.stream for f in reread} == {again.id}
+    assert [(f.timestamp, f.seq) for f in reread] == [(at(2), 0), (at(3), 1)]
+
+
+async def test_a_record_class_without_those_fields_passes_through_as_it_is():
+    records = [measurement(i) for i in range(3)]
+    gateway = DataGateway([ListClient("numbers", records)])
+    read = [r async for r in await gateway.consume(at(0), at(3))]
+    assert all(got is sent for got, sent in zip(read, records, strict=True))

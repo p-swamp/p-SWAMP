@@ -139,6 +139,46 @@ async def test_seek_shows_the_frame_there_and_a_chunk_ends_paused():
     await player.stop()
 
 
+def places(out: Recorder) -> list:
+    """Each published frame's (stream, seq)."""
+    return [(f.stream, f.seq) for f in out.of(PmuFrame)]
+
+
+async def test_stepping_pausing_and_speed_stay_in_one_stream():
+    player, out = await running(ListClient())
+    await command(player, StepCommand(n=2))
+    await command(player, SpeedCommand(speed=10))
+    await command(player, PlayCommand())
+    await until(lambda: len(frames(out)) >= 6)
+    await command(player, PauseCommand())
+    await command(player, StepCommand(n=1))
+    seen = places(out)
+    assert len({stream for stream, _ in seen}) == 1 and seen[0][0] is not None
+    assert [seq for _, seq in seen] == list(range(len(seen)))
+    await player.stop()
+
+
+async def test_a_seek_a_step_back_and_a_loop_each_start_a_new_stream():
+    player, out = await running(ListClient())
+    await command(player, StepCommand(n=2))
+    await command(player, SeekCommand(offset_s=0.5))
+    await command(player, StepCommand(n=1))
+    await command(player, StepCommand(n=-1))
+    first, sought, stepped_back = places(out)[0][0], places(out)[3][0], places(out)[5][0]
+    assert len({first, sought, stepped_back}) == 3
+    assert places(out) == [
+        (first, 0), (first, 1), (first, 2), (sought, 0), (sought, 1), (stepped_back, 0),
+    ]
+    await player.stop()
+    looping, out = await running(ListClient(frames=[frame(i / 20) for i in range(3)]), loop=True, speed=10)
+    await command(looping, PlayCommand())
+    await until(lambda: len(frames(out)) >= 5)
+    seen = places(out)[:5]
+    assert [seq for _, seq in seen] == [0, 1, 2, 0, 1]
+    assert seen[0][0] == seen[2][0] != seen[3][0] == seen[4][0]
+    await looping.stop()
+
+
 async def test_what_does_not_apply_is_refused():
     player, _ = await running(ListClient("rec"), TickingClient("live"))
     with pytest.raises(CommandRefused):
