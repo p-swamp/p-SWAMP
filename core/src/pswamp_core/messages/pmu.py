@@ -15,6 +15,14 @@ hash, so a consumer can tell cheaply whether the layout changed.
 
 ``values`` is ``float | None`` because NaN is not JSON: pydantic writes NaN as
 ``null``, and the type says so in the browser's contract.
+
+**A frame says where it is in its stream** (``stream``, ``seq``). The gateway
+sets both as it reads a source: ``stream`` names one unbroken pass over it (a
+seek, a loop or a source switch starts another), and ``seq`` counts the frames
+of that pass from 0. A consumer that sees another ``stream``, or a ``seq``
+that does not follow the last one, knows its input is no longer continuous. A
+provider leaves both unset. ``stream`` is not the ``mRID``, which names the
+source and is the same on every pass.
 """
 
 from __future__ import annotations
@@ -104,6 +112,16 @@ class PmuFrame(DataModel):
     mRID: str = Field(description="The stream (a PDC, a recording).")
     header: PmuHeader = Field(description="The channel layout; `values` follows its column order.")
     values: list[float | None] = Field(description="One value per header column; null where NaN.")
+    stream: str | None = Field(
+        default=None,
+        description="The pass over the source this frame was read in; a seek, a loop or a source switch "
+        "starts another. Set by the gateway.",
+    )
+    seq: int | None = Field(
+        default=None,
+        description="This frame's number in that pass, from 0. A gap means a frame was lost on the way. "
+        "Set by the gateway.",
+    )
 
     @model_validator(mode="after")
     def _width_matches_header(self) -> PmuFrame:

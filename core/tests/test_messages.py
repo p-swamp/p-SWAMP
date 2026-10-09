@@ -7,9 +7,10 @@ from typing import ClassVar, Literal
 
 import pytest
 from pydantic import ValidationError
-from support import HEADER, Measurement, NumberResult, at, frame
+from support import HEADER, Measurement, Number, NumberResult, at, frame
 
 from pswamp_core.messages import (
+    AppIdentity,
     DataModel,
     ErrorEvent,
     PlayCommand,
@@ -73,6 +74,23 @@ def test_a_frame_round_trips_with_nan_as_null():
     assert back.values == [1.0, None, None, 50.0]
     assert back.timestamp == original.timestamp
     assert back.header == HEADER and back.header.header_id == HEADER.header_id
+
+
+def test_a_frame_s_place_in_its_stream_is_unset_until_the_gateway_sets_it():
+    plain = frame(0.05)
+    assert plain.stream is None and plain.seq is None
+    assert PmuFrame.model_validate_json(plain.model_dump_json()) == plain
+    placed = plain.model_copy(update={"stream": "a1", "seq": 7})
+    back = PmuFrame.model_validate_json(placed.model_dump_json())
+    assert (back.stream, back.seq) == ("a1", 7)
+
+
+def test_a_result_carries_the_stream_of_its_input():
+    identity = AppIdentity(name="n", uuid="u")
+    plain = NumberResult(timestamp=at(0), app=identity, result=Number(value=1.0))
+    assert plain.stream is None
+    marked = NumberResult(timestamp=at(0), app=identity, stream="a1", result=Number(value=1.0))
+    assert NumberResult.model_validate_json(marked.model_dump_json()).stream == "a1"
 
 
 def test_a_frame_s_width_must_match_its_header():

@@ -503,6 +503,19 @@
           "result": {
             "$ref": "#/components/schemas/Excursion"
           },
+          "stream": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "The `stream` of the input this result was computed from; null for an answer to a command.",
+            "title": "Stream"
+          },
           "timestamp": {
             "description": "The instant the result is about.",
             "format": "date-time",
@@ -639,6 +652,19 @@
           },
           "result": {
             "$ref": "#/components/schemas/FrameStats"
+          },
+          "stream": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "The `stream` of the input this result was computed from; null for an answer to a command.",
+            "title": "Stream"
           },
           "timestamp": {
             "description": "The instant the result is about.",
@@ -1341,6 +1367,32 @@
             "title": "Mrid",
             "type": "string"
           },
+          "seq": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "This frame's number in that pass, from 0. A gap means a frame was lost on the way. Set by the gateway.",
+            "title": "Seq"
+          },
+          "stream": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "The pass over the source this frame was read in; a seek, a loop or a source switch starts another. Set by the gateway.",
+            "title": "Stream"
+          },
           "timestamp": {
             "description": "The PMU time of this instant.",
             "format": "date-time",
@@ -1649,6 +1701,19 @@
           },
           "result": {
             "$ref": "#/components/schemas/RangeSummary"
+          },
+          "stream": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "The `stream` of the input this result was computed from; null for an answer to a command.",
+            "title": "Stream"
           },
           "timestamp": {
             "description": "The instant the result is about.",

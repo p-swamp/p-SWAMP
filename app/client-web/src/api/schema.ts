@@ -676,6 +676,12 @@ export interface components {
             request_id: string | null;
             result: components["schemas"]["Excursion"];
             /**
+             * Stream
+             * @description The `stream` of the input this result was computed from; null for an answer to a command.
+             * @default null
+             */
+            stream: string | null;
+            /**
              * Timestamp
              * Format: date-time
              * @description The instant the result is about.
@@ -737,6 +743,12 @@ export interface components {
              */
             request_id: string | null;
             result: components["schemas"]["FrameStats"];
+            /**
+             * Stream
+             * @description The `stream` of the input this result was computed from; null for an answer to a command.
+             * @default null
+             */
+            stream: string | null;
             /**
              * Timestamp
              * Format: date-time
@@ -1079,6 +1091,18 @@ export interface components {
              */
             mRID: string;
             /**
+             * Seq
+             * @description This frame's number in that pass, from 0. A gap means a frame was lost on the way. Set by the gateway.
+             * @default null
+             */
+            seq: number | null;
+            /**
+             * Stream
+             * @description The pass over the source this frame was read in; a seek, a loop or a source switch starts another. Set by the gateway.
+             * @default null
+             */
+            stream: string | null;
+            /**
              * Timestamp
              * Format: date-time
              * @description The PMU time of this instant.
@@ -1226,6 +1250,12 @@ export interface components {
              */
             request_id: string | null;
             result: components["schemas"]["RangeSummary"];
+            /**
+             * Stream
+             * @description The `stream` of the input this result was computed from; null for an answer to a command.
+             * @default null
+             */
+            stream: string | null;
             /**
              * Timestamp
              * Format: date-time

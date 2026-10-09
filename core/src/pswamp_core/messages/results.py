@@ -43,4 +43,8 @@ class ResultEnvelope(DataModel, Generic[T]):
     app: AppIdentity
     parameters: dict[str, Any] = Field(default_factory=dict, description="The module's settings.")
     request_id: str | None = Field(default=None, description="Set when this result answers a command.")
+    stream: str | None = Field(
+        default=None,
+        description="The `stream` of the input this result was computed from; null for an answer to a command.",
+    )
     result: T
