@@ -61,8 +61,9 @@ class RollingFrequencyModule(Module):
     #: promise: the same inputs always give the same result. So a result
     #: depends only on the recording and the instant, never on the client, on
     #: a command, on the clock, on chance, or on anything else outside the
-    #: inputs. Nothing checks this promise: a cached result from one run is
-    #: shown in place of what another run would have computed.
+    #: inputs. Nothing checks this promise: a result kept from an earlier
+    #: replay is shown in place of what the module would have computed this
+    #: time.
     #:
     #: Here it holds: a result is a sum over the frames of the window, taken in
     #: their order, and nothing else goes in. An analysis that is not

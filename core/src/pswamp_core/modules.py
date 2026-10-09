@@ -55,8 +55,9 @@ so with two attributes and one method. All three are off unless set::
   result. So a result depends only on the recording and the instant, never on
   the client, on a command, on the clock, on chance, or on anything else
   outside the inputs. Leave it ``False``, the default, for an analysis that
-  is not deterministic. Nothing checks this promise: a cached result from one
-  run is shown in place of what another run would have computed.
+  is not deterministic. Nothing checks this promise: a result kept from an
+  earlier replay is shown in place of what the module would have computed
+  this time.
 - ``reset()``: called when the input stops being continuous: the player moved
   (a seek, a step back, a loop, another source) or a frame went missing.
   Throw away everything built from earlier inputs, the window above all. Keep
@@ -185,10 +186,10 @@ class Module(ABC):
         """Note ``message``'s place in its stream; ``True`` while a result
         from it does not count yet.
 
-        A break is the first input, an input from another stream, or one
-        whose number does not follow the last. At a break after the first
-        input ``reset`` is called, and at every break the warm-up starts
-        again from this input."""
+        The first input starts the warm-up. A break is an input from
+        another stream, or one whose number does not follow the last: at a
+        break ``reset`` is called, and the warm-up starts again from that
+        input."""
         stream, seq = getattr(message, "stream", None), getattr(message, "seq", None)
         skipped = seq is not None and self._seq is not None and seq != self._seq + 1
         if not self._read_any or stream != self._stream or skipped:
@@ -216,7 +217,7 @@ class Module(ABC):
 
         Every input is processed; a result is published unless the module is
         still warming up (``warm_up_s``). ``reset`` is called when the input
-        breaks."""
+        breaks: it comes from another stream, or a frame is missing."""
         if self.input_model is None:
             return
         async for message in inputs:

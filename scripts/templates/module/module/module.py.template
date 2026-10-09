@@ -40,10 +40,10 @@ class __NAME__Module(Module):
     input_model = PmuFrame
     output_model = __NAME__Result
 
-    # The next three matter only for an analysis that needs several inputs
-    # before it can answer (a window). This placeholder answers from one frame,
-    # so they are off. doc/module-cookbook.md, "Caching and windowed
-    # algorithms", shows them in use.
+    # The two attributes below, and ``reset``, matter only for an analysis that
+    # needs several inputs before it can answer (a window). This placeholder
+    # answers from one frame, so they are off. doc/module-cookbook.md, "Caching
+    # and windowed algorithms", shows all three in use.
 
     #: How many seconds of unbroken input the analysis needs before its answer
     #: counts. 0 means every input gives an answer on its own. While the module
@@ -59,18 +59,25 @@ class __NAME__Module(Module):
     #: a result depends only on the recording and the instant, never on the
     #: client, on a command, on the clock, on chance, or on anything else
     #: outside the inputs. Leave it ``False``, the default, for an analysis
-    #: that is not deterministic. Nothing checks this promise: a cached result
-    #: from one run is shown in place of what another run would have computed.
+    #: that is not deterministic. Nothing checks this promise: a result kept
+    #: from an earlier replay is shown in place of what the module would have
+    #: computed this time.
     cache_results = False
 
-    def reset(self) -> None:
-        """Called when the input stops being continuous: the player moved (a
-        seek, a step back, a loop, another source) or a frame went missing.
-        Throw away everything built from earlier inputs, the window above all.
-        Keep settings. It is not called before the first input, and a module
-        never calls it itself.
-
-        Nothing to throw away here: this analysis answers from one frame."""
+    # A module with a window also writes ``reset``:
+    #
+    #     def reset(self) -> None:
+    #         self._window.clear()
+    #
+    # It is called when the input stops being continuous: the player moved (a
+    # seek, a step back, a loop, another source) or a frame went missing.
+    # Throw away everything built from earlier inputs, the window above all.
+    # Keep settings. It is not called before the first input, and a module
+    # never calls it itself.
+    #
+    # It is a comment here on purpose. This analysis has nothing to throw away,
+    # and a pipeline refuses a module with a warm-up and kept results that has
+    # no ``reset`` of its own: an empty one written out here would hide that.
 
     async def process(self, frame: PmuFrame) -> __NAME__Body | None:
         columns = frame.header.columns(measurement="f")

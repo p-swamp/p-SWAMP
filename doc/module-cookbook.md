@@ -82,9 +82,8 @@ class PeakFrequencyModule(Module):
     input_model = PmuFrame                  # what it reads
     output_model = PeakFrequencyResult      # a ResultEnvelope subclass: what it publishes
 
-    warm_up_s = 0.0                         # these three are for an analysis that needs a window:
-    cache_results = False                   # off here, and described where they stand in the file
-    def reset(self) -> None: ...
+    warm_up_s = 0.0                         # for an analysis that needs a window: off here, and
+    cache_results = False                   # described in the file, with `reset()`, where they stand
 
     async def process(self, frame: PmuFrame) -> PeakFrequencyBody | None:
         columns = frame.header.columns(measurement="f")     # the layout rides in every frame
@@ -438,9 +437,10 @@ declaration for each:
 | So after every seek the page has no result for a full window, even over a part whose results were computed moments ago. | `cache_results` | The server keeps a recording's results and shows them again. |
 
 The two attributes are off unless set, and `reset()` does nothing unless
-written. A generated module carries the description of all three. A module
-that answers from one frame needs none of them: its result is there with the
-frame.
+written. A generated module carries the description of all three, with
+`reset()` as a comment to fill in: an empty one would hide from the pipeline
+that a windowed module has none. A module that answers from one frame needs
+none of them: its result is there with the frame.
 
 The example is `rolling-frequency`
 (`modules/pswamp_modules/rolling_frequency/module.py`): the mean frequency
@@ -481,8 +481,9 @@ class RollingFrequencyModule(Module):
   result. So a result depends only on the recording and the instant, never
   on the client, on a command, on the clock, on chance, or on anything else
   outside the inputs. Leave it `False`, the default, for an analysis that is
-  not deterministic. Nothing checks this promise: a cached result from one
-  run is shown in place of what another run would have computed.
+  not deterministic. Nothing checks this promise: a result kept from an
+  earlier replay is shown in place of what the module would have computed
+  this time.
 - **`reset()`**: called when the input stops being continuous: the player
   moved (a seek, a step back, a loop, another source) or a frame went
   missing. Throw away everything built from earlier inputs, the window above

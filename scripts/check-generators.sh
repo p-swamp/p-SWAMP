@@ -12,7 +12,10 @@
 #   3. the generated module's tests (the module's own tests/ folder, its
 #      page's socket in the server's tests/), and the layering test over the
 #      result;
-#   4. import the module-worker's pipelines and modules as patched into
+#   4. give the generated module a warm-up and kept results and nothing else,
+#      and expect its pipeline to refuse it: the template must not write out an
+#      empty reset(), which would hide that a windowed module has none;
+#   5. import the module-worker's pipelines and modules as patched into
 #      docker-compose.yml and k8s/p-swamp-local.yaml, from outside the server
 #      tree, as a worker does.
 set -euo pipefail
@@ -66,6 +69,37 @@ MODULE_PKG="$(printf '%s' "$MODULE" | tr - _)"
 scripts/run-python-server-tests.sh -q "tests/test_${MODULE_PKG}.py" \
   "../../modules/pswamp_modules/${MODULE_PKG}/tests" \
   ../../modules/pswamp_modules/tests/test_layering.py
+
+section "A window without reset() is still refused"
+(cd modules && MODULE_PKG="$MODULE_PKG" uv run --project ../app/server-python python - <<'PY'
+import importlib
+import os
+
+from pswamp_core.modules import Module
+from pswamp_core.pipeline import Pipeline
+
+package = os.environ["MODULE_PKG"]
+generated = next(
+    value for value in vars(importlib.import_module(f"pswamp_modules.{package}")).values()
+    if isinstance(value, type) and issubclass(value, Module) and value is not Module
+)
+gateway = importlib.import_module(f"pswamp_modules.pipelines.{package}").gateway
+
+
+class Windowed(generated):  # what an author has after setting the two attributes and no more
+    warm_up_s = 1.0
+    cache_results = True
+
+
+try:
+    Pipeline("check", gateway, modules=(Windowed,))
+except ValueError as refusal:
+    assert "no reset()" in str(refusal), refusal
+    print(f"    refused: {refusal}")
+else:
+    raise SystemExit("accepted: the generated module has a reset() of its own, which hides a missing one")
+PY
+)
 
 section "The module-worker hosts it, as patched"
 (cd modules && MODULE="$MODULE" uv run --project ../app/server-python python - <<'PY'
