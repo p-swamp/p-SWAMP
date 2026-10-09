@@ -145,9 +145,9 @@ spec:
             - name: KAFKA_BOOTSTRAP_SERVERS
               value: p-swamp-kafka:9092
             - name: PSWAMP_WORKER_PIPELINES
-              value: pswamp_modules.pipelines.pmu_test_streamer:PIPELINE
+              value: pswamp_modules.pipelines.pmu_test_streamer:PIPELINE,pswamp_modules.pipelines.rolling_frequency:PIPELINE
             - name: PSWAMP_WORKER_MODULES
-              value: frame-stats,excursion
+              value: frame-stats,excursion,rolling-frequency
           resources:
             requests:
               cpu: "100m"

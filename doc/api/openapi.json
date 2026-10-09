@@ -1806,6 +1806,180 @@
         "title": "ReplayStatus",
         "type": "object"
       },
+      "RollingFrequencyBody": {
+        "properties": {
+          "mean_hz": {
+            "description": "Mean frequency across the stations, over the window.",
+            "title": "Mean Hz",
+            "type": "number"
+          },
+          "samples": {
+            "description": "Frames in the window.",
+            "title": "Samples",
+            "type": "integer"
+          },
+          "window_s": {
+            "description": "The window: seconds up to and including this instant.",
+            "title": "Window S",
+            "type": "number"
+          }
+        },
+        "required": [
+          "mean_hz",
+          "window_s",
+          "samples"
+        ],
+        "title": "RollingFrequencyBody",
+        "type": "object"
+      },
+      "RollingFrequencyResult": {
+        "properties": {
+          "app": {
+            "$ref": "#/components/schemas/AppIdentity"
+          },
+          "mRID": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Mrid"
+          },
+          "parameters": {
+            "additionalProperties": true,
+            "description": "The module's settings.",
+            "title": "Parameters",
+            "type": "object"
+          },
+          "request_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Set when this result answers a command.",
+            "title": "Request Id"
+          },
+          "result": {
+            "$ref": "#/components/schemas/RollingFrequencyBody"
+          },
+          "stream": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "The `stream` of the input this result was computed from; null for an answer to a command.",
+            "title": "Stream"
+          },
+          "timestamp": {
+            "description": "The instant the result is about.",
+            "format": "date-time",
+            "title": "Timestamp",
+            "type": "string"
+          },
+          "version": {
+            "const": "v1",
+            "default": "v1",
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "timestamp",
+          "app",
+          "result"
+        ],
+        "title": "RollingFrequencyResult",
+        "type": "object"
+      },
+      "RollingFrequencyState": {
+        "description": "Pushed on connect and after every change.",
+        "properties": {
+          "from_cache": {
+            "description": "The result was computed on an earlier pass, by this client or another, and kept; false when the module computed it on this pass.",
+            "title": "From Cache",
+            "type": "boolean"
+          },
+          "player": {
+            "$ref": "#/components/schemas/PlayerStatus",
+            "description": "Where the player is in the recording, and which controls apply."
+          },
+          "result": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RollingFrequencyResult"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The module's result for the instant at the cursor; null while its window fills and nothing is kept for that instant."
+          },
+          "type": {
+            "const": "state",
+            "default": "state",
+            "title": "Type",
+            "type": "string"
+          },
+          "warm_up_s": {
+            "description": "Seconds of unbroken frames the module needs before it answers.",
+            "title": "Warm Up S",
+            "type": "number"
+          }
+        },
+        "required": [
+          "player",
+          "result",
+          "from_cache",
+          "warm_up_s"
+        ],
+        "title": "RollingFrequencyState",
+        "type": "object"
+      },
+      "RollingSeekBody": {
+        "properties": {
+          "offset_s": {
+            "description": "Seconds from the start of the recording.",
+            "minimum": 0.0,
+            "title": "Offset S",
+            "type": "number"
+          }
+        },
+        "required": [
+          "offset_s"
+        ],
+        "title": "RollingSeekBody",
+        "type": "object"
+      },
+      "RollingSpeedBody": {
+        "properties": {
+          "speed": {
+            "description": "Speed multiplier; 1 is real time.",
+            "exclusiveMinimum": 0.0,
+            "maximum": 10.0,
+            "title": "Speed",
+            "type": "number"
+          }
+        },
+        "required": [
+          "speed"
+        ],
+        "title": "RollingSpeedBody",
+        "type": "object"
+      },
       "SeekBody": {
         "properties": {
           "end_offset_s": {
@@ -2827,6 +3001,234 @@
         ]
       }
     },
+    "/api/rolling-frequency/playback/pause": {
+      "post": {
+        "description": "Pause the recording at the cursor.",
+        "operationId": "rolling_frequency_pause",
+        "parameters": [
+          {
+            "description": "The browser's client id -- the same value its WebSockets send, which is what makes a command apply to the pipeline the page is watching.",
+            "in": "query",
+            "name": "client_id",
+            "required": true,
+            "schema": {
+              "description": "The browser's client id -- the same value its WebSockets send, which is what makes a command apply to the pipeline the page is watching.",
+              "pattern": "^\\d{1,20}$",
+              "title": "Client Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandAck"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "description": "The client has no running pipeline: its page is not open."
+          },
+          "409": {
+            "description": "The command does not apply in the pipeline's current state."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Pause",
+        "tags": [
+          "rolling-frequency"
+        ]
+      }
+    },
+    "/api/rolling-frequency/playback/play": {
+      "post": {
+        "description": "Play the recording from the cursor.",
+        "operationId": "rolling_frequency_play",
+        "parameters": [
+          {
+            "description": "The browser's client id -- the same value its WebSockets send, which is what makes a command apply to the pipeline the page is watching.",
+            "in": "query",
+            "name": "client_id",
+            "required": true,
+            "schema": {
+              "description": "The browser's client id -- the same value its WebSockets send, which is what makes a command apply to the pipeline the page is watching.",
+              "pattern": "^\\d{1,20}$",
+              "title": "Client Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandAck"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "description": "The client has no running pipeline: its page is not open."
+          },
+          "409": {
+            "description": "The command does not apply in the pipeline's current state."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Play",
+        "tags": [
+          "rolling-frequency"
+        ]
+      }
+    },
+    "/api/rolling-frequency/playback/seek": {
+      "post": {
+        "description": "Move to an offset into the recording. The module's window starts over there.",
+        "operationId": "rolling_frequency_seek",
+        "parameters": [
+          {
+            "description": "The browser's client id -- the same value its WebSockets send, which is what makes a command apply to the pipeline the page is watching.",
+            "in": "query",
+            "name": "client_id",
+            "required": true,
+            "schema": {
+              "description": "The browser's client id -- the same value its WebSockets send, which is what makes a command apply to the pipeline the page is watching.",
+              "pattern": "^\\d{1,20}$",
+              "title": "Client Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RollingSeekBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandAck"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "description": "The client has no running pipeline: its page is not open."
+          },
+          "409": {
+            "description": "The command does not apply in the pipeline's current state."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Seek",
+        "tags": [
+          "rolling-frequency"
+        ]
+      }
+    },
+    "/api/rolling-frequency/playback/speed": {
+      "post": {
+        "description": "Change the replay speed.",
+        "operationId": "rolling_frequency_speed",
+        "parameters": [
+          {
+            "description": "The browser's client id -- the same value its WebSockets send, which is what makes a command apply to the pipeline the page is watching.",
+            "in": "query",
+            "name": "client_id",
+            "required": true,
+            "schema": {
+              "description": "The browser's client id -- the same value its WebSockets send, which is what makes a command apply to the pipeline the page is watching.",
+              "pattern": "^\\d{1,20}$",
+              "title": "Client Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RollingSpeedBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandAck"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "description": "The client has no running pipeline: its page is not open."
+          },
+          "409": {
+            "description": "The command does not apply in the pipeline's current state."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Speed",
+        "tags": [
+          "rolling-frequency"
+        ]
+      }
+    },
     "/api/time-window/channels": {
       "get": {
         "description": "Every selectable channel, for the picker. Static for the process, so it is\na plain GET rather than part of the socket protocol.",
@@ -3007,6 +3409,10 @@
     {
       "description": "Operational errors from any of a client's pipeline runs, for the layout's error tray.",
       "name": "errors"
+    },
+    {
+      "description": "A module with a five-second window over a recording; its results are kept and shown again on a seek back.",
+      "name": "rolling-frequency"
     }
   ],
   "x-websocket-channels": [
@@ -3073,6 +3479,14 @@
         "$ref": "#/components/schemas/ErrorNotice"
       },
       "path": "/api/errors/ws"
+    },
+    {
+      "app": "rolling-frequency",
+      "direction": "server-to-client",
+      "message": {
+        "$ref": "#/components/schemas/RollingFrequencyState"
+      },
+      "path": "/api/rolling-frequency/ws"
     }
   ]
 }

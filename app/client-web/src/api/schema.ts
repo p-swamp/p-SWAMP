@@ -291,6 +291,86 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/rolling-frequency/playback/pause": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Pause
+         * @description Pause the recording at the cursor.
+         */
+        post: operations["rolling_frequency_pause"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/rolling-frequency/playback/play": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Play
+         * @description Play the recording from the cursor.
+         */
+        post: operations["rolling_frequency_play"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/rolling-frequency/playback/seek": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Seek
+         * @description Move to an offset into the recording. The module's window starts over there.
+         */
+        post: operations["rolling_frequency_seek"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/rolling-frequency/playback/speed": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Speed
+         * @description Change the replay speed.
+         */
+        post: operations["rolling_frequency_speed"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/time-window/channels": {
         parameters: {
             query?: never;
@@ -1311,6 +1391,107 @@ export interface components {
             /** Source */
             source: string;
         };
+        /** RollingFrequencyBody */
+        RollingFrequencyBody: {
+            /**
+             * Mean Hz
+             * @description Mean frequency across the stations, over the window.
+             */
+            mean_hz: number;
+            /**
+             * Samples
+             * @description Frames in the window.
+             */
+            samples: number;
+            /**
+             * Window S
+             * @description The window: seconds up to and including this instant.
+             */
+            window_s: number;
+        };
+        /** RollingFrequencyResult */
+        RollingFrequencyResult: {
+            app: components["schemas"]["AppIdentity"];
+            /**
+             * Mrid
+             * @default null
+             */
+            mRID: string | null;
+            /**
+             * Parameters
+             * @description The module's settings.
+             */
+            parameters?: {
+                [key: string]: unknown;
+            };
+            /**
+             * Request Id
+             * @description Set when this result answers a command.
+             * @default null
+             */
+            request_id: string | null;
+            result: components["schemas"]["RollingFrequencyBody"];
+            /**
+             * Stream
+             * @description The `stream` of the input this result was computed from; null for an answer to a command.
+             * @default null
+             */
+            stream: string | null;
+            /**
+             * Timestamp
+             * Format: date-time
+             * @description The instant the result is about.
+             */
+            timestamp: string;
+            /**
+             * Version
+             * @default v1
+             * @constant
+             */
+            version: "v1";
+        };
+        /**
+         * RollingFrequencyState
+         * @description Pushed on connect and after every change.
+         */
+        RollingFrequencyState: {
+            /**
+             * From Cache
+             * @description The result was computed on an earlier pass, by this client or another, and kept; false when the module computed it on this pass.
+             */
+            from_cache: boolean;
+            /** @description Where the player is in the recording, and which controls apply. */
+            player: components["schemas"]["PlayerStatus"];
+            /** @description The module's result for the instant at the cursor; null while its window fills and nothing is kept for that instant. */
+            result: components["schemas"]["RollingFrequencyResult"] | null;
+            /**
+             * Type
+             * @default state
+             * @constant
+             */
+            type: "state";
+            /**
+             * Warm Up S
+             * @description Seconds of unbroken frames the module needs before it answers.
+             */
+            warm_up_s: number;
+        };
+        /** RollingSeekBody */
+        RollingSeekBody: {
+            /**
+             * Offset S
+             * @description Seconds from the start of the recording.
+             */
+            offset_s: number;
+        };
+        /** RollingSpeedBody */
+        RollingSpeedBody: {
+            /**
+             * Speed
+             * @description Speed multiplier; 1 is real time.
+             */
+            speed: number;
+        };
         /** SeekBody */
         SeekBody: {
             /**
@@ -2013,6 +2194,198 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["CommandAck"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    rolling_frequency_pause: {
+        parameters: {
+            query: {
+                /** @description The browser's client id -- the same value its WebSockets send, which is what makes a command apply to the pipeline the page is watching. */
+                client_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandAck"];
+                };
+            };
+            /** @description The client has no running pipeline: its page is not open. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The command does not apply in the pipeline's current state. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    rolling_frequency_play: {
+        parameters: {
+            query: {
+                /** @description The browser's client id -- the same value its WebSockets send, which is what makes a command apply to the pipeline the page is watching. */
+                client_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandAck"];
+                };
+            };
+            /** @description The client has no running pipeline: its page is not open. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The command does not apply in the pipeline's current state. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    rolling_frequency_seek: {
+        parameters: {
+            query: {
+                /** @description The browser's client id -- the same value its WebSockets send, which is what makes a command apply to the pipeline the page is watching. */
+                client_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RollingSeekBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandAck"];
+                };
+            };
+            /** @description The client has no running pipeline: its page is not open. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The command does not apply in the pipeline's current state. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    rolling_frequency_speed: {
+        parameters: {
+            query: {
+                /** @description The browser's client id -- the same value its WebSockets send, which is what makes a command apply to the pipeline the page is watching. */
+                client_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RollingSpeedBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandAck"];
+                };
+            };
+            /** @description The client has no running pipeline: its page is not open. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The command does not apply in the pipeline's current state. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {

@@ -37,6 +37,7 @@ import pmu_test_streamer
 import pswamp_web
 import reference_subapp
 import shared
+import rolling_frequency
 import pswamp_web.app_status
 import pswamp_web.grid
 import pswamp_web.islanding
@@ -127,6 +128,11 @@ APPS = [
         "errors",
         errors,
         "Operational errors from any of a client's pipeline runs, for the layout's error tray.",
+    ),
+    AppEntry(
+        "rolling-frequency",
+        rolling_frequency,
+        "A module with a five-second window over a recording; its results are kept and shown again on a seek back.",
     ),
 ]
 

@@ -129,8 +129,8 @@ services:
     working_dir: /workspace/p-SWAMP/modules
     environment:
       <<: *transport
-      PSWAMP_WORKER_PIPELINES: "pswamp_modules.pipelines.pmu_test_streamer:PIPELINE"
-      PSWAMP_WORKER_MODULES: "frame-stats,excursion"
+      PSWAMP_WORKER_PIPELINES: "pswamp_modules.pipelines.pmu_test_streamer:PIPELINE,pswamp_modules.pipelines.rolling_frequency:PIPELINE"
+      PSWAMP_WORKER_MODULES: "frame-stats,excursion,rolling-frequency"
     depends_on:
       kafka:
         condition: service_healthy
