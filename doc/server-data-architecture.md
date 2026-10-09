@@ -117,6 +117,7 @@ classes.
 | runs | one per client, with its own cursor and speed | one per live source, always on |
 | player controls | play, pause, step, seek, speed | none: a live feed is followed |
 | modules | one instance per client | one instance, results shared |
+| kept results | shared by every client on the recording, where the app has a cache | none |
 
 *What.* Each client has its own run, and picks its source with
 `SwitchSourceCommand`. On a recording, the client's player replays it. Each
@@ -130,7 +131,9 @@ The web API reads a client's run the same way in both cases.
 should run once, however many people watch. A visitor exploring recorded data
 wants their own clock. Always on means live analysis runs with no viewer too,
 as it would in a control room. Topics are shared by every key of an app; the
-record key keeps runs apart.
+record key keeps runs apart. A recording's results are the one thing clients
+share: they are the same for everyone, so one client's serve another's
+("Kept results").
 
 *Where.* `core/src/pswamp_core/pipeline.py` (`start_live_runs`,
 `PipelineRun._follow`), `player.py` (`follow_live`), `shared.serve_pipeline`.
@@ -189,10 +192,10 @@ FrameStatsResult.model_validate_json(text)           # the whole codec
 
 | Message | Carries |
 |---|---|
-| `PmuFrame` | One instant of every channel, with its `PmuHeader` (station, channel, measurement and unit per column, data rate, `cimReferenceId`, `header_id`). |
+| `PmuFrame` | One instant of every channel, with its `PmuHeader` (station, channel, measurement and unit per column, data rate, `cimReferenceId`, `header_id`), and its place in its stream (`stream`, `seq`). |
 | `Command` | An upstream action. The player's are `Play`, `Pause`, `Step`, `Seek`, `Speed` and `SwitchSource`; a module declares its own. |
 | `PlayerStatus` | The player's mode, source, cursor, speed and what it can do. |
-| `ResultEnvelope[T]` | A module's result body `T`, with the module's identity and the command it answers, if any. |
+| `ResultEnvelope[T]` | A module's result body `T`, with the module's identity, the `stream` of the input it was computed from, and the command it answers, if any. |
 | `ErrorEvent` | An operational failure, for the person using the run. |
 | `PipelineClosed` | A run stopped; hosts drop its module instances. |
 
@@ -200,6 +203,14 @@ FrameStatsResult.model_validate_json(text)           # the whole codec
 validated on receipt, and published in the browser's api contract without an
 adapter. A pinned version makes an incompatible payload fail loudly. Every
 frame carries its layout, so a module needs nothing but the frame in hand.
+
+**A frame says where it is in its stream.** A stream is one unbroken pass over
+a source: a seek, a step back, a loop, a switch of source and a retry each
+start a new one. The gateway stamps every frame with its stream's id
+(`stream`) and its number there (`seq`, from 0). Whoever reads the frames
+later can then tell a jump from an unbroken run, and a lost frame from none,
+whatever dropped it on the way: a full queue, a slow broker, a transport
+that loses or reorders. A provider leaves both unset.
 
 *Where.* `core/src/pswamp_core/messages/`.
 
@@ -295,6 +306,32 @@ example") show the three things a module can do beyond reading frames:
   `RangeSummaryModule` answers `SummarizeRangeCommand` with it: a batch query,
   which compose and k8s run in a worker of its own.
 
+**A module with a window.** An analysis that needs several inputs before it
+can answer declares it, and is told when its input breaks:
+
+```python
+class RollingFrequencyModule(Module):
+    warm_up_s = 5.0             # seconds of unbroken input before a result counts
+    cache_results = True        # the same inputs always give the same result
+
+    def reset(self) -> None:    # the input is no longer continuous
+        self._window.clear()
+```
+
+- `warm_up_s`: until that much unbroken input is in, `process` is called and
+  what it returns is not published.
+- `reset()`: called at a break: an input from another stream, or a frame
+  missing from the sequence. Not before the first input.
+- `cache_results`: the author's promise that the analysis is deterministic,
+  so the server may keep a recording's results and show them again ("Kept
+  results"). The core cannot check it. A pipeline refuses the flag where it
+  can see it cannot hold: a module that takes commands, reads another
+  module's results, has a warm-up and no `reset()`, or shares its result
+  class.
+
+All three are off by default. `doc/module-cookbook.md`, "Caching and windowed
+algorithms", is the recipe.
+
 *Why.* A contributor writes the analysis and three class attributes. The
 module never sees the transport: it reads a queue and publishes into a sink.
 That lets the same module run in the server or in a worker. Reading the layout
@@ -303,7 +340,8 @@ event loop; a CPU-heavy module runs its analysis in a thread or process pool.
 
 *Where.* `core/src/pswamp_core/modules.py`, `host.py`, `command_routing.py`;
 a module is a package under `modules/pswamp_modules/`, and the
-streamer's are `frame_stats/`, `excursion/` and `range_summary/`.
+streamer's are `frame_stats/`, `excursion/` and `range_summary/`. The module
+with a window is `rolling_frequency/`.
 
 ### Gateway and providers
 *What.* A provider implements `DataClient`: it is a `history` (it holds a
@@ -330,9 +368,11 @@ chunk = await gateway.consume(start=t0, end=t1)   # exactly [t0, t1)
 write its own outside this repo. `pswamp_core.testing.DataClientConformance`
 is the executable contract: inherit it, supply the client, and pytest checks
 it. With one source active at a time, a stream always has exactly one provider
-behind it. "Jump to a time" and "query a chunk" are the same call. The gateway
-opens a client on first use, so a source nobody reads costs nothing. History
-lives with the provider: the repo stores nothing.
+behind it. "Jump to a time" and "query a chunk" are the same call. Each call
+is one stream, with an id of its own, and stamps that id and a running number
+on the frames it yields (`PmuFrame.stream`, `seq`). The gateway opens a client
+on first use, so a source nobody reads costs nothing. History lives with the
+provider: the repo stores nothing.
 
 **Configured, not coded.** An app's sources come from `<APP>_DATA_CLIENTS`,
 with a default in the app's pipeline file. Each client reads its own
@@ -348,7 +388,8 @@ variable.
 
 *Where.* `core/src/pswamp_core/datagateway/`, `settings.py`, `testing.py`;
 the examples are `modules/pswamp_modules/sources/sample_client.py`
-(history) and `live_client.py` (live: the sample re-stamped on the wall clock).
+(history: the 3 s sample, and a 30 s recording with a line trip) and
+`live_client.py` (live: the sample re-stamped on the wall clock).
 
 ### CIM reference
 *What.* The gateway sets an optional `PmuHeader.cimReferenceId` on every
@@ -424,6 +465,50 @@ watched.
 
 *Where.* `core/src/pswamp_core/pipeline.py`, `worker.py`;
 `modules/pswamp_modules/pipelines/pmu_test_streamer.py`.
+
+### Kept results
+*What.* A run given a `ResultCache` keeps the results of the modules that
+allow it (`cache_results`) and shows them again at its cursor. An app's runs
+share one cache.
+
+```python
+cache = ResultCache()                                            # one per app, made in its lifespan
+REGISTRY = PipelineRegistry(lambda key: PipelineRun(key, PIPELINE, transport, cache=cache))
+
+run.latest.get(RollingFrequencyResult)    # the result for the instant at the cursor, or None
+run.from_cache(result)                    # True: computed on an earlier pass, by this client or another
+```
+
+- **Write.** A result is kept under the recording its stream read, its class
+  and its data timestamp. Not under the client.
+- **Show.** A result shows only if it is about the stream at the cursor. One
+  still in flight from before a seek does not.
+- **Read.** At every frame, where the module has not answered for the current
+  stream, the kept result for the cursor shows, or none. A result stands
+  until the next one is due; past a gap there is none rather than an old one.
+- **Bounds.** 10 000 results by default, the oldest dropped first: 40 to
+  60 MB, at the 3.8 to 5.8 KB one entry measured. In memory, in the server
+  process, empty after a restart.
+- **Never live.** A shared live run takes no cache, and a client's player
+  reads no live stream itself.
+
+*Why.* A module with a window answers nothing while the window fills, which
+it does again after every seek. Scrubbing back over a part already played
+would wait a full window for results computed moments ago. Kept by what they
+are about, one client's results also serve every other client on the
+recording. The cache is in the run, where a client's cursor and its results
+meet, and not in the transport: a topic holds every run on one partition,
+keeps a minute, and is read from its end. A transport that had to keep
+results and find them by time would also be harder to replace: every
+transport would have to do it. As it is, none changes. The stream id and the
+frame number make a kept result trustworthy: a module starts over at a jump
+or a lost frame, so it never publishes a result over a broken window.
+
+What it does not do: an instant nobody has played still waits for the window.
+
+*Where.* `core/src/pswamp_core/result_cache.py`, `pipeline.py`
+(`PipelineRun._take_kept`, `_show_kept`); the example is
+`app/server-python/src/rolling_frequency/api.py`, at `/rolling-frequency`.
 
 ### Commands
 *What.* A command's class is its address. Exactly one part of a pipeline
@@ -741,5 +826,14 @@ sources.
   accepted. A command that never reaches its receiver (its worker is not
   running, the broker is down) is lost with only a log line. The ack and every
   answer carry the `request_id` a watchdog would match on.
+- **Results for an instant nobody has played.** The cache shows what was
+  computed. Feeding a module the window before the cursor on a seek would
+  cover a first visit too.
+- **Kept results for more modules.** One that takes commands or reads another
+  module's results cannot have its results kept: the cache is not keyed by
+  settings, and a result carries no sequence number.
+- **A module that tolerates lost frames.** A missing frame always starts its
+  warm-up over; it cannot ask to be reset on a seek only.
+- **Looking back on a live source.** Nothing of a live source is kept.
 - **Security** between p-SWAMP and a remote data service, and limits on
   queries (see the contract's "Not settled yet").

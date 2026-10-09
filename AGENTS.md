@@ -59,6 +59,12 @@ which exist to keep the "adding a page" path honest:
   shows up there. A new module over the core is its own app, generated with
   `scripts/generate-new-module-with-frontend.sh` (`doc/module-cookbook.md`), not
   an extension of the streamer.
+- **`/rolling-frequency` is the worked example of a module with a window**:
+  the mean frequency over the last 5 s of a 30 s recording, whose results the
+  server keeps and shows again on a seek back. It is where `warm_up_s`,
+  `reset()` and `cache_results` are used and explained
+  (`modules/pswamp_modules/rolling_frequency/module.py`), and its spec is
+  `e2e/rolling-frequency.spec.ts`. Keep it to that one thing.
 
 **The client-server stack is stateless on purpose.** There is no database and no
 persistent volume anywhere under `app/` or `k8s/`. Don't reintroduce one without
@@ -66,7 +72,8 @@ an explicit ask. (The Nordic 44 grid model *is* a sqlite file, and the replayed
 PMU stream *is* a committed `.npz` — but both are read-only sample data the
 server opens, not storage it writes to.) Kafka, in compose and k8s, is a
 transport between processes, not a store: its topics keep about a minute and
-have no volume.
+have no volume. The results cache (`pswamp_core.result_cache`) is not a store
+either: it is in the server's memory, bounded, and empty after a restart.
 
 ## The Python projects in one repo
 
@@ -183,11 +190,17 @@ Two deployables, one wire protocol:
   its modules (`frame_stats/`, `excursion/`, `range_summary/`) and its data
   clients (`sources/sample_client.py`, `sources/live_client.py`). See "The
   server data architecture" below.
+  **`src/rolling_frequency/`** is the web API of the module with a window:
+  the one app that gives its runs a `ResultCache`.
   `sources/sample_data.txt` is a **one-off sample committed for testing**: 300
   *simulated* PMU records extracted by hand from the Nordic 44 simulation in
   `examples/nordic44_rtsim/` (voltage phasor + measured frequency, five stations
   at 20 Hz, spanning a line trip). Nothing generates it; don't add tooling to
-  regenerate it unless asked. **`src/errors/`** is the error tray's backend.
+  regenerate it unless asked. `sources/line_trip_30s.txt` is a second one, in
+  the same format: the same five stations for 30 s at 10 Hz, extracted once by
+  hand from `pswamp_web/data/n44_line_trip_50hz.npz` (seconds 15 to 45, every
+  fifth sample, numbered on an even grid). Nothing generates that either.
+  **`src/errors/`** is the error tray's backend.
   **`src/shared.py`** is what an app
   package imports its domain-free helpers from — `SocketRegistry`, plus
   `ClientId`, `CommandAck`, `read_client_id`, `get_logger` re-exported from
@@ -453,6 +466,23 @@ follows `doc/remote-data-integration-contract.md`. The rules to keep:
 - **Recordings are per client, live is shared.** A client's run is keyed by its
   client id; each live source has one always-on run keyed `live.<source>`, which
   client runs follow.
+- **A frame carries its stream and its number** (`PmuFrame.stream`, `seq`), set
+  by the gateway: one stream per `consume()`, so per seek, loop and source
+  switch. `Module.run` tells a break from them (another stream, or a missing
+  number), calls `reset()` and restarts the warm-up. Don't strip or rewrite
+  them between gateway and module, and don't detect seeks any other way.
+- **Kept results live in the run, never in the transport.** `PipelineRun(...,
+  cache=)` with one `ResultCache` per app, made in its lifespan. Recordings
+  only, and only for modules that set `cache_results`. The transport still
+  replays nothing: don't add retention or read-back to one.
+- **`cache_results` is a promise the core cannot check**: the analysis is
+  deterministic. A pipeline refuses the flag on a module that takes commands,
+  reads another module's results, has a warm-up and no `reset()`, or shares its
+  result class. Leave it off for anything that depends on chance, the clock or
+  a client's settings. `doc/module-cookbook.md`, "Caching and windowed
+  algorithms", is the recipe; the wording for the three is the same in
+  `pswamp_core/modules.py`, the module template and `rolling_frequency/module.py`,
+  so change all three together.
 - **Sources are configured, not coded**: `<APP>_DATA_CLIENTS` plus each client's
   `{NAME}_{SETTING}` block. A new `DataClient` passes
   `pswamp_core.testing.DataClientConformance`.

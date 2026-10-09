@@ -9,11 +9,15 @@ It goes in two parts, then recipes:
 1. **The module**: the server side. Write the analysis and test it, without
    the pipeline running.
 2. **The frontend**: the web API and the page that show the module's results.
-3. **Further recipes**: commands, chaining, batch queries, a worker of its
-   own, scaling, data sources.
+3. **Further recipes**: commands, chaining, windows and kept results, batch
+   queries, a worker of its own, scaling, data sources.
 
-The examples come from two apps:
+The examples come from three apps:
 - **`peak-frequency`**: what the generator writes below. One module, one page.
+- **`rolling-frequency`** (`modules/pswamp_modules/rolling_frequency/`; its
+  web API in `app/server-python/src/rolling_frequency/`): one module with a
+  five-second window over a 30 s recording, whose results the server keeps
+  and shows again. The example for "Caching and windowed algorithms".
 - **The PMU test streamer** (`frame_stats/`, `excursion/`, `range_summary/`
   and `pipelines/pmu_test_streamer.py` in `modules/pswamp_modules/`; its
   web API in `app/server-python/src/pmu_test_streamer/`): the reference
@@ -78,6 +82,10 @@ class PeakFrequencyModule(Module):
     input_model = PmuFrame                  # what it reads
     output_model = PeakFrequencyResult      # a ResultEnvelope subclass: what it publishes
 
+    warm_up_s = 0.0                         # these three are for an analysis that needs a window:
+    cache_results = False                   # off here, and described where they stand in the file
+    def reset(self) -> None: ...
+
     async def process(self, frame: PmuFrame) -> PeakFrequencyBody | None:
         columns = frame.header.columns(measurement="f")     # the layout rides in every frame
         ...                                                 # return None to publish nothing
@@ -87,6 +95,9 @@ class PeakFrequencyModule(Module):
   (column indexes) re-derives it when `frame.header.header_id` changes; the
   streamer's `frame_stats/module.py` does.
 - The CIM reference for the frame is `frame.header.cimReferenceId`.
+- An analysis that answers from one frame leaves `warm_up_s`, `cache_results`
+  and `reset` as generated. One that needs several frames before it can
+  answer sets them: "Caching and windowed algorithms", below.
 - A result class is a `ResultEnvelope[Body]` subclass with
   `version: Literal["v1"] = "v1"`. Its name is its topic
   (`PeakFrequencyResult` → `peak.frequency.result`), and the browser's type is
@@ -280,7 +291,9 @@ export function PeakFrequencyPage() {
 - A page over a recording needs the player's controls (play, pause, step,
   seek). Copy them from the streamer: the POSTs in its `api.py`, the
   functions in `usePmuStreamSocket.ts`, the buttons in
-  `PmuTestStreamerPage.tsx`.
+  `PmuTestStreamerPage.tsx`. Give the request bodies names of their own
+  (`RollingSeekBody`, not `SeekBody`): two models of one name are both
+  renamed in the api contract, the streamer's included.
 
 ### Test it
 
@@ -410,6 +423,215 @@ So the streamer's data runs frame → frame stats → excursion.
 - **The order in `modules=` does not matter.**
 - **Each link is a hop over the transport**, so a chained module sees an
   instant a little later than the module before it.
+
+### Caching and windowed algorithms
+
+Some analyses need several inputs before they can answer: a mean over five
+seconds, an estimate of oscillation modes over forty-five. Such a module has
+a **window**, and a window brings three problems. The contract has one
+declaration for each:
+
+| The problem | The declaration | What it does |
+|---|---|---|
+| Until the window is full the answer is wrong: a mean over half the window is not the mean it claims to be. | `warm_up_s` | Nothing is published until the window can be full. |
+| When the input jumps, the window holds samples from before and after the jump: a window over neither place. | `reset()` | The module is told, and empties its window. |
+| So after every seek the page has no result for a full window, even over a part whose results were computed moments ago. | `cache_results` | The server keeps a recording's results and shows them again. |
+
+The two attributes are off unless set, and `reset()` does nothing unless
+written. A generated module carries the description of all three. A module
+that answers from one frame needs none of them: its result is there with the
+frame.
+
+The example is `rolling-frequency`
+(`modules/pswamp_modules/rolling_frequency/module.py`): the mean frequency
+over the last five seconds, on a 30 s recording.
+
+```python
+WINDOW_S = 5.0
+
+class RollingFrequencyModule(Module):
+    name = "rolling-frequency"
+    input_model = PmuFrame
+    output_model = RollingFrequencyResult
+    warm_up_s = WINDOW_S          # no answer before five seconds of frames are in
+    cache_results = True          # the same frames always give the same mean
+
+    def __init__(self) -> None:
+        super().__init__()
+        self._window: deque[tuple[datetime, float]] = deque()
+
+    def reset(self) -> None:      # the input jumped: the window is about somewhere else
+        self._window.clear()
+
+    async def process(self, frame: PmuFrame) -> RollingFrequencyBody | None:
+        ...                       # add the frame, drop what is older than 5 s, return the window's mean
+```
+
+**1. What each one does.**
+
+- **`warm_up_s`**: how many seconds of unbroken input the analysis needs
+  before its answer counts. 0 means every input gives an answer on its own.
+  While the module warms up, `process` is still called with every input, so
+  it can fill its window, but what it returns is not published. The warm-up
+  starts at the module's first input and starts again after every break (see
+  `reset`). It is counted in the data's own time, not on the clock.
+- **`cache_results`**: set it to `True` to let the server keep this module's
+  results for a recording and show them again when any client is at the same
+  instant. Setting it is a promise: the same inputs always give the same
+  result. So a result depends only on the recording and the instant, never
+  on the client, on a command, on the clock, on chance, or on anything else
+  outside the inputs. Leave it `False`, the default, for an analysis that is
+  not deterministic. Nothing checks this promise: a cached result from one
+  run is shown in place of what another run would have computed.
+- **`reset()`**: called when the input stops being continuous: the player
+  moved (a seek, a step back, a loop, another source) or a frame went
+  missing. Throw away everything built from earlier inputs, the window above
+  all. Keep settings. It is not called before the first input, and a module
+  never calls it itself.
+
+**2. What happens around `process`.** `process` is called for every frame.
+`Module.run`, in the base class, decides what is published and when `reset()`
+is called. With the example's five-second window, and its results kept (4.):
+play from the start to 6 s, seek back to 2 s, play on.
+
+| The player | `reset()` | `Module.run` publishes | The page has |
+|---|---|---|---|
+| plays 0 to 5 s | not called: nothing to throw away yet | nothing: warming up | no result |
+| plays 5 to 6 s | | each result, the first for the frame at 5.0 s | the module's result |
+| seeks back to 2 s | called, before the frame at 2 s | nothing: warming up again | no result: none was ever computed for 2 s |
+| plays 2 to 5 s | | nothing | no result |
+| plays 5 to 6 s | | nothing: five seconds after the seek is 7 s | the result kept from the first pass |
+| plays 6 to 7 s | | nothing | no result: nobody has computed these |
+| plays on from 7 s | | each result | the module's result |
+
+- **The warm-up** starts at the module's first input and is measured between
+  frame timestamps: with the first frame at 0 s, the frame at 5.0 s is the
+  first whose result is published.
+- **A break** is an input from another stream, or a frame missing from the
+  sequence. At a break `reset()` is called and the warm-up starts again from
+  that input.
+- **A stream** is one unbroken pass over a source. A seek, a step back, a
+  loop, a switch of source, and playing again after the source failed each
+  start a new one. Pausing, a change of speed and stepping forward do not.
+- **The module does not look for breaks itself.** Every frame carries its
+  stream and its number there (`frame.stream`, `frame.seq`), and `Module.run`
+  reads them.
+- **Where the page has no result**, the example's says "Window filling".
+- **Without a cache** the last column differs after the seek: the page keeps
+  the result from before it, from 6 s, until the module's next one at 7 s.
+
+**3. What `cache_results` promises.** That the analysis is deterministic: the
+same frames in, the same result out, every time. These break the promise:
+
+- chance: a random start, sampling;
+- the clock: `utcnow()`, or doing something every so many seconds of wall
+  time;
+- anything read from outside the inputs: a file that changes, a service;
+- a setting a client can change.
+
+A module like that leaves `cache_results` off. It can still set `warm_up_s`
+and write `reset()`: those are about its own results being right, kept or
+not. A result that may differ in the last digits of a float from run to run
+(threaded linear algebra) is safe to keep, since the kept one is a valid
+answer. One that may differ in substance is not.
+
+A pipeline refuses the flag where it can see that the promise cannot hold.
+Each is a `ValueError` when the pipeline is declared, so at import:
+
+| The module | The error ends |
+|---|---|
+| takes commands (lists any in `commands`: "Send it commands") | `sets cache_results, but it takes commands: a command could change what it computes, and cached results are not kept per setting` |
+| reads another module's results | `but it does not read frames: without a frame's number, a lost input cannot be told from an unbroken run` |
+| has a warm-up and no `reset()` of its own | `but it has a warm-up and no reset(): its window would keep what it held before a seek` |
+| shares its result class with another module | `but <Other> publishes <Result> too: a cached result could be either's` |
+
+Whether the analysis is deterministic the pipeline cannot see. That part is
+the author's.
+
+**4. Turn the cache on in the web API.** The module allowing it is one half.
+The app's runs also need a `ResultCache` to share
+(`app/server-python/src/rolling_frequency/api.py`):
+
+```python
+_cache: ResultCache | None = None     # made in lifespan, so each server start begins empty
+
+REGISTRY = PipelineRegistry(
+    lambda client_id: PipelineRun(client_id, PIPELINE, transport(), cache=_cache)
+)
+
+@contextlib.asynccontextmanager
+async def lifespan(app: FastAPI):
+    global _cache
+    _cache = ResultCache()
+    try:
+        async with serve_pipeline(PIPELINE, REGISTRY):
+            yield
+    finally:
+        _cache = None
+
+def state_message(run: PipelineRun) -> RollingFrequencyState:
+    result = run.latest.get(RollingFrequencyResult)   # the module's own, or the kept one for the cursor
+    return RollingFrequencyState(..., result=result, from_cache=run.from_cache(result))
+```
+
+Here `run` is a client's `PipelineRun`, not the module's `run` method.
+
+- **What the page gets.** `run.latest.get(...)` is then the result for the
+  instant at the cursor: the module's own, else a kept one, else `None`. It no
+  longer shows a result from before a seek. `run.from_cache(result)` says
+  which of the two it is, so the page can mark it.
+- **What a result is kept under.** The source's name in the app, the result's
+  class, and its timestamp: that of the frame it was computed from. Not the
+  client: every client's run shares the cache, so one client's results serve
+  another's on the same source.
+- **How much.** One cache per app, 10 000 results in all by default
+  (`ResultCache(max_entries=...)`), the first kept dropped first: 40 to
+  60 MB. At one result per frame at 10 Hz that is about 17 minutes.
+- **For how long.** It is in the server's memory: empty after a restart.
+- **Recordings only.** A live source is never kept.
+
+**5. Test it.** `process` alone tests the analysis. The warm-up and the reset
+are `run`'s doing, so test them through `run`, over frames that carry their
+place as a gateway stamps it:
+
+```python
+from pswamp_core.subscription import Overflow, Subscription
+
+def frame(tenths, hz, stream, seq):      # stream: one unbroken pass; seq: the frame's number in it
+    return PmuFrame(mRID="test", timestamp=at(tenths / 10), header=HEADER, values=[hz, hz], stream=stream, seq=seq)
+
+inputs, out = Subscription(_NoOwner(), (PmuFrame,), Overflow.GROW, 0), Recorder()   # a queue that drops nothing
+for one in frames:
+    inputs.offer(one)
+inputs.close()                           # run ends once it has read them all
+await RollingFrequencyModule().run(inputs, out)
+out.published                            # what a host would send on
+```
+
+`rolling_frequency/tests/test_module.py` has three such tests: nothing is
+published before five seconds, a seek starts the window over, and so does a
+missing frame. Its first lines hold the helpers used here (`at`, `HEADER`,
+`Recorder`, `_NoOwner`). Frames built without `stream` and `seq` count as one unbroken
+run.
+
+**6. What to watch for.**
+
+- **An analysis that is not deterministic must not be kept**, and nothing but
+  its author can tell.
+- **A window that drops samples by age** keeps the later ones after a seek
+  back, for good, unless `reset()` clears it.
+- **A module that cannot keep up publishes nothing.** Its queue drops old
+  frames, every drop is a break, and the warm-up starts again. It says so on
+  the error tray ("Keeping up" in `doc/server-data-architecture.md`).
+- **A frame lost elsewhere is not reported.** One dropped by a broker starts
+  the window over just the same, with nothing on the error tray.
+- **What a module publishes itself**, through the sink it was given in
+  `setup` (a command to the player, say), is not held back during the
+  warm-up. Only what `process` returns is.
+- **The cache computes nothing.** An instant nobody has played still waits
+  for the window.
+- **The warm-up is in the data's time.** At 2× it takes half as long on the
+  clock.
 
 ### Read data yourself: a batch query
 

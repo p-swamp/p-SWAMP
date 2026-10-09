@@ -124,6 +124,8 @@ between does not buffer the stream into one blob.
 - `mRID` identifies the stream.
 - The header rides in every record. Leave `cimReferenceId` out: p-SWAMP's
   gateway sets it.
+- Leave `stream` and `seq` out too. They are not the `mRID`: p-SWAMP's gateway
+  sets them on each pass it reads, to mark the pass and number its frames.
 - The authoritative schema is `PmuFrame` in the api contract
   (`doc/api/openapi.json`, `components.schemas`).
 
