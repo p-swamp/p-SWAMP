@@ -1,0 +1,1500 @@
+t= 0.000s  PMU=3000  V= 419.07kV  ang=    5.66deg  f= 50.0009Hz
+t= 0.000s  PMU=3245  V= 419.92kV  ang=   12.76deg  f= 50.0009Hz
+t= 0.000s  PMU=5100  V= 300.01kV  ang=   12.88deg  f= 50.0009Hz
+t= 0.000s  PMU=6500  V= 300.00kV  ang=   15.05deg  f= 50.0009Hz
+t= 0.000s  PMU=7000  V= 420.01kV  ang=   40.74deg  f= 50.0009Hz
+t= 0.100s  PMU=3000  V= 419.07kV  ang=    5.70deg  f= 50.0009Hz
+t= 0.100s  PMU=3245  V= 419.92kV  ang=   12.80deg  f= 50.0009Hz
+t= 0.100s  PMU=5100  V= 300.01kV  ang=   12.92deg  f= 50.0009Hz
+t= 0.100s  PMU=6500  V= 300.00kV  ang=   15.08deg  f= 50.0009Hz
+t= 0.100s  PMU=7000  V= 420.01kV  ang=   40.77deg  f= 50.0009Hz
+t= 0.200s  PMU=3000  V= 419.07kV  ang=    5.73deg  f= 50.0009Hz
+t= 0.200s  PMU=3245  V= 419.92kV  ang=   12.83deg  f= 50.0009Hz
+t= 0.200s  PMU=5100  V= 300.01kV  ang=   12.95deg  f= 50.0009Hz
+t= 0.200s  PMU=6500  V= 300.00kV  ang=   15.12deg  f= 50.0009Hz
+t= 0.200s  PMU=7000  V= 420.01kV  ang=   40.80deg  f= 50.0009Hz
+t= 0.300s  PMU=3000  V= 419.07kV  ang=    5.76deg  f= 50.0009Hz
+t= 0.300s  PMU=3245  V= 419.92kV  ang=   12.86deg  f= 50.0009Hz
+t= 0.300s  PMU=5100  V= 300.01kV  ang=   12.98deg  f= 50.0009Hz
+t= 0.300s  PMU=6500  V= 300.00kV  ang=   15.15deg  f= 50.0009Hz
+t= 0.300s  PMU=7000  V= 420.01kV  ang=   40.84deg  f= 50.0009Hz
+t= 0.400s  PMU=3000  V= 419.07kV  ang=    5.80deg  f= 50.0009Hz
+t= 0.400s  PMU=3245  V= 419.92kV  ang=   12.90deg  f= 50.0009Hz
+t= 0.400s  PMU=5100  V= 300.01kV  ang=   13.02deg  f= 50.0009Hz
+t= 0.400s  PMU=6500  V= 300.00kV  ang=   15.18deg  f= 50.0009Hz
+t= 0.400s  PMU=7000  V= 420.01kV  ang=   40.87deg  f= 50.0009Hz
+t= 0.500s  PMU=3000  V= 419.07kV  ang=    5.83deg  f= 50.0009Hz
+t= 0.500s  PMU=3245  V= 419.92kV  ang=   12.93deg  f= 50.0009Hz
+t= 0.500s  PMU=5100  V= 300.01kV  ang=   13.05deg  f= 50.0009Hz
+t= 0.500s  PMU=6500  V= 300.00kV  ang=   15.22deg  f= 50.0009Hz
+t= 0.500s  PMU=7000  V= 420.01kV  ang=   40.90deg  f= 50.0009Hz
+t= 0.600s  PMU=3000  V= 419.07kV  ang=    5.87deg  f= 50.0009Hz
+t= 0.600s  PMU=3245  V= 419.92kV  ang=   12.96deg  f= 50.0009Hz
+t= 0.600s  PMU=5100  V= 300.01kV  ang=   13.08deg  f= 50.0009Hz
+t= 0.600s  PMU=6500  V= 300.00kV  ang=   15.25deg  f= 50.0009Hz
+t= 0.600s  PMU=7000  V= 420.01kV  ang=   40.94deg  f= 50.0009Hz
+t= 0.700s  PMU=3000  V= 419.07kV  ang=    5.90deg  f= 50.0009Hz
+t= 0.700s  PMU=3245  V= 419.92kV  ang=   13.00deg  f= 50.0009Hz
+t= 0.700s  PMU=5100  V= 300.01kV  ang=   13.12deg  f= 50.0009Hz
+t= 0.700s  PMU=6500  V= 300.00kV  ang=   15.29deg  f= 50.0009Hz
+t= 0.700s  PMU=7000  V= 420.01kV  ang=   40.97deg  f= 50.0009Hz
+t= 0.800s  PMU=3000  V= 419.07kV  ang=    5.93deg  f= 50.0009Hz
+t= 0.800s  PMU=3245  V= 419.92kV  ang=   13.03deg  f= 50.0009Hz
+t= 0.800s  PMU=5100  V= 300.01kV  ang=   13.15deg  f= 50.0009Hz
+t= 0.800s  PMU=6500  V= 300.00kV  ang=   15.32deg  f= 50.0009Hz
+t= 0.800s  PMU=7000  V= 420.01kV  ang=   41.00deg  f= 50.0009Hz
+t= 0.900s  PMU=3000  V= 419.07kV  ang=    5.97deg  f= 50.0009Hz
+t= 0.900s  PMU=3245  V= 419.92kV  ang=   13.06deg  f= 50.0009Hz
+t= 0.900s  PMU=5100  V= 300.01kV  ang=   13.18deg  f= 50.0009Hz
+t= 0.900s  PMU=6500  V= 300.00kV  ang=   15.35deg  f= 50.0009Hz
+t= 0.900s  PMU=7000  V= 420.01kV  ang=   41.04deg  f= 50.0009Hz
+t= 1.000s  PMU=3000  V= 419.07kV  ang=    6.00deg  f= 50.0009Hz
+t= 1.000s  PMU=3245  V= 419.92kV  ang=   13.10deg  f= 50.0009Hz
+t= 1.000s  PMU=5100  V= 300.01kV  ang=   13.22deg  f= 50.0009Hz
+t= 1.000s  PMU=6500  V= 300.00kV  ang=   15.39deg  f= 50.0009Hz
+t= 1.000s  PMU=7000  V= 420.01kV  ang=   41.07deg  f= 50.0009Hz
+t= 1.100s  PMU=3000  V= 419.07kV  ang=    6.03deg  f= 50.0009Hz
+t= 1.100s  PMU=3245  V= 419.92kV  ang=   13.13deg  f= 50.0009Hz
+t= 1.100s  PMU=5100  V= 300.01kV  ang=   13.25deg  f= 50.0009Hz
+t= 1.100s  PMU=6500  V= 300.00kV  ang=   15.42deg  f= 50.0009Hz
+t= 1.100s  PMU=7000  V= 420.01kV  ang=   41.10deg  f= 50.0009Hz
+t= 1.200s  PMU=3000  V= 419.07kV  ang=    6.07deg  f= 50.0009Hz
+t= 1.200s  PMU=3245  V= 419.92kV  ang=   13.16deg  f= 50.0009Hz
+t= 1.200s  PMU=5100  V= 300.01kV  ang=   13.29deg  f= 50.0009Hz
+t= 1.200s  PMU=6500  V= 300.00kV  ang=   15.45deg  f= 50.0009Hz
+t= 1.200s  PMU=7000  V= 420.01kV  ang=   41.14deg  f= 50.0009Hz
+t= 1.300s  PMU=3000  V= 419.07kV  ang=    6.10deg  f= 50.0009Hz
+t= 1.300s  PMU=3245  V= 419.92kV  ang=   13.20deg  f= 50.0009Hz
+t= 1.300s  PMU=5100  V= 300.01kV  ang=   13.32deg  f= 50.0009Hz
+t= 1.300s  PMU=6500  V= 300.00kV  ang=   15.48deg  f= 50.0009Hz
+t= 1.300s  PMU=7000  V= 420.01kV  ang=   41.17deg  f= 50.0009Hz
+t= 1.400s  PMU=3000  V= 419.07kV  ang=    6.13deg  f= 50.0009Hz
+t= 1.400s  PMU=3245  V= 419.92kV  ang=   13.23deg  f= 50.0009Hz
+t= 1.400s  PMU=5100  V= 300.01kV  ang=   13.35deg  f= 50.0009Hz
+t= 1.400s  PMU=6500  V= 300.00kV  ang=   15.52deg  f= 50.0009Hz
+t= 1.400s  PMU=7000  V= 420.01kV  ang=   41.20deg  f= 50.0009Hz
+t= 1.500s  PMU=3000  V= 419.07kV  ang=    6.16deg  f= 50.0009Hz
+t= 1.500s  PMU=3245  V= 419.92kV  ang=   13.26deg  f= 50.0009Hz
+t= 1.500s  PMU=5100  V= 300.01kV  ang=   13.38deg  f= 50.0009Hz
+t= 1.500s  PMU=6500  V= 300.00kV  ang=   15.55deg  f= 50.0009Hz
+t= 1.500s  PMU=7000  V= 420.01kV  ang=   41.23deg  f= 50.0009Hz
+t= 1.600s  PMU=3000  V= 419.07kV  ang=    6.20deg  f= 50.0009Hz
+t= 1.600s  PMU=3245  V= 419.92kV  ang=   13.30deg  f= 50.0009Hz
+t= 1.600s  PMU=5100  V= 300.01kV  ang=   13.42deg  f= 50.0009Hz
+t= 1.600s  PMU=6500  V= 300.00kV  ang=   15.58deg  f= 50.0009Hz
+t= 1.600s  PMU=7000  V= 420.01kV  ang=   41.27deg  f= 50.0009Hz
+t= 1.700s  PMU=3000  V= 419.07kV  ang=    6.23deg  f= 50.0009Hz
+t= 1.700s  PMU=3245  V= 419.92kV  ang=   13.33deg  f= 50.0009Hz
+t= 1.700s  PMU=5100  V= 300.01kV  ang=   13.45deg  f= 50.0009Hz
+t= 1.700s  PMU=6500  V= 300.00kV  ang=   15.62deg  f= 50.0009Hz
+t= 1.700s  PMU=7000  V= 420.01kV  ang=   41.30deg  f= 50.0009Hz
+t= 1.800s  PMU=3000  V= 419.07kV  ang=    6.27deg  f= 50.0009Hz
+t= 1.800s  PMU=3245  V= 419.92kV  ang=   13.36deg  f= 50.0009Hz
+t= 1.800s  PMU=5100  V= 300.01kV  ang=   13.48deg  f= 50.0009Hz
+t= 1.800s  PMU=6500  V= 300.00kV  ang=   15.65deg  f= 50.0009Hz
+t= 1.800s  PMU=7000  V= 420.01kV  ang=   41.34deg  f= 50.0009Hz
+t= 1.900s  PMU=3000  V= 419.07kV  ang=    6.30deg  f= 50.0009Hz
+t= 1.900s  PMU=3245  V= 419.92kV  ang=   13.40deg  f= 50.0009Hz
+t= 1.900s  PMU=5100  V= 300.01kV  ang=   13.52deg  f= 50.0009Hz
+t= 1.900s  PMU=6500  V= 300.00kV  ang=   15.69deg  f= 50.0009Hz
+t= 1.900s  PMU=7000  V= 420.01kV  ang=   41.37deg  f= 50.0009Hz
+t= 2.000s  PMU=3000  V= 419.07kV  ang=    6.33deg  f= 50.0009Hz
+t= 2.000s  PMU=3245  V= 419.92kV  ang=   13.43deg  f= 50.0009Hz
+t= 2.000s  PMU=5100  V= 300.01kV  ang=   13.55deg  f= 50.0009Hz
+t= 2.000s  PMU=6500  V= 300.00kV  ang=   15.72deg  f= 50.0009Hz
+t= 2.000s  PMU=7000  V= 420.01kV  ang=   41.40deg  f= 50.0009Hz
+t= 2.100s  PMU=3000  V= 419.07kV  ang=    6.37deg  f= 50.0009Hz
+t= 2.100s  PMU=3245  V= 419.92kV  ang=   13.46deg  f= 50.0009Hz
+t= 2.100s  PMU=5100  V= 300.01kV  ang=   13.59deg  f= 50.0009Hz
+t= 2.100s  PMU=6500  V= 300.00kV  ang=   15.75deg  f= 50.0009Hz
+t= 2.100s  PMU=7000  V= 420.01kV  ang=   41.44deg  f= 50.0009Hz
+t= 2.200s  PMU=3000  V= 419.07kV  ang=    6.40deg  f= 50.0009Hz
+t= 2.200s  PMU=3245  V= 419.92kV  ang=   13.50deg  f= 50.0009Hz
+t= 2.200s  PMU=5100  V= 300.01kV  ang=   13.62deg  f= 50.0009Hz
+t= 2.200s  PMU=6500  V= 300.00kV  ang=   15.79deg  f= 50.0009Hz
+t= 2.200s  PMU=7000  V= 420.01kV  ang=   41.47deg  f= 50.0009Hz
+t= 2.300s  PMU=3000  V= 419.07kV  ang=    6.43deg  f= 50.0009Hz
+t= 2.300s  PMU=3245  V= 419.92kV  ang=   13.53deg  f= 50.0009Hz
+t= 2.300s  PMU=5100  V= 300.01kV  ang=   13.65deg  f= 50.0009Hz
+t= 2.300s  PMU=6500  V= 300.00kV  ang=   15.82deg  f= 50.0009Hz
+t= 2.300s  PMU=7000  V= 420.01kV  ang=   41.50deg  f= 50.0009Hz
+t= 2.400s  PMU=3000  V= 419.07kV  ang=    6.47deg  f= 50.0009Hz
+t= 2.400s  PMU=3245  V= 419.92kV  ang=   13.57deg  f= 50.0009Hz
+t= 2.400s  PMU=5100  V= 300.01kV  ang=   13.69deg  f= 50.0009Hz
+t= 2.400s  PMU=6500  V= 300.00kV  ang=   15.85deg  f= 50.0009Hz
+t= 2.400s  PMU=7000  V= 420.01kV  ang=   41.54deg  f= 50.0009Hz
+t= 2.500s  PMU=3000  V= 419.07kV  ang=    6.50deg  f= 50.0009Hz
+t= 2.500s  PMU=3245  V= 419.92kV  ang=   13.60deg  f= 50.0009Hz
+t= 2.500s  PMU=5100  V= 300.01kV  ang=   13.72deg  f= 50.0009Hz
+t= 2.500s  PMU=6500  V= 300.00kV  ang=   15.89deg  f= 50.0009Hz
+t= 2.500s  PMU=7000  V= 420.01kV  ang=   41.57deg  f= 50.0009Hz
+t= 2.600s  PMU=3000  V= 419.07kV  ang=    6.54deg  f= 50.0009Hz
+t= 2.600s  PMU=3245  V= 419.92kV  ang=   13.63deg  f= 50.0009Hz
+t= 2.600s  PMU=5100  V= 300.01kV  ang=   13.75deg  f= 50.0009Hz
+t= 2.600s  PMU=6500  V= 300.00kV  ang=   15.92deg  f= 50.0009Hz
+t= 2.600s  PMU=7000  V= 420.01kV  ang=   41.61deg  f= 50.0009Hz
+t= 2.700s  PMU=3000  V= 419.07kV  ang=    6.57deg  f= 50.0009Hz
+t= 2.700s  PMU=3245  V= 419.92kV  ang=   13.67deg  f= 50.0009Hz
+t= 2.700s  PMU=5100  V= 300.01kV  ang=   13.79deg  f= 50.0009Hz
+t= 2.700s  PMU=6500  V= 300.00kV  ang=   15.96deg  f= 50.0009Hz
+t= 2.700s  PMU=7000  V= 420.01kV  ang=   41.64deg  f= 50.0009Hz
+t= 2.800s  PMU=3000  V= 419.07kV  ang=    6.60deg  f= 50.0009Hz
+t= 2.800s  PMU=3245  V= 419.92kV  ang=   13.70deg  f= 50.0009Hz
+t= 2.800s  PMU=5100  V= 300.01kV  ang=   13.82deg  f= 50.0009Hz
+t= 2.800s  PMU=6500  V= 300.00kV  ang=   15.99deg  f= 50.0009Hz
+t= 2.800s  PMU=7000  V= 420.01kV  ang=   41.67deg  f= 50.0009Hz
+t= 2.900s  PMU=3000  V= 419.07kV  ang=    6.64deg  f= 50.0009Hz
+t= 2.900s  PMU=3245  V= 419.92kV  ang=   13.74deg  f= 50.0009Hz
+t= 2.900s  PMU=5100  V= 300.01kV  ang=   13.86deg  f= 50.0009Hz
+t= 2.900s  PMU=6500  V= 300.00kV  ang=   16.02deg  f= 50.0009Hz
+t= 2.900s  PMU=7000  V= 420.01kV  ang=   41.71deg  f= 50.0009Hz
+t= 3.000s  PMU=3000  V= 419.08kV  ang=    6.67deg  f= 50.0009Hz
+t= 3.000s  PMU=3245  V= 419.92kV  ang=   13.77deg  f= 50.0009Hz
+t= 3.000s  PMU=5100  V= 300.01kV  ang=   13.89deg  f= 50.0009Hz
+t= 3.000s  PMU=6500  V= 300.00kV  ang=   16.06deg  f= 50.0009Hz
+t= 3.000s  PMU=7000  V= 420.01kV  ang=   41.74deg  f= 50.0009Hz
+t= 3.100s  PMU=3000  V= 419.08kV  ang=    6.70deg  f= 50.0009Hz
+t= 3.100s  PMU=3245  V= 419.92kV  ang=   13.80deg  f= 50.0009Hz
+t= 3.100s  PMU=5100  V= 300.01kV  ang=   13.92deg  f= 50.0009Hz
+t= 3.100s  PMU=6500  V= 300.00kV  ang=   16.09deg  f= 50.0009Hz
+t= 3.100s  PMU=7000  V= 420.01kV  ang=   41.78deg  f= 50.0009Hz
+t= 3.200s  PMU=3000  V= 419.08kV  ang=    6.74deg  f= 50.0009Hz
+t= 3.200s  PMU=3245  V= 419.92kV  ang=   13.84deg  f= 50.0009Hz
+t= 3.200s  PMU=5100  V= 300.01kV  ang=   13.96deg  f= 50.0009Hz
+t= 3.200s  PMU=6500  V= 300.00kV  ang=   16.13deg  f= 50.0009Hz
+t= 3.200s  PMU=7000  V= 420.01kV  ang=   41.81deg  f= 50.0009Hz
+t= 3.300s  PMU=3000  V= 419.08kV  ang=    6.77deg  f= 50.0009Hz
+t= 3.300s  PMU=3245  V= 419.92kV  ang=   13.87deg  f= 50.0009Hz
+t= 3.300s  PMU=5100  V= 300.01kV  ang=   13.99deg  f= 50.0009Hz
+t= 3.300s  PMU=6500  V= 300.00kV  ang=   16.16deg  f= 50.0009Hz
+t= 3.300s  PMU=7000  V= 420.01kV  ang=   41.84deg  f= 50.0009Hz
+t= 3.400s  PMU=3000  V= 419.08kV  ang=    6.81deg  f= 50.0009Hz
+t= 3.400s  PMU=3245  V= 419.92kV  ang=   13.90deg  f= 50.0009Hz
+t= 3.400s  PMU=5100  V= 300.01kV  ang=   14.03deg  f= 50.0009Hz
+t= 3.400s  PMU=6500  V= 300.00kV  ang=   16.19deg  f= 50.0009Hz
+t= 3.400s  PMU=7000  V= 420.01kV  ang=   41.88deg  f= 50.0009Hz
+t= 3.500s  PMU=3000  V= 419.08kV  ang=    6.84deg  f= 50.0009Hz
+t= 3.500s  PMU=3245  V= 419.92kV  ang=   13.94deg  f= 50.0009Hz
+t= 3.500s  PMU=5100  V= 300.01kV  ang=   14.06deg  f= 50.0009Hz
+t= 3.500s  PMU=6500  V= 300.00kV  ang=   16.23deg  f= 50.0009Hz
+t= 3.500s  PMU=7000  V= 420.01kV  ang=   41.91deg  f= 50.0009Hz
+t= 3.600s  PMU=3000  V= 419.08kV  ang=    6.87deg  f= 50.0009Hz
+t= 3.600s  PMU=3245  V= 419.92kV  ang=   13.97deg  f= 50.0009Hz
+t= 3.600s  PMU=5100  V= 300.01kV  ang=   14.09deg  f= 50.0009Hz
+t= 3.600s  PMU=6500  V= 300.00kV  ang=   16.26deg  f= 50.0009Hz
+t= 3.600s  PMU=7000  V= 420.01kV  ang=   41.94deg  f= 50.0009Hz
+t= 3.700s  PMU=3000  V= 419.08kV  ang=    6.91deg  f= 50.0009Hz
+t= 3.700s  PMU=3245  V= 419.92kV  ang=   14.01deg  f= 50.0009Hz
+t= 3.700s  PMU=5100  V= 300.01kV  ang=   14.13deg  f= 50.0009Hz
+t= 3.700s  PMU=6500  V= 300.00kV  ang=   16.29deg  f= 50.0009Hz
+t= 3.700s  PMU=7000  V= 420.01kV  ang=   41.98deg  f= 50.0009Hz
+t= 3.800s  PMU=3000  V= 419.08kV  ang=    6.94deg  f= 50.0009Hz
+t= 3.800s  PMU=3245  V= 419.92kV  ang=   14.04deg  f= 50.0009Hz
+t= 3.800s  PMU=5100  V= 300.01kV  ang=   14.16deg  f= 50.0009Hz
+t= 3.800s  PMU=6500  V= 300.00kV  ang=   16.33deg  f= 50.0009Hz
+t= 3.800s  PMU=7000  V= 420.01kV  ang=   42.01deg  f= 50.0009Hz
+t= 3.900s  PMU=3000  V= 419.08kV  ang=    6.98deg  f= 50.0009Hz
+t= 3.900s  PMU=3245  V= 419.92kV  ang=   14.07deg  f= 50.0009Hz
+t= 3.900s  PMU=5100  V= 300.01kV  ang=   14.19deg  f= 50.0009Hz
+t= 3.900s  PMU=6500  V= 300.00kV  ang=   16.36deg  f= 50.0009Hz
+t= 3.900s  PMU=7000  V= 420.01kV  ang=   42.05deg  f= 50.0009Hz
+t= 4.000s  PMU=3000  V= 419.08kV  ang=    7.01deg  f= 50.0009Hz
+t= 4.000s  PMU=3245  V= 419.92kV  ang=   14.11deg  f= 50.0009Hz
+t= 4.000s  PMU=5100  V= 300.01kV  ang=   14.23deg  f= 50.0009Hz
+t= 4.000s  PMU=6500  V= 300.00kV  ang=   16.40deg  f= 50.0009Hz
+t= 4.000s  PMU=7000  V= 420.01kV  ang=   42.08deg  f= 50.0009Hz
+t= 4.100s  PMU=3000  V= 419.08kV  ang=    7.04deg  f= 50.0009Hz
+t= 4.100s  PMU=3245  V= 419.92kV  ang=   14.14deg  f= 50.0009Hz
+t= 4.100s  PMU=5100  V= 300.01kV  ang=   14.26deg  f= 50.0009Hz
+t= 4.100s  PMU=6500  V= 300.00kV  ang=   16.43deg  f= 50.0009Hz
+t= 4.100s  PMU=7000  V= 420.01kV  ang=   42.11deg  f= 50.0009Hz
+t= 4.200s  PMU=3000  V= 419.08kV  ang=    7.08deg  f= 50.0009Hz
+t= 4.200s  PMU=3245  V= 419.92kV  ang=   14.18deg  f= 50.0009Hz
+t= 4.200s  PMU=5100  V= 300.01kV  ang=   14.30deg  f= 50.0009Hz
+t= 4.200s  PMU=6500  V= 300.00kV  ang=   16.46deg  f= 50.0009Hz
+t= 4.200s  PMU=7000  V= 420.01kV  ang=   42.15deg  f= 50.0009Hz
+t= 4.300s  PMU=3000  V= 419.08kV  ang=    7.11deg  f= 50.0009Hz
+t= 4.300s  PMU=3245  V= 419.92kV  ang=   14.21deg  f= 50.0009Hz
+t= 4.300s  PMU=5100  V= 300.01kV  ang=   14.33deg  f= 50.0009Hz
+t= 4.300s  PMU=6500  V= 300.00kV  ang=   16.50deg  f= 50.0009Hz
+t= 4.300s  PMU=7000  V= 420.01kV  ang=   42.18deg  f= 50.0009Hz
+t= 4.400s  PMU=3000  V= 419.08kV  ang=    7.15deg  f= 50.0009Hz
+t= 4.400s  PMU=3245  V= 419.92kV  ang=   14.24deg  f= 50.0009Hz
+t= 4.400s  PMU=5100  V= 300.01kV  ang=   14.36deg  f= 50.0009Hz
+t= 4.400s  PMU=6500  V= 300.00kV  ang=   16.53deg  f= 50.0009Hz
+t= 4.400s  PMU=7000  V= 420.01kV  ang=   42.22deg  f= 50.0009Hz
+t= 4.500s  PMU=3000  V= 419.08kV  ang=    7.18deg  f= 50.0009Hz
+t= 4.500s  PMU=3245  V= 419.92kV  ang=   14.28deg  f= 50.0009Hz
+t= 4.500s  PMU=5100  V= 300.01kV  ang=   14.40deg  f= 50.0009Hz
+t= 4.500s  PMU=6500  V= 300.00kV  ang=   16.57deg  f= 50.0009Hz
+t= 4.500s  PMU=7000  V= 420.01kV  ang=   42.25deg  f= 50.0009Hz
+t= 4.600s  PMU=3000  V= 419.08kV  ang=    7.21deg  f= 50.0009Hz
+t= 4.600s  PMU=3245  V= 419.92kV  ang=   14.31deg  f= 50.0009Hz
+t= 4.600s  PMU=5100  V= 300.01kV  ang=   14.43deg  f= 50.0009Hz
+t= 4.600s  PMU=6500  V= 300.00kV  ang=   16.60deg  f= 50.0009Hz
+t= 4.600s  PMU=7000  V= 420.01kV  ang=   42.28deg  f= 50.0009Hz
+t= 4.700s  PMU=3000  V= 419.08kV  ang=    7.25deg  f= 50.0009Hz
+t= 4.700s  PMU=3245  V= 419.92kV  ang=   14.35deg  f= 50.0009Hz
+t= 4.700s  PMU=5100  V= 300.01kV  ang=   14.47deg  f= 50.0009Hz
+t= 4.700s  PMU=6500  V= 300.00kV  ang=   16.63deg  f= 50.0009Hz
+t= 4.700s  PMU=7000  V= 420.01kV  ang=   42.32deg  f= 50.0009Hz
+t= 4.800s  PMU=3000  V= 419.08kV  ang=    7.28deg  f= 50.0009Hz
+t= 4.800s  PMU=3245  V= 419.92kV  ang=   14.38deg  f= 50.0009Hz
+t= 4.800s  PMU=5100  V= 300.01kV  ang=   14.50deg  f= 50.0009Hz
+t= 4.800s  PMU=6500  V= 300.00kV  ang=   16.67deg  f= 50.0009Hz
+t= 4.800s  PMU=7000  V= 420.01kV  ang=   42.35deg  f= 50.0009Hz
+t= 4.900s  PMU=3000  V= 419.08kV  ang=    7.32deg  f= 50.0009Hz
+t= 4.900s  PMU=3245  V= 419.92kV  ang=   14.41deg  f= 50.0009Hz
+t= 4.900s  PMU=5100  V= 300.01kV  ang=   14.53deg  f= 50.0009Hz
+t= 4.900s  PMU=6500  V= 300.00kV  ang=   16.70deg  f= 50.0009Hz
+t= 4.900s  PMU=7000  V= 420.01kV  ang=   42.39deg  f= 50.0009Hz
+t= 5.000s  PMU=3000  V= 419.08kV  ang=    7.35deg  f= 50.0009Hz
+t= 5.000s  PMU=3245  V= 419.92kV  ang=   14.45deg  f= 50.0009Hz
+t= 5.000s  PMU=5100  V= 300.01kV  ang=   14.57deg  f= 50.0009Hz
+t= 5.000s  PMU=6500  V= 300.00kV  ang=   16.74deg  f= 50.0009Hz
+t= 5.000s  PMU=7000  V= 420.01kV  ang=   42.42deg  f= 50.0009Hz
+t= 5.100s  PMU=3000  V= 418.97kV  ang=    6.79deg  f= 49.9920Hz
+t= 5.100s  PMU=3245  V= 419.35kV  ang=   13.30deg  f= 49.9847Hz
+t= 5.100s  PMU=5100  V= 299.46kV  ang=   14.32deg  f= 49.9971Hz
+t= 5.100s  PMU=6500  V= 299.48kV  ang=   19.03deg  f= 50.0380Hz
+t= 5.100s  PMU=7000  V= 419.68kV  ang=   42.43deg  f= 50.0006Hz
+t= 5.200s  PMU=3000  V= 418.70kV  ang=    6.39deg  f= 49.9899Hz
+t= 5.200s  PMU=3245  V= 418.91kV  ang=   12.85deg  f= 49.9863Hz
+t= 5.200s  PMU=5100  V= 299.24kV  ang=   14.21deg  f= 49.9969Hz
+t= 5.200s  PMU=6500  V= 300.32kV  ang=   21.73deg  f= 50.0632Hz
+t= 5.200s  PMU=7000  V= 419.59kV  ang=   42.43deg  f= 50.0002Hz
+t= 5.300s  PMU=3000  V= 418.30kV  ang=    5.96deg  f= 49.9887Hz
+t= 5.300s  PMU=3245  V= 418.45kV  ang=   12.47deg  f= 49.9884Hz
+t= 5.300s  PMU=5100  V= 299.00kV  ang=   14.08deg  f= 49.9965Hz
+t= 5.300s  PMU=6500  V= 301.81kV  ang=   25.26deg  f= 50.0870Hz
+t= 5.300s  PMU=7000  V= 419.52kV  ang=   42.41deg  f= 49.9995Hz
+t= 5.400s  PMU=3000  V= 417.93kV  ang=    5.56deg  f= 49.9889Hz
+t= 5.400s  PMU=3245  V= 418.17kV  ang=   12.16deg  f= 49.9903Hz
+t= 5.400s  PMU=5100  V= 298.78kV  ang=   13.93deg  f= 49.9959Hz
+t= 5.400s  PMU=6500  V= 303.34kV  ang=   29.24deg  f= 50.1031Hz
+t= 5.400s  PMU=7000  V= 419.47kV  ang=   42.34deg  f= 49.9985Hz
+t= 5.500s  PMU=3000  V= 417.67kV  ang=    5.23deg  f= 49.9902Hz
+t= 5.500s  PMU=3245  V= 418.01kV  ang=   11.87deg  f= 49.9913Hz
+t= 5.500s  PMU=5100  V= 298.59kV  ang=   13.74deg  f= 49.9951Hz
+t= 5.500s  PMU=6500  V= 304.34kV  ang=   33.28deg  f= 50.1096Hz
+t= 5.500s  PMU=7000  V= 419.43kV  ang=   42.21deg  f= 49.9972Hz
+t= 5.600s  PMU=3000  V= 417.53kV  ang=    4.98deg  f= 49.9920Hz
+t= 5.600s  PMU=3245  V= 417.90kV  ang=   11.60deg  f= 49.9920Hz
+t= 5.600s  PMU=5100  V= 298.43kV  ang=   13.52deg  f= 49.9943Hz
+t= 5.600s  PMU=6500  V= 304.62kV  ang=   37.18deg  f= 50.1093Hz
+t= 5.600s  PMU=7000  V= 419.40kV  ang=   42.03deg  f= 49.9957Hz
+t= 5.700s  PMU=3000  V= 417.55kV  ang=    4.79deg  f= 49.9938Hz
+t= 5.700s  PMU=3245  V= 417.94kV  ang=   11.39deg  f= 49.9934Hz
+t= 5.700s  PMU=5100  V= 298.35kV  ang=   13.29deg  f= 49.9939Hz
+t= 5.700s  PMU=6500  V= 304.30kV  ang=   40.93deg  f= 50.1064Hz
+t= 5.700s  PMU=7000  V= 419.39kV  ang=   41.79deg  f= 49.9941Hz
+t= 5.800s  PMU=3000  V= 417.72kV  ang=    4.65deg  f= 49.9952Hz
+t= 5.800s  PMU=3245  V= 418.20kV  ang=   11.23deg  f= 49.9949Hz
+t= 5.800s  PMU=5100  V= 298.39kV  ang=   13.07deg  f= 49.9939Hz
+t= 5.800s  PMU=6500  V= 303.69kV  ang=   44.62deg  f= 50.1044Hz
+t= 5.800s  PMU=7000  V= 419.39kV  ang=   41.50deg  f= 49.9926Hz
+t= 5.900s  PMU=3000  V= 418.01kV  ang=    4.51deg  f= 49.9957Hz
+t= 5.900s  PMU=3245  V= 418.62kV  ang=   11.09deg  f= 49.9955Hz
+t= 5.900s  PMU=5100  V= 298.56kV  ang=   12.87deg  f= 49.9941Hz
+t= 5.900s  PMU=6500  V= 303.11kV  ang=   48.37deg  f= 50.1048Hz
+t= 5.900s  PMU=7000  V= 419.42kV  ang=   41.18deg  f= 49.9914Hz
+t= 6.000s  PMU=3000  V= 418.35kV  ang=    4.33deg  f= 49.9952Hz
+t= 6.000s  PMU=3245  V= 419.06kV  ang=   10.90deg  f= 49.9949Hz
+t= 6.000s  PMU=5100  V= 298.82kV  ang=   12.65deg  f= 49.9940Hz
+t= 6.000s  PMU=6500  V= 302.77kV  ang=   52.24deg  f= 50.1073Hz
+t= 6.000s  PMU=7000  V= 419.46kV  ang=   40.82deg  f= 49.9905Hz
+t= 6.100s  PMU=3000  V= 418.67kV  ang=    4.11deg  f= 49.9942Hz
+t= 6.100s  PMU=3245  V= 419.43kV  ang=   10.65deg  f= 49.9937Hz
+t= 6.100s  PMU=5100  V= 299.09kV  ang=   12.42deg  f= 49.9935Hz
+t= 6.100s  PMU=6500  V= 302.68kV  ang=   56.22deg  f= 50.1102Hz
+t= 6.100s  PMU=7000  V= 419.52kV  ang=   40.45deg  f= 49.9899Hz
+t= 6.200s  PMU=3000  V= 418.94kV  ang=    3.84deg  f= 49.9931Hz
+t= 6.200s  PMU=3245  V= 419.72kV  ang=   10.36deg  f= 49.9925Hz
+t= 6.200s  PMU=5100  V= 299.33kV  ang=   12.14deg  f= 49.9926Hz
+t= 6.200s  PMU=6500  V= 302.72kV  ang=   60.27deg  f= 50.1123Hz
+t= 6.200s  PMU=7000  V= 419.58kV  ang=   40.07deg  f= 49.9896Hz
+t= 6.300s  PMU=3000  V= 419.13kV  ang=    3.54deg  f= 49.9920Hz
+t= 6.300s  PMU=3245  V= 419.94kV  ang=   10.05deg  f= 49.9917Hz
+t= 6.300s  PMU=5100  V= 299.51kV  ang=   11.82deg  f= 49.9915Hz
+t= 6.300s  PMU=6500  V= 302.73kV  ang=   64.31deg  f= 50.1128Hz
+t= 6.300s  PMU=7000  V= 419.66kV  ang=   39.70deg  f= 49.9895Hz
+t= 6.400s  PMU=3000  V= 419.26kV  ang=    3.19deg  f= 49.9909Hz
+t= 6.400s  PMU=3245  V= 420.10kV  ang=    9.71deg  f= 49.9908Hz
+t= 6.400s  PMU=5100  V= 299.60kV  ang=   11.45deg  f= 49.9902Hz
+t= 6.400s  PMU=6500  V= 302.63kV  ang=   68.31deg  f= 50.1123Hz
+t= 6.400s  PMU=7000  V= 419.72kV  ang=   39.32deg  f= 49.9894Hz
+t= 6.500s  PMU=3000  V= 419.29kV  ang=    2.79deg  f= 49.9896Hz
+t= 6.500s  PMU=3245  V= 420.16kV  ang=    9.32deg  f= 49.9896Hz
+t= 6.500s  PMU=5100  V= 299.63kV  ang=   11.03deg  f= 49.9890Hz
+t= 6.500s  PMU=6500  V= 302.41kV  ang=   72.30deg  f= 50.1119Hz
+t= 6.500s  PMU=7000  V= 419.78kV  ang=   38.94deg  f= 49.9893Hz
+t= 6.600s  PMU=3000  V= 419.24kV  ang=    2.35deg  f= 49.9882Hz
+t= 6.600s  PMU=3245  V= 420.11kV  ang=    8.88deg  f= 49.9883Hz
+t= 6.600s  PMU=5100  V= 299.59kV  ang=   10.58deg  f= 49.9879Hz
+t= 6.600s  PMU=6500  V= 302.16kV  ang=   76.33deg  f= 50.1128Hz
+t= 6.600s  PMU=7000  V= 419.81kV  ang=   38.55deg  f= 49.9891Hz
+t= 6.700s  PMU=3000  V= 419.12kV  ang=    1.86deg  f= 49.9869Hz
+t= 6.700s  PMU=3245  V= 419.96kV  ang=    8.39deg  f= 49.9871Hz
+t= 6.700s  PMU=5100  V= 299.53kV  ang=   10.10deg  f= 49.9870Hz
+t= 6.700s  PMU=6500  V= 302.03kV  ang=   80.50deg  f= 50.1156Hz
+t= 6.700s  PMU=7000  V= 419.81kV  ang=   38.15deg  f= 49.9888Hz
+t= 6.800s  PMU=3000  V= 418.96kV  ang=    1.34deg  f= 49.9859Hz
+t= 6.800s  PMU=3245  V= 419.78kV  ang=    7.88deg  f= 49.9861Hz
+t= 6.800s  PMU=5100  V= 299.45kV  ang=    9.60deg  f= 49.9864Hz
+t= 6.800s  PMU=6500  V= 302.09kV  ang=   84.86deg  f= 50.1200Hz
+t= 6.800s  PMU=7000  V= 419.79kV  ang=   37.73deg  f= 49.9884Hz
+t= 6.900s  PMU=3000  V= 418.79kV  ang=    0.80deg  f= 49.9853Hz
+t= 6.900s  PMU=3245  V= 419.58kV  ang=    7.36deg  f= 49.9856Hz
+t= 6.900s  PMU=5100  V= 299.38kV  ang=    9.10deg  f= 49.9862Hz
+t= 6.900s  PMU=6500  V= 302.38kV  ang=   89.41deg  f= 50.1250Hz
+t= 6.900s  PMU=7000  V= 419.75kV  ang=   37.29deg  f= 49.9880Hz
+t= 7.000s  PMU=3000  V= 418.64kV  ang=    0.27deg  f= 49.9852Hz
+t= 7.000s  PMU=3245  V= 419.42kV  ang=    6.83deg  f= 49.9855Hz
+t= 7.000s  PMU=5100  V= 299.34kV  ang=    8.61deg  f= 49.9861Hz
+t= 7.000s  PMU=6500  V= 302.83kV  ang=   94.10deg  f= 50.1292Hz
+t= 7.000s  PMU=7000  V= 419.70kV  ang=   36.84deg  f= 49.9875Hz
+t= 7.100s  PMU=3000  V= 418.54kV  ang=   -0.24deg  f= 49.9856Hz
+t= 7.100s  PMU=3245  V= 419.30kV  ang=    6.33deg  f= 49.9858Hz
+t= 7.100s  PMU=5100  V= 299.33kV  ang=    8.12deg  f= 49.9863Hz
+t= 7.100s  PMU=6500  V= 303.31kV  ang=   98.84deg  f= 50.1316Hz
+t= 7.100s  PMU=7000  V= 419.65kV  ang=   36.37deg  f= 49.9871Hz
+t= 7.200s  PMU=3000  V= 418.49kV  ang=   -0.72deg  f= 49.9863Hz
+t= 7.200s  PMU=3245  V= 419.26kV  ang=    5.85deg  f= 49.9864Hz
+t= 7.200s  PMU=5100  V= 299.35kV  ang=    7.65deg  f= 49.9865Hz
+t= 7.200s  PMU=6500  V= 303.68kV  ang=  103.54deg  f= 50.1315Hz
+t= 7.200s  PMU=7000  V= 419.60kV  ang=   35.89deg  f= 49.9868Hz
+t= 7.300s  PMU=3000  V= 418.51kV  ang=   -1.16deg  f= 49.9871Hz
+t= 7.300s  PMU=3245  V= 419.28kV  ang=    5.41deg  f= 49.9871Hz
+t= 7.300s  PMU=5100  V= 299.39kV  ang=    7.18deg  f= 49.9868Hz
+t= 7.300s  PMU=6500  V= 303.86kV  ang=  108.12deg  f= 50.1294Hz
+t= 7.300s  PMU=7000  V= 419.55kV  ang=   35.41deg  f= 49.9866Hz
+t= 7.400s  PMU=3000  V= 418.57kV  ang=   -1.58deg  f= 49.9879Hz
+t= 7.400s  PMU=3245  V= 419.36kV  ang=    4.98deg  f= 49.9878Hz
+t= 7.400s  PMU=5100  V= 299.45kV  ang=    6.73deg  f= 49.9871Hz
+t= 7.400s  PMU=6500  V= 303.83kV  ang=  112.56deg  f= 50.1260Hz
+t= 7.400s  PMU=7000  V= 419.52kV  ang=   34.92deg  f= 49.9865Hz
+t= 7.500s  PMU=3000  V= 418.65kV  ang=   -1.98deg  f= 49.9884Hz
+t= 7.500s  PMU=3245  V= 419.46kV  ang=    4.57deg  f= 49.9883Hz
+t= 7.500s  PMU=5100  V= 299.53kV  ang=    6.28deg  f= 49.9874Hz
+t= 7.500s  PMU=6500  V= 303.61kV  ang=  116.87deg  f= 50.1224Hz
+t= 7.500s  PMU=7000  V= 419.50kV  ang=   34.45deg  f= 49.9866Hz
+t= 7.600s  PMU=3000  V= 418.73kV  ang=   -2.38deg  f= 49.9886Hz
+t= 7.600s  PMU=3245  V= 419.55kV  ang=    4.17deg  f= 49.9884Hz
+t= 7.600s  PMU=5100  V= 299.60kV  ang=    5.84deg  f= 49.9876Hz
+t= 7.600s  PMU=6500  V= 303.31kV  ang=  121.08deg  f= 50.1194Hz
+t= 7.600s  PMU=7000  V= 419.48kV  ang=   33.98deg  f= 49.9869Hz
+t= 7.700s  PMU=3000  V= 418.79kV  ang=   -2.79deg  f= 49.9885Hz
+t= 7.700s  PMU=3245  V= 419.62kV  ang=    3.75deg  f= 49.9884Hz
+t= 7.700s  PMU=5100  V= 299.67kV  ang=    5.40deg  f= 49.9877Hz
+t= 7.700s  PMU=6500  V= 303.00kV  ang=  125.25deg  f= 50.1176Hz
+t= 7.700s  PMU=7000  V= 419.48kV  ang=   33.54deg  f= 49.9873Hz
+t= 7.800s  PMU=3000  V= 418.83kV  ang=   -3.21deg  f= 49.9883Hz
+t= 7.800s  PMU=3245  V= 419.65kV  ang=    3.33deg  f= 49.9883Hz
+t= 7.800s  PMU=5100  V= 299.72kV  ang=    4.97deg  f= 49.9877Hz
+t= 7.800s  PMU=6500  V= 302.75kV  ang=  129.41deg  f= 50.1168Hz
+t= 7.800s  PMU=7000  V= 419.49kV  ang=   33.11deg  f= 49.9877Hz
+t= 7.900s  PMU=3000  V= 418.83kV  ang=   -3.64deg  f= 49.9880Hz
+t= 7.900s  PMU=3245  V= 419.64kV  ang=    2.90deg  f= 49.9881Hz
+t= 7.900s  PMU=5100  V= 299.75kV  ang=    4.53deg  f= 49.9877Hz
+t= 7.900s  PMU=6500  V= 302.59kV  ang=  133.57deg  f= 50.1165Hz
+t= 7.900s  PMU=7000  V= 419.50kV  ang=   32.69deg  f= 49.9882Hz
+t= 8.000s  PMU=3000  V= 418.80kV  ang=   -4.08deg  f= 49.9878Hz
+t= 8.000s  PMU=3245  V= 419.60kV  ang=    2.47deg  f= 49.9879Hz
+t= 8.000s  PMU=5100  V= 299.77kV  ang=    4.09deg  f= 49.9877Hz
+t= 8.000s  PMU=6500  V= 302.49kV  ang=  137.72deg  f= 50.1164Hz
+t= 8.000s  PMU=7000  V= 419.51kV  ang=   32.29deg  f= 49.9886Hz
+t= 8.100s  PMU=3000  V= 418.76kV  ang=   -4.52deg  f= 49.9877Hz
+t= 8.100s  PMU=3245  V= 419.55kV  ang=    2.03deg  f= 49.9878Hz
+t= 8.100s  PMU=5100  V= 299.76kV  ang=    3.65deg  f= 49.9877Hz
+t= 8.100s  PMU=6500  V= 302.41kV  ang=  141.86deg  f= 50.1160Hz
+t= 8.100s  PMU=7000  V= 419.53kV  ang=   31.90deg  f= 49.9889Hz
+t= 8.200s  PMU=3000  V= 418.71kV  ang=   -4.96deg  f= 49.9878Hz
+t= 8.200s  PMU=3245  V= 419.49kV  ang=    1.60deg  f= 49.9879Hz
+t= 8.200s  PMU=5100  V= 299.75kV  ang=    3.21deg  f= 49.9877Hz
+t= 8.200s  PMU=6500  V= 302.33kV  ang=  145.97deg  f= 50.1152Hz
+t= 8.200s  PMU=7000  V= 419.54kV  ang=   31.52deg  f= 49.9891Hz
+t= 8.300s  PMU=3000  V= 418.67kV  ang=   -5.39deg  f= 49.9879Hz
+t= 8.300s  PMU=3245  V= 419.43kV  ang=    1.18deg  f= 49.9880Hz
+t= 8.300s  PMU=5100  V= 299.73kV  ang=    2.78deg  f= 49.9878Hz
+t= 8.300s  PMU=6500  V= 302.22kV  ang=  150.03deg  f= 50.1142Hz
+t= 8.300s  PMU=7000  V= 419.56kV  ang=   31.13deg  f= 49.9892Hz
+t= 8.400s  PMU=3000  V= 418.63kV  ang=   -5.80deg  f= 49.9882Hz
+t= 8.400s  PMU=3245  V= 419.39kV  ang=    0.76deg  f= 49.9883Hz
+t= 8.400s  PMU=5100  V= 299.71kV  ang=    2.35deg  f= 49.9879Hz
+t= 8.400s  PMU=6500  V= 302.10kV  ang=  154.06deg  f= 50.1132Hz
+t= 8.400s  PMU=7000  V= 419.56kV  ang=   30.74deg  f= 49.9891Hz
+t= 8.500s  PMU=3000  V= 418.61kV  ang=   -6.21deg  f= 49.9884Hz
+t= 8.500s  PMU=3245  V= 419.37kV  ang=    0.35deg  f= 49.9885Hz
+t= 8.500s  PMU=5100  V= 299.71kV  ang=    1.93deg  f= 49.9882Hz
+t= 8.500s  PMU=6500  V= 301.97kV  ang=  158.06deg  f= 50.1124Hz
+t= 8.500s  PMU=7000  V= 419.57kV  ang=   30.35deg  f= 49.9890Hz
+t= 8.600s  PMU=3000  V= 418.61kV  ang=   -6.61deg  f= 49.9887Hz
+t= 8.600s  PMU=3245  V= 419.37kV  ang=   -0.05deg  f= 49.9887Hz
+t= 8.600s  PMU=5100  V= 299.71kV  ang=    1.52deg  f= 49.9884Hz
+t= 8.600s  PMU=6500  V= 301.88kV  ang=  162.06deg  f= 50.1120Hz
+t= 8.600s  PMU=7000  V= 419.57kV  ang=   29.95deg  f= 49.9889Hz
+t= 8.700s  PMU=3000  V= 418.63kV  ang=   -7.00deg  f= 49.9889Hz
+t= 8.700s  PMU=3245  V= 419.39kV  ang=   -0.44deg  f= 49.9889Hz
+t= 8.700s  PMU=5100  V= 299.72kV  ang=    1.13deg  f= 49.9887Hz
+t= 8.700s  PMU=6500  V= 301.83kV  ang=  166.06deg  f= 50.1119Hz
+t= 8.700s  PMU=7000  V= 419.57kV  ang=   29.55deg  f= 49.9888Hz
+t= 8.800s  PMU=3000  V= 418.66kV  ang=   -7.39deg  f= 49.9891Hz
+t= 8.800s  PMU=3245  V= 419.43kV  ang=   -0.83deg  f= 49.9891Hz
+t= 8.800s  PMU=5100  V= 299.74kV  ang=    0.74deg  f= 49.9890Hz
+t= 8.800s  PMU=6500  V= 301.82kV  ang=  170.06deg  f= 50.1118Hz
+t= 8.800s  PMU=7000  V= 419.57kV  ang=   29.14deg  f= 49.9887Hz
+t= 8.900s  PMU=3000  V= 418.69kV  ang=   -7.77deg  f= 49.9892Hz
+t= 8.900s  PMU=3245  V= 419.47kV  ang=   -1.21deg  f= 49.9892Hz
+t= 8.900s  PMU=5100  V= 299.76kV  ang=    0.35deg  f= 49.9892Hz
+t= 8.900s  PMU=6500  V= 301.84kV  ang=  174.05deg  f= 50.1117Hz
+t= 8.900s  PMU=7000  V= 419.58kV  ang=   28.74deg  f= 49.9886Hz
+t= 9.000s  PMU=3000  V= 418.73kV  ang=   -8.15deg  f= 49.9893Hz
+t= 9.000s  PMU=3245  V= 419.52kV  ang=   -1.60deg  f= 49.9892Hz
+t= 9.000s  PMU=5100  V= 299.77kV  ang=   -0.02deg  f= 49.9893Hz
+t= 9.000s  PMU=6500  V= 301.86kV  ang=  178.02deg  f= 50.1113Hz
+t= 9.000s  PMU=7000  V= 419.58kV  ang=   28.33deg  f= 49.9886Hz
+t= 9.100s  PMU=3000  V= 418.77kV  ang=   -8.53deg  f= 49.9893Hz
+t= 9.100s  PMU=3245  V= 419.56kV  ang=   -1.98deg  f= 49.9892Hz
+t= 9.100s  PMU=5100  V= 299.77kV  ang=   -0.40deg  f= 49.9894Hz
+t= 9.100s  PMU=6500  V= 301.87kV  ang= -178.04deg  f= 50.1106Hz
+t= 9.100s  PMU=7000  V= 419.59kV  ang=   27.93deg  f= 49.9887Hz
+t= 9.200s  PMU=3000  V= 418.80kV  ang=   -8.92deg  f= 49.9893Hz
+t= 9.200s  PMU=3245  V= 419.59kV  ang=   -2.37deg  f= 49.9892Hz
+t= 9.200s  PMU=5100  V= 299.77kV  ang=   -0.78deg  f= 49.9894Hz
+t= 9.200s  PMU=6500  V= 301.86kV  ang= -174.12deg  f= 50.1099Hz
+t= 9.200s  PMU=7000  V= 419.60kV  ang=   27.52deg  f= 49.9888Hz
+t= 9.300s  PMU=3000  V= 418.81kV  ang=   -9.31deg  f= 49.9892Hz
+t= 9.300s  PMU=3245  V= 419.61kV  ang=   -2.76deg  f= 49.9891Hz
+t= 9.300s  PMU=5100  V= 299.76kV  ang=   -1.15deg  f= 49.9895Hz
+t= 9.300s  PMU=6500  V= 301.83kV  ang= -170.23deg  f= 50.1091Hz
+t= 9.300s  PMU=7000  V= 419.61kV  ang=   27.13deg  f= 49.9888Hz
+t= 9.400s  PMU=3000  V= 418.82kV  ang=   -9.70deg  f= 49.9891Hz
+t= 9.400s  PMU=3245  V= 419.61kV  ang=   -3.15deg  f= 49.9891Hz
+t= 9.400s  PMU=5100  V= 299.74kV  ang=   -1.53deg  f= 49.9895Hz
+t= 9.400s  PMU=6500  V= 301.80kV  ang= -166.36deg  f= 50.1086Hz
+t= 9.400s  PMU=7000  V= 419.62kV  ang=   26.73deg  f= 49.9890Hz
+t= 9.500s  PMU=3000  V= 418.81kV  ang=  -10.09deg  f= 49.9890Hz
+t= 9.500s  PMU=3245  V= 419.61kV  ang=   -3.54deg  f= 49.9890Hz
+t= 9.500s  PMU=5100  V= 299.72kV  ang=   -1.91deg  f= 49.9895Hz
+t= 9.500s  PMU=6500  V= 301.77kV  ang= -162.49deg  f= 50.1083Hz
+t= 9.500s  PMU=7000  V= 419.63kV  ang=   26.35deg  f= 49.9891Hz
+t= 9.600s  PMU=3000  V= 418.80kV  ang=  -10.49deg  f= 49.9890Hz
+t= 9.600s  PMU=3245  V= 419.60kV  ang=   -3.93deg  f= 49.9890Hz
+t= 9.600s  PMU=5100  V= 299.69kV  ang=   -2.28deg  f= 49.9895Hz
+t= 9.600s  PMU=6500  V= 301.75kV  ang= -158.61deg  f= 50.1083Hz
+t= 9.600s  PMU=7000  V= 419.64kV  ang=   25.96deg  f= 49.9892Hz
+t= 9.700s  PMU=3000  V= 418.79kV  ang=  -10.88deg  f= 49.9890Hz
+t= 9.700s  PMU=3245  V= 419.58kV  ang=   -4.32deg  f= 49.9891Hz
+t= 9.700s  PMU=5100  V= 299.67kV  ang=   -2.66deg  f= 49.9895Hz
+t= 9.700s  PMU=6500  V= 301.76kV  ang= -154.73deg  f= 50.1084Hz
+t= 9.700s  PMU=7000  V= 419.65kV  ang=   25.58deg  f= 49.9892Hz
+t= 9.800s  PMU=3000  V= 418.79kV  ang=  -11.27deg  f= 49.9891Hz
+t= 9.800s  PMU=3245  V= 419.58kV  ang=   -4.71deg  f= 49.9892Hz
+t= 9.800s  PMU=5100  V= 299.66kV  ang=   -3.04deg  f= 49.9895Hz
+t= 9.800s  PMU=6500  V= 301.79kV  ang= -150.84deg  f= 50.1086Hz
+t= 9.800s  PMU=7000  V= 419.65kV  ang=   25.20deg  f= 49.9893Hz
+t= 9.900s  PMU=3000  V= 418.78kV  ang=  -11.65deg  f= 49.9893Hz
+t= 9.900s  PMU=3245  V= 419.57kV  ang=   -5.09deg  f= 49.9893Hz
+t= 9.900s  PMU=5100  V= 299.65kV  ang=   -3.41deg  f= 49.9895Hz
+t= 9.900s  PMU=6500  V= 301.82kV  ang= -146.95deg  f= 50.1087Hz
+t= 9.900s  PMU=7000  V= 419.66kV  ang=   24.82deg  f= 49.9894Hz
+t=10.000s  PMU=3000  V= 418.79kV  ang=  -12.02deg  f= 49.9894Hz
+t=10.000s  PMU=3245  V= 419.58kV  ang=   -5.47deg  f= 49.9894Hz
+t=10.000s  PMU=5100  V= 299.65kV  ang=   -3.78deg  f= 49.9896Hz
+t=10.000s  PMU=6500  V= 301.84kV  ang= -143.06deg  f= 50.1087Hz
+t=10.000s  PMU=7000  V= 419.67kV  ang=   24.44deg  f= 49.9894Hz
+t=10.100s  PMU=3000  V= 418.80kV  ang=  -12.39deg  f= 49.9896Hz
+t=10.100s  PMU=3245  V= 419.59kV  ang=   -5.84deg  f= 49.9896Hz
+t=10.100s  PMU=5100  V= 299.65kV  ang=   -4.15deg  f= 49.9896Hz
+t=10.100s  PMU=6500  V= 301.86kV  ang= -139.17deg  f= 50.1086Hz
+t=10.100s  PMU=7000  V= 419.68kV  ang=   24.06deg  f= 49.9894Hz
+t=10.200s  PMU=3000  V= 418.81kV  ang=  -12.76deg  f= 49.9897Hz
+t=10.200s  PMU=3245  V= 419.60kV  ang=   -6.20deg  f= 49.9897Hz
+t=10.200s  PMU=5100  V= 299.66kV  ang=   -4.52deg  f= 49.9896Hz
+t=10.200s  PMU=6500  V= 301.86kV  ang= -135.29deg  f= 50.1085Hz
+t=10.200s  PMU=7000  V= 419.68kV  ang=   23.69deg  f= 49.9895Hz
+t=10.300s  PMU=3000  V= 418.82kV  ang=  -13.12deg  f= 49.9898Hz
+t=10.300s  PMU=3245  V= 419.62kV  ang=   -6.57deg  f= 49.9897Hz
+t=10.300s  PMU=5100  V= 299.67kV  ang=   -4.89deg  f= 49.9897Hz
+t=10.300s  PMU=6500  V= 301.85kV  ang= -131.42deg  f= 50.1084Hz
+t=10.300s  PMU=7000  V= 419.69kV  ang=   23.31deg  f= 49.9895Hz
+t=10.400s  PMU=3000  V= 418.84kV  ang=  -13.49deg  f= 49.9898Hz
+t=10.400s  PMU=3245  V= 419.63kV  ang=   -6.94deg  f= 49.9898Hz
+t=10.400s  PMU=5100  V= 299.69kV  ang=   -5.26deg  f= 49.9897Hz
+t=10.400s  PMU=6500  V= 301.83kV  ang= -127.54deg  f= 50.1083Hz
+t=10.400s  PMU=7000  V= 419.69kV  ang=   22.94deg  f= 49.9896Hz
+t=10.500s  PMU=3000  V= 418.85kV  ang=  -13.85deg  f= 49.9898Hz
+t=10.500s  PMU=3245  V= 419.65kV  ang=   -7.30deg  f= 49.9898Hz
+t=10.500s  PMU=5100  V= 299.70kV  ang=   -5.63deg  f= 49.9897Hz
+t=10.500s  PMU=6500  V= 301.81kV  ang= -123.66deg  f= 50.1083Hz
+t=10.500s  PMU=7000  V= 419.70kV  ang=   22.57deg  f= 49.9896Hz
+t=10.600s  PMU=3000  V= 418.86kV  ang=  -14.22deg  f= 49.9898Hz
+t=10.600s  PMU=3245  V= 419.65kV  ang=   -7.67deg  f= 49.9897Hz
+t=10.600s  PMU=5100  V= 299.71kV  ang=   -6.00deg  f= 49.9896Hz
+t=10.600s  PMU=6500  V= 301.80kV  ang= -119.78deg  f= 50.1084Hz
+t=10.600s  PMU=7000  V= 419.71kV  ang=   22.20deg  f= 49.9897Hz
+t=10.700s  PMU=3000  V= 418.86kV  ang=  -14.59deg  f= 49.9897Hz
+t=10.700s  PMU=3245  V= 419.65kV  ang=   -8.04deg  f= 49.9897Hz
+t=10.700s  PMU=5100  V= 299.72kV  ang=   -6.38deg  f= 49.9896Hz
+t=10.700s  PMU=6500  V= 301.79kV  ang= -115.89deg  f= 50.1085Hz
+t=10.700s  PMU=7000  V= 419.71kV  ang=   21.83deg  f= 49.9897Hz
+t=10.800s  PMU=3000  V= 418.85kV  ang=  -14.96deg  f= 49.9896Hz
+t=10.800s  PMU=3245  V= 419.64kV  ang=   -8.41deg  f= 49.9897Hz
+t=10.800s  PMU=5100  V= 299.73kV  ang=   -6.75deg  f= 49.9895Hz
+t=10.800s  PMU=6500  V= 301.77kV  ang= -112.01deg  f= 50.1085Hz
+t=10.800s  PMU=7000  V= 419.71kV  ang=   21.47deg  f= 49.9897Hz
+t=10.900s  PMU=3000  V= 418.85kV  ang=  -15.33deg  f= 49.9896Hz
+t=10.900s  PMU=3245  V= 419.63kV  ang=   -8.78deg  f= 49.9896Hz
+t=10.900s  PMU=5100  V= 299.74kV  ang=   -7.13deg  f= 49.9895Hz
+t=10.900s  PMU=6500  V= 301.76kV  ang= -108.12deg  f= 50.1085Hz
+t=10.900s  PMU=7000  V= 419.72kV  ang=   21.10deg  f= 49.9898Hz
+t=11.000s  PMU=3000  V= 418.84kV  ang=  -15.71deg  f= 49.9895Hz
+t=11.000s  PMU=3245  V= 419.62kV  ang=   -9.16deg  f= 49.9896Hz
+t=11.000s  PMU=5100  V= 299.74kV  ang=   -7.51deg  f= 49.9894Hz
+t=11.000s  PMU=6500  V= 301.74kV  ang= -104.24deg  f= 50.1085Hz
+t=11.000s  PMU=7000  V= 419.72kV  ang=   20.73deg  f= 49.9898Hz
+t=11.100s  PMU=3000  V= 418.82kV  ang=  -16.08deg  f= 49.9895Hz
+t=11.100s  PMU=3245  V= 419.60kV  ang=   -9.53deg  f= 49.9895Hz
+t=11.100s  PMU=5100  V= 299.74kV  ang=   -7.89deg  f= 49.9894Hz
+t=11.100s  PMU=6500  V= 301.71kV  ang= -100.35deg  f= 50.1085Hz
+t=11.100s  PMU=7000  V= 419.72kV  ang=   20.37deg  f= 49.9897Hz
+t=11.200s  PMU=3000  V= 418.81kV  ang=  -16.46deg  f= 49.9895Hz
+t=11.200s  PMU=3245  V= 419.59kV  ang=   -9.91deg  f= 49.9895Hz
+t=11.200s  PMU=5100  V= 299.74kV  ang=   -8.27deg  f= 49.9894Hz
+t=11.200s  PMU=6500  V= 301.68kV  ang=  -96.47deg  f= 50.1085Hz
+t=11.200s  PMU=7000  V= 419.72kV  ang=   20.00deg  f= 49.9897Hz
+t=11.300s  PMU=3000  V= 418.81kV  ang=  -16.84deg  f= 49.9895Hz
+t=11.300s  PMU=3245  V= 419.58kV  ang=  -10.28deg  f= 49.9895Hz
+t=11.300s  PMU=5100  V= 299.75kV  ang=   -8.65deg  f= 49.9894Hz
+t=11.300s  PMU=6500  V= 301.65kV  ang=  -92.58deg  f= 50.1085Hz
+t=11.300s  PMU=7000  V= 419.72kV  ang=   19.63deg  f= 49.9897Hz
+t=11.400s  PMU=3000  V= 418.80kV  ang=  -17.21deg  f= 49.9895Hz
+t=11.400s  PMU=3245  V= 419.57kV  ang=  -10.66deg  f= 49.9895Hz
+t=11.400s  PMU=5100  V= 299.75kV  ang=   -9.03deg  f= 49.9894Hz
+t=11.400s  PMU=6500  V= 301.62kV  ang=  -88.69deg  f= 50.1086Hz
+t=11.400s  PMU=7000  V= 419.72kV  ang=   19.26deg  f= 49.9896Hz
+t=11.500s  PMU=3000  V= 418.80kV  ang=  -17.59deg  f= 49.9895Hz
+t=11.500s  PMU=3245  V= 419.57kV  ang=  -11.03deg  f= 49.9895Hz
+t=11.500s  PMU=5100  V= 299.75kV  ang=   -9.41deg  f= 49.9894Hz
+t=11.500s  PMU=6500  V= 301.60kV  ang=  -84.80deg  f= 50.1087Hz
+t=11.500s  PMU=7000  V= 419.72kV  ang=   18.88deg  f= 49.9896Hz
+t=11.600s  PMU=3000  V= 418.80kV  ang=  -17.96deg  f= 49.9895Hz
+t=11.600s  PMU=3245  V= 419.57kV  ang=  -11.40deg  f= 49.9896Hz
+t=11.600s  PMU=5100  V= 299.76kV  ang=   -9.78deg  f= 49.9894Hz
+t=11.600s  PMU=6500  V= 301.59kV  ang=  -80.89deg  f= 50.1089Hz
+t=11.600s  PMU=7000  V= 419.72kV  ang=   18.51deg  f= 49.9896Hz
+t=11.700s  PMU=3000  V= 418.80kV  ang=  -18.33deg  f= 49.9896Hz
+t=11.700s  PMU=3245  V= 419.58kV  ang=  -11.78deg  f= 49.9896Hz
+t=11.700s  PMU=5100  V= 299.76kV  ang=  -10.16deg  f= 49.9895Hz
+t=11.700s  PMU=6500  V= 301.57kV  ang=  -76.99deg  f= 50.1090Hz
+t=11.700s  PMU=7000  V= 419.72kV  ang=   18.13deg  f= 49.9895Hz
+t=11.800s  PMU=3000  V= 418.81kV  ang=  -18.71deg  f= 49.9896Hz
+t=11.800s  PMU=3245  V= 419.58kV  ang=  -12.15deg  f= 49.9895Hz
+t=11.800s  PMU=5100  V= 299.77kV  ang=  -10.54deg  f= 49.9895Hz
+t=11.800s  PMU=6500  V= 301.56kV  ang=  -73.08deg  f= 50.1091Hz
+t=11.800s  PMU=7000  V= 419.72kV  ang=   17.76deg  f= 49.9895Hz
+t=11.900s  PMU=3000  V= 418.82kV  ang=  -19.08deg  f= 49.9895Hz
+t=11.900s  PMU=3245  V= 419.59kV  ang=  -12.53deg  f= 49.9895Hz
+t=11.900s  PMU=5100  V= 299.77kV  ang=  -10.91deg  f= 49.9895Hz
+t=11.900s  PMU=6500  V= 301.55kV  ang=  -69.16deg  f= 50.1092Hz
+t=11.900s  PMU=7000  V= 419.72kV  ang=   17.38deg  f= 49.9895Hz
+t=12.000s  PMU=3000  V= 418.82kV  ang=  -19.46deg  f= 49.9895Hz
+t=12.000s  PMU=3245  V= 419.60kV  ang=  -12.90deg  f= 49.9895Hz
+t=12.000s  PMU=5100  V= 299.77kV  ang=  -11.29deg  f= 49.9895Hz
+t=12.000s  PMU=6500  V= 301.54kV  ang=  -65.25deg  f= 50.1093Hz
+t=12.000s  PMU=7000  V= 419.72kV  ang=   17.00deg  f= 49.9895Hz
+t=12.100s  PMU=3000  V= 418.83kV  ang=  -19.83deg  f= 49.9895Hz
+t=12.100s  PMU=3245  V= 419.60kV  ang=  -13.28deg  f= 49.9895Hz
+t=12.100s  PMU=5100  V= 299.77kV  ang=  -11.66deg  f= 49.9895Hz
+t=12.100s  PMU=6500  V= 301.52kV  ang=  -61.33deg  f= 50.1093Hz
+t=12.100s  PMU=7000  V= 419.73kV  ang=   16.62deg  f= 49.9894Hz
+t=12.200s  PMU=3000  V= 418.83kV  ang=  -20.21deg  f= 49.9895Hz
+t=12.200s  PMU=3245  V= 419.61kV  ang=  -13.66deg  f= 49.9895Hz
+t=12.200s  PMU=5100  V= 299.77kV  ang=  -12.04deg  f= 49.9895Hz
+t=12.200s  PMU=6500  V= 301.51kV  ang=  -57.41deg  f= 50.1094Hz
+t=12.200s  PMU=7000  V= 419.73kV  ang=   16.25deg  f= 49.9894Hz
+t=12.300s  PMU=3000  V= 418.84kV  ang=  -20.59deg  f= 49.9894Hz
+t=12.300s  PMU=3245  V= 419.61kV  ang=  -14.04deg  f= 49.9894Hz
+t=12.300s  PMU=5100  V= 299.77kV  ang=  -12.41deg  f= 49.9895Hz
+t=12.300s  PMU=6500  V= 301.50kV  ang=  -53.48deg  f= 50.1095Hz
+t=12.300s  PMU=7000  V= 419.73kV  ang=   15.87deg  f= 49.9894Hz
+t=12.400s  PMU=3000  V= 418.84kV  ang=  -20.97deg  f= 49.9894Hz
+t=12.400s  PMU=3245  V= 419.62kV  ang=  -14.42deg  f= 49.9894Hz
+t=12.400s  PMU=5100  V= 299.76kV  ang=  -12.79deg  f= 49.9895Hz
+t=12.400s  PMU=6500  V= 301.49kV  ang=  -49.55deg  f= 50.1097Hz
+t=12.400s  PMU=7000  V= 419.74kV  ang=   15.49deg  f= 49.9894Hz
+t=12.500s  PMU=3000  V= 418.84kV  ang=  -21.35deg  f= 49.9894Hz
+t=12.500s  PMU=3245  V= 419.62kV  ang=  -14.80deg  f= 49.9894Hz
+t=12.500s  PMU=5100  V= 299.76kV  ang=  -13.17deg  f= 49.9895Hz
+t=12.500s  PMU=6500  V= 301.48kV  ang=  -45.61deg  f= 50.1098Hz
+t=12.500s  PMU=7000  V= 419.74kV  ang=   15.11deg  f= 49.9894Hz
+t=12.600s  PMU=3000  V= 418.85kV  ang=  -21.73deg  f= 49.9894Hz
+t=12.600s  PMU=3245  V= 419.62kV  ang=  -15.18deg  f= 49.9894Hz
+t=12.600s  PMU=5100  V= 299.76kV  ang=  -13.54deg  f= 49.9895Hz
+t=12.600s  PMU=6500  V= 301.47kV  ang=  -41.67deg  f= 50.1099Hz
+t=12.600s  PMU=7000  V= 419.75kV  ang=   14.73deg  f= 49.9894Hz
+t=12.700s  PMU=3000  V= 418.85kV  ang=  -22.11deg  f= 49.9894Hz
+t=12.700s  PMU=3245  V= 419.63kV  ang=  -15.56deg  f= 49.9894Hz
+t=12.700s  PMU=5100  V= 299.75kV  ang=  -13.92deg  f= 49.9895Hz
+t=12.700s  PMU=6500  V= 301.47kV  ang=  -37.73deg  f= 50.1101Hz
+t=12.700s  PMU=7000  V= 419.75kV  ang=   14.34deg  f= 49.9894Hz
+t=12.800s  PMU=3000  V= 418.86kV  ang=  -22.49deg  f= 49.9894Hz
+t=12.800s  PMU=3245  V= 419.63kV  ang=  -15.94deg  f= 49.9894Hz
+t=12.800s  PMU=5100  V= 299.75kV  ang=  -14.30deg  f= 49.9895Hz
+t=12.800s  PMU=6500  V= 301.46kV  ang=  -33.78deg  f= 50.1102Hz
+t=12.800s  PMU=7000  V= 419.75kV  ang=   13.96deg  f= 49.9893Hz
+t=12.900s  PMU=3000  V= 418.86kV  ang=  -22.87deg  f= 49.9894Hz
+t=12.900s  PMU=3245  V= 419.64kV  ang=  -16.32deg  f= 49.9894Hz
+t=12.900s  PMU=5100  V= 299.75kV  ang=  -14.68deg  f= 49.9895Hz
+t=12.900s  PMU=6500  V= 301.45kV  ang=  -29.82deg  f= 50.1103Hz
+t=12.900s  PMU=7000  V= 419.76kV  ang=   13.58deg  f= 49.9893Hz
+t=13.000s  PMU=3000  V= 418.87kV  ang=  -23.25deg  f= 49.9894Hz
+t=13.000s  PMU=3245  V= 419.65kV  ang=  -16.70deg  f= 49.9894Hz
+t=13.000s  PMU=5100  V= 299.75kV  ang=  -15.05deg  f= 49.9894Hz
+t=13.000s  PMU=6500  V= 301.44kV  ang=  -25.86deg  f= 50.1104Hz
+t=13.000s  PMU=7000  V= 419.76kV  ang=   13.20deg  f= 49.9893Hz
+t=13.100s  PMU=3000  V= 418.87kV  ang=  -23.63deg  f= 49.9894Hz
+t=13.100s  PMU=3245  V= 419.65kV  ang=  -17.08deg  f= 49.9894Hz
+t=13.100s  PMU=5100  V= 299.75kV  ang=  -15.43deg  f= 49.9894Hz
+t=13.100s  PMU=6500  V= 301.44kV  ang=  -21.90deg  f= 50.1105Hz
+t=13.100s  PMU=7000  V= 419.76kV  ang=   12.81deg  f= 49.9893Hz
+t=13.200s  PMU=3000  V= 418.88kV  ang=  -24.02deg  f= 49.9894Hz
+t=13.200s  PMU=3245  V= 419.66kV  ang=  -17.46deg  f= 49.9894Hz
+t=13.200s  PMU=5100  V= 299.75kV  ang=  -15.81deg  f= 49.9894Hz
+t=13.200s  PMU=6500  V= 301.43kV  ang=  -17.94deg  f= 50.1106Hz
+t=13.200s  PMU=7000  V= 419.77kV  ang=   12.43deg  f= 49.9893Hz
+t=13.300s  PMU=3000  V= 418.88kV  ang=  -24.40deg  f= 49.9894Hz
+t=13.300s  PMU=3245  V= 419.66kV  ang=  -17.84deg  f= 49.9893Hz
+t=13.300s  PMU=5100  V= 299.75kV  ang=  -16.19deg  f= 49.9894Hz
+t=13.300s  PMU=6500  V= 301.42kV  ang=  -13.96deg  f= 50.1107Hz
+t=13.300s  PMU=7000  V= 419.77kV  ang=   12.05deg  f= 49.9893Hz
+t=13.400s  PMU=3000  V= 418.89kV  ang=  -24.78deg  f= 49.9893Hz
+t=13.400s  PMU=3245  V= 419.67kV  ang=  -18.23deg  f= 49.9893Hz
+t=13.400s  PMU=5100  V= 299.75kV  ang=  -16.57deg  f= 49.9894Hz
+t=13.400s  PMU=6500  V= 301.41kV  ang=   -9.99deg  f= 50.1109Hz
+t=13.400s  PMU=7000  V= 419.77kV  ang=   11.66deg  f= 49.9893Hz
+t=13.500s  PMU=3000  V= 418.89kV  ang=  -25.16deg  f= 49.9893Hz
+t=13.500s  PMU=3245  V= 419.67kV  ang=  -18.61deg  f= 49.9893Hz
+t=13.500s  PMU=5100  V= 299.75kV  ang=  -16.96deg  f= 49.9893Hz
+t=13.500s  PMU=6500  V= 301.40kV  ang=   -6.01deg  f= 50.1110Hz
+t=13.500s  PMU=7000  V= 419.77kV  ang=   11.28deg  f= 49.9893Hz
+t=13.600s  PMU=3000  V= 418.89kV  ang=  -25.55deg  f= 49.9893Hz
+t=13.600s  PMU=3245  V= 419.67kV  ang=  -18.99deg  f= 49.9893Hz
+t=13.600s  PMU=5100  V= 299.76kV  ang=  -17.34deg  f= 49.9893Hz
+t=13.600s  PMU=6500  V= 301.39kV  ang=   -2.02deg  f= 50.1111Hz
+t=13.600s  PMU=7000  V= 419.78kV  ang=   10.90deg  f= 49.9893Hz
+t=13.700s  PMU=3000  V= 418.89kV  ang=  -25.93deg  f= 49.9893Hz
+t=13.700s  PMU=3245  V= 419.67kV  ang=  -19.38deg  f= 49.9893Hz
+t=13.700s  PMU=5100  V= 299.76kV  ang=  -17.72deg  f= 49.9893Hz
+t=13.700s  PMU=6500  V= 301.38kV  ang=    1.96deg  f= 50.1112Hz
+t=13.700s  PMU=7000  V= 419.78kV  ang=   10.51deg  f= 49.9893Hz
+t=13.800s  PMU=3000  V= 418.89kV  ang=  -26.31deg  f= 49.9893Hz
+t=13.800s  PMU=3245  V= 419.67kV  ang=  -19.76deg  f= 49.9893Hz
+t=13.800s  PMU=5100  V= 299.76kV  ang=  -18.11deg  f= 49.9893Hz
+t=13.800s  PMU=6500  V= 301.37kV  ang=    5.96deg  f= 50.1113Hz
+t=13.800s  PMU=7000  V= 419.78kV  ang=   10.13deg  f= 49.9893Hz
+t=13.900s  PMU=3000  V= 418.89kV  ang=  -26.70deg  f= 49.9893Hz
+t=13.900s  PMU=3245  V= 419.67kV  ang=  -20.15deg  f= 49.9893Hz
+t=13.900s  PMU=5100  V= 299.76kV  ang=  -18.49deg  f= 49.9892Hz
+t=13.900s  PMU=6500  V= 301.36kV  ang=    9.95deg  f= 50.1114Hz
+t=13.900s  PMU=7000  V= 419.78kV  ang=    9.74deg  f= 49.9893Hz
+t=14.000s  PMU=3000  V= 418.89kV  ang=  -27.09deg  f= 49.9893Hz
+t=14.000s  PMU=3245  V= 419.67kV  ang=  -20.53deg  f= 49.9893Hz
+t=14.000s  PMU=5100  V= 299.76kV  ang=  -18.88deg  f= 49.9892Hz
+t=14.000s  PMU=6500  V= 301.35kV  ang=   13.95deg  f= 50.1115Hz
+t=14.000s  PMU=7000  V= 419.78kV  ang=    9.36deg  f= 49.9893Hz
+t=14.100s  PMU=3000  V= 418.89kV  ang=  -27.47deg  f= 49.9892Hz
+t=14.100s  PMU=3245  V= 419.67kV  ang=  -20.92deg  f= 49.9893Hz
+t=14.100s  PMU=5100  V= 299.77kV  ang=  -19.27deg  f= 49.9892Hz
+t=14.100s  PMU=6500  V= 301.34kV  ang=   17.95deg  f= 50.1116Hz
+t=14.100s  PMU=7000  V= 419.78kV  ang=    8.98deg  f= 49.9893Hz
+t=14.200s  PMU=3000  V= 418.89kV  ang=  -27.86deg  f= 49.9892Hz
+t=14.200s  PMU=3245  V= 419.66kV  ang=  -21.30deg  f= 49.9892Hz
+t=14.200s  PMU=5100  V= 299.77kV  ang=  -19.66deg  f= 49.9892Hz
+t=14.200s  PMU=6500  V= 301.33kV  ang=   21.96deg  f= 50.1117Hz
+t=14.200s  PMU=7000  V= 419.78kV  ang=    8.59deg  f= 49.9893Hz
+t=14.300s  PMU=3000  V= 418.89kV  ang=  -28.24deg  f= 49.9892Hz
+t=14.300s  PMU=3245  V= 419.66kV  ang=  -21.69deg  f= 49.9892Hz
+t=14.300s  PMU=5100  V= 299.77kV  ang=  -20.04deg  f= 49.9892Hz
+t=14.300s  PMU=6500  V= 301.32kV  ang=   25.97deg  f= 50.1118Hz
+t=14.300s  PMU=7000  V= 419.78kV  ang=    8.21deg  f= 49.9893Hz
+t=14.400s  PMU=3000  V= 418.89kV  ang=  -28.63deg  f= 49.9892Hz
+t=14.400s  PMU=3245  V= 419.66kV  ang=  -22.08deg  f= 49.9892Hz
+t=14.400s  PMU=5100  V= 299.77kV  ang=  -20.43deg  f= 49.9892Hz
+t=14.400s  PMU=6500  V= 301.31kV  ang=   29.99deg  f= 50.1119Hz
+t=14.400s  PMU=7000  V= 419.79kV  ang=    7.82deg  f= 49.9892Hz
+t=14.500s  PMU=3000  V= 418.89kV  ang=  -29.02deg  f= 49.9892Hz
+t=14.500s  PMU=3245  V= 419.66kV  ang=  -22.46deg  f= 49.9892Hz
+t=14.500s  PMU=5100  V= 299.78kV  ang=  -20.82deg  f= 49.9892Hz
+t=14.500s  PMU=6500  V= 301.30kV  ang=   34.00deg  f= 50.1120Hz
+t=14.500s  PMU=7000  V= 419.79kV  ang=    7.43deg  f= 49.9892Hz
+t=14.600s  PMU=3000  V= 418.89kV  ang=  -29.40deg  f= 49.9892Hz
+t=14.600s  PMU=3245  V= 419.66kV  ang=  -22.85deg  f= 49.9892Hz
+t=14.600s  PMU=5100  V= 299.78kV  ang=  -21.21deg  f= 49.9892Hz
+t=14.600s  PMU=6500  V= 301.29kV  ang=   38.03deg  f= 50.1121Hz
+t=14.600s  PMU=7000  V= 419.79kV  ang=    7.05deg  f= 49.9892Hz
+t=14.700s  PMU=3000  V= 418.89kV  ang=  -29.79deg  f= 49.9892Hz
+t=14.700s  PMU=3245  V= 419.66kV  ang=  -23.24deg  f= 49.9892Hz
+t=14.700s  PMU=5100  V= 299.78kV  ang=  -21.60deg  f= 49.9891Hz
+t=14.700s  PMU=6500  V= 301.28kV  ang=   42.05deg  f= 50.1122Hz
+t=14.700s  PMU=7000  V= 419.79kV  ang=    6.66deg  f= 49.9892Hz
+t=14.800s  PMU=3000  V= 418.89kV  ang=  -30.18deg  f= 49.9892Hz
+t=14.800s  PMU=3245  V= 419.66kV  ang=  -23.63deg  f= 49.9892Hz
+t=14.800s  PMU=5100  V= 299.79kV  ang=  -21.99deg  f= 49.9891Hz
+t=14.800s  PMU=6500  V= 301.27kV  ang=   46.08deg  f= 50.1123Hz
+t=14.800s  PMU=7000  V= 419.79kV  ang=    6.27deg  f= 49.9892Hz
+t=14.900s  PMU=3000  V= 418.90kV  ang=  -30.57deg  f= 49.9892Hz
+t=14.900s  PMU=3245  V= 419.66kV  ang=  -24.01deg  f= 49.9892Hz
+t=14.900s  PMU=5100  V= 299.79kV  ang=  -22.38deg  f= 49.9891Hz
+t=14.900s  PMU=6500  V= 301.26kV  ang=   50.11deg  f= 50.1124Hz
+t=14.900s  PMU=7000  V= 419.79kV  ang=    5.89deg  f= 49.9892Hz
+t=15.000s  PMU=3000  V= 418.90kV  ang=  -30.96deg  f= 49.9892Hz
+t=15.000s  PMU=3245  V= 419.66kV  ang=  -24.40deg  f= 49.9892Hz
+t=15.000s  PMU=5100  V= 299.79kV  ang=  -22.77deg  f= 49.9891Hz
+t=15.000s  PMU=6500  V= 301.25kV  ang=   54.15deg  f= 50.1125Hz
+t=15.000s  PMU=7000  V= 419.79kV  ang=    5.50deg  f= 49.9892Hz
+t=15.100s  PMU=3000  V= 418.90kV  ang=  -31.35deg  f= 49.9891Hz
+t=15.100s  PMU=3245  V= 419.66kV  ang=  -24.79deg  f= 49.9891Hz
+t=15.100s  PMU=5100  V= 299.79kV  ang=  -23.16deg  f= 49.9891Hz
+t=15.100s  PMU=6500  V= 301.24kV  ang=   58.19deg  f= 50.1126Hz
+t=15.100s  PMU=7000  V= 419.79kV  ang=    5.11deg  f= 49.9892Hz
+t=15.200s  PMU=3000  V= 418.90kV  ang=  -31.74deg  f= 49.9891Hz
+t=15.200s  PMU=3245  V= 419.66kV  ang=  -25.18deg  f= 49.9891Hz
+t=15.200s  PMU=5100  V= 299.79kV  ang=  -23.55deg  f= 49.9891Hz
+t=15.200s  PMU=6500  V= 301.23kV  ang=   62.24deg  f= 50.1127Hz
+t=15.200s  PMU=7000  V= 419.79kV  ang=    4.72deg  f= 49.9891Hz
+t=15.300s  PMU=3000  V= 418.90kV  ang=  -32.13deg  f= 49.9891Hz
+t=15.300s  PMU=3245  V= 419.66kV  ang=  -25.57deg  f= 49.9891Hz
+t=15.300s  PMU=5100  V= 299.79kV  ang=  -23.94deg  f= 49.9891Hz
+t=15.300s  PMU=6500  V= 301.22kV  ang=   66.28deg  f= 50.1128Hz
+t=15.300s  PMU=7000  V= 419.80kV  ang=    4.33deg  f= 49.9891Hz
+t=15.400s  PMU=3000  V= 418.90kV  ang=  -32.52deg  f= 49.9891Hz
+t=15.400s  PMU=3245  V= 419.67kV  ang=  -25.96deg  f= 49.9891Hz
+t=15.400s  PMU=5100  V= 299.79kV  ang=  -24.33deg  f= 49.9891Hz
+t=15.400s  PMU=6500  V= 301.21kV  ang=   70.33deg  f= 50.1129Hz
+t=15.400s  PMU=7000  V= 419.80kV  ang=    3.94deg  f= 49.9891Hz
+t=15.500s  PMU=3000  V= 418.90kV  ang=  -32.91deg  f= 49.9891Hz
+t=15.500s  PMU=3245  V= 419.67kV  ang=  -26.36deg  f= 49.9891Hz
+t=15.500s  PMU=5100  V= 299.79kV  ang=  -24.72deg  f= 49.9891Hz
+t=15.500s  PMU=6500  V= 301.20kV  ang=   74.39deg  f= 50.1130Hz
+t=15.500s  PMU=7000  V= 419.80kV  ang=    3.54deg  f= 49.9891Hz
+t=15.600s  PMU=3000  V= 418.91kV  ang=  -33.30deg  f= 49.9891Hz
+t=15.600s  PMU=3245  V= 419.67kV  ang=  -26.75deg  f= 49.9891Hz
+t=15.600s  PMU=5100  V= 299.79kV  ang=  -25.11deg  f= 49.9891Hz
+t=15.600s  PMU=6500  V= 301.19kV  ang=   78.45deg  f= 50.1131Hz
+t=15.600s  PMU=7000  V= 419.80kV  ang=    3.15deg  f= 49.9891Hz
+t=15.700s  PMU=3000  V= 418.91kV  ang=  -33.69deg  f= 49.9891Hz
+t=15.700s  PMU=3245  V= 419.67kV  ang=  -27.14deg  f= 49.9891Hz
+t=15.700s  PMU=5100  V= 299.79kV  ang=  -25.50deg  f= 49.9891Hz
+t=15.700s  PMU=6500  V= 301.18kV  ang=   82.51deg  f= 50.1132Hz
+t=15.700s  PMU=7000  V= 419.80kV  ang=    2.76deg  f= 49.9891Hz
+t=15.800s  PMU=3000  V= 418.91kV  ang=  -34.09deg  f= 49.9891Hz
+t=15.800s  PMU=3245  V= 419.67kV  ang=  -27.53deg  f= 49.9891Hz
+t=15.800s  PMU=5100  V= 299.79kV  ang=  -25.90deg  f= 49.9891Hz
+t=15.800s  PMU=6500  V= 301.18kV  ang=   86.57deg  f= 50.1133Hz
+t=15.800s  PMU=7000  V= 419.80kV  ang=    2.37deg  f= 49.9890Hz
+t=15.900s  PMU=3000  V= 418.91kV  ang=  -34.48deg  f= 49.9891Hz
+t=15.900s  PMU=3245  V= 419.68kV  ang=  -27.93deg  f= 49.9891Hz
+t=15.900s  PMU=5100  V= 299.79kV  ang=  -26.29deg  f= 49.9891Hz
+t=15.900s  PMU=6500  V= 301.17kV  ang=   90.64deg  f= 50.1134Hz
+t=15.900s  PMU=7000  V= 419.81kV  ang=    1.97deg  f= 49.9890Hz
+t=16.000s  PMU=3000  V= 418.92kV  ang=  -34.87deg  f= 49.9890Hz
+t=16.000s  PMU=3245  V= 419.68kV  ang=  -28.32deg  f= 49.9890Hz
+t=16.000s  PMU=5100  V= 299.79kV  ang=  -26.68deg  f= 49.9891Hz
+t=16.000s  PMU=6500  V= 301.16kV  ang=   94.71deg  f= 50.1134Hz
+t=16.000s  PMU=7000  V= 419.81kV  ang=    1.58deg  f= 49.9890Hz
+t=16.100s  PMU=3000  V= 418.92kV  ang=  -35.27deg  f= 49.9890Hz
+t=16.100s  PMU=3245  V= 419.68kV  ang=  -28.71deg  f= 49.9890Hz
+t=16.100s  PMU=5100  V= 299.79kV  ang=  -27.07deg  f= 49.9891Hz
+t=16.100s  PMU=6500  V= 301.15kV  ang=   98.79deg  f= 50.1135Hz
+t=16.100s  PMU=7000  V= 419.81kV  ang=    1.19deg  f= 49.9890Hz
+t=16.200s  PMU=3000  V= 418.92kV  ang=  -35.66deg  f= 49.9890Hz
+t=16.200s  PMU=3245  V= 419.69kV  ang=  -29.11deg  f= 49.9890Hz
+t=16.200s  PMU=5100  V= 299.79kV  ang=  -27.46deg  f= 49.9891Hz
+t=16.200s  PMU=6500  V= 301.14kV  ang=  102.87deg  f= 50.1136Hz
+t=16.200s  PMU=7000  V= 419.81kV  ang=    0.79deg  f= 49.9890Hz
+t=16.300s  PMU=3000  V= 418.93kV  ang=  -36.05deg  f= 49.9890Hz
+t=16.300s  PMU=3245  V= 419.69kV  ang=  -29.50deg  f= 49.9890Hz
+t=16.300s  PMU=5100  V= 299.79kV  ang=  -27.86deg  f= 49.9891Hz
+t=16.300s  PMU=6500  V= 301.14kV  ang=  106.95deg  f= 50.1137Hz
+t=16.300s  PMU=7000  V= 419.81kV  ang=    0.40deg  f= 49.9890Hz
+t=16.400s  PMU=3000  V= 418.93kV  ang=  -36.45deg  f= 49.9890Hz
+t=16.400s  PMU=3245  V= 419.69kV  ang=  -29.89deg  f= 49.9890Hz
+t=16.400s  PMU=5100  V= 299.79kV  ang=  -28.25deg  f= 49.9890Hz
+t=16.400s  PMU=6500  V= 301.13kV  ang=  111.03deg  f= 50.1138Hz
+t=16.400s  PMU=7000  V= 419.82kV  ang=    0.00deg  f= 49.9890Hz
+t=16.500s  PMU=3000  V= 418.93kV  ang=  -36.84deg  f= 49.9890Hz
+t=16.500s  PMU=3245  V= 419.69kV  ang=  -30.29deg  f= 49.9890Hz
+t=16.500s  PMU=5100  V= 299.79kV  ang=  -28.64deg  f= 49.9890Hz
+t=16.500s  PMU=6500  V= 301.12kV  ang=  115.12deg  f= 50.1139Hz
+t=16.500s  PMU=7000  V= 419.82kV  ang=   -0.39deg  f= 49.9890Hz
+t=16.600s  PMU=3000  V= 418.93kV  ang=  -37.24deg  f= 49.9890Hz
+t=16.600s  PMU=3245  V= 419.69kV  ang=  -30.68deg  f= 49.9890Hz
+t=16.600s  PMU=5100  V= 299.79kV  ang=  -29.04deg  f= 49.9890Hz
+t=16.600s  PMU=6500  V= 301.11kV  ang=  119.21deg  f= 50.1140Hz
+t=16.600s  PMU=7000  V= 419.82kV  ang=   -0.79deg  f= 49.9890Hz
+t=16.700s  PMU=3000  V= 418.93kV  ang=  -37.63deg  f= 49.9890Hz
+t=16.700s  PMU=3245  V= 419.70kV  ang=  -31.08deg  f= 49.9890Hz
+t=16.700s  PMU=5100  V= 299.79kV  ang=  -29.43deg  f= 49.9890Hz
+t=16.700s  PMU=6500  V= 301.10kV  ang=  123.31deg  f= 50.1141Hz
+t=16.700s  PMU=7000  V= 419.82kV  ang=   -1.18deg  f= 49.9890Hz
+t=16.800s  PMU=3000  V= 418.93kV  ang=  -38.03deg  f= 49.9890Hz
+t=16.800s  PMU=3245  V= 419.70kV  ang=  -31.47deg  f= 49.9890Hz
+t=16.800s  PMU=5100  V= 299.79kV  ang=  -29.83deg  f= 49.9890Hz
+t=16.800s  PMU=6500  V= 301.10kV  ang=  127.40deg  f= 50.1141Hz
+t=16.800s  PMU=7000  V= 419.82kV  ang=   -1.58deg  f= 49.9890Hz
+t=16.900s  PMU=3000  V= 418.94kV  ang=  -38.42deg  f= 49.9890Hz
+t=16.900s  PMU=3245  V= 419.70kV  ang=  -31.87deg  f= 49.9890Hz
+t=16.900s  PMU=5100  V= 299.80kV  ang=  -30.22deg  f= 49.9890Hz
+t=16.900s  PMU=6500  V= 301.09kV  ang=  131.50deg  f= 50.1142Hz
+t=16.900s  PMU=7000  V= 419.82kV  ang=   -1.97deg  f= 49.9890Hz
+t=17.000s  PMU=3000  V= 418.94kV  ang=  -38.82deg  f= 49.9890Hz
+t=17.000s  PMU=3245  V= 419.70kV  ang=  -32.26deg  f= 49.9890Hz
+t=17.000s  PMU=5100  V= 299.80kV  ang=  -30.62deg  f= 49.9890Hz
+t=17.000s  PMU=6500  V= 301.08kV  ang=  135.61deg  f= 50.1143Hz
+t=17.000s  PMU=7000  V= 419.83kV  ang=   -2.37deg  f= 49.9890Hz
+t=17.100s  PMU=3000  V= 418.94kV  ang=  -39.21deg  f= 49.9890Hz
+t=17.100s  PMU=3245  V= 419.70kV  ang=  -32.66deg  f= 49.9890Hz
+t=17.100s  PMU=5100  V= 299.80kV  ang=  -31.01deg  f= 49.9890Hz
+t=17.100s  PMU=6500  V= 301.07kV  ang=  139.71deg  f= 50.1144Hz
+t=17.100s  PMU=7000  V= 419.83kV  ang=   -2.77deg  f= 49.9890Hz
+t=17.200s  PMU=3000  V= 418.94kV  ang=  -39.61deg  f= 49.9890Hz
+t=17.200s  PMU=3245  V= 419.70kV  ang=  -33.06deg  f= 49.9890Hz
+t=17.200s  PMU=5100  V= 299.80kV  ang=  -31.41deg  f= 49.9889Hz
+t=17.200s  PMU=6500  V= 301.06kV  ang=  143.82deg  f= 50.1145Hz
+t=17.200s  PMU=7000  V= 419.83kV  ang=   -3.16deg  f= 49.9890Hz
+t=17.300s  PMU=3000  V= 418.94kV  ang=  -40.01deg  f= 49.9889Hz
+t=17.300s  PMU=3245  V= 419.70kV  ang=  -33.45deg  f= 49.9889Hz
+t=17.300s  PMU=5100  V= 299.80kV  ang=  -31.81deg  f= 49.9889Hz
+t=17.300s  PMU=6500  V= 301.06kV  ang=  147.94deg  f= 50.1146Hz
+t=17.300s  PMU=7000  V= 419.83kV  ang=   -3.56deg  f= 49.9889Hz
+t=17.400s  PMU=3000  V= 418.94kV  ang=  -40.40deg  f= 49.9889Hz
+t=17.400s  PMU=3245  V= 419.70kV  ang=  -33.85deg  f= 49.9889Hz
+t=17.400s  PMU=5100  V= 299.80kV  ang=  -32.21deg  f= 49.9889Hz
+t=17.400s  PMU=6500  V= 301.05kV  ang=  152.05deg  f= 50.1146Hz
+t=17.400s  PMU=7000  V= 419.83kV  ang=   -3.96deg  f= 49.9889Hz
+t=17.500s  PMU=3000  V= 418.94kV  ang=  -40.80deg  f= 49.9889Hz
+t=17.500s  PMU=3245  V= 419.70kV  ang=  -34.25deg  f= 49.9889Hz
+t=17.500s  PMU=5100  V= 299.80kV  ang=  -32.60deg  f= 49.9889Hz
+t=17.500s  PMU=6500  V= 301.04kV  ang=  156.17deg  f= 50.1147Hz
+t=17.500s  PMU=7000  V= 419.83kV  ang=   -4.35deg  f= 49.9889Hz
+t=17.600s  PMU=3000  V= 418.94kV  ang=  -41.20deg  f= 49.9889Hz
+t=17.600s  PMU=3245  V= 419.70kV  ang=  -34.65deg  f= 49.9889Hz
+t=17.600s  PMU=5100  V= 299.81kV  ang=  -33.00deg  f= 49.9889Hz
+t=17.600s  PMU=6500  V= 301.03kV  ang=  160.29deg  f= 50.1148Hz
+t=17.600s  PMU=7000  V= 419.83kV  ang=   -4.75deg  f= 49.9889Hz
+t=17.700s  PMU=3000  V= 418.94kV  ang=  -41.60deg  f= 49.9889Hz
+t=17.700s  PMU=3245  V= 419.70kV  ang=  -35.04deg  f= 49.9889Hz
+t=17.700s  PMU=5100  V= 299.81kV  ang=  -33.40deg  f= 49.9889Hz
+t=17.700s  PMU=6500  V= 301.03kV  ang=  164.42deg  f= 50.1149Hz
+t=17.700s  PMU=7000  V= 419.83kV  ang=   -5.15deg  f= 49.9889Hz
+t=17.800s  PMU=3000  V= 418.94kV  ang=  -41.99deg  f= 49.9889Hz
+t=17.800s  PMU=3245  V= 419.70kV  ang=  -35.44deg  f= 49.9889Hz
+t=17.800s  PMU=5100  V= 299.81kV  ang=  -33.80deg  f= 49.9889Hz
+t=17.800s  PMU=6500  V= 301.02kV  ang=  168.55deg  f= 50.1150Hz
+t=17.800s  PMU=7000  V= 419.83kV  ang=   -5.55deg  f= 49.9889Hz
+t=17.900s  PMU=3000  V= 418.94kV  ang=  -42.39deg  f= 49.9889Hz
+t=17.900s  PMU=3245  V= 419.70kV  ang=  -35.84deg  f= 49.9889Hz
+t=17.900s  PMU=5100  V= 299.81kV  ang=  -34.20deg  f= 49.9889Hz
+t=17.900s  PMU=6500  V= 301.01kV  ang=  172.68deg  f= 50.1150Hz
+t=17.900s  PMU=7000  V= 419.84kV  ang=   -5.94deg  f= 49.9889Hz
+t=18.000s  PMU=3000  V= 418.95kV  ang=  -42.79deg  f= 49.9889Hz
+t=18.000s  PMU=3245  V= 419.70kV  ang=  -36.24deg  f= 49.9889Hz
+t=18.000s  PMU=5100  V= 299.81kV  ang=  -34.60deg  f= 49.9889Hz
+t=18.000s  PMU=6500  V= 301.00kV  ang=  176.81deg  f= 50.1151Hz
+t=18.000s  PMU=7000  V= 419.84kV  ang=   -6.34deg  f= 49.9889Hz
+t=18.100s  PMU=3000  V= 418.95kV  ang=  -43.19deg  f= 49.9889Hz
+t=18.100s  PMU=3245  V= 419.70kV  ang=  -36.64deg  f= 49.9889Hz
+t=18.100s  PMU=5100  V= 299.81kV  ang=  -35.00deg  f= 49.9889Hz
+t=18.100s  PMU=6500  V= 301.00kV  ang= -179.05deg  f= 50.1152Hz
+t=18.100s  PMU=7000  V= 419.84kV  ang=   -6.74deg  f= 49.9889Hz
+t=18.200s  PMU=3000  V= 418.95kV  ang=  -43.59deg  f= 49.9889Hz
+t=18.200s  PMU=3245  V= 419.70kV  ang=  -37.04deg  f= 49.9889Hz
+t=18.200s  PMU=5100  V= 299.81kV  ang=  -35.40deg  f= 49.9889Hz
+t=18.200s  PMU=6500  V= 300.99kV  ang= -174.92deg  f= 50.1153Hz
+t=18.200s  PMU=7000  V= 419.84kV  ang=   -7.14deg  f= 49.9889Hz
+t=18.300s  PMU=3000  V= 418.95kV  ang=  -43.99deg  f= 49.9889Hz
+t=18.300s  PMU=3245  V= 419.70kV  ang=  -37.44deg  f= 49.9889Hz
+t=18.300s  PMU=5100  V= 299.81kV  ang=  -35.80deg  f= 49.9889Hz
+t=18.300s  PMU=6500  V= 300.98kV  ang= -170.77deg  f= 50.1153Hz
+t=18.300s  PMU=7000  V= 419.84kV  ang=   -7.54deg  f= 49.9889Hz
+t=18.400s  PMU=3000  V= 418.95kV  ang=  -44.39deg  f= 49.9889Hz
+t=18.400s  PMU=3245  V= 419.70kV  ang=  -37.84deg  f= 49.9889Hz
+t=18.400s  PMU=5100  V= 299.81kV  ang=  -36.20deg  f= 49.9888Hz
+t=18.400s  PMU=6500  V= 300.98kV  ang= -166.63deg  f= 50.1154Hz
+t=18.400s  PMU=7000  V= 419.84kV  ang=   -7.94deg  f= 49.9889Hz
+t=18.500s  PMU=3000  V= 418.95kV  ang=  -44.79deg  f= 49.9889Hz
+t=18.500s  PMU=3245  V= 419.70kV  ang=  -38.24deg  f= 49.9889Hz
+t=18.500s  PMU=5100  V= 299.82kV  ang=  -36.60deg  f= 49.9888Hz
+t=18.500s  PMU=6500  V= 300.97kV  ang= -162.48deg  f= 50.1155Hz
+t=18.500s  PMU=7000  V= 419.84kV  ang=   -8.34deg  f= 49.9889Hz
+t=18.600s  PMU=3000  V= 418.95kV  ang=  -45.19deg  f= 49.9888Hz
+t=18.600s  PMU=3245  V= 419.71kV  ang=  -38.64deg  f= 49.9888Hz
+t=18.600s  PMU=5100  V= 299.82kV  ang=  -37.00deg  f= 49.9888Hz
+t=18.600s  PMU=6500  V= 300.96kV  ang= -158.33deg  f= 50.1156Hz
+t=18.600s  PMU=7000  V= 419.84kV  ang=   -8.74deg  f= 49.9888Hz
+t=18.700s  PMU=3000  V= 418.95kV  ang=  -45.59deg  f= 49.9888Hz
+t=18.700s  PMU=3245  V= 419.71kV  ang=  -39.04deg  f= 49.9888Hz
+t=18.700s  PMU=5100  V= 299.82kV  ang=  -37.40deg  f= 49.9888Hz
+t=18.700s  PMU=6500  V= 300.96kV  ang= -154.18deg  f= 50.1156Hz
+t=18.700s  PMU=7000  V= 419.84kV  ang=   -9.14deg  f= 49.9888Hz
+t=18.800s  PMU=3000  V= 418.95kV  ang=  -45.99deg  f= 49.9888Hz
+t=18.800s  PMU=3245  V= 419.71kV  ang=  -39.44deg  f= 49.9888Hz
+t=18.800s  PMU=5100  V= 299.82kV  ang=  -37.80deg  f= 49.9888Hz
+t=18.800s  PMU=6500  V= 300.95kV  ang= -150.02deg  f= 50.1157Hz
+t=18.800s  PMU=7000  V= 419.84kV  ang=   -9.54deg  f= 49.9888Hz
+t=18.900s  PMU=3000  V= 418.95kV  ang=  -46.39deg  f= 49.9888Hz
+t=18.900s  PMU=3245  V= 419.71kV  ang=  -39.84deg  f= 49.9888Hz
+t=18.900s  PMU=5100  V= 299.82kV  ang=  -38.20deg  f= 49.9888Hz
+t=18.900s  PMU=6500  V= 300.94kV  ang= -145.87deg  f= 50.1158Hz
+t=18.900s  PMU=7000  V= 419.85kV  ang=   -9.94deg  f= 49.9888Hz
+t=19.000s  PMU=3000  V= 418.96kV  ang=  -46.80deg  f= 49.9888Hz
+t=19.000s  PMU=3245  V= 419.71kV  ang=  -40.24deg  f= 49.9888Hz
+t=19.000s  PMU=5100  V= 299.82kV  ang=  -38.60deg  f= 49.9888Hz
+t=19.000s  PMU=6500  V= 300.94kV  ang= -141.71deg  f= 50.1158Hz
+t=19.000s  PMU=7000  V= 419.85kV  ang=  -10.35deg  f= 49.9888Hz
+t=19.100s  PMU=3000  V= 418.96kV  ang=  -47.20deg  f= 49.9888Hz
+t=19.100s  PMU=3245  V= 419.71kV  ang=  -40.64deg  f= 49.9888Hz
+t=19.100s  PMU=5100  V= 299.82kV  ang=  -39.00deg  f= 49.9888Hz
+t=19.100s  PMU=6500  V= 300.93kV  ang= -137.54deg  f= 50.1159Hz
+t=19.100s  PMU=7000  V= 419.85kV  ang=  -10.75deg  f= 49.9888Hz
+t=19.200s  PMU=3000  V= 418.96kV  ang=  -47.60deg  f= 49.9888Hz
+t=19.200s  PMU=3245  V= 419.71kV  ang=  -41.05deg  f= 49.9888Hz
+t=19.200s  PMU=5100  V= 299.82kV  ang=  -39.41deg  f= 49.9888Hz
+t=19.200s  PMU=6500  V= 300.92kV  ang= -133.38deg  f= 50.1160Hz
+t=19.200s  PMU=7000  V= 419.85kV  ang=  -11.15deg  f= 49.9888Hz
+t=19.300s  PMU=3000  V= 418.96kV  ang=  -48.00deg  f= 49.9888Hz
+t=19.300s  PMU=3245  V= 419.71kV  ang=  -41.45deg  f= 49.9888Hz
+t=19.300s  PMU=5100  V= 299.82kV  ang=  -39.81deg  f= 49.9888Hz
+t=19.300s  PMU=6500  V= 300.92kV  ang= -129.21deg  f= 50.1161Hz
+t=19.300s  PMU=7000  V= 419.85kV  ang=  -11.55deg  f= 49.9888Hz
+t=19.400s  PMU=3000  V= 418.96kV  ang=  -48.40deg  f= 49.9888Hz
+t=19.400s  PMU=3245  V= 419.72kV  ang=  -41.85deg  f= 49.9888Hz
+t=19.400s  PMU=5100  V= 299.82kV  ang=  -40.21deg  f= 49.9888Hz
+t=19.400s  PMU=6500  V= 300.91kV  ang= -125.04deg  f= 50.1161Hz
+t=19.400s  PMU=7000  V= 419.85kV  ang=  -11.95deg  f= 49.9888Hz
+t=19.500s  PMU=3000  V= 418.96kV  ang=  -48.81deg  f= 49.9888Hz
+t=19.500s  PMU=3245  V= 419.72kV  ang=  -42.25deg  f= 49.9888Hz
+t=19.500s  PMU=5100  V= 299.82kV  ang=  -40.61deg  f= 49.9888Hz
+t=19.500s  PMU=6500  V= 300.90kV  ang= -120.86deg  f= 50.1162Hz
+t=19.500s  PMU=7000  V= 419.85kV  ang=  -12.36deg  f= 49.9888Hz
+t=19.600s  PMU=3000  V= 418.96kV  ang=  -49.21deg  f= 49.9888Hz
+t=19.600s  PMU=3245  V= 419.72kV  ang=  -42.66deg  f= 49.9888Hz
+t=19.600s  PMU=5100  V= 299.82kV  ang=  -41.02deg  f= 49.9888Hz
+t=19.600s  PMU=6500  V= 300.90kV  ang= -116.69deg  f= 50.1163Hz
+t=19.600s  PMU=7000  V= 419.85kV  ang=  -12.76deg  f= 49.9888Hz
+t=19.700s  PMU=3000  V= 418.97kV  ang=  -49.61deg  f= 49.9888Hz
+t=19.700s  PMU=3245  V= 419.72kV  ang=  -43.06deg  f= 49.9888Hz
+t=19.700s  PMU=5100  V= 299.82kV  ang=  -41.42deg  f= 49.9888Hz
+t=19.700s  PMU=6500  V= 300.89kV  ang= -112.51deg  f= 50.1163Hz
+t=19.700s  PMU=7000  V= 419.86kV  ang=  -13.16deg  f= 49.9888Hz
+t=19.800s  PMU=3000  V= 418.97kV  ang=  -50.02deg  f= 49.9888Hz
+t=19.800s  PMU=3245  V= 419.72kV  ang=  -43.46deg  f= 49.9888Hz
+t=19.800s  PMU=5100  V= 299.82kV  ang=  -41.82deg  f= 49.9888Hz
+t=19.800s  PMU=6500  V= 300.88kV  ang= -108.33deg  f= 50.1164Hz
+t=19.800s  PMU=7000  V= 419.86kV  ang=  -13.57deg  f= 49.9888Hz
+t=19.900s  PMU=3000  V= 418.97kV  ang=  -50.42deg  f= 49.9888Hz
+t=19.900s  PMU=3245  V= 419.72kV  ang=  -43.87deg  f= 49.9888Hz
+t=19.900s  PMU=5100  V= 299.82kV  ang=  -42.23deg  f= 49.9888Hz
+t=19.900s  PMU=6500  V= 300.88kV  ang= -104.15deg  f= 50.1165Hz
+t=19.900s  PMU=7000  V= 419.86kV  ang=  -13.97deg  f= 49.9888Hz
+t=20.000s  PMU=3000  V= 418.97kV  ang=  -50.82deg  f= 49.9888Hz
+t=20.000s  PMU=3245  V= 419.72kV  ang=  -44.27deg  f= 49.9888Hz
+t=20.000s  PMU=5100  V= 299.82kV  ang=  -42.63deg  f= 49.9888Hz
+t=20.000s  PMU=6500  V= 300.87kV  ang=  -99.96deg  f= 50.1165Hz
+t=20.000s  PMU=7000  V= 419.86kV  ang=  -14.38deg  f= 49.9888Hz
+t=20.100s  PMU=3000  V= 418.97kV  ang=  -51.23deg  f= 49.9887Hz
+t=20.100s  PMU=3245  V= 419.72kV  ang=  -44.67deg  f= 49.9887Hz
+t=20.100s  PMU=5100  V= 299.82kV  ang=  -43.03deg  f= 49.9888Hz
+t=20.100s  PMU=6500  V= 300.87kV  ang=  -95.77deg  f= 50.1166Hz
+t=20.100s  PMU=7000  V= 419.86kV  ang=  -14.78deg  f= 49.9887Hz
+t=20.200s  PMU=3000  V= 418.97kV  ang=  -51.63deg  f= 49.9887Hz
+t=20.200s  PMU=3245  V= 419.73kV  ang=  -45.08deg  f= 49.9887Hz
+t=20.200s  PMU=5100  V= 299.82kV  ang=  -43.44deg  f= 49.9887Hz
+t=20.200s  PMU=6500  V= 300.86kV  ang=  -91.58deg  f= 50.1167Hz
+t=20.200s  PMU=7000  V= 419.86kV  ang=  -15.18deg  f= 49.9887Hz
+t=20.300s  PMU=3000  V= 418.97kV  ang=  -52.04deg  f= 49.9887Hz
+t=20.300s  PMU=3245  V= 419.73kV  ang=  -45.48deg  f= 49.9887Hz
+t=20.300s  PMU=5100  V= 299.82kV  ang=  -43.84deg  f= 49.9887Hz
+t=20.300s  PMU=6500  V= 300.85kV  ang=  -87.39deg  f= 50.1167Hz
+t=20.300s  PMU=7000  V= 419.86kV  ang=  -15.59deg  f= 49.9887Hz
+t=20.400s  PMU=3000  V= 418.97kV  ang=  -52.44deg  f= 49.9887Hz
+t=20.400s  PMU=3245  V= 419.73kV  ang=  -45.89deg  f= 49.9887Hz
+t=20.400s  PMU=5100  V= 299.83kV  ang=  -44.25deg  f= 49.9887Hz
+t=20.400s  PMU=6500  V= 300.85kV  ang=  -83.19deg  f= 50.1168Hz
+t=20.400s  PMU=7000  V= 419.86kV  ang=  -15.99deg  f= 49.9887Hz
+t=20.500s  PMU=3000  V= 418.97kV  ang=  -52.85deg  f= 49.9887Hz
+t=20.500s  PMU=3245  V= 419.73kV  ang=  -46.29deg  f= 49.9887Hz
+t=20.500s  PMU=5100  V= 299.83kV  ang=  -44.65deg  f= 49.9887Hz
+t=20.500s  PMU=6500  V= 300.84kV  ang=  -78.99deg  f= 50.1169Hz
+t=20.500s  PMU=7000  V= 419.86kV  ang=  -16.40deg  f= 49.9887Hz
+t=20.600s  PMU=3000  V= 418.97kV  ang=  -53.25deg  f= 49.9887Hz
+t=20.600s  PMU=3245  V= 419.73kV  ang=  -46.70deg  f= 49.9887Hz
+t=20.600s  PMU=5100  V= 299.83kV  ang=  -45.06deg  f= 49.9887Hz
+t=20.600s  PMU=6500  V= 300.84kV  ang=  -74.79deg  f= 50.1169Hz
+t=20.600s  PMU=7000  V= 419.86kV  ang=  -16.80deg  f= 49.9887Hz
+t=20.700s  PMU=3000  V= 418.97kV  ang=  -53.66deg  f= 49.9887Hz
+t=20.700s  PMU=3245  V= 419.73kV  ang=  -47.10deg  f= 49.9887Hz
+t=20.700s  PMU=5100  V= 299.83kV  ang=  -45.46deg  f= 49.9887Hz
+t=20.700s  PMU=6500  V= 300.83kV  ang=  -70.59deg  f= 50.1170Hz
+t=20.700s  PMU=7000  V= 419.87kV  ang=  -17.21deg  f= 49.9887Hz
+t=20.800s  PMU=3000  V= 418.98kV  ang=  -54.06deg  f= 49.9887Hz
+t=20.800s  PMU=3245  V= 419.73kV  ang=  -47.51deg  f= 49.9887Hz
+t=20.800s  PMU=5100  V= 299.83kV  ang=  -45.87deg  f= 49.9887Hz
+t=20.800s  PMU=6500  V= 300.82kV  ang=  -66.39deg  f= 50.1170Hz
+t=20.800s  PMU=7000  V= 419.87kV  ang=  -17.61deg  f= 49.9887Hz
+t=20.900s  PMU=3000  V= 418.98kV  ang=  -54.47deg  f= 49.9887Hz
+t=20.900s  PMU=3245  V= 419.73kV  ang=  -47.92deg  f= 49.9887Hz
+t=20.900s  PMU=5100  V= 299.83kV  ang=  -46.28deg  f= 49.9887Hz
+t=20.900s  PMU=6500  V= 300.82kV  ang=  -62.18deg  f= 50.1171Hz
+t=20.900s  PMU=7000  V= 419.87kV  ang=  -18.02deg  f= 49.9887Hz
+t=21.000s  PMU=3000  V= 418.98kV  ang=  -54.87deg  f= 49.9887Hz
+t=21.000s  PMU=3245  V= 419.73kV  ang=  -48.32deg  f= 49.9887Hz
+t=21.000s  PMU=5100  V= 299.83kV  ang=  -46.68deg  f= 49.9887Hz
+t=21.000s  PMU=6500  V= 300.81kV  ang=  -57.97deg  f= 50.1172Hz
+t=21.000s  PMU=7000  V= 419.87kV  ang=  -18.43deg  f= 49.9887Hz
+t=21.100s  PMU=3000  V= 418.98kV  ang=  -55.28deg  f= 49.9887Hz
+t=21.100s  PMU=3245  V= 419.73kV  ang=  -48.73deg  f= 49.9887Hz
+t=21.100s  PMU=5100  V= 299.83kV  ang=  -47.09deg  f= 49.9887Hz
+t=21.100s  PMU=6500  V= 300.81kV  ang=  -53.76deg  f= 50.1172Hz
+t=21.100s  PMU=7000  V= 419.87kV  ang=  -18.83deg  f= 49.9887Hz
+t=21.200s  PMU=3000  V= 418.98kV  ang=  -55.69deg  f= 49.9887Hz
+t=21.200s  PMU=3245  V= 419.73kV  ang=  -49.13deg  f= 49.9887Hz
+t=21.200s  PMU=5100  V= 299.83kV  ang=  -47.49deg  f= 49.9887Hz
+t=21.200s  PMU=6500  V= 300.80kV  ang=  -49.54deg  f= 50.1173Hz
+t=21.200s  PMU=7000  V= 419.87kV  ang=  -19.24deg  f= 49.9887Hz
+t=21.300s  PMU=3000  V= 418.98kV  ang=  -56.09deg  f= 49.9887Hz
+t=21.300s  PMU=3245  V= 419.73kV  ang=  -49.54deg  f= 49.9887Hz
+t=21.300s  PMU=5100  V= 299.83kV  ang=  -47.90deg  f= 49.9887Hz
+t=21.300s  PMU=6500  V= 300.80kV  ang=  -45.33deg  f= 50.1173Hz
+t=21.300s  PMU=7000  V= 419.87kV  ang=  -19.65deg  f= 49.9887Hz
+t=21.400s  PMU=3000  V= 418.98kV  ang=  -56.50deg  f= 49.9887Hz
+t=21.400s  PMU=3245  V= 419.73kV  ang=  -49.95deg  f= 49.9887Hz
+t=21.400s  PMU=5100  V= 299.83kV  ang=  -48.31deg  f= 49.9887Hz
+t=21.400s  PMU=6500  V= 300.79kV  ang=  -41.11deg  f= 50.1174Hz
+t=21.400s  PMU=7000  V= 419.87kV  ang=  -20.05deg  f= 49.9887Hz
+t=21.500s  PMU=3000  V= 418.98kV  ang=  -56.91deg  f= 49.9887Hz
+t=21.500s  PMU=3245  V= 419.73kV  ang=  -50.35deg  f= 49.9887Hz
+t=21.500s  PMU=5100  V= 299.83kV  ang=  -48.72deg  f= 49.9887Hz
+t=21.500s  PMU=6500  V= 300.78kV  ang=  -36.89deg  f= 50.1175Hz
+t=21.500s  PMU=7000  V= 419.87kV  ang=  -20.46deg  f= 49.9887Hz
+t=21.600s  PMU=3000  V= 418.98kV  ang=  -57.32deg  f= 49.9887Hz
+t=21.600s  PMU=3245  V= 419.73kV  ang=  -50.76deg  f= 49.9887Hz
+t=21.600s  PMU=5100  V= 299.83kV  ang=  -49.12deg  f= 49.9887Hz
+t=21.600s  PMU=6500  V= 300.78kV  ang=  -32.67deg  f= 50.1175Hz
+t=21.600s  PMU=7000  V= 419.87kV  ang=  -20.87deg  f= 49.9887Hz
+t=21.700s  PMU=3000  V= 418.98kV  ang=  -57.72deg  f= 49.9887Hz
+t=21.700s  PMU=3245  V= 419.73kV  ang=  -51.17deg  f= 49.9887Hz
+t=21.700s  PMU=5100  V= 299.84kV  ang=  -49.53deg  f= 49.9887Hz
+t=21.700s  PMU=6500  V= 300.77kV  ang=  -28.44deg  f= 50.1176Hz
+t=21.700s  PMU=7000  V= 419.87kV  ang=  -21.27deg  f= 49.9887Hz
+t=21.800s  PMU=3000  V= 418.98kV  ang=  -58.13deg  f= 49.9887Hz
+t=21.800s  PMU=3245  V= 419.73kV  ang=  -51.58deg  f= 49.9887Hz
+t=21.800s  PMU=5100  V= 299.84kV  ang=  -49.94deg  f= 49.9886Hz
+t=21.800s  PMU=6500  V= 300.77kV  ang=  -24.21deg  f= 50.1176Hz
+t=21.800s  PMU=7000  V= 419.87kV  ang=  -21.68deg  f= 49.9887Hz
+t=21.900s  PMU=3000  V= 418.98kV  ang=  -58.54deg  f= 49.9886Hz
+t=21.900s  PMU=3245  V= 419.74kV  ang=  -51.99deg  f= 49.9886Hz
+t=21.900s  PMU=5100  V= 299.84kV  ang=  -50.35deg  f= 49.9886Hz
+t=21.900s  PMU=6500  V= 300.76kV  ang=  -19.99deg  f= 50.1177Hz
+t=21.900s  PMU=7000  V= 419.87kV  ang=  -22.09deg  f= 49.9886Hz
+t=22.000s  PMU=3000  V= 418.98kV  ang=  -58.95deg  f= 49.9886Hz
+t=22.000s  PMU=3245  V= 419.74kV  ang=  -52.39deg  f= 49.9886Hz
+t=22.000s  PMU=5100  V= 299.84kV  ang=  -50.76deg  f= 49.9886Hz
+t=22.000s  PMU=6500  V= 300.76kV  ang=  -15.75deg  f= 50.1178Hz
+t=22.000s  PMU=7000  V= 419.88kV  ang=  -22.50deg  f= 49.9886Hz
+t=22.100s  PMU=3000  V= 418.98kV  ang=  -59.36deg  f= 49.9886Hz
+t=22.100s  PMU=3245  V= 419.74kV  ang=  -52.80deg  f= 49.9886Hz
+t=22.100s  PMU=5100  V= 299.84kV  ang=  -51.16deg  f= 49.9886Hz
+t=22.100s  PMU=6500  V= 300.75kV  ang=  -11.52deg  f= 50.1178Hz
+t=22.100s  PMU=7000  V= 419.88kV  ang=  -22.91deg  f= 49.9886Hz
+t=22.200s  PMU=3000  V= 418.99kV  ang=  -59.76deg  f= 49.9886Hz
+t=22.200s  PMU=3245  V= 419.74kV  ang=  -53.21deg  f= 49.9886Hz
+t=22.200s  PMU=5100  V= 299.84kV  ang=  -51.57deg  f= 49.9886Hz
+t=22.200s  PMU=6500  V= 300.75kV  ang=   -7.29deg  f= 50.1179Hz
+t=22.200s  PMU=7000  V= 419.88kV  ang=  -23.32deg  f= 49.9886Hz
+t=22.300s  PMU=3000  V= 418.99kV  ang=  -60.17deg  f= 49.9886Hz
+t=22.300s  PMU=3245  V= 419.74kV  ang=  -53.62deg  f= 49.9886Hz
+t=22.300s  PMU=5100  V= 299.84kV  ang=  -51.98deg  f= 49.9886Hz
+t=22.300s  PMU=6500  V= 300.74kV  ang=   -3.05deg  f= 50.1179Hz
+t=22.300s  PMU=7000  V= 419.88kV  ang=  -23.72deg  f= 49.9886Hz
+t=22.400s  PMU=3000  V= 418.99kV  ang=  -60.58deg  f= 49.9886Hz
+t=22.400s  PMU=3245  V= 419.74kV  ang=  -54.03deg  f= 49.9886Hz
+t=22.400s  PMU=5100  V= 299.84kV  ang=  -52.39deg  f= 49.9886Hz
+t=22.400s  PMU=6500  V= 300.74kV  ang=    1.19deg  f= 50.1180Hz
+t=22.400s  PMU=7000  V= 419.88kV  ang=  -24.13deg  f= 49.9886Hz
+t=22.500s  PMU=3000  V= 418.99kV  ang=  -60.99deg  f= 49.9886Hz
+t=22.500s  PMU=3245  V= 419.74kV  ang=  -54.44deg  f= 49.9886Hz
+t=22.500s  PMU=5100  V= 299.84kV  ang=  -52.80deg  f= 49.9886Hz
+t=22.500s  PMU=6500  V= 300.73kV  ang=    5.43deg  f= 50.1180Hz
+t=22.500s  PMU=7000  V= 419.88kV  ang=  -24.54deg  f= 49.9886Hz
+t=22.600s  PMU=3000  V= 418.99kV  ang=  -61.40deg  f= 49.9886Hz
+t=22.600s  PMU=3245  V= 419.74kV  ang=  -54.85deg  f= 49.9886Hz
+t=22.600s  PMU=5100  V= 299.84kV  ang=  -53.21deg  f= 49.9886Hz
+t=22.600s  PMU=6500  V= 300.73kV  ang=    9.68deg  f= 50.1181Hz
+t=22.600s  PMU=7000  V= 419.88kV  ang=  -24.95deg  f= 49.9886Hz
+t=22.700s  PMU=3000  V= 418.99kV  ang=  -61.81deg  f= 49.9886Hz
+t=22.700s  PMU=3245  V= 419.74kV  ang=  -55.26deg  f= 49.9886Hz
+t=22.700s  PMU=5100  V= 299.84kV  ang=  -53.62deg  f= 49.9886Hz
+t=22.700s  PMU=6500  V= 300.72kV  ang=   13.92deg  f= 50.1181Hz
+t=22.700s  PMU=7000  V= 419.88kV  ang=  -25.36deg  f= 49.9886Hz
+t=22.800s  PMU=3000  V= 418.99kV  ang=  -62.22deg  f= 49.9886Hz
+t=22.800s  PMU=3245  V= 419.74kV  ang=  -55.67deg  f= 49.9886Hz
+t=22.800s  PMU=5100  V= 299.84kV  ang=  -54.03deg  f= 49.9886Hz
+t=22.800s  PMU=6500  V= 300.72kV  ang=   18.17deg  f= 50.1182Hz
+t=22.800s  PMU=7000  V= 419.88kV  ang=  -25.77deg  f= 49.9886Hz
+t=22.900s  PMU=3000  V= 418.99kV  ang=  -62.63deg  f= 49.9886Hz
+t=22.900s  PMU=3245  V= 419.74kV  ang=  -56.08deg  f= 49.9886Hz
+t=22.900s  PMU=5100  V= 299.84kV  ang=  -54.44deg  f= 49.9886Hz
+t=22.900s  PMU=6500  V= 300.71kV  ang=   22.42deg  f= 50.1182Hz
+t=22.900s  PMU=7000  V= 419.88kV  ang=  -26.18deg  f= 49.9886Hz
+t=23.000s  PMU=3000  V= 418.99kV  ang=  -63.04deg  f= 49.9886Hz
+t=23.000s  PMU=3245  V= 419.75kV  ang=  -56.49deg  f= 49.9886Hz
+t=23.000s  PMU=5100  V= 299.84kV  ang=  -54.85deg  f= 49.9886Hz
+t=23.000s  PMU=6500  V= 300.71kV  ang=   26.67deg  f= 50.1183Hz
+t=23.000s  PMU=7000  V= 419.88kV  ang=  -26.59deg  f= 49.9886Hz
+t=23.100s  PMU=3000  V= 418.99kV  ang=  -63.45deg  f= 49.9886Hz
+t=23.100s  PMU=3245  V= 419.75kV  ang=  -56.90deg  f= 49.9886Hz
+t=23.100s  PMU=5100  V= 299.84kV  ang=  -55.26deg  f= 49.9886Hz
+t=23.100s  PMU=6500  V= 300.70kV  ang=   30.92deg  f= 50.1183Hz
+t=23.100s  PMU=7000  V= 419.88kV  ang=  -27.00deg  f= 49.9886Hz
+t=23.200s  PMU=3000  V= 418.99kV  ang=  -63.86deg  f= 49.9886Hz
+t=23.200s  PMU=3245  V= 419.75kV  ang=  -57.31deg  f= 49.9886Hz
+t=23.200s  PMU=5100  V= 299.84kV  ang=  -55.67deg  f= 49.9886Hz
+t=23.200s  PMU=6500  V= 300.70kV  ang=   35.18deg  f= 50.1184Hz
+t=23.200s  PMU=7000  V= 419.89kV  ang=  -27.41deg  f= 49.9886Hz
+t=23.300s  PMU=3000  V= 418.99kV  ang=  -64.27deg  f= 49.9886Hz
+t=23.300s  PMU=3245  V= 419.75kV  ang=  -57.72deg  f= 49.9886Hz
+t=23.300s  PMU=5100  V= 299.84kV  ang=  -56.08deg  f= 49.9886Hz
+t=23.300s  PMU=6500  V= 300.69kV  ang=   39.43deg  f= 50.1185Hz
+t=23.300s  PMU=7000  V= 419.89kV  ang=  -27.82deg  f= 49.9886Hz
+t=23.400s  PMU=3000  V= 418.99kV  ang=  -64.68deg  f= 49.9886Hz
+t=23.400s  PMU=3245  V= 419.75kV  ang=  -58.13deg  f= 49.9886Hz
+t=23.400s  PMU=5100  V= 299.84kV  ang=  -56.49deg  f= 49.9886Hz
+t=23.400s  PMU=6500  V= 300.69kV  ang=   43.69deg  f= 50.1185Hz
+t=23.400s  PMU=7000  V= 419.89kV  ang=  -28.23deg  f= 49.9886Hz
+t=23.500s  PMU=3000  V= 419.00kV  ang=  -65.09deg  f= 49.9886Hz
+t=23.500s  PMU=3245  V= 419.75kV  ang=  -58.54deg  f= 49.9886Hz
+t=23.500s  PMU=5100  V= 299.84kV  ang=  -56.90deg  f= 49.9886Hz
+t=23.500s  PMU=6500  V= 300.68kV  ang=   47.95deg  f= 50.1185Hz
+t=23.500s  PMU=7000  V= 419.89kV  ang=  -28.64deg  f= 49.9886Hz
+t=23.600s  PMU=3000  V= 419.00kV  ang=  -65.50deg  f= 49.9886Hz
+t=23.600s  PMU=3245  V= 419.75kV  ang=  -58.95deg  f= 49.9886Hz
+t=23.600s  PMU=5100  V= 299.84kV  ang=  -57.31deg  f= 49.9886Hz
+t=23.600s  PMU=6500  V= 300.68kV  ang=   52.22deg  f= 50.1186Hz
+t=23.600s  PMU=7000  V= 419.89kV  ang=  -29.06deg  f= 49.9886Hz
+t=23.700s  PMU=3000  V= 419.00kV  ang=  -65.91deg  f= 49.9886Hz
+t=23.700s  PMU=3245  V= 419.75kV  ang=  -59.36deg  f= 49.9886Hz
+t=23.700s  PMU=5100  V= 299.84kV  ang=  -57.72deg  f= 49.9886Hz
+t=23.700s  PMU=6500  V= 300.67kV  ang=   56.48deg  f= 50.1186Hz
+t=23.700s  PMU=7000  V= 419.89kV  ang=  -29.47deg  f= 49.9886Hz
+t=23.800s  PMU=3000  V= 419.00kV  ang=  -66.33deg  f= 49.9886Hz
+t=23.800s  PMU=3245  V= 419.75kV  ang=  -59.77deg  f= 49.9886Hz
+t=23.800s  PMU=5100  V= 299.85kV  ang=  -58.13deg  f= 49.9885Hz
+t=23.800s  PMU=6500  V= 300.67kV  ang=   60.75deg  f= 50.1187Hz
+t=23.800s  PMU=7000  V= 419.89kV  ang=  -29.88deg  f= 49.9886Hz
+t=23.900s  PMU=3000  V= 419.00kV  ang=  -66.74deg  f= 49.9885Hz
+t=23.900s  PMU=3245  V= 419.75kV  ang=  -60.18deg  f= 49.9885Hz
+t=23.900s  PMU=5100  V= 299.85kV  ang=  -58.55deg  f= 49.9885Hz
+t=23.900s  PMU=6500  V= 300.66kV  ang=   65.02deg  f= 50.1187Hz
+t=23.900s  PMU=7000  V= 419.89kV  ang=  -30.29deg  f= 49.9885Hz
+t=24.000s  PMU=3000  V= 419.00kV  ang=  -67.15deg  f= 49.9885Hz
+t=24.000s  PMU=3245  V= 419.75kV  ang=  -60.60deg  f= 49.9885Hz
+t=24.000s  PMU=5100  V= 299.85kV  ang=  -58.96deg  f= 49.9885Hz
+t=24.000s  PMU=6500  V= 300.66kV  ang=   69.29deg  f= 50.1188Hz
+t=24.000s  PMU=7000  V= 419.89kV  ang=  -30.70deg  f= 49.9885Hz
+t=24.100s  PMU=3000  V= 419.00kV  ang=  -67.56deg  f= 49.9885Hz
+t=24.100s  PMU=3245  V= 419.75kV  ang=  -61.01deg  f= 49.9885Hz
+t=24.100s  PMU=5100  V= 299.85kV  ang=  -59.37deg  f= 49.9885Hz
+t=24.100s  PMU=6500  V= 300.66kV  ang=   73.56deg  f= 50.1188Hz
+t=24.100s  PMU=7000  V= 419.89kV  ang=  -31.11deg  f= 49.9885Hz
+t=24.200s  PMU=3000  V= 419.00kV  ang=  -67.97deg  f= 49.9885Hz
+t=24.200s  PMU=3245  V= 419.75kV  ang=  -61.42deg  f= 49.9885Hz
+t=24.200s  PMU=5100  V= 299.85kV  ang=  -59.78deg  f= 49.9885Hz
+t=24.200s  PMU=6500  V= 300.65kV  ang=   77.83deg  f= 50.1189Hz
+t=24.200s  PMU=7000  V= 419.89kV  ang=  -31.53deg  f= 49.9885Hz
+t=24.300s  PMU=3000  V= 419.00kV  ang=  -68.39deg  f= 49.9885Hz
+t=24.300s  PMU=3245  V= 419.75kV  ang=  -61.83deg  f= 49.9885Hz
+t=24.300s  PMU=5100  V= 299.85kV  ang=  -60.19deg  f= 49.9885Hz
+t=24.300s  PMU=6500  V= 300.65kV  ang=   82.11deg  f= 50.1189Hz
+t=24.300s  PMU=7000  V= 419.89kV  ang=  -31.94deg  f= 49.9885Hz
+t=24.400s  PMU=3000  V= 419.00kV  ang=  -68.80deg  f= 49.9885Hz
+t=24.400s  PMU=3245  V= 419.75kV  ang=  -62.24deg  f= 49.9885Hz
+t=24.400s  PMU=5100  V= 299.85kV  ang=  -60.61deg  f= 49.9885Hz
+t=24.400s  PMU=6500  V= 300.64kV  ang=   86.38deg  f= 50.1190Hz
+t=24.400s  PMU=7000  V= 419.89kV  ang=  -32.35deg  f= 49.9885Hz
+t=24.500s  PMU=3000  V= 419.00kV  ang=  -69.21deg  f= 49.9885Hz
+t=24.500s  PMU=3245  V= 419.75kV  ang=  -62.66deg  f= 49.9885Hz
+t=24.500s  PMU=5100  V= 299.85kV  ang=  -61.02deg  f= 49.9885Hz
+t=24.500s  PMU=6500  V= 300.64kV  ang=   90.66deg  f= 50.1190Hz
+t=24.500s  PMU=7000  V= 419.89kV  ang=  -32.76deg  f= 49.9885Hz
+t=24.600s  PMU=3000  V= 419.00kV  ang=  -69.62deg  f= 49.9885Hz
+t=24.600s  PMU=3245  V= 419.76kV  ang=  -63.07deg  f= 49.9885Hz
+t=24.600s  PMU=5100  V= 299.85kV  ang=  -61.43deg  f= 49.9885Hz
+t=24.600s  PMU=6500  V= 300.63kV  ang=   94.94deg  f= 50.1191Hz
+t=24.600s  PMU=7000  V= 419.90kV  ang=  -33.18deg  f= 49.9885Hz
+t=24.700s  PMU=3000  V= 419.00kV  ang=  -70.04deg  f= 49.9885Hz
+t=24.700s  PMU=3245  V= 419.76kV  ang=  -63.48deg  f= 49.9885Hz
+t=24.700s  PMU=5100  V= 299.85kV  ang=  -61.85deg  f= 49.9885Hz
+t=24.700s  PMU=6500  V= 300.63kV  ang=   99.22deg  f= 50.1191Hz
+t=24.700s  PMU=7000  V= 419.90kV  ang=  -33.59deg  f= 49.9885Hz
+t=24.800s  PMU=3000  V= 419.00kV  ang=  -70.45deg  f= 49.9885Hz
+t=24.800s  PMU=3245  V= 419.76kV  ang=  -63.90deg  f= 49.9885Hz
+t=24.800s  PMU=5100  V= 299.85kV  ang=  -62.26deg  f= 49.9885Hz
+t=24.800s  PMU=6500  V= 300.62kV  ang=  103.51deg  f= 50.1192Hz
+t=24.800s  PMU=7000  V= 419.90kV  ang=  -34.00deg  f= 49.9885Hz
+t=24.900s  PMU=3000  V= 419.00kV  ang=  -70.90deg  f= 49.9885Hz
+t=24.900s  PMU=3245  V= 419.76kV  ang=  -64.35deg  f= 49.9885Hz
+t=24.900s  PMU=5100  V= 299.85kV  ang=  -62.71deg  f= 49.9885Hz
+t=24.900s  PMU=6500  V= 300.62kV  ang=  108.22deg  f= 50.1192Hz
+t=24.900s  PMU=7000  V= 419.90kV  ang=  -34.46deg  f= 49.9885Hz
+t=25.000s  PMU=3000  V= 358.39kV  ang=  -71.70deg  f= 49.9803Hz
+t=25.000s  PMU=3245  V= 261.31kV  ang=  -64.48deg  f= 49.9941Hz
+t=25.000s  PMU=5100  V= 264.28kV  ang=  -62.54deg  f= 50.0026Hz
+t=25.000s  PMU=6500  V= 179.46kV  ang=  112.07deg  f= 50.1047Hz
+t=25.000s  PMU=7000  V= 412.11kV  ang=  -34.80deg  f= 49.9903Hz
+t=25.100s  PMU=3000  V= 339.80kV  ang=  -70.80deg  f= 50.0034Hz
+t=25.100s  PMU=3245  V= 247.78kV  ang=  -64.71deg  f= 49.9911Hz
+t=25.100s  PMU=5100  V= 259.32kV  ang=  -61.88deg  f= 50.0106Hz
+t=25.100s  PMU=6500  V= 147.23kV  ang=  130.50deg  f= 50.2653Hz
+t=25.100s  PMU=7000  V= 405.35kV  ang=  -33.98deg  f= 50.0112Hz
+t=25.200s  PMU=3000  V= 340.07kV  ang=  -71.39deg  f= 49.9906Hz
+t=25.200s  PMU=3245  V= 257.43kV  ang=  -68.98deg  f= 49.9374Hz
+t=25.200s  PMU=5100  V= 260.99kV  ang=  -62.07deg  f= 50.0003Hz
+t=25.200s  PMU=6500  V= 155.67kV  ang=  162.91deg  f= 50.5267Hz
+t=25.200s  PMU=7000  V= 403.91kV  ang=  -32.54deg  f= 50.0299Hz
+t=25.300s  PMU=3000  V= 359.94kV  ang=  -74.08deg  f= 49.9505Hz
+t=25.300s  PMU=3245  V= 310.76kV  ang=  -76.09deg  f= 49.8575Hz
+t=25.300s  PMU=5100  V= 271.62kV  ang=  -63.37deg  f= 49.9778Hz
+t=25.300s  PMU=6500  V= 205.98kV  ang= -147.65deg  f= 50.9895Hz
+t=25.300s  PMU=7000  V= 406.53kV  ang=  -30.82deg  f= 50.0413Hz
+t=25.400s  PMU=3000  V= 398.36kV  ang=  -75.48deg  f= 49.9604Hz
+t=25.400s  PMU=3245  V= 395.14kV  ang=  -74.50deg  f= 49.9681Hz
+t=25.400s  PMU=5100  V= 292.42kV  ang=  -63.23deg  f= 49.9987Hz
+t=25.400s  PMU=6500  V= 281.30kV  ang=  -92.11deg  f= 51.4644Hz
+t=25.400s  PMU=7000  V= 414.91kV  ang=  -29.58deg  f= 50.0370Hz
+t=25.500s  PMU=3000  V= 407.60kV  ang=  -71.53deg  f= 50.0588Hz
+t=25.500s  PMU=3245  V= 410.10kV  ang=  -62.08deg  f= 50.2099Hz
+t=25.500s  PMU=5100  V= 299.72kV  ang=  -59.56deg  f= 50.0673Hz
+t=25.500s  PMU=6500  V= 297.42kV  ang=  -43.17deg  f= 51.4821Hz
+t=25.500s  PMU=7000  V= 423.70kV  ang=  -28.83deg  f= 50.0273Hz
+t=25.600s  PMU=3000  V= 390.76kV  ang=  -64.32deg  f= 50.1462Hz
+t=25.600s  PMU=3245  V= 382.23kV  ang=  -47.55deg  f= 50.3147Hz
+t=25.600s  PMU=5100  V= 294.83kV  ang=  -55.26deg  f= 50.0989Hz
+t=25.600s  PMU=6500  V= 282.10kV  ang=   -8.53deg  f= 51.1967Hz
+t=25.600s  PMU=7000  V= 425.72kV  ang=  -28.16deg  f= 50.0221Hz
+t=25.700s  PMU=3000  V= 379.78kV  ang=  -54.91deg  f= 50.2150Hz
+t=25.700s  PMU=3245  V= 368.47kV  ang=  -35.05deg  f= 50.3245Hz
+t=25.700s  PMU=5100  V= 293.48kV  ang=  -51.51deg  f= 50.1021Hz
+t=25.700s  PMU=6500  V= 274.99kV  ang=    6.60deg  f= 50.7510Hz
+t=25.700s  PMU=7000  V= 423.96kV  ang=  -27.07deg  f= 50.0288Hz
+t=25.800s  PMU=3000  V= 390.92kV  ang=  -45.30deg  f= 50.2507Hz
+t=25.800s  PMU=3245  V= 392.26kV  ang=  -28.71deg  f= 50.2418Hz
+t=25.800s  PMU=5100  V= 301.46kV  ang=  -48.52deg  f= 50.0910Hz
+t=25.800s  PMU=6500  V= 288.80kV  ang=   -1.03deg  f= 50.1555Hz
+t=25.800s  PMU=7000  V= 422.32kV  ang=  -24.63deg  f= 50.0562Hz
+t=25.900s  PMU=3000  V= 414.14kV  ang=  -39.29deg  f= 50.2024Hz
+t=25.900s  PMU=3245  V= 428.87kV  ang=  -30.57deg  f= 50.0575Hz
+t=25.900s  PMU=5100  V= 313.95kV  ang=  -47.03deg  f= 50.0591Hz
+t=25.900s  PMU=6500  V= 310.76kV  ang=  -23.92deg  f= 49.6336Hz
+t=25.900s  PMU=7000  V= 423.27kV  ang=  -20.34deg  f= 50.0994Hz
+t=26.000s  PMU=3000  V= 427.65kV  ang=  -37.91deg  f= 50.0964Hz
+t=26.000s  PMU=3245  V= 442.66kV  ang=  -36.21deg  f= 49.9174Hz
+t=26.000s  PMU=5100  V= 320.67kV  ang=  -46.60deg  f= 50.0286Hz
+t=26.000s  PMU=6500  V= 320.70kV  ang=  -47.69deg  f= 49.4433Hz
+t=26.000s  PMU=7000  V= 428.00kV  ang=  -15.00deg  f= 50.1326Hz
+t=26.100s  PMU=3000  V= 433.08kV  ang=  -40.20deg  f= 49.9891Hz
+t=26.100s  PMU=3245  V= 443.63kV  ang=  -41.40deg  f= 49.8784Hz
+t=26.100s  PMU=5100  V= 321.21kV  ang=  -45.99deg  f= 50.0218Hz
+t=26.100s  PMU=6500  V= 323.23kV  ang=  -62.31deg  f= 49.5477Hz
+t=26.100s  PMU=7000  V= 432.61kV  ang=  -10.22deg  f= 50.1324Hz
+t=26.200s  PMU=3000  V= 437.91kV  ang=  -45.63deg  f= 49.8941Hz
+t=26.200s  PMU=3245  V= 448.61kV  ang=  -45.94deg  f= 49.8740Hz
+t=26.200s  PMU=5100  V= 320.84kV  ang=  -45.35deg  f= 50.0187Hz
+t=26.200s  PMU=6500  V= 327.59kV  ang=  -65.67deg  f= 49.7896Hz
+t=26.200s  PMU=7000  V= 434.05kV  ang=   -7.28deg  f= 50.0970Hz
+t=26.300s  PMU=3000  V= 441.45kV  ang=  -52.72deg  f= 49.8328Hz
+t=26.300s  PMU=3245  V= 456.52kV  ang=  -50.43deg  f= 49.8729Hz
+t=26.300s  PMU=5100  V= 320.67kV  ang=  -45.70deg  f= 49.9975Hz
+t=26.300s  PMU=6500  V= 335.14kV  ang=  -61.66deg  f= 50.0061Hz
+t=26.300s  PMU=7000  V= 434.21kV  ang=   -7.38deg  f= 50.0277Hz
+t=26.400s  PMU=3000  V= 442.09kV  ang=  -59.42deg  f= 49.8213Hz
+t=26.400s  PMU=3245  V= 460.27kV  ang=  -54.45deg  f= 49.8834Hz
+t=26.400s  PMU=5100  V= 318.26kV  ang=  -47.81deg  f= 49.9578Hz
+t=26.400s  PMU=6500  V= 341.31kV  ang=  -56.52deg  f= 50.0946Hz
+t=26.400s  PMU=7000  V= 435.75kV  ang=  -11.28deg  f= 49.9340Hz
+t=26.500s  PMU=3000  V= 439.46kV  ang=  -64.56deg  f= 49.8469Hz
+t=26.500s  PMU=3245  V= 457.62kV  ang=  -57.49deg  f= 49.9061Hz
+t=26.500s  PMU=5100  V= 312.00kV  ang=  -51.53deg  f= 49.9167Hz
+t=26.500s  PMU=6500  V= 341.14kV  ang=  -54.08deg  f= 50.0697Hz
+t=26.500s  PMU=7000  V= 437.40kV  ang=  -18.58deg  f= 49.8404Hz
+t=26.600s  PMU=3000  V= 434.09kV  ang=  -68.27deg  f= 49.8809Hz
+t=26.600s  PMU=3245  V= 450.80kV  ang=  -60.05deg  f= 49.9212Hz
+t=26.600s  PMU=5100  V= 303.04kV  ang=  -55.94deg  f= 49.8925Hz
+t=26.600s  PMU=6500  V= 334.19kV  ang=  -55.11deg  f= 49.9989Hz
+t=26.600s  PMU=7000  V= 435.22kV  ang=  -27.91deg  f= 49.7741Hz
+t=26.700s  PMU=3000  V= 428.95kV  ang=  -71.39deg  f= 49.9020Hz
+t=26.700s  PMU=3245  V= 444.74kV  ang=  -63.04deg  f= 49.9173Hz
+t=26.700s  PMU=5100  V= 294.71kV  ang=  -60.04deg  f= 49.8906Hz
+t=26.700s  PMU=6500  V= 326.65kV  ang=  -58.60deg  f= 49.9335Hz
+t=26.700s  PMU=7000  V= 428.98kV  ang=  -37.50deg  f= 49.7499Hz
+t=26.800s  PMU=3000  V= 427.24kV  ang=  -74.85deg  f= 49.9017Hz
+t=26.800s  PMU=3245  V= 443.20kV  ang=  -67.07deg  f= 49.8958Hz
+t=26.800s  PMU=5100  V= 289.66kV  ang=  -63.32deg  f= 49.9036Hz
+t=26.800s  PMU=6500  V= 323.82kV  ang=  -63.57deg  f= 49.8838Hz
+t=26.800s  PMU=7000  V= 422.54kV  ang=  -45.84deg  f= 49.7648Hz
+t=26.900s  PMU=3000  V= 429.46kV  ang=  -79.35deg  f= 49.8817Hz
+t=26.900s  PMU=3245  V= 445.53kV  ang=  -72.52deg  f= 49.8616Hz
+t=26.900s  PMU=5100  V= 288.10kV  ang=  -65.95deg  f= 49.9183Hz
+t=26.900s  PMU=6500  V= 324.33kV  ang=  -70.20deg  f= 49.8342Hz
+t=26.900s  PMU=7000  V= 419.04kV  ang=  -52.35deg  f= 49.8013Hz
+t=27.000s  PMU=3000  V= 432.46kV  ang=  -84.97deg  f= 49.8549Hz
+t=27.000s  PMU=3245  V= 447.29kV  ang=  -79.25deg  f= 49.8273Hz
+t=27.000s  PMU=5100  V= 288.19kV  ang=  -68.40deg  f= 49.9261Hz
+t=27.000s  PMU=6500  V= 322.98kV  ang=  -78.70deg  f= 49.7849Hz
+t=27.000s  PMU=7000  V= 418.20kV  ang=  -57.26deg  f= 49.8416Hz
+t=27.100s  PMU=3000  V= 433.24kV  ang=  -90.99deg  f= 49.8399Hz
+t=27.100s  PMU=3245  V= 445.93kV  ang=  -86.27deg  f= 49.8128Hz
+t=27.100s  PMU=5100  V= 288.01kV  ang=  -71.01deg  f= 49.9263Hz
+t=27.100s  PMU=6500  V= 318.54kV  ang=  -87.81deg  f= 49.7620Hz
+t=27.100s  PMU=7000  V= 418.46kV  ang=  -61.09deg  f= 49.8745Hz
+t=27.200s  PMU=3000  V= 431.74kV  ang=  -96.37deg  f= 49.8479Hz
+t=27.200s  PMU=3245  V= 442.35kV  ang=  -92.19deg  f= 49.8302Hz
+t=27.200s  PMU=5100  V= 287.15kV  ang=  -73.82deg  f= 49.9231Hz
+t=27.200s  PMU=6500  V= 312.90kV  ang=  -95.24deg  f= 49.7885Hz
+t=27.200s  PMU=7000  V= 418.94kV  ang=  -64.46deg  f= 49.8942Hz
+t=27.300s  PMU=3000  V= 429.45kV  ang= -100.26deg  f= 49.8784Hz
+t=27.300s  PMU=3245  V= 438.33kV  ang=  -95.91deg  f= 49.8771Hz
+t=27.300s  PMU=5100  V= 286.27kV  ang=  -76.70deg  f= 49.9210Hz
+t=27.300s  PMU=6500  V= 307.78kV  ang=  -98.89deg  f= 49.8664Hz
+t=27.300s  PMU=7000  V= 419.13kV  ang=  -67.71deg  f= 49.9035Hz
+t=27.400s  PMU=3000  V= 427.12kV  ang= -102.29deg  f= 49.9226Hz
+t=27.400s  PMU=3245  V= 434.60kV  ang=  -97.08deg  f= 49.9390Hz
+t=27.400s  PMU=5100  V= 286.09kV  ang=  -79.41deg  f= 49.9232Hz
+t=27.400s  PMU=6500  V= 303.93kV  ang=  -98.14deg  f= 49.9710Hz
+t=27.400s  PMU=7000  V= 418.39kV  ang=  -70.76deg  f= 49.9113Hz
+t=27.500s  PMU=3000  V= 424.56kV  ang= -102.59deg  f= 49.9688Hz
+t=27.500s  PMU=3245  V= 430.98kV  ang=  -96.18deg  f= 49.9968Hz
+t=27.500s  PMU=5100  V= 286.91kV  ang=  -81.76deg  f= 49.9304Hz
+t=27.500s  PMU=6500  V= 301.45kV  ang=  -94.11deg  f= 50.0636Hz
+t=27.500s  PMU=7000  V= 416.23kV  ang=  -73.08deg  f= 49.9278Hz
+t=27.600s  PMU=3000  V= 421.78kV  ang= -101.64deg  f= 50.0068Hz
+t=27.600s  PMU=3245  V= 427.43kV  ang=  -94.13deg  f= 50.0363Hz
+t=27.600s  PMU=5100  V= 288.89kV  ang=  -83.68deg  f= 49.9404Hz
+t=27.600s  PMU=6500  V= 300.08kV  ang=  -88.98deg  f= 50.1132Hz
+t=27.600s  PMU=7000  V= 413.15kV  ang=  -74.02deg  f= 49.9591Hz
+t=27.700s  PMU=3000  V= 419.49kV  ang= -100.06deg  f= 50.0307Hz
+t=27.700s  PMU=3245  V= 424.57kV  ang=  -91.92deg  f= 50.0520Hz
+t=27.700s  PMU=5100  V= 292.20kV  ang=  -85.27deg  f= 49.9497Hz
+t=27.700s  PMU=6500  V= 299.38kV  ang=  -84.97deg  f= 50.1091Hz
+t=27.700s  PMU=7000  V= 410.55kV  ang=  -73.10deg  f= 50.0034Hz
+t=27.800s  PMU=3000  V= 418.56kV  ang=  -98.45deg  f= 50.0396Hz
+t=27.800s  PMU=3245  V= 423.16kV  ang=  -90.29deg  f= 50.0468Hz
+t=27.800s  PMU=5100  V= 296.82kV  ang=  -86.72deg  f= 49.9555Hz
+t=27.800s  PMU=6500  V= 299.25kV  ang=  -83.49deg  f= 50.0619Hz
+t=27.800s  PMU=7000  V= 409.68kV  ang=  -70.29deg  f= 50.0526Hz
+t=27.900s  PMU=3000  V= 418.99kV  ang=  -97.19deg  f= 50.0364Hz
+t=27.900s  PMU=3245  V= 422.90kV  ang=  -89.53deg  f= 50.0295Hz
+t=27.900s  PMU=5100  V= 302.23kV  ang=  -88.20deg  f= 49.9570Hz
+t=27.900s  PMU=6500  V= 299.19kV  ang=  -84.67deg  f= 49.9985Hz
+t=27.900s  PMU=7000  V= 410.89kV  ang=  -66.03deg  f= 50.0958Hz
+t=28.000s  PMU=3000  V= 419.76kV  ang=  -96.37deg  f= 50.0275Hz
+t=28.000s  PMU=3245  V= 422.50kV  ang=  -89.43deg  f= 50.0121Hz
+t=28.000s  PMU=5100  V= 307.37kV  ang=  -89.77deg  f= 49.9560Hz
+t=28.000s  PMU=6500  V= 298.44kV  ang=  -87.34deg  f= 49.9513Hz
+t=28.000s  PMU=7000  V= 413.43kV  ang=  -61.07deg  f= 50.1236Hz
+t=28.100s  PMU=3000  V= 419.88kV  ang=  -95.81deg  f= 50.0201Hz
+t=28.100s  PMU=3245  V= 421.21kV  ang=  -89.43deg  f= 50.0050Hz
+t=28.100s  PMU=5100  V= 311.37kV  ang=  -91.37deg  f= 49.9552Hz
+t=28.100s  PMU=6500  V= 297.13kV  ang=  -89.70deg  f= 49.9418Hz
+t=28.100s  PMU=7000  V= 416.07kV  ang=  -56.24deg  f= 50.1310Hz
+t=28.200s  PMU=3000  V= 419.22kV  ang=  -95.21deg  f= 50.0184Hz
+t=28.200s  PMU=3245  V= 419.49kV  ang=  -88.97deg  f= 50.0110Hz
+t=28.200s  PMU=5100  V= 313.94kV  ang=  -92.89deg  f= 49.9568Hz
+t=28.200s  PMU=6500  V= 296.13kV  ang=  -90.34deg  f= 49.9696Hz
+t=28.200s  PMU=7000  V= 418.03kV  ang=  -52.21deg  f= 50.1188Hz
+t=28.300s  PMU=3000  V= 418.15kV  ang=  -94.36deg  f= 50.0222Hz
+t=28.300s  PMU=3245  V= 418.00kV  ang=  -87.82deg  f= 50.0253Hz
+t=28.300s  PMU=5100  V= 315.18kV  ang=  -94.19deg  f= 49.9618Hz
+t=28.300s  PMU=6500  V= 295.99kV  ang=  -88.83deg  f= 50.0169Hz
+t=28.300s  PMU=7000  V= 419.19kV  ang=  -49.37deg  f= 50.0929Hz
+t=28.400s  PMU=3000  V= 416.97kV  ang=  -93.24deg  f= 50.0284Hz
+t=28.400s  PMU=3245  V= 417.00kV  ang=  -86.12deg  f= 50.0398Hz
+t=28.400s  PMU=5100  V= 315.28kV  ang=  -95.11deg  f= 49.9706Hz
+t=28.400s  PMU=6500  V= 296.73kV  ang=  -85.79deg  f= 50.0603Hz
+t=28.400s  PMU=7000  V= 419.58kV  ang=  -47.76deg  f= 50.0614Hz
+t=28.500s  PMU=3000  V= 415.76kV  ang=  -91.99deg  f= 50.0325Hz
+t=28.500s  PMU=3245  V= 416.31kV  ang=  -84.28deg  f= 50.0471Hz
+t=28.500s  PMU=5100  V= 314.60kV  ang=  -95.55deg  f= 49.9824Hz
+t=28.500s  PMU=6500  V= 297.87kV  ang=  -82.37deg  f= 50.0814Hz
+t=28.500s  PMU=7000  V= 419.21kV  ang=  -47.16deg  f= 50.0322Hz
+t=28.600s  PMU=3000  V= 414.71kV  ang=  -90.88deg  f= 50.0311Hz
+t=28.600s  PMU=3245  V= 415.89kV  ang=  -82.78deg  f= 50.0431Hz
+t=28.600s  PMU=5100  V= 313.59kV  ang=  -95.48deg  f= 49.9959Hz
+t=28.600s  PMU=6500  V= 298.94kV  ang=  -79.78deg  f= 50.0731Hz
+t=28.600s  PMU=7000  V= 418.37kV  ang=  -47.21deg  f= 50.0105Hz
+t=28.700s  PMU=3000  V= 414.31kV  ang=  -90.22deg  f= 50.0226Hz
+t=28.700s  PMU=3245  V= 416.04kV  ang=  -82.05deg  f= 50.0279Hz
+t=28.700s  PMU=5100  V= 312.70kV  ang=  -94.95deg  f= 50.0089Hz
+t=28.700s  PMU=6500  V= 299.95kV  ang=  -78.83deg  f= 50.0407Hz
+t=28.700s  PMU=7000  V= 417.65kV  ang=  -47.60deg  f= 49.9968Hz
+t=28.800s  PMU=3000  V= 414.84kV  ang=  -90.19deg  f= 50.0081Hz
+t=28.800s  PMU=3245  V= 416.90kV  ang=  -82.25deg  f= 50.0055Hz
+t=28.800s  PMU=5100  V= 312.07kV  ang=  -94.08deg  f= 50.0193Hz
+t=28.800s  PMU=6500  V= 300.86kV  ang=  -79.62deg  f= 49.9980Hz
+t=28.800s  PMU=7000  V= 417.63kV  ang=  -48.20deg  f= 49.9881Hz
+t=28.900s  PMU=3000  V= 416.12kV  ang=  -90.84deg  f= 49.9908Hz
+t=28.900s  PMU=3245  V= 418.23kV  ang=  -83.32deg  f= 49.9825Hz
+t=28.900s  PMU=5100  V= 311.44kV  ang=  -93.05deg  f= 50.0255Hz
+t=28.900s  PMU=6500  V= 301.45kV  ang=  -81.68deg  f= 49.9610Hz
+t=28.900s  PMU=7000  V= 418.35kV  ang=  -49.06deg  f= 49.9800Hz
+t=29.000s  PMU=3000  V= 417.73kV  ang=  -92.01deg  f= 49.9757Hz
+t=29.000s  PMU=3245  V= 419.70kV  ang=  -84.89deg  f= 49.9653Hz
+t=29.000s  PMU=5100  V= 310.48kV  ang=  -92.02deg  f= 50.0277Hz
+t=29.000s  PMU=6500  V= 301.82kV  ang=  -84.14deg  f= 49.9416Hz
+t=29.000s  PMU=7000  V= 419.44kV  ang=  -50.34deg  f= 49.9692Hz
+t=29.100s  PMU=3000  V= 419.31kV  ang=  -93.40deg  f= 49.9663Hz
+t=29.100s  PMU=3245  V= 421.27kV  ang=  -86.56deg  f= 49.9578Hz
+t=29.100s  PMU=5100  V= 309.00kV  ang=  -91.07deg  f= 50.0267Hz
+t=29.100s  PMU=6500  V= 302.40kV  ang=  -86.20deg  f= 49.9421Hz
+t=29.100s  PMU=7000  V= 420.42kV  ang=  -52.19deg  f= 49.9551Hz
+t=29.200s  PMU=3000  V= 420.72kV  ang=  -94.74deg  f= 49.9642Hz
+t=29.200s  PMU=3245  V= 422.94kV  ang=  -88.00deg  f= 49.9595Hz
+t=29.200s  PMU=5100  V= 307.00kV  ang=  -90.28deg  f= 50.0236Hz
+t=29.200s  PMU=6500  V= 303.35kV  ang=  -87.48deg  f= 49.9562Hz
+t=29.200s  PMU=7000  V= 421.02kV  ang=  -54.61deg  f= 49.9399Hz
+t=29.300s  PMU=3000  V= 421.97kV  ang=  -95.84deg  f= 49.9677Hz
+t=29.300s  PMU=3245  V= 424.67kV  ang=  -89.07deg  f= 49.9666Hz
+t=29.300s  PMU=5100  V= 304.63kV  ang=  -89.64deg  f= 50.0197Hz
+t=29.300s  PMU=6500  V= 304.60kV  ang=  -88.03deg  f= 49.9741Hz
+t=29.300s  PMU=7000  V= 421.15kV  ang=  -57.45deg  f= 49.9273Hz
+t=29.400s  PMU=3000  V= 423.01kV  ang=  -96.68deg  f= 49.9736Hz
+t=29.400s  PMU=3245  V= 426.27kV  ang=  -89.84deg  f= 49.9744Hz
+t=29.400s  PMU=5100  V= 302.08kV  ang=  -89.14deg  f= 50.0157Hz
+t=29.400s  PMU=6500  V= 305.80kV  ang=  -88.20deg  f= 49.9869Hz
+t=29.400s  PMU=7000  V= 420.84kV  ang=  -60.42deg  f= 49.9208Hz
+t=29.500s  PMU=3000  V= 423.81kV  ang=  -97.36deg  f= 49.9785Hz
+t=29.500s  PMU=3245  V= 427.47kV  ang=  -90.48deg  f= 49.9794Hz
+t=29.500s  PMU=5100  V= 299.52kV  ang=  -88.77deg  f= 50.0122Hz
+t=29.500s  PMU=6500  V= 306.44kV  ang=  -88.40deg  f= 49.9907Hz
+t=29.500s  PMU=7000  V= 420.31kV  ang=  -63.19deg  f= 49.9222Hz
+t=29.600s  PMU=3000  V= 424.35kV  ang=  -98.01deg  f= 49.9806Hz
+t=29.600s  PMU=3245  V= 428.18kV  ang=  -91.16deg  f= 49.9802Hz
+t=29.600s  PMU=5100  V= 297.15kV  ang=  -88.47deg  f= 50.0096Hz
+t=29.600s  PMU=6500  V= 306.36kV  ang=  -88.89deg  f= 49.9868Hz
+t=29.600s  PMU=7000  V= 419.87kV  ang=  -65.51deg  f= 49.9313Hz
+t=29.700s  PMU=3000  V= 424.61kV  ang=  -98.74deg  f= 49.9797Hz
+t=29.700s  PMU=3245  V= 428.34kV  ang=  -91.97deg  f= 49.9782Hz
+t=29.700s  PMU=5100  V= 295.10kV  ang=  -88.22deg  f= 50.0080Hz
+t=29.700s  PMU=6500  V= 305.61kV  ang=  -89.70deg  f= 49.9799Hz
+t=29.700s  PMU=7000  V= 419.81kV  ang=  -67.21deg  f= 49.9454Hz
+t=29.800s  PMU=3000  V= 424.59kV  ang=  -99.58deg  f= 49.9777Hz
+t=29.800s  PMU=3245  V= 428.01kV  ang=  -92.88deg  f= 49.9760Hz
+t=29.800s  PMU=5100  V= 293.42kV  ang=  -87.99deg  f= 50.0071Hz
+t=29.800s  PMU=6500  V= 304.40kV  ang=  -90.67deg  f= 49.9751Hz
+t=29.800s  PMU=7000  V= 420.19kV  ang=  -68.30deg  f= 49.9614Hz
+t=29.900s  PMU=3000  V= 424.32kV  ang= -100.40deg  f= 49.9774Hz
+t=29.900s  PMU=3245  V= 427.35kV  ang=  -93.74deg  f= 49.9763Hz
+t=29.900s  PMU=5100  V= 292.15kV  ang=  -87.75deg  f= 50.0069Hz
+t=29.900s  PMU=6500  V= 303.07kV  ang=  -91.54deg  f= 49.9755Hz
+t=29.900s  PMU=7000  V= 420.88kV  ang=  -68.87deg  f= 49.9762Hz

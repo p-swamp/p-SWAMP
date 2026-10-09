@@ -10,7 +10,15 @@ import pytest
 from pswamp_core.datagateway import TimeRange
 from pswamp_core.testing import DataClientConformance
 from pswamp_modules.sources.live_client import LIVE_STREAM_ID, LiveSyntheticClient
-from pswamp_modules.sources.sample_client import EPOCH, STREAM_ID, SampleRecordingClient, load_sample
+from pswamp_modules.sources.sample_client import (
+    EPOCH,
+    LINE_TRIP_PATH,
+    LINE_TRIP_STREAM_ID,
+    STREAM_ID,
+    LineTripRecordingClient,
+    SampleRecordingClient,
+    load_sample,
+)
 
 # --- the sample recording ---------------------------------------------------------
 
@@ -33,6 +41,53 @@ class TestSampleRecordingClient(DataClientConformance):
     @pytest.fixture
     def conformance_records(self):
         return list(load_sample().frames)
+
+
+# --- the line-trip recording -------------------------------------------------------
+
+
+def line_trip():
+    return load_sample(LINE_TRIP_PATH, LINE_TRIP_STREAM_ID)
+
+
+def test_the_line_trip_recording_is_thirty_seconds_of_the_same_stations_at_10_hz():
+    recording = line_trip()
+    assert len(recording.frames) == 300
+    assert recording.header.stations == load_sample().header.stations
+    assert recording.header.data_rate == 10.0 and recording.header.n_columns == 15
+    first = recording.frames[0]
+    assert first.timestamp == EPOCH and first.mRID == LINE_TRIP_STREAM_ID
+    steps = {b.timestamp - a.timestamp for a, b in zip(recording.frames, recording.frames[1:])}
+    assert steps == {timedelta(seconds=0.1)}  # an even grid, so a module's window is what it says
+    assert recording.coverage.end == EPOCH + timedelta(seconds=30)
+
+
+def test_the_line_trip_is_five_seconds_in_and_the_reconnection_twenty_five():
+    recording = line_trip()
+    (column,) = [
+        i for i in recording.header.columns(measurement="f") if recording.header.station[i] == "6500"
+    ]
+    f = [frame.values[column] for frame in recording.frames]  # station 6500, one value per 0.1 s
+    assert all(abs(x - 50.0) < 0.005 for x in f[:51])  # steady up to and including 5.0 s
+    assert all(x > 50.05 for x in f[60:250])  # islanded: its frequency sits high
+    assert max(f[250:260]) > 51.0  # the swing as it reconnects
+    assert abs(f[-1] - 50.0) < 0.05  # and back with the rest
+
+
+class TestLineTripRecordingClient(DataClientConformance):
+    @pytest.fixture
+    def client_under_test(self):
+        return LineTripRecordingClient()
+
+    @pytest.fixture
+    def conformance_records(self):
+        return list(line_trip().frames)
+
+
+def test_a_sample_file_s_frames_carry_the_mrid_of_the_client_serving_it():
+    assert SampleRecordingClient().recording.frames[0].mRID == STREAM_ID
+    assert LineTripRecordingClient().recording.frames[0].mRID == LINE_TRIP_STREAM_ID
+    assert LineTripRecordingClient.from_env("recording").name == "recording"
 
 
 # --- the live feed ----------------------------------------------------------------

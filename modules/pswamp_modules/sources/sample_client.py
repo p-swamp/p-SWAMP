@@ -16,6 +16,19 @@ It is parsed once, on first use, into 60 ``PmuFrame``s sharing one header
 (per station: ``V_Magnitude`` kV, ``V_Angle`` deg, ``f`` Hz). The file's
 relative ``t`` is anchored at ``EPOCH``, so the recording sits at a fixed place
 on the time axis.
+
+``LineTripRecordingClient`` serves a longer recording in the same format,
+``line_trip_30s.txt``: the same five stations for 30 s at 10 Hz, 1500 lines.
+Three seconds is too short for an analysis that needs a window of several
+seconds; this one has room for it, and something to see: a line trip 5 s in
+that islands station 6500, and the reconnection 25 s in.
+
+It was extracted once, by hand, from the grid monitor's recording
+(``app/server-python/src/pswamp_web/data/n44_line_trip_50hz.npz``, "Nordic 44
+TOPS simulation, p-SWAMP 0ed9d05, recorded 2026-08-18"): 300 samples, every
+fifth from the one stamped 15.01 s there, volts as kV and radians as degrees.
+The instants are numbered on an even 0.1 s grid from 0, by sample count; the
+source's own stamps slip by 10 ms twice in that span. Nothing regenerates it.
 """
 
 from __future__ import annotations
@@ -27,21 +40,36 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 from functools import lru_cache
 from pathlib import Path
+from typing import ClassVar
 
 from pswamp_core.datagateway import DataClient, TimeRange
 from pswamp_core.messages import PmuFrame, PmuHeader
 from pswamp_core.settings import EnvSetting
 from pswamp_core.util.time import UTC
 
-__all__ = ["DEFAULT_PATH", "EPOCH", "STREAM_ID", "SampleRecording", "SampleRecordingClient", "load_sample"]
+__all__ = [
+    "DEFAULT_PATH",
+    "EPOCH",
+    "LINE_TRIP_PATH",
+    "LINE_TRIP_STREAM_ID",
+    "STREAM_ID",
+    "LineTripRecordingClient",
+    "SampleRecording",
+    "SampleRecordingClient",
+    "load_sample",
+]
 
 DEFAULT_PATH = Path(__file__).parent / "sample_data.txt"
+LINE_TRIP_PATH = Path(__file__).parent / "line_trip_30s.txt"
 
 #: Where the recording's t = 0 sits on the time axis.
 EPOCH = datetime(2026, 1, 1, tzinfo=UTC)
 
-#: The mRID every frame carries.
+#: The mRID every frame of the sample carries.
 STREAM_ID = "n44-sample"
+
+#: The mRID every frame of the line-trip recording carries.
+LINE_TRIP_STREAM_ID = "n44-line-trip"
 
 _LINE = re.compile(
     r"t=\s*(?P<t>[-\d.]+)s\s+PMU=(?P<pmu>\S+)\s+V=\s*(?P<v>[-\d.]+)kV\s+"
@@ -67,8 +95,9 @@ class SampleRecording:
 
 
 @lru_cache(maxsize=4)
-def load_sample(path: Path = DEFAULT_PATH) -> SampleRecording:
-    """Parse a sample file. Cached by path; the frames are never modified."""
+def load_sample(path: Path = DEFAULT_PATH, mrid: str = STREAM_ID) -> SampleRecording:
+    """Parse a sample file into frames carrying ``mrid``. Cached by path and
+    mRID; the frames are never modified."""
     instants: dict[float, dict[str, tuple[float, float, float]]] = {}
     stations: dict[str, None] = {}
     for number, line in enumerate(path.read_text().splitlines(), start=1):
@@ -96,7 +125,7 @@ def load_sample(path: Path = DEFAULT_PATH) -> SampleRecording:
     frames = tuple(
         PmuFrame(
             timestamp=EPOCH + timedelta(seconds=t),
-            mRID=STREAM_ID,
+            mRID=mrid,
             header=header,
             values=[x for name in names for x in instants[t].get(name, (None, None, None))],
         )
@@ -112,10 +141,12 @@ class SampleRecordingClient(DataClient):
     env_settings = (
         EnvSetting("PATH", "The sample file to serve", default=str(DEFAULT_PATH), kind="path"),
     )
+    #: The mRID its frames carry.
+    stream_id: ClassVar[str] = STREAM_ID
 
     def __init__(self, name: str = "sample", path: Path | str = DEFAULT_PATH) -> None:
         super().__init__(name)
-        self.recording = load_sample(Path(path))
+        self.recording = load_sample(Path(path), self.stream_id)
 
     async def coverage(self) -> TimeRange:
         return self.recording.coverage
@@ -126,3 +157,15 @@ class SampleRecordingClient(DataClient):
                 return
             if time_range.contains(record.timestamp):
                 yield record
+
+
+class LineTripRecordingClient(SampleRecordingClient):
+    """The 30 s line-trip recording as a history. ``{NAME}_PATH`` picks another file."""
+
+    env_settings = (
+        EnvSetting("PATH", "The recording file to serve", default=str(LINE_TRIP_PATH), kind="path"),
+    )
+    stream_id = LINE_TRIP_STREAM_ID
+
+    def __init__(self, name: str = "line-trip", path: Path | str = LINE_TRIP_PATH) -> None:
+        super().__init__(name, path)
