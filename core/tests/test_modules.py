@@ -194,6 +194,16 @@ async def test_reset_is_called_when_the_input_breaks_and_never_before_the_first_
     assert [f.timestamp for f in module.window] == [at(1.15)]
 
 
+async def test_an_input_without_a_number_breaks_on_its_stream_alone():
+    def of(seconds: float, stream: str) -> PmuFrame:  # as another module's result: a stream, no number
+        return frame(seconds).model_copy(update={"stream": stream})
+
+    module = Window()
+    published = await through(module, [of(0.00, "a"), of(0.05, "a"), of(0.10, "a"), of(1.00, "b"), of(1.05, "b"), of(1.10, "b")])
+    assert module.resets == 1
+    assert [r.timestamp for r in published] == [at(0.10), at(1.10)]
+
+
 async def test_results_are_held_back_for_the_warm_up_after_every_break():
     module = Window()
     frames = [
