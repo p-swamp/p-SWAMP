@@ -50,6 +50,7 @@ from .log import get_logger
 from .messages.commands import Command
 from .messages.control import PipelineClosed, PlayerStatus
 from .messages.errors import ErrorEvent
+from .modules import Module
 from .player import PLAYER_COMMANDS, Player
 from .subscription import Overflow
 from .transport import Outbox
@@ -60,7 +61,6 @@ if TYPE_CHECKING:
     from .datagateway import DataGateway
     from .messages.data_model import DataModel
     from .messages.results import ResultEnvelope
-    from .modules import Module
     from .transport import Transport, TransportSubscription
 
 __all__ = [
@@ -93,7 +93,9 @@ class Pipeline:
     Raises ``ValueError`` when two receivers (the player, a module) take the
     same command class: a command class is an address. Also when two classes
     of the pipeline have the same topic, as two of the same name do: a topic
-    carries one class.
+    carries one class. Also for a module that sets ``cache_results`` where
+    its results could not be trusted to be the same for everyone
+    (``_cannot_cache``).
     """
 
     app: str
@@ -115,6 +117,29 @@ class Pipeline:
                     f"{self.app}: {other.__module__}.{other.__qualname__} and {model.__module__}.{model.__qualname__} "
                     f"are both on topic {model.topic}; rename one, or give it a topic of its own (topic: ClassVar[str])"
                 )
+        for module in self.modules:
+            reason = self._cannot_cache(module) if module.cache_results else None
+            if reason is not None:
+                raise ValueError(f"{self.app}: {module.__name__} sets cache_results, but {reason}")
+
+    def _cannot_cache(self, module: type[Module]) -> str | None:
+        """Why ``module``'s results cannot be kept and shown again, if they
+        cannot. These are the cases the pipeline can see; whether the
+        analysis is deterministic it cannot, and takes the author's word."""
+        if module.commands:
+            return (
+                "it takes commands: a command could change what it computes, "
+                "and cached results are not kept per setting"
+            )
+        reads = getattr(module, "input_model", None)
+        if reads is None or "seq" not in reads.model_fields:
+            return "it does not read frames: without a frame's number, a lost input cannot be told from an unbroken run"
+        if module.warm_up_s > 0 and module.reset is Module.reset:
+            return "it has a warm-up and no reset(): its window would keep what it held before a seek"
+        sharing = [m.__name__ for m in self.modules if m is not module and m.output_model is module.output_model]
+        if sharing:
+            return f"{', '.join(sharing)} publishes {module.output_model.__name__} too: a cached result could be either's"
+        return None
 
     @property
     def inputs(self) -> frozenset[type[DataModel]]:

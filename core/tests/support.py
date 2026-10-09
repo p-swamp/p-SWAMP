@@ -35,6 +35,11 @@ def frame(seconds: float, f: float = 50.0, header: PmuHeader = HEADER) -> PmuFra
     return PmuFrame(timestamp=at(seconds), mRID="test", header=header, values=values)
 
 
+def placed(seconds: float, stream: str, seq: int) -> PmuFrame:
+    """A frame at ``at(seconds)``, as number ``seq`` of ``stream``: what a gateway yields."""
+    return frame(seconds).model_copy(update={"stream": stream, "seq": seq})
+
+
 class Measurement(DataModel):
     """A minimal message for tests."""
 

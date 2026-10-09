@@ -111,6 +111,40 @@ def test_two_classes_of_one_name_cannot_share_a_topic():
         Pipeline("app", gateway, modules=(FrameCounter, AlsoNumberResult))
 
 
+def test_cache_results_is_refused_where_a_result_could_differ_between_clients():
+    class Cached(FrameCounter):
+        cache_results = True
+
+    Pipeline("app", gateway, modules=(Cached,))  # reads frames, takes no commands, has no warm-up
+
+    class WithCommands(Cached):
+        commands = (HalveCommand,)
+
+    with pytest.raises(ValueError, match="WithCommands sets cache_results, but it takes commands"):
+        Pipeline("app", gateway, modules=(WithCommands,))
+
+    class Chained(Cached):
+        input_model = NumberResult
+
+    with pytest.raises(ValueError, match="it does not read frames"):
+        Pipeline("app", gateway, modules=(Chained,))
+
+    class WarmUpOnly(Cached):
+        warm_up_s = 1.0
+
+    with pytest.raises(ValueError, match="a warm-up and no reset"):
+        Pipeline("app", gateway, modules=(WarmUpOnly,))
+
+    class WithReset(WarmUpOnly):
+        def reset(self) -> None:
+            self.count = 0
+
+    Pipeline("app", gateway, modules=(WithReset,))
+    with pytest.raises(ValueError, match="Halver publishes NumberResult too"):
+        Pipeline("app", gateway, modules=(Cached, Halver))
+    Pipeline("app", gateway, modules=(FrameCounter, Halver))  # sharing is fine when nothing is cached
+
+
 async def test_frames_reach_the_module_and_its_results_come_back(hosted):
     run = await hosted(FrameCounter)
     with run.changes() as changes:
