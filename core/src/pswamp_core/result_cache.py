@@ -43,10 +43,12 @@ if TYPE_CHECKING:
 
 __all__ = ["DEFAULT_MAX_ENTRIES", "ResultCache"]
 
-#: 40 to 60 MB of results. One entry measured 3.8 KB with five stations named
-#: in its parameters and 5.8 KB with 44 (a result as it arrives off a
-#: transport, its parameters included). At one result per frame at 10 Hz this
-#: is about 17 minutes of a recording.
+#: 30 to 60 MB of results, by their size. One entry measured 2.9 KB of the
+#: process's memory for a small result (rolling-frequency's, 280 bytes as
+#: JSON) and 5.8 KB for one naming 44 stations in its parameters. Memory
+#: grows by that much per result up to the cap, then stays level. At one
+#: result per frame at 10 Hz the cap is 17 minutes of a recording; at one a
+#: second, 2.8 hours.
 DEFAULT_MAX_ENTRIES = 10_000
 
 R = TypeVar("R", bound="ResultEnvelope")

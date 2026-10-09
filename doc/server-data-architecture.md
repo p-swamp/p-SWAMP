@@ -486,8 +486,10 @@ run.from_cache(result)                    # True: computed on an earlier pass, b
 - **Read.** At every frame, where the module has not answered for the current
   stream, the kept result for the cursor shows, or none. A result stands
   until the next one is due; past a gap there is none rather than an old one.
-- **Bounds.** 10 000 results by default, the oldest dropped first: 40 to
-  60 MB, at the 3.8 to 5.8 KB one entry measured. In memory, in the server
+- **Bounds.** 10 000 results by default, the oldest dropped first. One
+  result takes 2.9 to 5.8 KB of the server's memory, by its size, so 30 to
+  60 MB at the cap; memory grows by that much per result until then and
+  stays level after. In memory, in the server
   process, empty after a restart.
 - **Never live.** A shared live run takes no cache, and a client's player
   reads no live stream itself.

@@ -586,8 +586,11 @@ Here `run` is a client's `PipelineRun`, not the module's `run` method.
   client: every client's run shares the cache, so one client's results serve
   another's on the same source.
 - **How much.** One cache per app, 10 000 results in all by default
-  (`ResultCache(max_entries=...)`), the first kept dropped first: 40 to
-  60 MB. At one result per frame at 10 Hz that is about 17 minutes.
+  (`ResultCache(max_entries=...)`), the first kept dropped first. One
+  result takes about 3 KB of the server's memory, more if its `parameters`
+  are long: 30 MB at the cap for the example. At one result per frame at
+  10 Hz the cap is 17 minutes of a recording; at one a second, 2.8 hours.
+  Past the cap, memory stays level.
 - **For how long.** It is in the server's memory: empty after a restart.
 - **Recordings only.** A live source is never kept.
 
