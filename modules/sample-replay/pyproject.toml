@@ -18,7 +18,7 @@ version = "0.1.0"
 description = "The sample replay source (sample-replay): the bundled Nordic 44 sample recording, replayable."
 readme = "README.md"
 license = "Apache-2.0"
-requires-python = ">=3.11"
+requires-python = ">=3.12"
 dependencies = ["pswamp-core", "pswamp-models"]
 
 # Only for examples/, never the source itself (the image does not install it):

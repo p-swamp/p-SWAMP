@@ -41,22 +41,22 @@ RUN npm run build
 # result. Its output only changes when a manifest does, so the dependency
 # install below stays cached across source edits, and a new module needs no
 # edit here. Same base image as the server stage (already pulled), for `find`.
-FROM ghcr.io/astral-sh/uv:python3.11-bookworm-slim@sha256:4f5d923c9dcea037f57bda425dd209f3ec643da2f0b74227f68d09dab0b3bb36 AS module-manifests
+FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim@sha256:e5b65587bce7de595f299855d7385fe7fca39b8a74baa261ba1b7147afa78e58 AS module-manifests
 COPY modules/ /manifests/modules/
 RUN find /manifests -maxdepth 2 -type f -delete     && find /manifests -mindepth 4 -type f -delete     && find /manifests -type f ! -name pyproject.toml ! -name README.md -delete     && find /manifests -type d -empty -delete
 
 # --- server stage -----------------------------------------------------------
 #
-# Base: Astral's official uv image (Python 3.11 on Debian 12 "bookworm" slim).
+# Base: Astral's official uv image (Python 3.12 on Debian 12 "bookworm" slim).
 # Pinned to a digest for reproducible builds — the readable tag is kept as
 # documentation, but Docker enforces the @sha256. This is the multi-arch OCI
 # index digest, so arm64/amd64 still resolve automatically.
-# Resolved 2026-06-06 from tag python3.11-bookworm-slim. To refresh:
+# Resolved 2026-10-07 from tag python3.12-bookworm-slim. To refresh:
 #   curl -s "https://ghcr.io/token?scope=repository:astral-sh/uv:pull" | ...
 #   curl -sI -H "Authorization: Bearer <token>" \
 #     -H "Accept: application/vnd.oci.image.index.v1+json" \
-#     https://ghcr.io/v2/astral-sh/uv/manifests/python3.11-bookworm-slim
-FROM ghcr.io/astral-sh/uv:python3.11-bookworm-slim@sha256:4f5d923c9dcea037f57bda425dd209f3ec643da2f0b74227f68d09dab0b3bb36
+#     https://ghcr.io/v2/astral-sh/uv/manifests/python3.12-bookworm-slim
+FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim@sha256:e5b65587bce7de595f299855d7385fe7fca39b8a74baa261ba1b7147afa78e58
 
 # The image mirrors the *whole repo* at its real depth, not just the server dir
 # flattened to /app. The depth is required for the build to work at all, not a

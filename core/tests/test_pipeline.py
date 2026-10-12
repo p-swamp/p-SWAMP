@@ -349,7 +349,7 @@ async def test_live_is_one_shared_run_that_client_runs_follow():
     assert all(run.sources.instances["tick"].opened == 0 for run in clients)
     clients[0].dispatch(SwitchSourceCommand(source="rec"))
     await until(lambda: clients[0].router.status().mode == "replay")
-    assert clients[0].frame.timestamp == clients[0].router.last_frame.timestamp
+    await until(lambda: clients[0].router.last_frame is not None and clients[0].frame.timestamp == clients[0].router.last_frame.timestamp)
     for run in (*clients, live):
         await run.stop()
     await cancel_and_wait(hosting)

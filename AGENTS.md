@@ -1368,7 +1368,7 @@ mind when editing that command (`tools/src/pswamp_tools/commands/deploy.py`):
   built and `src/` is a plain source folder, not a packaging layout — `server.py`
   imports each app package by name because the working directory *is* `src/`, and
   a new backend api is just a new folder there (no new manifest, no new lockfile).
-  The root `.python-version` (and `app/server-python/.python-version`) pins local dev to Python 3.11, matching the
+  The root `.python-version` (and `app/server-python/.python-version`) pins local dev to Python 3.12, matching the
   image; without it `uv` would build the venv on whatever system Python is newest.
   Deliberately **no `[tool.ruff]` section** in `pyproject.toml`: ruff only treats
   the file as config when that section exists, so omitting it keeps the explicit
@@ -1577,14 +1577,14 @@ What has to hold in the `static-errorcheck` job:
   otherwise; Python itself comes from uv. Node must be **24**, matching the
   Dockerfile's `web-build` stage. `uv` (not `uvx`) is required since ruff comes
   from the locked `dev` dependency group.
-- **A real Python 3.11 must be on the runner *before* the check runs.** Passing
+- **A real Python 3.12 must be on the runner *before* the check runs.** Passing
   the preflight isn't enough: `uv lock --check` resolves against the project's
-  `requires-python` and wants 3.11 (per the root `.python-version`), and
+  `requires-python` and wants 3.12 (per the root `.python-version`), and
   it runs `--offline` so uv may not download one on demand. A runner with only a
-  newer python3 fails with *"No interpreter found for Python 3.11 … uv is set to
+  newer python3 fails with *"No interpreter found for Python 3.12 … uv is set to
   offline mode"* — `py_compile` still passes, which makes it look like a lockfile
   problem when it is an interpreter problem. The workflow therefore runs
-  `uv python install 3.11` before running the check. Fix it there, not by
+  `uv python install 3.12` before running the check. Fix it there, not by
   dropping `--offline` from `pswamp check`: that flag keeps the pre-push hook
   off the network.
 - **Cache keys:** npm on `app/client-web/package-lock.json`, uv on the root

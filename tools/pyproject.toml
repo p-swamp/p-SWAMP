@@ -18,7 +18,7 @@ version = "0.1.0"
 description = "The p-SWAMP repo CLI (`pswamp`): checks, api contract, tests, scaffolding, dev, deploy, deps."
 readme = "README.md"
 license = "Apache-2.0"
-requires-python = ">=3.11"
+requires-python = ">=3.12"
 dependencies = [
     "typer>=0.15",
     "rich>=13.7",
