@@ -22,6 +22,7 @@ named `remote`; a script passes keywords):
 |---|---|---|
 | `url` | required | Base URL of the service, `http://remote-data:8100` |
 | `timeout` | `30` | Seconds to wait for an answer to start, and for each line |
+| `coverage_timeout` | `10` | Seconds to wait for the coverage, which a seek and a switch to this source wait on |
 
 `coverage` is `GET /v1/coverage?model=pmu.frame`; `read` is `POST /v1/queries`,
 whose NDJSON answer is read a line at a time, so closing the stream early (a

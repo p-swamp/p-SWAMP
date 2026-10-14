@@ -13,12 +13,16 @@ again before applying it, because the state may have changed since the command
 was sent. A refusal or failure becomes an ``ErrorEvent`` carrying the command's
 ``request_id``. So does a command issued more than ``deadline`` seconds ago
 (``CONTROL_DEADLINE_S``, by its ``timestamp``): held up by a broker outage, or
-behind a slow command, it is reported rather than applied late.
+behind a slow command, it is reported rather than applied late. A command
+of a ``preempt`` class does not wait: it stops the command in progress and
+supersedes those queued before it, each reported (a source switch, away from
+a source that hangs).
 """
 
 from __future__ import annotations
 
 import asyncio
+from collections import deque
 from collections.abc import AsyncIterable, Callable, Sequence
 from typing import TYPE_CHECKING, Any, ClassVar, Protocol
 
@@ -77,6 +81,8 @@ class CommandInbox:
             returned; a module publishes it as its result.
         deadline: A command issued longer ago than this is reported, not
             applied.
+        preempt: Command classes that do not wait their turn: one stops the
+            command in progress and supersedes those queued before it.
     """
 
     def __init__(
@@ -87,13 +93,18 @@ class CommandInbox:
         *,
         on_result: Callable[[Command, Any], None] | None = None,
         deadline: float = CONTROL_DEADLINE_S,
+        preempt: tuple[type[Command], ...] = (),
     ) -> None:
         self.receiver = receiver
         self._commands = commands
         self._out = out
         self._on_result = on_result
         self.deadline = deadline
+        self.preempt = preempt
         self._task: asyncio.Task | None = None
+        #: The command being applied, and its task, while the inbox reads ahead.
+        self._applying: tuple[Command, asyncio.Task] | None = None
+        self._preempted_by: Command | None = None
 
     def start(self) -> None:
         if self._task is None:
@@ -106,11 +117,63 @@ class CommandInbox:
 
     async def _serve(self) -> None:
         try:
-            async for command in self._commands:
-                await self.apply(command)
+            if self.preempt:
+                await self._serve_preempting()
+            else:
+                async for command in self._commands:
+                    await self.apply(command)
         except Exception:
             logger.exception("%s stopped taking commands", self.receiver.name)
             raise
+
+    async def _serve_preempting(self) -> None:
+        """Apply in order, reading ahead meanwhile, so that a ``preempt``
+        command can stop the one in progress."""
+        waiting: deque[Command] = deque()
+        wake = asyncio.Event()
+
+        async def read() -> None:
+            try:
+                async for command in self._commands:
+                    if isinstance(command, self.preempt):
+                        while waiting:
+                            self._superseded(waiting.popleft(), command, "did not apply")
+                        if self._applying is not None:
+                            self._preempted_by = command
+                            self._applying[1].cancel()
+                    waiting.append(command)
+                    wake.set()
+            finally:
+                wake.set()
+
+        reader = asyncio.create_task(read(), name=f"{self.receiver.name}.commands.read")
+        try:
+            while True:
+                while not waiting:
+                    if reader.done():
+                        return await reader  # raises what ended it
+                    wake.clear()
+                    await wake.wait()
+                command = waiting.popleft()
+                applying = asyncio.create_task(self.apply(command), name=f"{self.receiver.name}.{command.name}")
+                self._applying = (command, applying)
+                try:
+                    await applying
+                except asyncio.CancelledError:
+                    current = asyncio.current_task()
+                    if current is not None and current.cancelling():
+                        raise
+                    if self._preempted_by is not None:
+                        self._superseded(command, self._preempted_by, "stopped applying")
+                finally:
+                    self._applying, self._preempted_by = None, None
+        finally:
+            await cancel_and_wait(reader, ignore=(Exception,))
+
+    def _superseded(self, command: Command, by: Command, what: str) -> None:
+        name = self.receiver.name
+        logger.warning("%s %s %s (request %s): %s came after it", name, what, command.name, command.request_id, by.name)
+        self._report(command, f"{name} {what} {command.name}: {by.name} came after it", f"a {by.name} replaces what came before it")
 
     async def apply(self, command: Command) -> None:
         """Validate and apply one command; report a refusal, a failure, or an

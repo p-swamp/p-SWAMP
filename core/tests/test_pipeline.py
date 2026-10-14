@@ -6,7 +6,7 @@ import asyncio
 from typing import Literal
 
 import pytest
-from support import ListSource, Number, NumberResult, TickingSource
+from support import ListSource, Number, NumberResult, TickingSource, take
 from test_modules import HalveCommand, Halver
 
 from pswamp_core.command_routing import CommandRefused, NoReceiver
@@ -14,6 +14,7 @@ from pswamp_core.host import serve_hosts
 from pswamp_core.modules import Module
 from pswamp_core.pipeline import Pipeline, PipelineRun, start_live_runs
 from pswamp_core.sources import SourceSet
+from pswamp_core.subscription import Overflow
 from pswamp_core.transport import InMemoryTransport
 from pswamp_core.util.tasks import cancel_and_wait
 from pswamp_models.common import Command, ErrorEvent, ResultEnvelope
@@ -184,7 +185,10 @@ async def test_live_is_one_shared_run_that_client_runs_follow():
     for run in clients:
         await run.start()
         run.dispatch(SwitchSourceCommand(source="tick"))
-    await until(lambda: all(run.frame is not None and run.frame.timestamp == live.frame.timestamp for run in clients))
+    await until(
+        lambda: live.frame is not None
+        and all(run.frame is not None and run.frame.timestamp == live.frame.timestamp for run in clients)
+    )
     assert live.key == "live.tick" and all(run.router.status().mode == "live" for run in clients)
     # One module instance counts the live frames for everyone.
     await until(lambda: all(run.latest.get(NumberResult) is not None for run in clients))
@@ -218,6 +222,29 @@ async def test_a_command_the_transport_does_not_take_in_time_goes_to_on_error():
     ((key, event),) = reports
     assert (key, event.source, event.request_id) == ("k", "server", command.request_id)
     assert "halve" in event.message and "not delivered" in event.message and event.detail == "ConnectionError: broker down"
+    await run.stop()
+
+
+async def test_a_switch_stops_a_command_stuck_on_the_source_it_leaves():
+    class Hangs(ListSource):
+        name = "hangs"
+
+        async def acoverage(self):
+            await asyncio.Event().wait()  # a remote service that never answers
+
+    transport = InMemoryTransport()
+    run = PipelineRun("k", Pipeline("app", lambda: SourceSet([ListSource("rec"), Hangs("stuck")])), transport)
+    with transport.subscribe(ErrorEvent, app="app", key="k", overflow=Overflow.GROW) as errors:
+        await run.start()
+        run.dispatch(SwitchSourceCommand(source="stuck"))
+        await until(lambda: run.router.status().source == "stuck")  # opening it, for ever
+        run.dispatch(PlayCommand())  # waits behind it
+        run.dispatch(SwitchSourceCommand(source="rec"))
+        await until(lambda: run.router.status().source == "rec" and run.router.last_frame is not None, timeout=2)
+        (_, play), (_, switch) = await take(errors, 2)
+    assert play.message == "player did not apply play: switch.source came after it"
+    assert switch.message == "player stopped applying switch.source: switch.source came after it"
+    assert run.router.status().paused  # the play was for the source it left
     await run.stop()
 
 

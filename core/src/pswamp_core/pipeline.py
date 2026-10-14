@@ -51,7 +51,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Generic, TypeVar
 
 from pswamp_models.common import Command, ErrorEvent, PipelineClosed
-from pswamp_models.player import PlayerStatus
+from pswamp_models.player import PlayerStatus, SwitchSourceCommand
 
 from .active_source import ROUTER_COMMANDS, ActiveSource
 from .command_routing import CommandInbox, CommandRefused, NoReceiver, concrete_commands
@@ -416,7 +416,10 @@ class PipelineRun:
             await subscription.ready(_READY_TIMEOUT_S)
         self.outbox.start()
         await self.router.start()
-        self._inbox = CommandInbox((command async for _, command in commands), self.router, self)
+        # A switch stops a command still waiting on the source it leaves (one that hangs).
+        self._inbox = CommandInbox(
+            (command async for _, command in commands), self.router, self, preempt=(SwitchSourceCommand,)
+        )
         self._inbox.start()
 
     async def stop(self, reason: str = "stopped") -> None:

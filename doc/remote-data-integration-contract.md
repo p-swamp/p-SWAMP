@@ -143,11 +143,15 @@ or, as compose and k8s do, through the environment; each source reads its own
 PMU_TEST_STREAMER_SOURCES=sample:sample-replay,live:live-synthetic,remote:remote-history
 REMOTE_URL=http://remote-data:8100      # required
 REMOTE_TIMEOUT=30                       # seconds; default 30
+REMOTE_COVERAGE_TIMEOUT=10              # seconds; default 10
 ```
 
 - `REMOTE_TIMEOUT` bounds the wait for a response to start, and for each next
   line while the client is reading. A paused replay reads nothing and is not
   timed out.
+- `REMOTE_COVERAGE_TIMEOUT` bounds `GET /v1/coverage`, which a seek and a
+  switch to the source wait on. A switch away from a source that hangs does
+  not wait: it stops the command in progress.
 - An unreachable service, a non-200 status, an `error` line and a missing
   `end` line all fail the stream. The player stops and shows the error, which
   also reaches the error tray.

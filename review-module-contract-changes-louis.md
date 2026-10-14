@@ -44,7 +44,7 @@ module contract for the next module.
 
 | # | Issue | Origin | Decision |
 |---|---|---|---|
-| 32 | A hung remote data service holds up every command of the run | before | — |
+| 32 | A hung remote data service holds up every command of the run (fixed 2026-10-14) | before | — |
 | 40 | A module command sent while following the shared live run reaches an instance that gets no frames (fixed 2026-10-14) | before | Decided |
 | 1 | A `blocking` module runs `process` and `handle` in two threads at once (fixed 2026-10-14) | Louis | D5 |
 | 2 | A sync `read` source holds the event loop; a live one would freeze the server (fixed 2026-10-14) | Louis | — |
@@ -681,6 +681,12 @@ Unlike comments 1 to 27, these are about the branch as a whole: all but 33 and
   awaits the playable source (`active_source.py:168`).
 - Suggestion: a `SwitchSourceCommand` cancels the command in progress; the
   coverage timeout becomes a setting.
+- Fixed 2026-10-14 as suggested. `CommandInbox(preempt=...)`, which the run
+  gives `SwitchSourceCommand`, reads ahead while a command is applied. A
+  switch cancels the one in progress and supersedes those queued before it,
+  each reported on the tray. Cancelling is safe here: a playable source runs
+  its commands in its own task, which the switch stops anyway. The coverage
+  timeout is `REMOTE_COVERAGE_TIMEOUT` (default 10 s).
 
 ### Regression and smaller
 

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from datetime import datetime, timedelta, timezone
 
 import httpx
@@ -103,8 +104,31 @@ def test_it_is_a_playable_history_source_with_a_required_url():
 def test_settings_come_from_the_environment(monkeypatch):
     monkeypatch.setenv("REMOTE_URL", "http://remote-data:8100")
     monkeypatch.setenv("REMOTE_TIMEOUT", "7")
+    monkeypatch.setenv("REMOTE_COVERAGE_TIMEOUT", "3")
     source = RemoteHistory.from_env("remote")
     assert (source.source, source.url, source.timeout) == ("remote", "http://remote-data:8100", 7.0)
+    assert source.coverage_timeout == 3.0 and RemoteHistory(url="u").coverage_timeout == 10.0
+
+
+async def test_coverage_waits_no_longer_than_its_own_timeout():
+    writers = []
+
+    async def accept_and_say_nothing(reader, writer):
+        writers.append(writer)
+        await reader.read()  # until the client gives up
+
+    server = await asyncio.start_server(accept_and_say_nothing, "127.0.0.1", 0)
+    port = server.sockets[0].getsockname()[1]
+    source = RemoteHistory("remote", url=f"http://127.0.0.1:{port}", coverage_timeout=0.2)
+    began = asyncio.get_running_loop().time()
+    with pytest.raises(ConnectionError, match="ReadTimeout"):
+        await source.acoverage()
+    assert asyncio.get_running_loop().time() - began < 2
+    for writer in writers:
+        writer.close()
+        await writer.wait_closed()
+    server.close()
+    await server.wait_closed()
 
 
 async def test_an_unreachable_service_is_named_in_the_error():

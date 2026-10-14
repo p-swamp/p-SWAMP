@@ -9,6 +9,7 @@ and knows nothing of the store::
 
     REMOTE_URL=http://remote-data-stub:8100
     REMOTE_TIMEOUT=30
+    REMOTE_COVERAGE_TIMEOUT=10
 
 - ``acoverage`` is ``GET /v1/coverage?model=pmu.frame``.
 - ``aread`` is ``POST /v1/queries``; the records come back as that call's
@@ -17,6 +18,8 @@ and knows nothing of the store::
   closes the connection, which is the service's cue to stop.
 - ``TIMEOUT`` bounds the wait for the response to start and for each line;
   a paused replay reads nothing and is not timed out.
+- ``COVERAGE_TIMEOUT`` bounds the coverage call, which a seek and a switch
+  to this source wait on.
 
 Written as async code, because the data is: a script calls the synchronous
 ``read`` and ``coverage``, which drive these on a private event loop. A client
@@ -57,12 +60,16 @@ class RemoteHistory(Playable, SourceModule):
     env_settings = (
         EnvSetting("URL", "Base URL of the remote data service, e.g. http://remote-data:8100", required=True),
         EnvSetting("TIMEOUT", "Seconds to wait for an answer to start, and for each line", default="30", kind="seconds"),
+        EnvSetting(
+            "COVERAGE_TIMEOUT", "Seconds to wait for the coverage, which a seek waits on", default="10", kind="seconds"
+        ),
     )
 
     def __init__(self, source: str | None = None, *, http_client: Any | None = None, **settings: Any) -> None:
         super().__init__(source, **settings)
         self.url: str = self.settings.url.rstrip("/")
         self.timeout: float = self.settings.timeout.total_seconds()
+        self.coverage_timeout: float = self.settings.coverage_timeout.total_seconds()
         self._http_client = http_client
 
     @contextlib.asynccontextmanager
@@ -76,7 +83,9 @@ class RemoteHistory(Playable, SourceModule):
     async def acoverage(self) -> TimeRange | None:
         try:
             async with self._http() as http:
-                response = await http.get("/v1/coverage", params={"model": self.model.topic})
+                response = await http.get(
+                    "/v1/coverage", params={"model": self.model.topic}, timeout=self.coverage_timeout
+                )
         except Exception as error:  # the message a person sees when the service is down
             raise ConnectionError(f"cannot reach {self.url or 'the service'}: {type(error).__name__}: {error}") from error
         response.raise_for_status()

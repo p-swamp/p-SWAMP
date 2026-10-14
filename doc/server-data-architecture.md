@@ -583,7 +583,10 @@ so its commands are checked before they are published, and a refusal is an
 honest 409. A module may run in another process, so its commands are checked
 where it runs, and a refusal comes back as an `ErrorEvent`. Player commands
 also travel on topics, so a module can command the player exactly as the web
-API does. A command is applied within 10 s of being issued, or reported: the
+API does. The run's router takes a `SwitchSourceCommand` at once: it stops
+the command in progress and supersedes those queued before it, each reported,
+so a source that hangs (a remote service gone quiet) cannot hold up the switch
+away from it. A command is applied within 10 s of being issued, or reported: the
 outbox gives up on one it cannot send by then, and the receiver refuses one
 older than that. A broker outage, or a slow command ahead of it, never makes a
 command land long after its 200.
