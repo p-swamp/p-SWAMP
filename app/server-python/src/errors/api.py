@@ -12,7 +12,7 @@ from fastapi import APIRouter, WebSocket
 
 from pswamp_core.util.tasks import cancel_and_wait
 from pswamp_web.pump import wait_for_disconnect
-from pswamp_web.wire import read_client_id, send_state
+from pswamp_web.wire import read_client_id, refuse_socket, send_state
 
 from .hub import HUB
 
@@ -23,7 +23,7 @@ router = APIRouter()
 async def ws_endpoint(ws: WebSocket) -> None:
     client_id = read_client_id(ws)
     if client_id is None:
-        await ws.close(code=1008)
+        await refuse_socket(ws)
         return
     await ws.accept()
     with HUB.tray(client_id) as notices:

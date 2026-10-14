@@ -13,7 +13,8 @@ So this module is where the shapes get named. Every message a page receives is
 declared here, and every page sends through :func:`send_state`.
 
 It also holds the names every REST command endpoint declares itself with --
-:data:`ClientId`, :class:`CommandAck`, :func:`read_client_id` -- for the whole
+:data:`ClientId`, :class:`CommandAck`, :func:`read_client_id` (and
+:func:`refuse_socket`, for a socket it cannot place) -- for the whole
 backend, not just this package. They live here rather than in ``src/shared.py``
 because the import may only run one way: this package is kept self-contained so
 that the repo's two Python projects can be consolidated in whichever direction the
@@ -109,6 +110,19 @@ def read_client_id(ws: WebSocket) -> str | None:
     if raw is None:
         return None
     return raw.strip() if re.match(CLIENT_ID_PATTERN, raw.strip()) else None
+
+
+async def refuse_socket(ws: WebSocket, code: int = 1008) -> None:
+    """Accept ``ws``, then close it with ``code`` (1008: policy violation).
+
+    Accepted first because a close code only reaches the browser on an
+    established connection. A refused handshake reads as 1006 there, which the
+    web client retries every 2 s for as long as the tab is open; 1008 it treats
+    as final. Firefox also holds every other socket to the host behind one that
+    keeps failing its handshake, for up to a minute.
+    """
+    await ws.accept()
+    await ws.close(code=code)
 
 
 ClientId = Annotated[

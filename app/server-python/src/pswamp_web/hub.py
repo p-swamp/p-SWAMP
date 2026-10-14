@@ -49,7 +49,7 @@ from .replay import (
     load_recording,
 )
 from .stores import AlarmStore, AppStatusStore, IslandStore, LineOutageStore
-from .wire import ReplayStatus, read_client_id
+from .wire import ReplayStatus, read_client_id, refuse_socket
 
 logger = get_logger("pswamp_web.hub")
 
@@ -575,19 +575,19 @@ async def connected_hub(ws: WebSocket) -> AsyncIterator[Hub | None]:
             if hub is None:
                 return
 
-    Two refusals, and the ordering of ``accept`` between them is the point:
+    Two refusals, both accepted *first* and then closed, because a code only
+    reaches the browser on an established connection:
 
-    * **No usable client id** -- closed before accepting, i.e. the handshake is
-      rejected outright. Our own client always sends one, so this is a caller
-      that has no business here.
-    * **At capacity** -- accepted *first*, then closed with 1013, because a code
-      only reaches the browser on an established connection. The web client
-      treats 1013 as terminal and stops reconnecting, which is the whole reason
-      to spend a handshake on saying no politely.
+    * **No usable client id** -- closed with 1008 (``refuse_socket``). Our own
+      client always sends one, so this is a caller that has no business here.
+    * **At capacity** -- closed with 1013.
+
+    The web client treats both codes as terminal and stops reconnecting, which
+    is the whole reason to spend a handshake on saying no politely.
     """
     client_id = read_client_id(ws)
     if client_id is None:
-        await ws.close(code=1008)  # policy violation
+        await refuse_socket(ws)
         yield None
         return
 

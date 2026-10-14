@@ -596,7 +596,8 @@ async def ws_endpoint(ws: WebSocket) -> None:
   forwards the error topic to the tray, hosts the modules in the server when
   the transport is in-memory, and stops every run on the way out.
 - `connected_pipeline`: the socket's handshake, with close codes 1008 (no
-  client id), 1013 (at capacity) and 1011 (the run failed to start).
+  client id), 1013 (at capacity) and 1011 (the run failed to start). Each is
+  sent after accepting the socket, so the browser sees the code.
 - `push_changes`: one message on connect and one per change, coalesced.
 - `dispatch_command`: 404 without a run, 409 when the router refuses, else a
   `CommandAck` meaning *accepted*: the command is queued for its receiver. The

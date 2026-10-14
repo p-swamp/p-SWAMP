@@ -942,6 +942,14 @@ Notes that matter when touching routing:
   because the server does not know the reverse proxy's prefix. The mount root is
   the mirror case and is the proxy's to handle: `/p-swamp/` works, `/p-swamp`
   resolves assets outside the prefix.
+- **A socket the server cannot serve is accepted, then closed with 1008**
+  (`refuse_socket` in `pswamp_web/wire.py`): a path no app serves
+  (`unknown_socket` in `server.py`), or no usable client id. A close code only
+  reaches a browser on an accepted socket; a refused handshake reads as 1006
+  there, which `useServerSocket` retries every 2 s, and Firefox then holds every
+  other socket to the host behind the failing one for up to a minute. A tab left
+  open from another branch's build did exactly that. Keep `unknown_socket` below
+  the `APPS` loop and above the `/` mount.
 - Because that fallback answers every unknown path, `App.tsx` keeps a catch-all
   `*` route redirecting to `/`; without it a typo'd URL renders the nav over an
   empty outlet. Keep it pointed at whichever page `<Route index>` renders.

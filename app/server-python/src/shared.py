@@ -69,6 +69,7 @@ from pswamp_web.wire import (
     ClientId,
     CommandAck,
     read_client_id,
+    refuse_socket,
     send_state,
 )
 
@@ -85,6 +86,7 @@ __all__ = [
     "get_logger",
     "push_changes",
     "read_client_id",
+    "refuse_socket",
     "send_state",
     "serve_pipeline",
     "transport",
@@ -238,13 +240,13 @@ async def _forward_errors(link: Transport, app: str, registry: PipelineRegistry)
 async def connected_pipeline(ws: WebSocket, registry: PipelineRegistry) -> AsyncIterator[PipelineRun | None]:
     """Accept a socket and hold its client's run while it lives; ``None`` when refused.
 
-    No usable client id: closed before accepting (1008). At capacity: accepted,
-    then closed with 1013, since a close code only reaches the browser on an
-    established connection. A run that fails to start: 1011.
+    Every refusal is accepted first, since a close code only reaches the browser
+    on an established connection. No usable client id: closed with 1008
+    (``refuse_socket``). At capacity: 1013. A run that fails to start: 1011.
     """
     client_id = read_client_id(ws)
     if client_id is None:
-        await ws.close(code=1008)
+        await refuse_socket(ws)
         yield None
         return
     await ws.accept()

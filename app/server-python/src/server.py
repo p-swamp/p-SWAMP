@@ -26,7 +26,7 @@ from contextlib import AsyncExitStack, asynccontextmanager
 from pathlib import Path
 from urllib.parse import quote
 
-from fastapi import FastAPI
+from fastapi import FastAPI, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException as StarletteHTTPException
@@ -46,6 +46,8 @@ import pswamp_web.line_outage
 import pswamp_web.phasors
 import pswamp_web.time_window
 from api_contract import AppEntry
+
+logger = shared.get_logger("server")
 
 # --- shared services --------------------------------------------------------
 #
@@ -228,6 +230,27 @@ for _app in APPS:
 # document and the committed one cannot drift.
 
 api_contract.install(app, APPS)
+
+
+# --- sockets no app serves --------------------------------------------------
+#
+# A socket on a path nothing above has: typically a tab left open from another
+# build, asking for an app this server does not have. Without this route it
+# falls into the static mount below, which speaks only HTTP, and the handshake
+# fails. The page reads that as "the server is down" and retries every 2 s for
+# as long as the tab is open, and Firefox holds every other socket to this host
+# behind the failing one for up to a minute. Refused the way shared.refuse_socket
+# does it, the page stops and asks for a reload instead.
+#
+# Must stay BELOW the include_router loop (an app's own socket matches first)
+# and ABOVE the mount. A socket route matches sockets only, so a plain request
+# for an unknown path still reaches the mount and its 404.
+
+
+@app.websocket("/{path:path}")
+async def unknown_socket(ws: WebSocket, path: str) -> None:
+    logger.warning("refused a socket on /%s: no app serves it", path)
+    await shared.refuse_socket(ws)
 
 
 # --- web client assets ------------------------------------------------------

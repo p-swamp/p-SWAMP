@@ -376,9 +376,10 @@ Client side
 connection half for every app. It:
 
 1. opens one WebSocket to `resolveServerUrl(wsPath) + '?client_id=' + CLIENT_ID`;
-2. reconnects every 2 s while down — **except** after close codes `1008` (id
-   rejected) and `1013` (server at pipeline capacity). The server meant those, and
-   retrying only makes it worse;
+2. reconnects every 2 s while down — **except** after close codes `1008` (the
+   server refused this socket: no usable client id, or a path no app serves) and
+   `1013` (server at pipeline capacity). The server meant those, and retrying
+   only makes it worse;
 3. runs each frame through `JSON.parse`, drops anything whose `type` is not
    `"state"`, then stores it (`message`) or hands it to `options.onMessage`;
 4. tracks a `status` — `connecting` / `online` / `offline` — separating "never
@@ -660,10 +661,16 @@ Error and refusal semantics
 | unknown alarm uuid | `404` |
 | command for a client with no pipeline | `404` |
 | command for a client with no open view (`time-window`) | `404` |
-| socket with an unusable client id | close `1008`, **before** accept — client stops retrying |
+| socket with an unusable client id | accept, then close `1008` — client stops retrying |
+| socket on a path no app serves | accept, then close `1008` — client stops retrying (`unknown_socket` in `server.py`) |
 | socket when every pipeline is in use | accept, then close `1013` — client stops retrying |
 | socket whose pipeline fails to start | accept, then close `1011`; the client retries |
-| unknown path under `/api/` | real `404`, never the SPA shell (`SPAStaticFiles._NO_FALLBACK`) |
+| plain request for an unknown path under `/api/` | real `404`, never the SPA shell (`SPAStaticFiles._NO_FALLBACK`) |
+
+Every socket refusal is accepted first (`refuse_socket` in `pswamp_web/wire.py`):
+a close code only reaches the browser on an accepted socket. A refused handshake
+reads as `1006` there, which the client retries every 2 s, and Firefox then holds
+every other socket to the host behind the failing one for up to a minute.
 
 The numeric-string rule includes `"0"`, although the browser generates a positive
 value.

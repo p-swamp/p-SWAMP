@@ -35,7 +35,7 @@ import urllib.error
 import urllib.request
 
 from websockets.asyncio.client import connect
-from websockets.exceptions import InvalidStatus
+from websockets.exceptions import ConnectionClosed, InvalidStatus
 
 WS_PATH = "/api/reference-subapp/ws"
 API_PATH = "/api/reference-subapp"
@@ -160,14 +160,32 @@ async def rejects_bad_callers(base_url: str, ws_url: str) -> None:
     status, _ = post(base_url, f"{API_PATH}/count/bump", None)
     check("POST without client_id -> 422", status == 422, f"got {status}")
 
-    # `InvalidStatus` specifically, not any error: the server closes before
-    # accepting, which the handshake reports as an HTTP status. A connection
-    # refused would satisfy a bare `except` and turn a dead server into a pass.
+    # Accepted, then closed with 1008: a close code only reaches a browser on an
+    # accepted socket, and 1008 is what makes the web client stop retrying. A
+    # refused handshake (`InvalidStatus`) is a failure here, and so is a socket
+    # on a path no app serves falling through to the static mount.
+    for label, path in (
+        ("WebSocket without client_id", WS_PATH),
+        ("WebSocket on a path no app serves", "/api/no-such-app/ws?client_id=1"),
+    ):
+        try:
+            async with connect(f"{ws_url}{path}") as ws:
+                code = await close_code(ws)
+        except InvalidStatus as error:
+            bad(f"{label} -> accepted, then closed with 1008 -- the handshake was refused ({error.response.status_code})")
+            continue
+        check(f"{label} -> accepted, then closed with 1008", code == 1008, f"got {code}")
+
+
+async def close_code(ws) -> int | None:
+    """The code the server closes ``ws`` with; None if it sends data or stays open."""
     try:
-        async with connect(f"{ws_url}{WS_PATH}"):
-            bad("WebSocket without client_id -> refused -- it was accepted")
-    except InvalidStatus as error:
-        ok(f"WebSocket without client_id -> refused ({error.response.status_code})")
+        await asyncio.wait_for(ws.recv(), timeout=5)
+    except ConnectionClosed as closed:
+        return closed.rcvd.code if closed.rcvd is not None else None
+    except TimeoutError:
+        pass
+    return None
 
 
 async def phase(name, coro) -> None:
