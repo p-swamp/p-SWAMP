@@ -5,7 +5,18 @@ from __future__ import annotations
 import asyncio
 
 from support import Measurement, Number, NumberResult, at, measurement, take
-from test_modules import Alarm, Assessment, Doubler, Estimate, HalveCommand, Halver, Monitor, Snapshot, TextResult
+from test_modules import (
+    Alarm,
+    Assessment,
+    Doubler,
+    Estimate,
+    HalveCommand,
+    Halver,
+    Monitor,
+    Overlapping,
+    Snapshot,
+    TextResult,
+)
 
 from pswamp_core.host import ModuleHost
 from pswamp_core.subscription import Overflow
@@ -75,6 +86,26 @@ async def test_commands_reach_the_instance_for_their_key_and_refusals_come_back(
         (_, result), (_, error) = await take(answers, 2)
     assert result.result.value == 5 and result.request_id == ok.request_id
     assert error.request_id == refused.request_id
+    await cancel_and_wait(task)
+
+
+async def test_an_input_and_a_command_never_run_in_an_instance_at_once():
+    instances: list[Overlapping] = []
+
+    def build() -> Overlapping:
+        instances.append(Overlapping())
+        return instances[-1]
+
+    broker = InMemoryTransport()
+    task = asyncio.create_task(ModuleHost(build, broker, app="a").serve())
+    await settle()
+    with broker.subscribe(NumberResult, app="a", key="k", overflow=Overflow.GROW) as results:
+        await broker.publish(measurement(1), app="a", key="k")
+        await broker.publish(HalveCommand(value=4), app="a", key="k")
+        await broker.publish(measurement(2), app="a", key="k")
+        await take(results, 3)
+    (module,) = instances[1:]  # the first is the host's template
+    assert len(module.calls) == 3 and not module.overlapped()
     await cancel_and_wait(task)
 
 

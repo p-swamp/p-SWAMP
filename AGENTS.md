@@ -531,7 +531,8 @@ The rules to keep:
   exactly what a host would publish. A `ModuleHost` calls `await arun(msg)` per
   input, and `validate` then `ahandle` per command (`await arun_command(cmd)` is
   that pair in one call, for a test inside an event loop); the module's code runs
-  inline, or in a thread with `blocking = True`. A module whose answer must
+  inline, or in a thread with `blocking = True`, and an instance takes one call
+  at a time either way (a lock in `Module`). A module whose answer must
   await overrides `ahandle`. Test modules with `run`: no loop, no transport.
 - **A module never sees the transport.** A `ModuleHost` runs it, in the server
   with the in-memory transport or in a worker with Kafka. Where a module runs is

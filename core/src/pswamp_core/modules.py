@@ -62,6 +62,11 @@ A ``ModuleHost`` calls ``await arun(message)`` per input, and ``validate`` then
 call, for a test inside an event loop. With ``blocking = True`` the module's
 code runs in a thread, off the event loop.
 
+**One call at a time.** An instance takes one call at a time, an input or a
+command (its ``validate`` and its answer), so its code never runs twice at
+once, in a thread or not. A call that takes long holds the others back:
+commands wait, and inputs queue under the module's overflow policy.
+
 A module never sees the transport. A ``ModuleHost`` feeds it one run's input
 and publishes its outputs (``pswamp_core.host``); whether the host is in the
 server or in a worker is the deployment's choice.
@@ -111,7 +116,8 @@ class Module(ABC):
         outputs: The classes it publishes: ``ResultEnvelope`` subclasses its
             bodies are wrapped in, and anything it sends as it is (a command).
         commands: The concrete ``Command`` classes it answers.
-        blocking: Run ``process`` and ``handle`` in a thread when hosted.
+        blocking: Run ``process`` and ``handle`` in a thread when hosted;
+            still one call at a time.
         overflow, maxsize: Its input queue (the trigger's, with a join).
             ``DROP_OLDEST`` by default: a module that falls behind a live
             stream analyses the newest frame.
@@ -231,6 +237,8 @@ class Module(ABC):
         self.sources: SourceSet | None = None
         #: This instance's join state, for named inputs.
         self._join = type(self).join.bound(self.inputs) if isinstance(self.inputs, Mapping) else None
+        #: Held around each call into the instance: one call at a time.
+        self._calling = asyncio.Lock()
 
     async def setup(self) -> None:
         """Called once by a host, after ``sources`` is set and before any input."""
@@ -276,11 +284,12 @@ class Module(ABC):
     async def arun(self, message: DataModel) -> list[DataModel]:
         """``run`` for one arriving message, as a host calls it: the module's
         code runs inline, or in a thread if ``blocking``."""
-        call = self._prepare(message, {})
-        if call is None:
-            return []
-        handler, args, kwargs, timestamp = call
-        return self.outputs_of(await self._call(handler, *args, **kwargs), timestamp=timestamp)
+        async with self._calling:
+            call = self._prepare(message, {})
+            if call is None:
+                return []
+            handler, args, kwargs, timestamp = call
+            return self.outputs_of(await self._call(handler, *args, **kwargs), timestamp=timestamp)
 
     def observe(self, message: DataModel) -> None:
         """Take a non-trigger input of a join: it only replaces that input's
@@ -307,8 +316,9 @@ class Module(ABC):
 
     async def arun_command(self, command: Command) -> list[DataModel]:
         """Validate and answer ``command``."""
-        self.validate(command)
-        return self.answer_of(command, await self.ahandle(command))
+        async with self._calling:
+            self.validate(command)
+            return self.answer_of(command, await self.ahandle(command))
 
     # -- outputs -----------------------------------------------------------------------
 

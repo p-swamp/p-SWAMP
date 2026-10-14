@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import asyncio
 import threading
+import time
 from typing import Literal
 
 import pytest
@@ -226,6 +227,43 @@ async def test_a_blocking_module_runs_in_a_thread():
     assert result.result.value == inline.result.value == 4.0
     assert Threaded.threads[0] is not threading.main_thread()
     assert Threaded().run_one(measurement(1)).result.value == 2.0  # run() is always inline
+
+
+class Overlapping(Halver):
+    """A blocking module whose every call sleeps, recording when it ran."""
+
+    name = "overlapping"
+    inputs = (Measurement,)
+    blocking = True
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.calls: list[tuple[float, float]] = []
+
+    def _busy(self) -> None:
+        began = time.monotonic()
+        time.sleep(0.05)
+        self.calls.append((began, time.monotonic()))
+
+    def process(self, message: Measurement) -> Number:
+        self._busy()
+        return Number(value=message.value)
+
+    def handle(self, command: HalveCommand) -> Number:
+        self._busy()
+        return super().handle(command)
+
+    def overlapped(self) -> bool:
+        calls = sorted(self.calls)
+        return any(began < ended for (_, ended), (began, _) in zip(calls, calls[1:]))
+
+
+async def test_a_blocking_instance_takes_one_call_at_a_time():
+    module = Overlapping()
+    await asyncio.gather(
+        module.arun(measurement(1)), module.arun_command(HalveCommand(value=4)), module.arun(measurement(2))
+    )
+    assert len(module.calls) == 3 and not module.overlapped()
 
 
 # -- declaring a module ---------------------------------------------------------------

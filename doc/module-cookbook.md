@@ -673,6 +673,9 @@ module in that process.
 - Run the analysis off the loop: `blocking = True` on the module runs
   `process` and `handle` in a thread; for pure-Python work, a
   `ProcessPoolExecutor` inside `process`.
+- An instance still takes one call at a time, threaded or not. While a long
+  `process` runs, a command for that instance waits, and inputs queue under
+  the module's overflow policy (the oldest are dropped past `maxsize`).
 - With numpy or scipy in a pool, set `OPENBLAS_NUM_THREADS=1`: BLAS's own
   threads per call multiply the CPU and collapse throughput.
 - Watch the tray: falling behind is reported.

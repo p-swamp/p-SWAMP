@@ -342,7 +342,9 @@ publishing `answer_of` what it returned; `arun_command` is those steps in one
 call. A module whose answer must await (reading history, say) overrides
 `ahandle`; `run_command` then drives it on a private event loop and refuses to
 do so from inside a running one. Setting `blocking = True` runs the module's code
-in a thread, off the event loop, for a CPU-heavy analysis.
+in a thread, off the event loop, for a CPU-heavy analysis. Either way an
+instance takes **one call at a time**, an input or a command (its `validate`
+and its answer), so a module's code never runs twice at once.
 
 A module that answers commands lists their concrete classes in `commands`
 and implements `handle` (or `async def ahandle`, when the answer must await),

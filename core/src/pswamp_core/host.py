@@ -107,7 +107,9 @@ async def serve_module(module: Module, inputs: Subscription, out: Sink) -> None:
 
 
 class _Answering:
-    """A module as the command inbox sees a receiver."""
+    """A module as the command inbox sees a receiver. It validates in
+    ``handle``, under the instance's lock, so a command's ``validate`` and
+    answer are one call: neither runs while an input is processed."""
 
     def __init__(self, module: Module) -> None:
         self.module = module
@@ -115,10 +117,12 @@ class _Answering:
         self.commands = module.commands
 
     def validate(self, command: Command) -> None:
-        self.module.validate(command)
+        return
 
     async def handle(self, command: Command) -> object:
-        return await self.module.ahandle(command)
+        async with self.module._calling:
+            self.module.validate(command)
+            return await self.module.ahandle(command)
 
 
 def command_inbox(module: Module, commands: AsyncIterable[Command], out: Sink) -> CommandInbox:

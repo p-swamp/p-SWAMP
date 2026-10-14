@@ -46,7 +46,7 @@ module contract for the next module.
 |---|---|---|---|
 | 32 | A hung remote data service holds up every command of the run | before | — |
 | 40 | A module command sent while following the shared live run reaches an instance that gets no frames | before | Decided |
-| 1 | A `blocking` module runs `process` and `handle` in two threads at once | Louis | D5 |
+| 1 | A `blocking` module runs `process` and `handle` in two threads at once (fixed 2026-10-14) | Louis | D5 |
 | 2 | A sync `read` source holds the event loop; a live one would freeze the server | Louis | — |
 | 11 | A module with a dependency of its own fails to import in the image | Louis | D4 |
 | 33 | The models layering test fails, so the unit tests are red (fixed 2026-10-14) | Louis | — |
@@ -344,6 +344,9 @@ output is designed.
   raced. A non-blocking module is safe, since both run on the loop.
 - Suggestion: one lock per instance around the handler call in `arun` and
   around `ahandle` where the host calls it (`host.py:120`).
+- Fixed 2026-10-14: `Module._calling`, held by `arun`, `arun_command` and
+  the host's command path (`validate` and `ahandle` together). The appendix
+  script now prints `overlapped = False | threads: 1`.
 
 **2. A source written as sync `read` never yields to the event loop.**
 - Where: `core/src/pswamp_core/sources.py:251-260`. Callers:
