@@ -23,8 +23,8 @@ gets the module's `identity` and reports its settings as `parameters`.
 `Playable` answers its commands in `ahandle`, the slot `Module` gives an answer
 that awaits; it returns nothing, since a player answers through its sink.
 
-Where a source runs does not change: in the process that owns its run, read by
-the run's `ActiveSource` router, never in a `ModuleHost` on the transport, for
+Where a source runs does not change: in the server, which builds every run, read
+by the run's `ActiveSource` router, never in a `ModuleHost` on the transport, for
 ADR-005's reasons (per-viewer pacing, a synchronous 409 for a refused player
 command, no broker hop for the frame on screen). `Pipeline` now refuses a
 source listed among its modules, so this holds for a pipeline declared in code

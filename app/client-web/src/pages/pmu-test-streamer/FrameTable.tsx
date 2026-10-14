@@ -21,7 +21,7 @@ function cell(frame: PmuFrame | null, index: number, digits: number): string {
 }
 
 /** One frame as a table: a row per station, one column per measurement, and
- *  the CIM reference the gateway stamped on its layout. */
+ *  the CIM reference the pipeline's enrichment stamped on its layout. */
 export function FrameTable({ header, frame }: { header: PmuHeader; frame: PmuFrame | null }) {
   const stations = Array.from(new Set(header.station))
   return (

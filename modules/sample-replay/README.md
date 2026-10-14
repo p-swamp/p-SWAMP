@@ -7,7 +7,7 @@ A **source**: it has no inputs, it produces. The bundled Nordic 44 sample
 recording (`sample_data.txt`, in the package): five stations at 20 Hz for three
 seconds, 60 frames spanning a line trip, as `PmuFrame`s sharing one header.
 It is a *history* (it has a `coverage`, `[0.05 s, 3.05 s)` after 2026-01-01) and
-*playable* (the player controls apply: play, pause, step, seek, speed, loop).
+*playable* (the player controls apply: play, pause, step, seek, speed).
 
 | | Message | Topic | Defined in |
 |---|---|---|---|

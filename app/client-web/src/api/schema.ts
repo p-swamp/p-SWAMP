@@ -1158,7 +1158,7 @@ export interface components {
             channel: string[];
             /**
              * Cimreferenceid
-             * @description The grid (CIM) data that applies to this layout. Set by the gateway, never by a provider.
+             * @description The grid (CIM) data that applies to this layout. Set by the pipeline's enrichment, never by a source.
              * @default null
              */
             cimReferenceId: string | null;

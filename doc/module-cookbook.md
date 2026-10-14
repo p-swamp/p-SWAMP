@@ -696,7 +696,7 @@ its entry point.
   synthetic data with a read of yours:
 
   ```python
-  class MyRecording(Playable, SourceModule):      # drop Playable for a live source
+  class MyRecordingSource(Playable, SourceModule):  # drop Playable for a live source
       name = "my-recording"
       kind = "history"                            # or "live"
       outputs = (PmuFrame,)

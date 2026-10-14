@@ -12,8 +12,8 @@ band also pauses the player.
 |---|---|---|---|
 | Reads | `FrameStatsResult` | `frame.stats.result` | `pswamp_models.frame_stats` |
 | Emits | `ExcursionResult` (body `Excursion`) | `excursion.result` | `pswamp_models.excursion` |
-| Emits | `PauseCommand`, on leaving the band with auto-pause on | `pause` | `pswamp_models.player` |
-| Accepts | `AutoPauseCommand(enabled)`: turn pausing on excursion on or off | `auto.pause` | `pswamp_models.excursion` |
+| Emits | `PauseCommand`, on leaving the band with auto-pause on | `pause.command` | `pswamp_models.player` |
+| Accepts | `AutoPauseCommand(enabled)`: turn pausing on excursion on or off | `auto.pause.command` | `pswamp_models.excursion` |
 
 **Parameters:** `nominal_hz` = 50.0 and `band_hz` = 0.005 (module constants
 `NOMINAL_HZ`, `BAND_HZ`, reported in `parameters`). A result whose mean

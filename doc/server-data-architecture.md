@@ -188,7 +188,7 @@ name (`PmuFrame` → `pmu.frame`).
 
 ```python
 class FrameStats(BaseModel):
-    mean_hz: float
+    mean_frequency_hz: float | None
 
 class FrameStatsResult(ResultEnvelope[FrameStats]):   # topic frame.stats.result
     version: Literal["v1"] = "v1"
@@ -253,7 +253,7 @@ one consumer, from the topic's end, with no consumer group. Compose runs the
 broker as `kafka` (Apache Kafka, one KRaft node, no volume).
 
 *Where.* `core/src/pswamp_core/transport/`, `subscription.py`, `settings.py`
-(spec loading, shared with the data providers); `core/tests/transport_suite.py`
+(spec loading, and the `{NAME}_{SETTING}` blocks sources read too); `core/tests/transport_suite.py`
 (run against the compose broker with
 `KAFKA_TEST_BOOTSTRAP_SERVERS=127.0.0.1:19092`).
 
@@ -326,18 +326,20 @@ a module sends is just one more declared output.
 **The same code is called two ways.** The base class provides both:
 
 ```python
-stats = FrameStatsModule()
-stats.run_one(frame).result.mean_frequency_hz     # synchronous: a script, a test
-stats.run(frame)                                  # the list a host would publish
-stats.run_command(AutoPauseCommand(enabled=True)) # a command, likewise
-margin.run(pmu=f, scada=s, se=e)                  # a joined module: the bundle by name
+stats, excursion = FrameStatsModule(), ExcursionModule()
+stats.run_one(frame).result.mean_frequency_hz          # synchronous: a script, a test
+stats.run(frame)                                       # the list a host would publish
+excursion.run_command(AutoPauseCommand(enabled=True))  # a command, likewise
+margin.run(pmu=f, scada=s, se=e)                       # a joined module: the bundle by name
 
-await stats.arun(frame)                           # what a ModuleHost calls, one message
-await stats.arun_command(command)                 # (in a thread when blocking = True)
+await stats.arun(frame)                                # what a ModuleHost calls per input
+await excursion.arun_command(command)                  # a command, from inside an event loop
 ```
 
 `run` returns exactly what the host would publish, so a test that passes sees
-the wire. A module whose answer must await (reading history, say) overrides
+the wire. A host answers a command in three steps: `validate`, `ahandle`, and
+publishing `answer_of` what it returned; `arun_command` is those steps in one
+call. A module whose answer must await (reading history, say) overrides
 `ahandle`; `run_command` then drives it on a private event loop and refuses to
 do so from inside a running one. Setting `blocking = True` runs the module's code
 in a thread, off the event loop, for a CPU-heavy analysis.
@@ -422,11 +424,12 @@ chunk = await sources.consume(start=t0, end=t1)   # exactly [t0, t1)
 **Sources run in-process, not as hosted modules.** A source has no inputs and
 produces frames, which makes it look like a module with `inputs = ()` that a
 worker could host on the transport like any other. It is not run that way: the
-run's router reads the active source directly, in the server or the worker that
-owns the run. A source's frames are paced for a person watching, per client, and
-switched and sought on command; as a transport-hosted module that would put
-every frame on a second hop, give a second pacing layer a second clock, and turn
-a seek into a round trip. What sources share with modules is the project shape,
+run's router reads the active source directly, in the server, which builds every
+run. (A module that `reads_sources`, the range summary, reads a `SourceSet` of
+its own wherever it is hosted.) A source's frames are paced for a person
+watching, per client, and switched and sought on command; as a transport-hosted
+module that would put every frame on a second hop, give a second pacing layer a
+second clock, and turn a seek into a round trip. What sources share with modules is the project shape,
 the entry point and the way a script calls them. (This was decided against a
 uniform, worker-hosted design: `doc/adr/005-workspace-models-modules-cli.md`.)
 
@@ -830,10 +833,10 @@ deployment's own sources and broker come in through the same variables.
 
 ## Adding a module
 
-`uv run pswamp new module <slug> "<Label>"` writes a
-working module (code and tests in one folder) and its pipeline in `modules/`,
-its web API and page in `app/`, and adds it to the module-worker. Then replace the placeholder
-analysis.
+`uv run pswamp new module <slug> "<Label>"` writes a working module project in
+`modules/<slug>/` (code, tests, an example), its messages in `models/`, its
+pipeline file in `pipelines/`, its web API and page in `app/`, and adds it to
+the module-worker. Then replace the placeholder analysis.
 `doc/module-cookbook.md` covers the rest: tests, logs, commands, chaining,
 batch queries, a worker of its own, scaling, CPU-heavy modules, and data
 sources.

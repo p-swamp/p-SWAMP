@@ -75,8 +75,8 @@ export function PmuTestStreamerPage() {
       <CardHeader className="border-b">
         <CardTitle className="text-lg">PMU Test Streamer</CardTitle>
         <span className="text-gray-500">
-          A PMU source through the core pipeline: provider → gateway → player → frame
-          statistics → excursion, with a range summary on request.
+          A PMU source through the core pipeline: source → frame statistics →
+          excursion, with a range summary on request.
         </span>
         <CardAction className="self-center">
           {connected && live ? (

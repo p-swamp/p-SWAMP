@@ -10,9 +10,11 @@ and configures it with a block of variables prefixed by that name::
     KAFKA_BOOTSTRAP_SERVERS=kafka:9092
 
 A ``Configurable`` class declares the variables it reads in ``env_settings``,
-and ``from_env(name)`` builds it from them. The transport and data providers
-are configured this way, so a deployment can plug in its own class with one
-package and a few variables, and no code change here.
+and ``from_env(name)`` builds it from them. The transport is named and
+configured this way, so a deployment can plug in its own class with one package
+and a few variables, and no code change here. A source reads its settings the
+same way, from its ``{NAME}_{SETTING}`` block, but is named by its entry point
+in a pipeline file (``pswamp_core.pipeline_config``), not by a spec.
 """
 
 from __future__ import annotations

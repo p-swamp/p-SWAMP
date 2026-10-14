@@ -528,10 +528,11 @@ The rules to keep:
   class not in `outputs` is an error: there is no `emit()`.
 - **A module is called the same way everywhere.** `run(msg)` / `run_one(msg)` /
   `run_command(cmd)` are the synchronous calls — a script, a test — and return
-  exactly what a host would publish; `await arun(msg)` and `await arun_command(cmd)`
-  are what a `ModuleHost` calls (inline, or in a thread with `blocking = True`).
-  A module whose answer must await overrides `ahandle`. Test modules with `run`:
-  no loop, no transport.
+  exactly what a host would publish. A `ModuleHost` calls `await arun(msg)` per
+  input, and `validate` then `ahandle` per command (`await arun_command(cmd)` is
+  that pair in one call, for a test inside an event loop); the module's code runs
+  inline, or in a thread with `blocking = True`. A module whose answer must
+  await overrides `ahandle`. Test modules with `run`: no loop, no transport.
 - **A module never sees the transport.** A `ModuleHost` runs it, in the server
   with the in-memory transport or in a worker with Kafka. Where a module runs is
   configuration (`PSWAMP_TRANSPORT`, `PSWAMP_WORKER_PIPELINES`,
@@ -553,10 +554,11 @@ The rules to keep:
   transport. A run holds its sources in a `SourceSet` (named instances, one
   active) and an **`ActiveSource` router** that receives `SwitchSourceCommand`
   and routes the playback commands to the active source (refusing them, with the
-  same 409, for a live one). The sources run **in-process, in the server or the
-  worker that reads them** — not as worker-hosted modules on the transport of
-  their own: that would put every frame on a second hop and a second pacing
-  layer for no gain (ADR-005, ADR-006). `Pipeline` refuses a source listed
+  same 409, for a live one). A run's sources are read **in the server, which
+  builds every run**, by its router — not as worker-hosted modules on the
+  transport of their own: that would put every frame on a second hop and a
+  second pacing layer for no gain (ADR-005, ADR-006). A module that
+  `reads_sources` reads a `SourceSet` of its own wherever it is hosted. `Pipeline` refuses a source listed
   among its modules, so this holds for a pipeline declared in code too.
   `pswamp_core.testing.SourceConformance` is a
   source's executable contract.

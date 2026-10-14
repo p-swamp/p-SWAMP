@@ -59,7 +59,7 @@ class PmuHeader(BaseModel):
     data_rate: float = Field(gt=0, description="Frames per second.")
     cimReferenceId: str | None = Field(
         default=None,
-        description="The grid (CIM) data that applies to this layout. Set by the gateway, never by a provider.",
+        description="The grid (CIM) data that applies to this layout. Set by the pipeline's enrichment, never by a source.",
     )
 
     @model_validator(mode="after")

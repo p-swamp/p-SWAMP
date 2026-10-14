@@ -16,7 +16,7 @@ and the package is the namespace to import it from.
   from here, and so does everyone else: nobody imports a module for its data.
 
 Depends on pydantic only, so anything may depend on it: the core, the
-modules, the web backend, a data provider outside this repo.
+modules, the web backend, a source outside this repo.
 """
 
 __version__ = "0.1.0"

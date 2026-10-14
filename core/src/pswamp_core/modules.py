@@ -57,9 +57,10 @@ and returns exactly what a host would publish::
 
 ``run(frame)`` for styles 1 and 2; ``run(pmu=f, scada=s, se=e)`` for style 3,
 which bypasses the join. ``run_command`` answers a command the same way.
-``await arun(message)`` and ``await arun_command(command)`` are what a
-``ModuleHost`` calls; with ``blocking = True`` they run the module's code in a
-thread, off the event loop.
+A ``ModuleHost`` calls ``await arun(message)`` per input, and ``validate`` then
+``ahandle`` per command; ``await arun_command(command)`` is that pair in one
+call, for a test inside an event loop. With ``blocking = True`` the module's
+code runs in a thread, off the event loop.
 
 A module never sees the transport. A ``ModuleHost`` feeds it one run's input
 and publishes its outputs (``pswamp_core.host``); whether the host is in the

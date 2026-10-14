@@ -57,7 +57,7 @@ records how it is organised inside it. The wire (topics, JSON shapes,
   carries the pacing and the player commands. A run holds its sources in a
   `SourceSet` and an `ActiveSource` router that switches the active one and
   routes the player commands to it. The router reads sources directly, in the
-  process that owns the run.
+  server, which builds every run.
 - **Pipelines are TOML, one file per app.** `pipelines/<app>.toml` names modules
   and sources by entry point. `Pipeline.load` keeps the existing checks (one
   receiver per command, one class per topic) and adds one: every class a module
@@ -74,9 +74,11 @@ records how it is organised inside it. The wire (topics, JSON shapes,
 - A module can be understood, tested, run and shipped on its own, and used from
   a ten-line script with no server, transport or event loop. The sample-replay
   example is the proof and the template.
-- Adding a module or a source is one generator command and no edits to
-  Dockerfile, compose or the workspace; the pipeline file is the only place that
-  says what runs.
+- Adding a module or a source is one generator command and no edit to the
+  Dockerfile or the workspace's member list. The generator adds the project to
+  the server's manifest and, for a module, to the module-worker's lists in
+  compose and k8s. The pipeline file says what an app runs; compose and k8s say
+  where.
 - The lock is one file, but a change to a member's manifest re-locks everyone,
   and the desktop package still needs its own `uv lock` and the
   `--upgrade-package p-swamp` step to be seen from the workspace.

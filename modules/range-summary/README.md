@@ -11,7 +11,7 @@ min, max and mean frequency over it.
 |---|---|---|---|
 | Reads | no topic (`inputs = ()`); it reads its sources (`reads_sources = True`) | | |
 | Emits | `RangeSummaryResult` (body `RangeSummary`), carrying the command's `request_id` | `range.summary.result` | `pswamp_models.range_summary` |
-| Accepts | `SummarizeRangeCommand(source, offset_s, end_offset_s)` | `summarize.range` | `pswamp_models.range_summary` |
+| Accepts | `SummarizeRangeCommand(source, offset_s, end_offset_s)` | `summarize.range.command` | `pswamp_models.range_summary` |
 
 **Parameters:** none. A command is refused (`CommandRefused`, which the host
 publishes as an `ErrorEvent`) when the source is unknown, is live rather than

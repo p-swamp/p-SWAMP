@@ -46,7 +46,7 @@ def validate(
     """Load each pipeline file as the server and the workers do, and run every check.
 
     A file fails when it is not valid TOML or does not match the schema, names a
-    module that is not installed, names a data client that does not import, or
+    module or source that is not installed or does not import, or
     the pipeline it declares is inconsistent: two receivers of one command, two
     classes on one topic, a command a module sends that nothing takes, or a class
     a module reads that nothing produces. The environment applies, as it does at

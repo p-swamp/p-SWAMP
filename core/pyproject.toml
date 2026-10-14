@@ -11,8 +11,8 @@
 # from them.
 #
 # pydantic and the message models (models/, pswamp-models, itself pydantic only)
-# are the only required dependencies, so a data provider written outside this
-# repo can depend on the core alone. The extra is imported lazily:
+# are the only required dependencies, so a module or source written outside
+# this repo can depend on the core alone. The extra is imported lazily:
 #   [kafka]        aiokafka, for pswamp_core.transport.kafka
 
 [project]

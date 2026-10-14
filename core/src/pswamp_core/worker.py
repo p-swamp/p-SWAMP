@@ -88,7 +88,7 @@ def main() -> int:
     hosts = [host for pipeline in pipelines for host in pipeline.hosts(transport, only=only)]
     if not hosts:
         print(f"{PIPELINES_VARIABLE} (and {MODULES_VARIABLE}) name no module to host, e.g.", file=sys.stderr)
-        print(f"  {PIPELINES_VARIABLE}=pipelines/pmu-test-streamer.toml", file=sys.stderr)
+        print(f"  {PIPELINES_VARIABLE}=pmu-test-streamer.toml  (run from pipelines/)", file=sys.stderr)
         return 2
 
     async def run() -> None:

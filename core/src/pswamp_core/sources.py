@@ -6,9 +6,10 @@
 A source is a module like any other: a ``Module`` subclass, in a project of
 its own (``modules/<name>/``, an entry point in ``pswamp.modules``). It has no
 inputs: it *produces* messages, ``PmuFrame`` by default. Where it differs is
-where it runs: in the process that owns its run, read by the run's
+where it runs: in the server, which builds every run, read by the run's
 ``ActiveSource`` router, never in a ``ModuleHost`` on the transport (ADR-005,
-ADR-006). For a source, ``blocking`` governs ``read``, ``coverage``, ``open``
+ADR-006). A module that ``reads_sources`` reads a ``SourceSet`` of its own
+wherever it is hosted. For a source, ``blocking`` governs ``read``, ``coverage``, ``open``
 and ``close``. It is of one of two ``kind``s:
 
 - ``history``: holds a range of records (a recording, a store).
