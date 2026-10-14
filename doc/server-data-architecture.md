@@ -235,7 +235,9 @@ The deployment picks the implementation with `PSWAMP_TRANSPORT`
 (`name:module.path:Class`, plus that name's `{NAME}_{SETTING}` variables).
 Unset, it is the `InMemoryTransport`. The player and modules publish
 synchronously into an `Outbox`, which sends in order and, when full, drops the
-oldest data message, but never a command, an answer to one, or an error.
+oldest data message, but never a command, an answer to one, or an error. One
+of those the transport refuses is sent again until 10 s after it was queued
+(`CONTROL_DEADLINE_S`), then given up and reported.
 
 Two classes of one name have the same topic. `subscribe` refuses the second
 class on a topic, and `Pipeline` refuses to declare both. Rename one, or give
@@ -255,8 +257,11 @@ it a topic of its own (`topic: ClassVar[str]`).
 **Kafka.** `KafkaTransport` (`kafka:pswamp_core.transport.kafka:KafkaTransport`
 with `KAFKA_BOOTSTRAP_SERVERS`) creates each topic with one partition and
 about a minute of retention. It reads every topic its process listens to with
-one consumer, from the topic's end, with no consumer group. Compose runs the
-broker as `kafka` (Apache Kafka, one KRaft node, no volume).
+one consumer, from the topic's end, with no consumer group. A consumer that
+fails is reopened with backoff and resumes each control topic (commands,
+errors, `PipelineClosed`) where it was, so what was sent meanwhile still
+arrives; a data topic starts again at its end. Compose runs the broker as
+`kafka` (Apache Kafka, one KRaft node, no volume).
 
 *Where.* `core/src/pswamp_core/transport/`, `subscription.py`, `settings.py`
 (spec loading, and the `{NAME}_{SETTING}` blocks sources read too); `core/tests/transport_suite.py`
@@ -567,6 +572,7 @@ run.dispatch(SeekCommand(client_id=id, offset_s=12))
 #   nobody takes it?   NoReceiver
 #   then               topic pmu-test-streamer.seek.command, key = the run's key
 # the receiver's CommandInbox: validate again, then handle; a refusal is an ErrorEvent(request_id)
+# a command issued more than 10 s before it is applied (its timestamp) is refused the same way
 ```
 
 *Why.* The mental model is one sentence: **anyone may publish a command, its
@@ -577,7 +583,10 @@ so its commands are checked before they are published, and a refusal is an
 honest 409. A module may run in another process, so its commands are checked
 where it runs, and a refusal comes back as an `ErrorEvent`. Player commands
 also travel on topics, so a module can command the player exactly as the web
-API does.
+API does. A command is applied within 10 s of being issued, or reported: the
+outbox gives up on one it cannot send by then, and the receiver refuses one
+older than that. A broker outage, or a slow command ahead of it, never makes a
+command land long after its 200.
 
 *Where.* `core/src/pswamp_core/command_routing.py`, `models/src/pswamp_models/player/commands.py`,
 `pipeline.py` (`dispatch`).

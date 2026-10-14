@@ -36,7 +36,7 @@ and is left out. "Decision" names the decision below that settles a comment;
 |---|---|---|---|
 | 28 | Kafka losing its topics stops the stack until every process restarts; probes stay green | before | — |
 | 29 | A live source that fails stays failed; later viewers are not told | before | — |
-| 31 | A command sent during a broker outage is acknowledged, then lost or applied late | before | — |
+| 31 | A command sent during a broker outage is acknowledged, then lost or applied late (fixed 2026-10-14) | before | — |
 | 30 | Module state belongs to the key: settings lost on a worker restart, inherited after a crash | before | D1 |
 
 **Medium**: wrong in situations the project will soon reach, or a trap in the
@@ -663,8 +663,10 @@ Unlike comments 1 to 27, these are about the branch as a whole: all but 33 and
   gives it up and calls `on_undelivered`. One still queued at its deadline is
   given up unsent, so `play` is no longer applied 24 s after its 200. A run
   turns that into an `ErrorEvent` for `on_error`, and `shared.run_registry`
-  hands it to the tray directly. Still open: a consumer that reconnects starts
-  every topic at its end (4b).
+  hands it to the tray directly. Then: a reopened Kafka consumer resumes the
+  control topics where it was (`_resume_at`), and a command carries its issue
+  time (`Command.timestamp`). A `CommandInbox` refuses one issued more than
+  10 s ago, through the tray, so a resumed backlog is reported, not applied.
 
 **32. A remote data service that hangs holds up every command of the run.**
 - Seen (compose, the stub frozen with `docker pause`): a seek waited 10 s, the

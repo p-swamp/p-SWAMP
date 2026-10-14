@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+from datetime import timedelta
 
 from support import Measurement, Number, NumberResult, at, measurement, take
 from test_modules import (
@@ -20,7 +21,7 @@ from test_modules import (
 
 from pswamp_core.host import ModuleHost
 from pswamp_core.subscription import Overflow
-from pswamp_core.transport import InMemoryTransport
+from pswamp_core.transport import CONTROL_DEADLINE_S, InMemoryTransport
 from pswamp_core.util.tasks import cancel_and_wait
 from pswamp_core.util.time import utcnow
 from pswamp_models.common import ErrorEvent, PipelineClosed
@@ -106,6 +107,21 @@ async def test_an_input_and_a_command_never_run_in_an_instance_at_once():
         await take(results, 3)
     (module,) = instances[1:]  # the first is the host's template
     assert len(module.calls) == 3 and not module.overlapped()
+    await cancel_and_wait(task)
+
+
+async def test_a_command_issued_too_long_ago_is_reported_not_applied():
+    broker = InMemoryTransport()
+    task = asyncio.create_task(ModuleHost(Halver, broker, app="a").serve())
+    await settle()
+    with broker.subscribe(NumberResult, ErrorEvent, app="a", key="k", overflow=Overflow.GROW) as answers:
+        late = HalveCommand(value=10, timestamp=utcnow() - timedelta(seconds=CONTROL_DEADLINE_S + 5))
+        fresh = HalveCommand(value=8)
+        await broker.publish(late, app="a", key="k")
+        await broker.publish(fresh, app="a", key="k")
+        (_, error), (_, result) = await take(answers, 2)
+    assert error.request_id == late.request_id and "did not apply halve" in error.message
+    assert (result.result.value, result.request_id) == (4, fresh.request_id)
     await cancel_and_wait(task)
 
 

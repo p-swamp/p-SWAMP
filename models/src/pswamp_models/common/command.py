@@ -14,16 +14,22 @@ The commands themselves live with whoever receives them: the player's in
 
 ``request_id`` is generated when a command is built. Whatever answers the
 command carries it: a module's result, or an ``ErrorEvent`` if it was refused.
+
+``timestamp`` is when the command was issued (wall clock), set when it is
+built. A receiver does not apply one that reaches it too long after, so a
+command is applied soon after it was acknowledged, or reported.
 """
 
 from __future__ import annotations
 
+from datetime import datetime
 from typing import ClassVar, Literal
 from uuid import uuid4
 
 from pydantic import Field
 
 from .data_model import DataModel, topic_from_name
+from .utc import UTC
 
 __all__ = ["Command"]
 
@@ -41,6 +47,10 @@ class Command(DataModel):
 
     version: Literal["v1"] = "v1"
     request_id: str = Field(default_factory=lambda: uuid4().hex)
+    timestamp: datetime | None = Field(
+        default_factory=lambda: datetime.now(UTC),
+        description="When it was issued. A receiver does not apply one that reaches it too long after.",
+    )
     client_id: str | None = Field(default=None, description="The client that issued it, if any.")
 
     name: ClassVar[_Name] = _Name()

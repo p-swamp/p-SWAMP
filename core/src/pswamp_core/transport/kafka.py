@@ -17,6 +17,13 @@
   (One consumer per topic, some fifty in the server, starved each other.)
   No consumer group and no committed offsets: a process that restarts wants
   what is said from now on, not a backlog. A new topic is read from its end.
+- **Reconnecting.** A consumer that fails (the broker went away) is reopened
+  with backoff. It resumes each control topic (commands, errors,
+  ``PipelineClosed``) where it was, so what was published meanwhile still
+  arrives; a receiver refuses a command that arrives too late
+  (``CommandInbox``). A data topic starts again at its end. A control topic
+  whose offsets no longer fit (the broker lost it and made it again) is read
+  from its start.
 - **Backpressure.** ``publish`` waits for the broker's acknowledgement, so a
   slow broker backs up into the caller's ``Outbox``, which drops old data.
 
@@ -34,7 +41,7 @@ from pswamp_models.common import stamp_sent_at
 
 from ..log import get_logger
 from ..settings import EnvSetting
-from . import Transport
+from . import _CONTROL, Transport
 
 if TYPE_CHECKING:
     from pswamp_models.common import DataModel
@@ -84,6 +91,9 @@ class KafkaTransport(Transport):
         self._created: set[str] = set()
         #: Topics listened to but not yet assigned to the consumer.
         self._unassigned: set[str] = set()
+        #: Per control topic, the next offset to read: where a reopened
+        #: consumer resumes.
+        self._resume_at: dict[str, int] = {}
         self._consumer_task: asyncio.Task | None = None
 
     async def open(self) -> None:
@@ -202,12 +212,25 @@ class KafkaTransport(Transport):
         consumer.assign([*held, *fresh])
         for tp, offset in held.items():
             consumer.seek(tp, offset)
-        if fresh:
-            await consumer.seek_to_end(*fresh)
-            for tp in fresh:
-                await consumer.position(tp)
+        resumed = {tp: self._resume_at[tp.topic] for tp in fresh if tp.topic in self._resume_at}
+        if resumed:
+            starts = await consumer.beginning_offsets(list(resumed))
+            ends = await consumer.end_offsets(list(resumed))
+            for tp, offset in resumed.items():
+                consumer.seek(tp, offset if starts[tp] <= offset <= ends[tp] else starts[tp])
+        at_end = [tp for tp in fresh if tp not in resumed]
+        if at_end:
+            await consumer.seek_to_end(*at_end)
+            for tp in at_end:
+                position = await consumer.position(tp)
+                if self._is_control(tp.topic):
+                    self._resume_at[tp.topic] = position
         for topic in new:
             self._ready[topic].set()
+
+    def _is_control(self, topic: str) -> bool:
+        model = self._models.get(topic)
+        return model is not None and issubclass(model, _CONTROL)
 
     def _decode(self, topic: str, records: Sequence[Any]) -> None:
         model = self._models.get(topic)
@@ -222,6 +245,8 @@ class KafkaTransport(Transport):
             if record.timestamp is not None and record.timestamp >= 0:
                 stamp_sent_at(message, record.timestamp / 1000.0)  # the producer's CreateTime
             self._deliver(topic, record.key.decode() if record.key else "", message)
+        if records and topic in self._resume_at:
+            self._resume_at[topic] = records[-1].offset + 1
 
 
 async def _stop(consumer: Any) -> None:

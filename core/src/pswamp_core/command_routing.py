@@ -11,7 +11,9 @@ command travels on its own topic, so routing a command is publishing it.
 A ``CommandInbox`` applies one receiver's commands in order. It validates each
 again before applying it, because the state may have changed since the command
 was sent. A refusal or failure becomes an ``ErrorEvent`` carrying the command's
-``request_id``.
+``request_id``. So does a command issued more than ``deadline`` seconds ago
+(``CONTROL_DEADLINE_S``, by its ``timestamp``): held up by a broker outage, or
+behind a slow command, it is reported rather than applied late.
 """
 
 from __future__ import annotations
@@ -23,6 +25,7 @@ from typing import TYPE_CHECKING, Any, ClassVar, Protocol
 from pswamp_models.common import ErrorEvent
 
 from .log import get_logger
+from .transport import CONTROL_DEADLINE_S
 from .util.tasks import cancel_and_wait
 from .util.time import utcnow
 
@@ -72,6 +75,8 @@ class CommandInbox:
         out: Where a refusal or failure is reported, as an ``ErrorEvent``.
         on_result: Called with a command and whatever non-``None`` ``handle``
             returned; a module publishes it as its result.
+        deadline: A command issued longer ago than this is reported, not
+            applied.
     """
 
     def __init__(
@@ -81,11 +86,13 @@ class CommandInbox:
         out: Sink,
         *,
         on_result: Callable[[Command, Any], None] | None = None,
+        deadline: float = CONTROL_DEADLINE_S,
     ) -> None:
         self.receiver = receiver
         self._commands = commands
         self._out = out
         self._on_result = on_result
+        self.deadline = deadline
         self._task: asyncio.Task | None = None
 
     def start(self) -> None:
@@ -109,6 +116,15 @@ class CommandInbox:
         """Validate and apply one command; report a refusal, a failure, or an
         answer that could not be published."""
         name = self.receiver.name
+        age = None if command.timestamp is None else (utcnow() - command.timestamp).total_seconds()
+        if age is not None and age > self.deadline:
+            logger.warning("%s did not apply %s (request %s): issued %.1f s ago", name, command.name, command.request_id, age)
+            self._report(
+                command,
+                f"{name} did not apply {command.name}: it arrived {age:.0f} s after it was issued",
+                f"a command more than {self.deadline:g} s old is not applied, so that none is applied late",
+            )
+            return
         try:
             self.receiver.validate(command)
             result = await self.receiver.handle(command)

@@ -8,16 +8,20 @@ and is skipped without one.
 
 from __future__ import annotations
 
+import asyncio
 import os
 import sys
 
 import pytest
-from support import Measurement
+from support import Measurement, measurement, take
 from transport_suite import TransportSuite
 
 from pswamp_core.settings import MissingSettingError
+from pswamp_core.subscription import Overflow
 from pswamp_core.transport import transport_from_env
 from pswamp_core.transport.kafka import KafkaTransport
+from pswamp_core.util.tasks import cancel_and_wait
+from pswamp_models.player import PauseCommand
 
 BOOTSTRAP = os.environ.get("KAFKA_TEST_BOOTSTRAP_SERVERS", "")
 
@@ -48,3 +52,24 @@ class TestKafkaTransport(TransportSuite):
         transport = KafkaTransport("kafka", BOOTSTRAP)
         yield transport
         await transport.close()
+
+
+@pytest.mark.skipif(not BOOTSTRAP, reason="KAFKA_TEST_BOOTSTRAP_SERVERS is not set")
+async def test_a_reopened_consumer_resumes_the_command_topics_and_not_the_data(app):
+    receiver, sender = KafkaTransport("receiver", BOOTSTRAP), KafkaTransport("sender", BOOTSTRAP)
+    try:
+        with receiver.subscribe(PauseCommand, Measurement, app=app, overflow=Overflow.GROW) as feed:
+            await feed.ready(20)
+            await cancel_and_wait(receiver._consumer_task)  # its broker went away, as far as it knows
+            command = PauseCommand()
+            await sender.publish(command, app=app, key="k")  # meanwhile
+            await sender.publish(measurement(1), app=app, key="k")
+            receiver._consumer_task = asyncio.create_task(receiver._consume())  # reopened
+            await feed.ready(20)
+            ((key, got),) = await take(feed, 1, timeout=20)
+            assert (key, type(got), got.request_id) == ("k", PauseCommand, command.request_id)
+            await asyncio.sleep(1)
+            assert feed.get_nowait() is None  # the frame from meanwhile is not read back
+    finally:
+        await receiver.close()
+        await sender.close()
