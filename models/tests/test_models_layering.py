@@ -18,10 +18,12 @@ ALLOWED = {"pswamp_models", "pydantic", "pydantic_core", "typing_extensions", "a
 
 # What was loaded before the import (the interpreter's own start-up, a venv's
 # site hooks) is not the models' doing, so only what the import adds counts.
+# ``_sysconfigdata_<platform>`` is stdlib but not in ``stdlib_module_names``:
+# pydantic imports zoneinfo, which loads sysconfig, which loads it.
 IMPORT_ALL = """
 import importlib, pkgutil, sys
 def top():
-    return {{name.partition(".")[0] for name in sys.modules}}
+    return {{name.partition(".")[0] for name in sys.modules if not name.startswith("_sysconfigdata")}}
 before = top()
 package = importlib.import_module("pswamp_models")
 for found in pkgutil.walk_packages(package.__path__, "pswamp_models."):
