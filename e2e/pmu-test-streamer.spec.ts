@@ -101,6 +101,8 @@ test.describe('PMU test streamer', () => {
       await expect(page.getByRole('button', { name, exact: true })).toBeDisabled()
     }
     await expect(page.getByRole('slider', { name: 'Seek' })).toBeDisabled()
+    // The excursion module reads the shared stream: no per-viewer setting (a 409 server-side).
+    await expect(page.getByRole('checkbox', { name: 'Pause on excursion' })).toBeDisabled()
     await switchTo(page, 'sample')
     await expect(page.getByText(/^Recorded · Paused$/)).toBeVisible()
     await expect(frame(page)).toHaveText(/^1 of 60 /)

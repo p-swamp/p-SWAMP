@@ -31,7 +31,9 @@ cursor. A live source has one run of its own, keyed ``live.<source>``, started
 with the app and running until shutdown (``start_live_runs``), so its modules
 run once however many people watch. A client's run switched to a live source
 opens no stream: it *follows* the live run, taking that key's frames and
-results off the transport into its own ``latest``.
+results off the transport into its own ``latest``. A command for a module that
+reads the stream is refused meanwhile: that module's instance runs under the
+live run's key, for every viewer, so its settings are not one viewer's.
 
 A **``PipelineRegistry``** keeps one run per key: it builds a run on first
 ``acquire``, keeps it through a reload, evicts it when idle or, at the cap,
@@ -52,7 +54,7 @@ from pswamp_models.common import Command, ErrorEvent, PipelineClosed
 from pswamp_models.player import PlayerStatus
 
 from .active_source import ROUTER_COMMANDS, ActiveSource
-from .command_routing import CommandInbox, NoReceiver, concrete_commands
+from .command_routing import CommandInbox, CommandRefused, NoReceiver, concrete_commands
 from .host import DEFAULT_IDLE_SECONDS, ModuleHost
 from .keep_up import KeepUp
 from .log import get_logger
@@ -337,13 +339,22 @@ class PipelineRun:
         by the router, so a refusal raises ``CommandRefused`` here (the web
         API's 409) and nothing is published. A
         module command is published as it is: the module validates it where
-        it runs, and a refusal comes back as an ``ErrorEvent``. A command
-        nothing takes raises ``NoReceiver``.
+        it runs, and a refusal comes back as an ``ErrorEvent``. While the run
+        follows a shared live run, a command for a module that reads the
+        stream raises ``CommandRefused``: its instance for this view is the
+        live run's. A command nothing takes raises ``NoReceiver``.
         """
         if type(command) in ROUTER_COMMANDS:
             self.router.validate(command)
-        elif self.pipeline.module_for(type(command)) is None:
-            raise NoReceiver(f"{self.pipeline.app} has no receiver for {type(command).__name__}")
+        else:
+            module = self.pipeline.module_for(type(command))
+            if module is None:
+                raise NoReceiver(f"{self.pipeline.app} has no receiver for {type(command).__name__}")
+            if self._following is not None and module.input_models():
+                raise CommandRefused(
+                    f"{module.name} reads the shared live run {self._following.key}, so its settings are not "
+                    f"per viewer: switch to a recording to change them"
+                )
         self.outbox.publish(command)
 
     # -- lifecycle ------------------------------------------------------------------

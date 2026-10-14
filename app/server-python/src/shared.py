@@ -300,7 +300,8 @@ def dispatch_command(registry: PipelineRegistry, command: Command, log: logging.
     """Dispatch ``command`` into its client's run and acknowledge it.
 
     404 when the client has no run (a command never builds one); 409 when the
-    player refuses it now, with the reason as the detail. The ack means
+    player refuses it now, or when it is for a module that reads the shared
+    live run the client follows, with the reason as the detail. The ack means
     *accepted*: the command is queued for its receiver, and its effect arrives
     on the socket, or a refusal or failure on the error tray, carrying the
     ack's ``request_id``. Nothing reports a command that never reaches its

@@ -198,3 +198,39 @@ async def test_live_is_one_shared_run_that_client_runs_follow():
     for run in (*clients, live):
         await run.stop()
     await cancel_and_wait(hosting)
+
+
+class ResetCount(Command):
+    version: Literal["v1"] = "v1"
+
+
+class ResettableCounter(FrameCounter):
+    name = "resettable"
+    commands = (ResetCount,)
+
+    def handle(self, command: ResetCount) -> None:
+        self.count = 0
+
+
+async def test_a_command_to_a_module_reading_the_shared_live_run_is_refused():
+    transport = InMemoryTransport()
+    pipeline = Pipeline("app", two_sources, modules=(ResettableCounter, Halver))
+    hosting = asyncio.create_task(serve_hosts(pipeline.hosts(transport)))
+    await asyncio.sleep(0)
+    (live,) = await start_live_runs(pipeline, transport)
+    run = PipelineRun("a", pipeline, transport)
+    await run.start()
+    run.dispatch(ResetCount())  # on its own replay: its own instance
+    run.dispatch(SwitchSourceCommand(source="tick"))
+    await until(lambda: run.following == "live.tick")
+    # The counter that matters runs under live.tick, for every viewer.
+    with pytest.raises(CommandRefused, match="resettable reads the shared live run"):
+        run.dispatch(ResetCount())
+    run.dispatch(HalveCommand(value=2))  # a module that reads no stream still answers
+    await until(lambda: run.latest.get(NumberResult) is not None and run.latest.get(NumberResult).app.name == "halver")
+    run.dispatch(SwitchSourceCommand(source="rec"))
+    await until(lambda: run.following is None)
+    run.dispatch(ResetCount())
+    for each in (run, live):
+        await each.stop()
+    await cancel_and_wait(hosting)

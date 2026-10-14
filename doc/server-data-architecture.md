@@ -120,6 +120,7 @@ classes.
 | runs | one per client, with its own cursor and speed | one per live source, always on |
 | player controls | play, pause, step, seek, speed | none: a live feed is followed |
 | modules | one instance per client | one instance, results shared |
+| module commands | to the client's instance | refused (409) for a module that reads the stream |
 
 *What.* Each client has its own run, and picks its source with
 `SwitchSourceCommand`. On a recording, the active source replays it (it is
@@ -128,13 +129,18 @@ live source has one shared run, keyed `live.<source>`, which `serve_pipeline`
 starts with the app (`start_live_runs`) and stops at shutdown. A client's run
 switched to a live source opens no stream: its router reports "live", and the
 run follows the shared run's frame and result topics into its own `latest`.
-The web API reads a client's run the same way in both cases.
+The web API reads a client's run the same way in both cases. While following,
+a command for a module that reads the stream (auto-pause) is refused with a
+409. A module that reads no stream, such as the range summary, still answers.
 
 *Why.* Everyone watching live must see the same instant, and its analysis
 should run once, however many people watch. A visitor exploring recorded data
 wants their own clock. Always on means live analysis runs with no viewer too,
 as it would in a control room. Topics are shared by every key of an app; the
-record key keeps runs apart.
+record key keeps runs apart. A module's instance on live is everyone's, so one
+viewer's setting must not change what the others see. Sent under the client's
+own key, it would reach an instance that gets no frames, so it would change
+nothing.
 
 *Where.* `core/src/pswamp_core/pipeline.py` (`start_live_runs`,
 `PipelineRun._follow`), `active_source.py` (`follow_live`), `shared.serve_pipeline`.

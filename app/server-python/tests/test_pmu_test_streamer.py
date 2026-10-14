@@ -75,6 +75,9 @@ def test_live_is_a_source_without_transport_controls(server):
         assert state["frame"]["mRID"] == LIVE_STREAM_ID and state["frame_index"] is None
         refused = server.post("/api/pmu-test-streamer/playback/seek?client_id=104", json={"offset_s": 1})
         assert refused.status_code == 409 and "live" in refused.json()["detail"]
+        # The excursion module reads the shared stream: no per-viewer setting.
+        refused = server.post("/api/pmu-test-streamer/excursion/auto-pause?client_id=104", json={"enabled": True})
+        assert refused.status_code == 409 and "shared live run" in refused.json()["detail"]
         server.post("/api/pmu-test-streamer/playback/source?client_id=104", json={"name": "sample"})
         back = next_state(ws, lambda s: s["player"]["mode"] == "replay")
         assert back["player"]["paused"]

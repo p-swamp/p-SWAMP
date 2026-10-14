@@ -583,7 +583,8 @@ The rules to keep:
   server's `src/`, so a module that imports the web backend fails at start.
 - **Recordings are per client, live is shared.** A client's run is keyed by its
   client id; each live source has one always-on run keyed `live.<source>`, which
-  client runs follow.
+  client runs follow. While following, a command for a module that reads the
+  stream is refused (409): that instance is every viewer's.
 - **The in-memory transport is not a mock.** It round-trips every message
   through JSON, so the unit tests catch what Kafka would. A new transport passes
   `core/tests/transport_suite.py`.

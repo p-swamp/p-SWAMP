@@ -45,7 +45,7 @@ module contract for the next module.
 | # | Issue | Origin | Decision |
 |---|---|---|---|
 | 32 | A hung remote data service holds up every command of the run | before | — |
-| 40 | A module command sent while following the shared live run reaches an instance that gets no frames | before | Decided |
+| 40 | A module command sent while following the shared live run reaches an instance that gets no frames (fixed 2026-10-14) | before | Decided |
 | 1 | A `blocking` module runs `process` and `handle` in two threads at once (fixed 2026-10-14) | Louis | D5 |
 | 2 | A sync `read` source holds the event loop; a live one would freeze the server (fixed 2026-10-14) | Louis | — |
 | 11 | A module with a dependency of its own fails to import in the image | Louis | D4 |
@@ -240,7 +240,10 @@ the grid monitor's `AlarmStore` is today.
   join and several `@on` inputs (3(a) and 14: experimental, per D5), and every
   Low comment.
 - **Comment 40: refuse.** A module command sent while following a shared live
-  run answers 409. Module settings apply only to a client's own replay.
+  run answers 409. Module settings apply only to a client's own replay. As
+  built, only a module that reads the stream is refused. A module with no
+  inputs (the range summary) reads its own sources, so its instance under the
+  client's key is the right one, and it still answers.
 - **Comment 31: retry, then report.** An outbox retries a command until a
   deadline (~10 s). If it gives up, the server reports to that client's tray
   in process, not over the transport. Command topics resume from their last
@@ -785,6 +788,9 @@ was run again, in bare, compose and minikube.
   while following, the modules that matter run under the live run's key.
   Sending it there instead would change the setting for every viewer.
 - Decided: refuse it with a 409 while following (see "Decided").
+- Fixed 2026-10-14 in `PipelineRun.dispatch`: `CommandRefused` for a module
+  with inputs while `_following` is set. The streamer's auto-pause box was
+  already disabled while live; the Playwright spec now checks that.
 
 ---
 
