@@ -11,7 +11,8 @@ were reproduced with the script in the appendix. The test suites were not run
 then; on 2026-10-14 the branch was run end to end (comments 28 to 39, under
 "Running it"). Whether other developers can start on modules, CIM lookup and
 remote data, and the decisions to make first, are under "Readiness for edge
-work".
+work". How hard it is to lift the desktop WAMPAC apps into modules is
+under "Lifting the desktop WAMPAC apps".
 
 Compose, k8s and the pipeline file agree with the code today, and the module
 index in `modules/README.md` matches all six projects.
@@ -48,7 +49,7 @@ module contract for the next module.
 | 11 | A module with a dependency of its own fails to import in the image | Louis | D4 |
 | 33 | The models layering test fails, so the unit tests are red | Louis | — |
 | 6 | No teardown hook: a resource leaks per evicted key | before | D1 |
-| 9 | Two producers of one class, or a cycle, pass every check | before | — |
+| 9 | Two producers of one class, or a cycle, pass every check | before | D14 |
 | 5 | A module cannot publish outside a call | Louis | D2 |
 | 3 | The join builds its bundle at dequeue; an input from after a seek back stays fresh | Louis | D1, D5 |
 | 4 | `class X(SourceModule, Playable)` is accepted and half works | Louis | — |
@@ -214,17 +215,98 @@ own "Not settled yet" list. Authentication and TLS, limits, and models beyond
 settings now (`<APP>_REMOTE_TOKEN`, a CA bundle) under D3, so adding them is
 additive. Live data over a remote service is a second contract, not this one.
 
+**D14. One class, several producers.** Settles comment 9 (two producers of
+one class). Comment 9 suggests refusing them. The WAMPAC apps need the
+opposite for events: every app reports a status, several raise alarms, each
+onto one topic that one consumer reads (`AlarmSender` in
+`desktop/src/pswamp/coordination/alarm_handling.py` does exactly that). Options:
+(a) refuse, and give each app status and alarm classes of its own; (b) allow
+several producers for a class marked as an event stream (status, alarms),
+refuse it for anything else; (c) allow it everywhere, as now. Recommend (b);
+a cycle stays refused either way. Note `run.latest` keeps only the newest
+message of a class, so a page showing a stream needs a store at the edge, as
+the grid monitor's `AlarmStore` is today.
+
 ### Order
 
-1. Decide D1 to D13.
+1. Decide D1 to D14.
 2. Build the decisions that change edge code: D7, D3, D1, D2, D8 to D10, D4,
    D6, D5.
 3. Open the edges: remote data now; CIM lookup after D8 to D11; modules after
    D1 to D5.
 4. Any time, behind the line: 28, 29, 31, 32, 2, 14, 3.
 5. Fixes that need no decision, any time: 33 first (it keeps the unit tests
-   red), then 4, 7, 8, 9, 13, 15, 16, 17, 18, 20, 21, 22, 34, 35, 36, 37, 38,
-   39, and the two rules of 19 that D7 leaves.
+   red), then 4, 7, 8, 13, 15, 16, 17, 18, 20, 21, 22, 34, 35, 36, 37, 38, 39,
+   and the two rules of 19 that D7 leaves.
+
+---
+
+## Lifting the desktop WAMPAC apps into modules (2026-10-14)
+
+How hard it is to move the monitoring applications in
+`desktop/src/pswamp/monitoring/` into `modules/` under today's contract.
+
+**What there is.** Five files, 70 to 190 lines each, on shared templates
+(`app_templates/`: `SnapshotApp`, `TimeWindowApp`, status reporting and
+`AlarmHandler`), labeled time windows (`utils/`), a C37.118 decoder
+(`utils/pypmu.py`), Kafka/MQTT I/O (`streaming/`) and alarm handling
+(`coordination/`): ~2,100 lines in all. The analysis inside each app is a
+small numpy function; the rest is a run loop, I/O and windowing that the core
+now does.
+
+**Spike.** Islanding and line outage written as `Module`s (scratch, not in the
+repo), calling the desktop algorithms unchanged, run as a script over the
+grid monitor's N44 recording (3,501 frames, 700 columns, 40 KB per frame as
+JSON):
+
+- Islanding: islands 6500, 6700, 6701 from t=23 s (the grid monitor's sanity
+  values); 0.03 ms per frame. After the reconnection (41 to 52 s)
+  `detect_islands` returns overlapping groups; the web layer fixes that up
+  today (`island_groups` in `pswamp_web/stores.py`), so a port moves the fix
+  into the module.
+- Line outage: disconnect at 20.2 s, connect at 40.0 s; 0.02 ms per frame.
+- Each is ~40 lines, plus a ~40-line window over a frame's columns that both
+  need.
+- N4SID, timed separately on a 45 s window of the 44 frequencies: 0.21 s per
+  identification on this Mac (0.26 s with one BLAS thread; an earlier
+  container measurement was 0.62 s). The least damped modes come out at
+  0.019, below the app's 0.03 "Emergency".
+
+| App | Port | Why |
+|---|---|---|
+| Islanding (`islanding.py`) | Easy | Pure function; evaluating on data time (1 Hz over a 10 s window) fits `process` as is. Move in the overlapping-groups fix; alarms per D14. |
+| Line outage (`line_outage_detection.py`) | Easy | Threshold over 10 samples, with state. Needs current channels, which no source in `modules/` has (below). |
+| N4SID mode estimation (`n4sid.py`) | Medium to hard | `blocking = True`, and while an identification runs the instance reads nothing: at 1x the queue (64 frames) covers it, faster replays drop frames, and the window gets gaps N4SID does not expect (D2's open question). One identification per second per client watching a replay. `nfoursid` brings pandas and matplotlib (D4). Its `warnings.simplefilter("error", ...)` at import changes every module in the worker. Eigenvalues and mode shapes are complex: they need a wire shape. Without `window_length` its window grows for ever. |
+| FFT (`fft.py`) | Medium: design, not code | Publishes nothing: the Qt plot reads its spectra off the app object. Its output (a spectrum per channel per evaluation) needs a message designed. Its constructor talks to Kafka directly; that goes. Its thresholds say "need to be adjusted". |
+| FFT v2 (`fft_v2.py`) | Not portable | Imports `monitoring/utils.py`, deleted on 2026-03-03 ("Removed unused TimeWindowRTApp"). Dead code. |
+| Voltage stability, SSI, Prony | Not here | The examples and the app launcher import them; they were never in this repo. |
+| Status and alarms (`AlarmHandler`, `AlarmSender`, `ReportingApp`) | Medium: contract | Each app's status (OK, Alert, Emergency) feeds one alarm consumer: several producers of one class (D14). Status once a second when nothing else is published needs D2's tick. |
+
+**Work shared by all of them, done once:**
+
+1. A window over a frame's columns (by measurement, NaN handling, a new
+   layout resets it). The desktop's `TimeWindowLabeled` and `PMUDecoder` work
+   on C37.118 frames and live in the desktop package, which a module may not
+   import, so it needs a home (D4's `libs/`).
+2. A source with the data. `sample-replay` holds 60 frames (3 s at 20 Hz,
+   voltage and frequency only). Islanding needs 10 s, N4SID 45 s, line outage
+   currents. A source over `n44_line_trip_50hz.npz` (70 s, 50 Hz, 700 columns)
+   covers all three.
+3. Result models in `pswamp_models`: islands as station names, events with
+   stations, eigenvalues as pairs; today's results are dicts of numpy arrays
+   and uuids.
+4. A window reset on seek and source switch (D1's `reset`). Without it a seek
+   back mixes the old window with the new stream.
+5. The grid monitor's pages read the desktop apps today (`pswamp_web`, on
+   threads). Modules help those pages only once they are re-pointed at them.
+
+**Verdict.** The algorithms lift with little change, and the contract fits a
+windowed, data-time-driven analysis. The cost is around them: the window
+helper and its home (D4), a source with the data, D1's reset, D2 for N4SID
+and status, D14 for alarms, an output design for FFT, then the pages.
+Suggested order: islanding and line outage first (after D4 and the N44
+source); status and alarms with D14; N4SID after D2 and D4; FFT once its
+output is designed.
 
 ---
 
