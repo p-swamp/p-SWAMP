@@ -12,7 +12,8 @@ then; on 2026-10-14 the branch was run end to end (comments 28 to 39, under
 "Running it"). Whether other developers can start on modules, CIM lookup and
 remote data, and the decisions to make first, are under "Readiness for edge
 work". How hard it is to lift the desktop WAMPAC apps into modules is
-under "Lifting the desktop WAMPAC apps".
+under "Lifting the desktop WAMPAC apps". Comment 40 came later, under "Found in the contract
+pass".
 
 Compose, k8s and the pipeline file agree with the code today, and the module
 index in `modules/README.md` matches all six projects.
@@ -44,10 +45,11 @@ module contract for the next module.
 | # | Issue | Origin | Decision |
 |---|---|---|---|
 | 32 | A hung remote data service holds up every command of the run | before | — |
+| 40 | A module command sent while following the shared live run reaches an instance that gets no frames | before | Decided |
 | 1 | A `blocking` module runs `process` and `handle` in two threads at once | Louis | D5 |
 | 2 | A sync `read` source holds the event loop; a live one would freeze the server | Louis | — |
 | 11 | A module with a dependency of its own fails to import in the image | Louis | D4 |
-| 33 | The models layering test fails, so the unit tests are red | Louis | — |
+| 33 | The models layering test fails, so the unit tests are red (fixed 2026-10-14) | Louis | — |
 | 6 | No teardown hook: a resource leaks per evicted key | before | D1 |
 | 9 | Two producers of one class, or a cycle, pass every check | before | D14 |
 | 5 | A module cannot publish outside a call | Louis | D2 |
@@ -226,6 +228,26 @@ refuse it for anything else; (c) allow it everywhere, as now. Recommend (b);
 a cycle stays refused either way. Note `run.latest` keeps only the newest
 message of a class, so a page showing a stream needs a store at the edge, as
 the grid monitor's `AlarmStore` is today.
+
+### Decided (2026-10-14)
+
+- **What "sound" takes.** Six comments are design faults, not code faults,
+  and are fixed first: 30 with 3(b), 6 and 40 (D1: the transport key names a
+  client, not a run); 31 and 32 (an acknowledged command can vanish); 28 (a
+  broken broker leaves the probes green); 1 (D5's per-instance lock); 2; 29.
+  Then D7, D3, D2, D14 and D4, one at a time. Deferred: D6 (write the
+  additive-only rule down for now), D8 to D13 (until CIM work starts), the
+  join and several `@on` inputs (3(a) and 14: experimental, per D5), and every
+  Low comment.
+- **Comment 40: refuse.** A module command sent while following a shared live
+  run answers 409. Module settings apply only to a client's own replay.
+- **Comment 31: retry, then report.** An outbox retries a command until a
+  deadline (~10 s). If it gives up, the server reports to that client's tray
+  in process, not over the transport. Command topics resume from their last
+  position after a consumer reconnect; data topics still start at the end.
+
+This replaces "Order" below, which is kept for the record. The new order: 33;
+1; 2; 40; D1 (30, 3(b), 6); 31 and 32; 28; 29; then the five decisions.
 
 ### Order
 
@@ -738,6 +760,25 @@ was run again, in bare, compose and minikube.
   and 32 in compose and minikube; 29 in process; 34, 35 bare; 36, 38 compose;
   37 in the code.
 - Comment 33: still fails.
+
+---
+
+## Found in the contract pass (2026-10-14)
+
+**40. A module command sent while following the shared live run reaches an instance that gets no frames.**
+- Seen (in process, `SampleReplay` and `LiveSynthetic` as sources, the
+  excursion module): a client switched to live follows `live.live`. An
+  `AutoPauseCommand` from it builds an excursion instance under `c1`, and the
+  host logs "excursion applied auto.pause". The live data and results are
+  under `live.live`, so the setting changes nothing the client sees, and
+  nothing says so.
+- Where: `core/src/pswamp_core/pipeline.py:333-347`. `dispatch` publishes
+  every command under the run's own key, following or not. A host builds an
+  instance on any message for a key, a command included (`host.py:251-261`).
+- Why: one case of D1. A module command is aimed at the client's run, but
+  while following, the modules that matter run under the live run's key.
+  Sending it there instead would change the setting for every viewer.
+- Decided: refuse it with a 409 while following (see "Decided").
 
 ---
 
