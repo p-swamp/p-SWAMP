@@ -265,7 +265,10 @@ about a minute of retention. It reads every topic its process listens to with
 one consumer, from the topic's end, with no consumer group. A consumer that
 fails is reopened with backoff and resumes each control topic (commands,
 errors, `PipelineClosed`) where it was, so what was sent meanwhile still
-arrives; a data topic starts again at its end. A broker that lost its topics
+arrives; a data topic starts again at its end. Kafka keeps order within a
+topic only, and each class has its own, so the consumer delivers each fetch
+in the order it was sent: a pause then a play sent meanwhile arrive in that
+order. A broker that lost its topics
 (a new one, with no volume) is noticed on both sides, and the topics are made
 again: a failed publish makes its topic on the next try, and the consumer
 checks every 2 s that the topics it holds still exist. Compose runs the broker as

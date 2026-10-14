@@ -24,6 +24,11 @@
   (``CommandInbox``). A data topic starts again at its end. A control topic
   whose offsets no longer fit (the broker lost it and made it again) is read
   from its start.
+- **Order.** Kafka keeps order within a topic only, and each class has its
+  own topic. Each fetch is delivered each topic in its own order, the topics
+  interleaved by when each record was sent (its CreateTime; within one ms, a
+  command's issue time). So commands of different classes apply as sent,
+  also when a reconnect fetches everything sent meanwhile at once.
 - **A broker that lost its topics** (a new broker with no volume) is noticed
   both ways. A publish that fails makes its topic again on the next try. The
   consumer checks every ``_TOPIC_CHECK_S`` that the topics it holds still
@@ -39,11 +44,12 @@ this class costs nothing without it.
 from __future__ import annotations
 
 import asyncio
+import heapq
 import time
 from collections.abc import Sequence
 from typing import TYPE_CHECKING, Any
 
-from pswamp_models.common import stamp_sent_at
+from pswamp_models.common import Command, stamp_sent_at
 
 from ..log import get_logger
 from ..settings import EnvSetting
@@ -197,9 +203,7 @@ class KafkaTransport(Transport):
                 while True:
                     if self._unassigned:
                         await self._assign(consumer)
-                    batches = await consumer.getmany(timeout_ms=_POLL_MS)
-                    for partition, records in batches.items():
-                        self._decode(partition.topic, records)
+                    self._decode(await consumer.getmany(timeout_ms=_POLL_MS))
                     delay = _RECONNECT_DELAY
                     if time.monotonic() - checked >= _TOPIC_CHECK_S:
                         checked = time.monotonic()
@@ -265,21 +269,41 @@ class KafkaTransport(Transport):
         model = self._models.get(topic)
         return model is not None and issubclass(model, _CONTROL)
 
-    def _decode(self, topic: str, records: Sequence[Any]) -> None:
-        model = self._models.get(topic)
-        if model is None:
-            return
-        for record in records:
-            try:
-                message = model.model_validate_json(record.value)
-            except Exception as error:
-                logger.warning("%s: dropping an undecodable record on %s: %s", self.name, topic, error)
+    def _decode(self, batches: dict[Any, Sequence[Any]]) -> None:
+        """Deliver one fetch: each topic in its own order, the topics
+        interleaved by when each record was sent. Kafka keeps order within a
+        topic only, and each class has its own, so a pause then a play would
+        otherwise arrive in whatever order the fetch lists their topics; after
+        a reconnect, everything sent meanwhile is one fetch."""
+        topics = []
+        for partition, records in batches.items():
+            topic = partition.topic
+            model = self._models.get(topic)
+            if model is None:
                 continue
-            if record.timestamp is not None and record.timestamp >= 0:
-                stamp_sent_at(message, record.timestamp / 1000.0)  # the producer's CreateTime
+            received = []
+            for record in records:
+                try:
+                    message = model.model_validate_json(record.value)
+                except Exception as error:
+                    logger.warning("%s: dropping an undecodable record on %s: %s", self.name, topic, error)
+                    continue
+                if record.timestamp is not None and record.timestamp >= 0:
+                    stamp_sent_at(message, record.timestamp / 1000.0)  # the producer's CreateTime
+                received.append((topic, record, message))
+            topics.append(received)
+            if records and topic in self._resume_at:
+                self._resume_at[topic] = records[-1].offset + 1
+        # merge, not sort: a topic's own order stands even if producers' clocks differ
+        for topic, record, message in heapq.merge(*topics, key=_sent_order):
             self._deliver(topic, record.key.decode() if record.key else "", message)
-        if records and topic in self._resume_at:
-            self._resume_at[topic] = records[-1].offset + 1
+
+
+def _sent_order(item: tuple[str, Any, DataModel]) -> tuple[int, float]:
+    """When a record was sent, in ms; within one ms, a command's issue time."""
+    _, record, message = item
+    sent = record.timestamp if record.timestamp is not None and record.timestamp >= 0 else 0
+    return sent, message.timestamp.timestamp() if isinstance(message, Command) else 0.0
 
 
 async def _stop(consumer: Any) -> None:

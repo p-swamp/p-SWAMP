@@ -22,7 +22,7 @@ from pswamp_core.subscription import Overflow
 from pswamp_core.transport import transport_from_env
 from pswamp_core.transport.kafka import KafkaTransport
 from pswamp_core.util.tasks import cancel_and_wait
-from pswamp_models.player import PauseCommand
+from pswamp_models.player import PauseCommand, PlayCommand
 
 BOOTSTRAP = os.environ.get("KAFKA_TEST_BOOTSTRAP_SERVERS", "")
 
@@ -71,6 +71,25 @@ async def test_a_reopened_consumer_resumes_the_command_topics_and_not_the_data(a
             assert (key, type(got), got.request_id) == ("k", PauseCommand, command.request_id)
             await asyncio.sleep(1)
             assert feed.get_nowait() is None  # the frame from meanwhile is not read back
+    finally:
+        await receiver.close()
+        await sender.close()
+
+
+@pytest.mark.skipif(not BOOTSTRAP, reason="KAFKA_TEST_BOOTSTRAP_SERVERS is not set")
+async def test_commands_from_meanwhile_arrive_in_the_order_sent_across_their_topics(app):
+    receiver, sender = KafkaTransport("receiver", BOOTSTRAP), KafkaTransport("sender", BOOTSTRAP)
+    try:
+        with receiver.subscribe(PauseCommand, PlayCommand, app=app, overflow=Overflow.GROW) as feed:
+            await feed.ready(20)
+            await cancel_and_wait(receiver._consumer_task)
+            sent = [PauseCommand(), PlayCommand(), PauseCommand(), PlayCommand()]  # one topic per class
+            for command in sent:
+                await sender.publish(command, app=app, key="k")
+            receiver._consumer_task = asyncio.create_task(receiver._consume())  # reopened: all four in one fetch
+            await feed.ready(20)
+            got = await take(feed, len(sent), timeout=20)
+            assert [message.request_id for _, message in got] == [command.request_id for command in sent]
     finally:
         await receiver.close()
         await sender.close()
