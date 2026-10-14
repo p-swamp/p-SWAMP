@@ -9,7 +9,9 @@ projects under `modules/` were read in full; compose, k8s, the Dockerfile, the
 docs and the generator were read against that code. Comments 1 to 4, 9 and 13
 were reproduced with the script in the appendix. The test suites were not run
 then; on 2026-10-14 the branch was run end to end (comments 28 to 39, under
-"Running it").
+"Running it"). Whether other developers can start on modules, CIM lookup and
+remote data, and the decisions to make first, are under "Readiness for edge
+work".
 
 Compose, k8s and the pipeline file agree with the code today, and the module
 index in `modules/README.md` matches all six projects.
@@ -21,61 +23,208 @@ index in `modules/README.md` matches all six projects.
 Every comment below, ranked. "Before" means it was already there at `069f88f`,
 before this review's scope; "Louis" means it came with `f70d7d6` to `dbf635b`.
 Comment 39 is about the refused-socket change (`924221e`), not Louis's commits,
-and is left out. Retested at
+and is left out. "Decision" names the decision below that settles a comment;
+"—" is a fix that needs no decision (step 5 under "Order"). Retested at
 `16f36a5`: all still present except 23 to 27, which are fixed (see "Retest at
 `16f36a5`").
 
 **High**: breaks a running deployment, or silently loses what a user asked for.
 
-| # | Issue | Origin |
-|---|---|---|
-| 28 | Kafka losing its topics stops the stack until every process restarts; probes stay green | before |
-| 29 | A live source that fails stays failed; later viewers are not told | before |
-| 31 | A command sent during a broker outage is acknowledged, then lost or applied late | before |
-| 30 | Module state belongs to the key: settings lost on a worker restart, inherited after a crash | before |
+| # | Issue | Origin | Decision |
+|---|---|---|---|
+| 28 | Kafka losing its topics stops the stack until every process restarts; probes stay green | before | — |
+| 29 | A live source that fails stays failed; later viewers are not told | before | — |
+| 31 | A command sent during a broker outage is acknowledged, then lost or applied late | before | — |
+| 30 | Module state belongs to the key: settings lost on a worker restart, inherited after a crash | before | D1 |
 
 **Medium**: wrong in situations the project will soon reach, or a trap in the
 module contract for the next module.
 
-| # | Issue | Origin |
-|---|---|---|
-| 32 | A hung remote data service holds up every command of the run | before |
-| 1 | A `blocking` module runs `process` and `handle` in two threads at once | Louis |
-| 2 | A sync `read` source holds the event loop; a live one would freeze the server | Louis |
-| 11 | A module with a dependency of its own fails to import in the image | Louis |
-| 33 | The models layering test fails, so the unit tests are red | Louis |
-| 6 | No teardown hook: a resource leaks per evicted key | before |
-| 9 | Two producers of one class, or a cycle, pass every check | before |
-| 5 | A module cannot publish outside a call | Louis |
-| 3 | The join builds its bundle at dequeue; an input from after a seek back stays fresh | Louis |
-| 4 | `class X(SourceModule, Playable)` is accepted and half works | Louis |
-| 14 | Several `@on` inputs share one drop-oldest queue | Louis |
-| 18 | A non-playable history is pumped unpaced; the generator writes that shape | Louis |
-| 10 | One flat namespace for source settings; modules cannot be configured | Louis |
-| 21 | A generated source's pipeline file is loaded by nothing | Louis |
-| 20 | The remote-data stub is in the image by an unchecked `.dockerignore` exception | Louis |
+| # | Issue | Origin | Decision |
+|---|---|---|---|
+| 32 | A hung remote data service holds up every command of the run | before | — |
+| 1 | A `blocking` module runs `process` and `handle` in two threads at once | Louis | D5 |
+| 2 | A sync `read` source holds the event loop; a live one would freeze the server | Louis | — |
+| 11 | A module with a dependency of its own fails to import in the image | Louis | D4 |
+| 33 | The models layering test fails, so the unit tests are red | Louis | — |
+| 6 | No teardown hook: a resource leaks per evicted key | before | D1 |
+| 9 | Two producers of one class, or a cycle, pass every check | before | — |
+| 5 | A module cannot publish outside a call | Louis | D2 |
+| 3 | The join builds its bundle at dequeue; an input from after a seek back stays fresh | Louis | D1, D5 |
+| 4 | `class X(SourceModule, Playable)` is accepted and half works | Louis | — |
+| 14 | Several `@on` inputs share one drop-oldest queue | Louis | D5 |
+| 18 | A non-playable history is pumped unpaced; the generator writes that shape | Louis | — |
+| 10 | One flat namespace for source settings; modules cannot be configured | Louis | D3 |
+| 21 | A generated source's pipeline file is loaded by nothing | Louis | — |
+| 20 | The remote-data stub is in the image by an unchecked `.dockerignore` exception | Louis | — |
 
 **Low**: edge cases, small leaks, tooling.
 
-| # | Issue | Origin |
-|---|---|---|
-| 38 | A run keeps playing for 300 s after its last socket closes | before |
-| 36 | An outbox reports falling behind, never catching up | before |
-| 34 | A seek whose end is not after its start answers 500 | before |
-| 35 | A huge negative step reaches the tray as `OverflowError` | before |
-| 13 | An input without a `timestamp` fails every body result | before |
-| 15 | `missing="skip"` skips silently | Louis |
-| 8 | "A source is a module" holds for the type, not the behaviour | Louis |
-| 7 | A source's outputs past the first are half supported | Louis |
-| 37 | The error tray keeps 20 notices per client id for ever | before |
-| 12 | Code shared by two modules has no home | Louis |
-| 19 | Three rules AGENTS.md calls test-enforced are not | Louis |
-| 22 | The generator's worker-list patterns are not bounded to their block | Louis |
-| 16 | `SourceConformance` reads without `open()` | Louis |
-| 17 | `Module` has no `abstract = True` | Louis |
+| # | Issue | Origin | Decision |
+|---|---|---|---|
+| 38 | A run keeps playing for 300 s after its last socket closes | before | — |
+| 36 | An outbox reports falling behind, never catching up | before | — |
+| 34 | A seek whose end is not after its start answers 500 | before | — |
+| 35 | A huge negative step reaches the tray as `OverflowError` | before | — |
+| 13 | An input without a `timestamp` fails every body result | before | — |
+| 15 | `missing="skip"` skips silently | Louis | — |
+| 8 | "A source is a module" holds for the type, not the behaviour | Louis | — |
+| 7 | A source's outputs past the first are half supported | Louis | — |
+| 37 | The error tray keeps 20 notices per client id for ever | before | — |
+| 12 | Code shared by two modules has no home | Louis | D4 |
+| 19 | Three rules AGENTS.md calls test-enforced are not | Louis | D7 (part) |
+| 22 | The generator's worker-list patterns are not bounded to their block | Louis | — |
+| 16 | `SourceConformance` reads without `open()` | Louis | — |
+| 17 | `Module` has no `abstract = True` | Louis | — |
 
 **Docs and wording**: 23 to 27 (Louis). Fixed in `16f36a5`; see the note under
 "Docs and wording".
+
+---
+
+## Readiness for edge work, and the contract pass (2026-10-14)
+
+The question: can other developers start on modules, CIM lookup and remote
+data integration while the pipeline, transport and the rest of the plumbing
+keep changing under them?
+
+**The split is right.** A module declares inputs and outputs and writes plain
+code; a source writes `read` or `aread`; neither sees the transport, runs,
+hosts or the broker. Edge code today imports `Module`, `SourceModule`,
+`Playable`, `EnvSetting`, `TimeRange`, `SourceConformance`, `CommandRefused`,
+three time helpers and `pswamp_models`, nothing else. Comments 28, 29, 31, 32,
+1, 2 and 14 can be fixed behind that line, with no module or source changing.
+Messages leave pydantic's default (unknown fields ignored), so an optional
+field added within `v1` does not break an older reader.
+
+**What is not settled is what edge code is written against.** Deciding those
+later changes edge code, so they are decided first (the decisions below), then
+the edges open.
+
+### Readiness
+
+| Plug point | Ready? | Waits for |
+|---|---|---|
+| Remote data integration | Now. The integration is the HTTP contract (`doc/remote-data-integration-contract.md`): a deployment's service never touches the core. | D3 (settings names, before deployments are configured); D13 later |
+| CIM lookup | After D8 to D11. | Only D8 and D10 need code, both small |
+| Modules, per-frame | Now. | |
+| Modules, stateful, periodic, configured, or with dependencies | After D1 to D5. | |
+
+### The CIM scope (decided 2026-10-14)
+
+A CIM plugin is a clean place to add CIM lookup logic later. Its outcome is a
+reference id on the frame, not grid data on the transport. The hook exists:
+`CimReferenceEnricher.reference_for(header)` (`core/src/pswamp_core/enrich.py`),
+called once per channel layout, cached, stamped on every frame as
+`PmuHeader.cimReferenceId`, applied to every source stream in every process
+that builds a `SourceSet`. Today it returns the configured stub id.
+
+### Decisions
+
+Each: the question, the options, a recommendation. Nothing is built until they
+are decided.
+
+**D1. When a module instance starts and stops.** Settles comments 30, 3(b)
+and 6. Today
+an instance belongs to the client id (`host.py:251-261`): it survives seeks and
+switches, a worker restart drops it silently, and a new run inherits it after a
+crash. No teardown. Options: (a) an instance per run: the run's transport key
+carries a run id, so a new run always gets fresh instances; (b) keep the client
+id, and the run announces its start so a host rebuilds; (c) as now, documented.
+Recommend (a), plus a `teardown()` hook, a `reset(reason)` hook called on seek
+and source switch (default: nothing), and **sticky settings**: a command class
+marked `sticky` is replayed by the run to a rebuilt instance, so a user's
+setting (auto-pause) survives a worker restart. Touches: every stateful module.
+
+**D2. Output outside a call.** Settles comment 5. Options: (a) a periodic hook:
+`every = 1.0` and `tick(now)`, returning outputs like `process` does; (b) an
+injected `publish` (the `setup(out)` that was removed); (c) none, documented.
+Recommend (a): it keeps "return, don't emit" and covers watchdogs, periodic
+summaries and windowed analyses (buffer in `process`, compute in `tick`). Open
+within (a): whether `tick` may run in a thread while `process` keeps reading.
+
+**D3. Configuration.** Settles comment 10. Today module settings are constants, the
+pipeline file forbids settings, and sources read `{NAME}_{SETTING}` in one
+namespace across apps (`REMOTE_URL`, `LIVE_PATH`). Options: (a) one style for
+modules and sources: declared settings, values in the pipeline file
+(`[modules.<name>]`, `[sources.<name>]`), app-scoped environment overrides
+(`<APP>_<NAME>_<SETTING>`, beside the existing `<APP>_SOURCES`); (b) environment
+only, app-scoped. Recommend (a), now: it renames every deployed setting, so it
+lands before remote-data teams configure deployments. A module listed twice
+under two names follows from it.
+
+**D4. Dependencies and shared code.** Settles comments 11 and 12. The image gets a
+module's third-party dependencies only through the server's manifest, which the
+generator edits; a module added by hand ships without them. Recommend: a
+`pswamp check` step that every `modules/*` project is a server dependency; and a
+home for shared code, `libs/<name>/` projects that modules may depend on (the
+layering test allows module → lib, never module → module).
+
+**D5. Guarantees, and what is experimental.** Settles comment 1, and parks 3
+and 14 until they are fixed (step 4). Recommend:
+guarantee one call at a time per instance (a per-instance lock in the host;
+internal); mark the join and several `@on` inputs experimental until 3 and 14
+are fixed, in the docstring and the cookbook.
+
+**D6. How messages change.** Settles no comment: it comes from the readiness
+question and the remote contract's "Not settled yet". Recommend the rule: within a version, add
+optional fields only; a breaking change is a new class or version, published
+beside the old one during a move. Make "unknown fields ignored" explicit on
+`DataModel` with a test, and have `pswamp check` flag a field removed or
+changed in `pswamp_models` against a committed schema snapshot, as it does for
+the api contract.
+
+**D7. The public API.** Settles part of comment 19 (a module importing
+another module gets caught). `pswamp_core/__init__.py` exports nothing. Recommend:
+re-export the edge surface from `pswamp_core` (`Module`, `on`, `Latest`,
+`SourceModule`, `Playable`, `EnvSetting`, `TimeRange`, `CommandRefused`,
+`SourceConformance`, the time helpers, the CIM lookup base), call everything
+else internal, and have the layering test hold module and source code to it.
+
+**D8. Installing a CIM lookup.** From the CIM scope; settles no comment. Today `pipeline_config.py:203` hard-codes
+`CimReferenceEnricher`; the pipeline file takes only `cim_reference`.
+Recommend: `[enrich] cim = "<entry point>"` in a `pswamp.enrichers` group,
+configured as in D3; `cim_reference` stays as the stub's setting.
+
+**D9. What a lookup receives.** From the CIM scope; settles no comment. Today the layout only: no stream (`mRID`), no
+source name, no time, so a recording from before a grid change cannot get the
+old model's id. Recommend a small frozen context object (header, stream
+`mRID`, source name, the first frame's timestamp), so it can grow without
+breaking a lookup.
+
+**D10. I/O and failure.** From the CIM scope; settles no comment. Today it is synchronous on the event loop ("no
+I/O"), and a lookup that raises stops the stream. Recommend: an async form,
+awaited once per new layout before its first frame goes out, plus `open` /
+`aopen` for loading at start (as sources have); a failed lookup passes the
+frame with no id and reports once per layout on the error tray.
+
+**D11. How long an id holds.** From the CIM scope; settles no comment. Today per layout, for the life of the run.
+Recommend: cache per (layout, stream); a lookup may return a validity end,
+after which the next frame triggers a new lookup.
+
+**D12. One id per layout or per column.** From the CIM scope; settles no
+comment, only a doc mismatch on `cimReferenceId`. Recommend one per layout now. Under
+D6 a per-column list is an optional field added later without breaking anyone.
+Also settle the doc mismatch: a source may carry its own id (a recording made
+with one); the lookup fills it when absent, which is what the code does.
+
+**D13. Remote data, later.** Settles no comment: it is the remote contract's
+own "Not settled yet" list. Authentication and TLS, limits, and models beyond
+`pmu.frame` stay in the contract's "Not settled yet". Recommend naming the
+settings now (`<APP>_REMOTE_TOKEN`, a CA bundle) under D3, so adding them is
+additive. Live data over a remote service is a second contract, not this one.
+
+### Order
+
+1. Decide D1 to D13.
+2. Build the decisions that change edge code: D7, D3, D1, D2, D8 to D10, D4,
+   D6, D5.
+3. Open the edges: remote data now; CIM lookup after D8 to D11; modules after
+   D1 to D5.
+4. Any time, behind the line: 28, 29, 31, 32, 2, 14, 3.
+5. Fixes that need no decision, any time: 33 first (it keeps the unit tests
+   red), then 4, 7, 8, 9, 13, 15, 16, 17, 18, 20, 21, 22, 34, 35, 36, 37, 38,
+   39, and the two rules of 19 that D7 leaves.
 
 ---
 
