@@ -38,6 +38,7 @@ and is left out. "Decision" names the decision below that settles a comment;
 | 29 | A live source that fails stays failed; later viewers are not told (fixed 2026-10-14) | before | — |
 | 31 | A command sent during a broker outage is acknowledged, then lost or applied late (fixed 2026-10-14) | before | — |
 | 30 | Module state belongs to the key: settings lost on a worker restart, inherited after a crash | before | D1 |
+| 41 | Commands of different classes sent while a Kafka consumer reopens apply out of order (fixed 2026-10-14) | 31 fix | — |
 
 **Medium**: wrong in situations the project will soon reach, or a trap in the
 module contract for the next module.
@@ -46,6 +47,7 @@ module contract for the next module.
 |---|---|---|---|
 | 32 | A hung remote data service holds up every command of the run (fixed 2026-10-14) | before | — |
 | 40 | A module command sent while following the shared live run reaches an instance that gets no frames (fixed 2026-10-14) | before | Decided |
+| 42 | aiokafka spins on metadata while a broker comes and goes: up to 24 000 log lines/s, for up to 11 s | before | — |
 | 1 | A `blocking` module runs `process` and `handle` in two threads at once (fixed 2026-10-14) | Louis | D5 |
 | 2 | A sync `read` source holds the event loop; a live one would freeze the server (fixed 2026-10-14) | Louis | — |
 | 11 | A module with a dependency of its own fails to import in the image | Louis | D4 |
@@ -66,6 +68,8 @@ module contract for the next module.
 | # | Issue | Origin | Decision |
 |---|---|---|---|
 | 38 | A run keeps playing for 300 s after its last socket closes | before | — |
+| 43 | "Not delivered within 10 s" reaches the tray up to 2.7 s late | 31 fix | — |
+| 44 | A process that starts without a broker exits with its producer unclosed | before | — |
 | 36 | An outbox reports falling behind, never catching up | before | — |
 | 34 | A seek whose end is not after its start answers 500 | before | — |
 | 35 | A huge negative step reaches the tray as `OverflowError` | before | — |
@@ -826,6 +830,36 @@ page and the tray, POSTs, docker or kubectl for the outages).
 - 29, 1, 2: the appendix scripts now print `frame=True`,
   `overlapped = False` and "other task ran 335 times".
 
+### Regression, three rounds each (2026-10-14)
+
+At `5dcf338`, compose (project `pswamp-review`, server on :8132) and
+minikube, three rounds each: compose fresh, warm, then `down` and `up`;
+minikube freshly deployed, warm, then every deployment restarted. Before
+that, `pswamp check` passed and `pswamp test server` gave 457 passed in
+each of 5 runs; the 12 Kafka cases passed 5 runs against the compose broker,
+and again in each compose round.
+
+Every round ran: smoke; the 12 Playwright specs in Chromium and in Firefox;
+the compose-only provider spec in both (with the helper patched to accept
+:8132; skipped on minikube); every route in both browsers (18 × ok, the
+dashboard at 6 sockets); then these checks over sockets and POSTs:
+- 40: auto-pause while live is a 409; range-summary still answers.
+- Order: 30 sequences of three commands apply in order.
+- Compose: the 12 Kafka cases; 31 with Kafka paused 3 s (applied) and
+  stopped (reported at 10.1 s, not applied late); 32 (the switch lands in
+  0.1 s); 28 (Kafka recreated: ten results in 0.9 s).
+- Minikube: 31 with Kafka scaled to 0 (reported at 10.6 to 12.7 s, see
+  43; not applied late; ten results 0.9 s after the next play); 28 (the pod
+  deleted: playing, ten results in 2.0 to 3.8 s).
+- After the faults: smoke, Playwright and routes again.
+
+All six rounds passed every step, with no traceback in their logs and no
+restart except the cold start in 44. Before `5dcf338`, the same rounds
+(three compose, one minikube) failed once on the product: 41, in minikube.
+One compose failure came from the check reusing a client id, whose tray
+replayed the last round's notice; the check now uses fresh ids. The laptop
+slept 15 minutes in compose round 3; the steps after it passed.
+
 ---
 
 ## Found in the contract pass (2026-10-14)
@@ -847,6 +881,67 @@ page and the tray, POSTs, docker or kubectl for the outages).
 - Fixed 2026-10-14 in `PipelineRun.dispatch`: `CommandRefused` for a module
   with inputs while `_following` is set. The streamer's auto-pause box was
   already disabled while live; the Playwright spec now checks that.
+
+---
+
+## Found in the regression (2026-10-14)
+
+**41. Commands of different classes sent while a Kafka consumer reopens apply out of order.**
+- Seen (minikube, the Kafka pod deleted while a client plays): the check
+  POSTed pause, seek, play as the new pod came up. The server applied them
+  as seek, play, pause, all in the same millisecond, and the run stayed
+  paused. Three compose rounds of the same check had passed.
+- Where: `core/src/pswamp_core/transport/kafka.py`, `_consume`. Each class
+  has its own topic, and Kafka keeps order within a topic only. The consumer
+  delivered a fetch topic by topic. A reopened consumer resumes the command
+  topics (the fix for 31), so everything sent meanwhile is one fetch.
+- Fixed 2026-10-14 (`5dcf338`): each fetch is merged by send time (the
+  record's CreateTime; within one ms, the command's issue time), keeping
+  each topic's own order. `test_commands_from_meanwhile_arrive_in_the_order_sent_across_their_topics`
+  failed 3 of 3 runs before, and passes since.
+- Not seen without a reopen: 30 sequences of three commands, sent back to
+  back as a page does, all applied in order (compose and minikube, every
+  round). A 3 s `docker pause` of Kafka does not reopen the consumer, and
+  kept the order too.
+
+**42. aiokafka spins on metadata while a broker comes and goes.**
+- Seen: the server and the module worker log `Unable to update metadata`,
+  `Unable connect to node` and `Topic … not found in cluster metadata`
+  thousands of times a second. Compose: 2 to 3 s at each stop, start or
+  recreate of Kafka, up to 18 000 lines/s in the server, which peaks at
+  ~90% CPU. Minikube: the server up to 24 000 lines/s for 1 to 2 s, and the
+  worker ~9 000 lines/s for 10 to 11 s after a new Kafka pod (its `emptyDir`
+  lost the topics the worker publishes to). It stops on its own, and no
+  check failed because of it.
+- Where: aiokafka 0.14.0, `producer/sender.py:155-170` and
+  `consumer/fetcher.py:557-566`. While a partition's leader is unknown, the
+  loop forces a metadata update and waits for it, and a refused connection or
+  a missing topic answers at once, so it loops with no backoff. Its comment
+  says "wait backoff time". The publish that started it fails after
+  `request_timeout_ms` (10 s); our `publish` then makes the topic again, which
+  ends it.
+- Why it matters: a broker rollout floods every process's log and spends CPU
+  on all of them. The flood behind 28 was this loop, then unbounded.
+- Options (none tried): re-create the topics a process publishes to as
+  soon as its consumer finds topics missing, rather than when a publish
+  times out; a logging filter that collapses aiokafka's repeats; a fix
+  upstream. Open.
+
+**43. "Not delivered within 10 s" reaches the tray up to 2.7 s late.**
+- Seen (minikube, Kafka scaled to 0): the report arrives 10.6 to 12.7 s after
+  the POST (10.1 s in compose).
+- Where: `Outbox` gives up only once the attempt in progress returns, and in
+  minikube an attempt takes up to the producer's 10 s request timeout. The
+  receiver refuses a command older than 10 s, so a late attempt that
+  succeeds is still not applied.
+
+**44. A process that starts without a broker exits with its producer unclosed.**
+- Seen (minikube, every deployment restarted at once): the server restarted
+  once and both workers twice ("Unable to bootstrap"), then ran. The log
+  shows "Unclosed AIOKafkaProducer".
+- Where: `KafkaTransport.open` does not stop a producer whose `start()`
+  failed. The exit itself is the intended fail-fast: `pswamp deploy
+  minikube` rolls Kafka out first, and compose waits for its healthcheck.
 
 ---
 
