@@ -9,6 +9,7 @@ import asyncio
 import pytest
 from support import AsyncListSource, ListSource, Recorder, TickingSource, at, frame
 
+import pswamp_core.active_source as active_source_module
 from pswamp_core.active_source import ROUTER_COMMANDS, ActiveSource
 from pswamp_core.command_routing import CommandRefused
 from pswamp_core.sources import SourceModule, SourceSet
@@ -171,6 +172,39 @@ async def test_a_live_feed_that_fails_or_ends_stops_with_an_error():
     await command(router, SwitchSourceCommand(source="short"))
     await until(lambda: len(out.of(ErrorEvent)) == 2)
     assert "the live feed ended" in out.of(ErrorEvent)[1].detail and router.status().ended
+    await router.stop()
+
+
+class ComesBack(SourceModule):
+    """A live feed that drops after one frame, cannot be reached twice, then
+    keeps going."""
+
+    name = "comes-back-source"
+    kind = "live"
+    opens = 0
+
+    async def aread(self, start=None, end=None):
+        ComesBack.opens += 1
+        if ComesBack.opens in (2, 3):
+            raise ConnectionError("no route to the PMU")
+        yield frame(0).model_copy(update={"timestamp": utcnow()})
+        if ComesBack.opens == 1:
+            raise ConnectionError("feed went away")
+        while True:
+            await asyncio.sleep(0.01)
+            yield frame(0).model_copy(update={"timestamp": utcnow()})
+
+
+async def test_a_live_feed_that_fails_is_reopened_and_reported_once(monkeypatch):
+    monkeypatch.setattr(active_source_module, "_REOPEN_S", 0.02)
+    ComesBack.opens = 0
+    router, out = await running(ListSource("rec"), ComesBack("pmu"))
+    await command(router, SwitchSourceCommand(source="pmu"))
+    await until(lambda: ComesBack.opens >= 4 and len(frames(out)) >= 5)
+    status = router.status()
+    assert status.mode == "live" and status.error is None and not status.ended and not status.paused
+    (error,) = out.of(ErrorEvent)  # when it went; not again while it stayed down
+    assert "feed went away" in error.detail
     await router.stop()
 
 

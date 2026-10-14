@@ -588,7 +588,9 @@ The rules to keep:
 - **Recordings are per client, live is shared.** A client's run is keyed by its
   client id; each live source has one always-on run keyed `live.<source>`, which
   client runs follow. While following, a command for a module that reads the
-  stream is refused (409): that instance is every viewer's.
+  stream is refused (409): that instance is every viewer's. A live feed that
+  fails is reopened with backoff, and a page reads `run.status()`, which carries
+  the shared run's error, rather than `run.router.status()`.
 - **The in-memory transport is not a mock.** It round-trips every message
   through JSON, so the unit tests catch what Kafka would. A new transport passes
   `core/tests/transport_suite.py`.

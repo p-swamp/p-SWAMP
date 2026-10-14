@@ -31,7 +31,8 @@ cursor. A live source has one run of its own, keyed ``live.<source>``, started
 with the app and running until shutdown (``start_live_runs``), so its modules
 run once however many people watch. A client's run switched to a live source
 opens no stream: it *follows* the live run, taking that key's frames and
-results off the transport into its own ``latest``. A command for a module that
+results off the transport into its own ``latest``, and its status: ``status()``
+carries the live run's error while its feed is down. A command for a module that
 reads the stream is refused meanwhile: that module's instance runs under the
 live run's key, for every viewer, so its settings are not one viewer's.
 
@@ -85,6 +86,10 @@ logger = get_logger("pswamp_core.pipeline")
 
 #: How long a run waits at start for its topics to be received.
 _READY_TIMEOUT_S = 20.0
+
+#: How often a shared live run repeats its status while its feed is down, so
+#: that a viewer who comes to it later hears why there is nothing.
+_STATUS_EVERY_S = 2.0
 
 M = TypeVar("M", bound="DataModel")
 
@@ -290,6 +295,8 @@ class PipelineRun:
         #: The frame at the cursor: the active source's, or the live run's while following it.
         self.frame: DataModel | None = None
         self._following: TransportSubscription | None = None
+        #: The shared live run's newest status, while following it.
+        self._followed_status: PlayerStatus | None = None
         self._waiters: set[asyncio.Event] = set()
         self._inbox: CommandInbox | None = None
         self._subscriptions: list[TransportSubscription] = []
@@ -300,15 +307,25 @@ class PipelineRun:
 
     def publish(self, message: DataModel) -> None:
         """What the active source publishes: remembered here, and put on the transport
-        when a module reads it, it is an error, or it is a shared run's frame."""
+        when a module reads it, it is an error, or it is a shared run's frame or
+        status."""
         if isinstance(message, PlayerStatus):
             self._follow(message)
         elif message is self.router.last_frame:
             self.frame = message
         self._remember(message)
-        frame = self.shared and message is self.router.last_frame
-        if frame or type(message) in self.pipeline.inputs or isinstance(message, ErrorEvent):
+        shared = self.shared and (message is self.router.last_frame or isinstance(message, PlayerStatus))
+        if shared or type(message) in self.pipeline.inputs or isinstance(message, ErrorEvent):
             self.outbox.publish(message)
+
+    def status(self) -> PlayerStatus:
+        """The player's status as this run's viewer sees it: its router's,
+        with the shared live run's error and end while following one."""
+        own = self.router.status()
+        followed = self._followed_status
+        if self._following is None or followed is None:
+            return own
+        return own.model_copy(update={"error": followed.error, "ended": followed.ended})
 
     def changes(self) -> Changes:
         """Wake-ups on every change; close it (or use ``with``) when done."""
@@ -339,13 +356,16 @@ class PipelineRun:
             return
         model = self.sources.active.model
         self.frame = None
-        self._following = self.transport.subscribe(model, *self.pipeline.results, app=self.pipeline.app, key=key)
+        self._following = self.transport.subscribe(
+            model, PlayerStatus, *self.pipeline.results, app=self.pipeline.app, key=key
+        )
         self._tasks.append(asyncio.create_task(self._receive_followed(self._following, model), name=f"{self.key}.follow"))
 
     def _unfollow(self) -> None:
         if self._following is not None:
             self._following.close()  # ends its _receive task
             self._following = None
+        self._followed_status = None
 
     def _undelivered(self, message: DataModel, error: Exception | None) -> None:
         """What the outbox gave up on, to ``on_error``: a command or an error
@@ -416,6 +436,8 @@ class PipelineRun:
             await subscription.ready(_READY_TIMEOUT_S)
         self.outbox.start()
         await self.router.start()
+        if self.shared:
+            self._tasks.append(asyncio.create_task(self._repeat_status(), name=f"{key}.status"))
         # A switch stops a command still waiting on the source it leaves (one that hangs).
         self._inbox = CommandInbox(
             (command async for _, command in commands), self.router, self, preempt=(SwitchSourceCommand,)
@@ -447,9 +469,23 @@ class PipelineRun:
         async for _, message in messages:
             if messages is not self._following:
                 return  # unfollowed: what is still queued belongs to the live run
+            if isinstance(message, PlayerStatus):
+                self._followed_status = message  # read through status(); this run's own stays in latest
+                for event in self._waiters:
+                    event.set()
+                continue
             if type(message) is frames:
                 self.frame = message
             self._remember(message)
+
+    async def _repeat_status(self) -> None:
+        """A shared run's status, again every ``_STATUS_EVERY_S`` while its
+        feed is down: a viewer who switches to it later hears it too."""
+        while True:
+            await asyncio.sleep(_STATUS_EVERY_S)
+            status = self.router.status()
+            if status.error is not None:
+                self.outbox.publish(status)
 
 
 async def start_live_runs(

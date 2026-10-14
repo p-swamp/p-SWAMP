@@ -129,7 +129,12 @@ live source has one shared run, keyed `live.<source>`, which `serve_pipeline`
 starts with the app (`start_live_runs`) and stops at shutdown. A client's run
 switched to a live source opens no stream: its router reports "live", and the
 run follows the shared run's frame and result topics into its own `latest`.
-The web API reads a client's run the same way in both cases. While following,
+The web API reads a client's run the same way in both cases: `run.status()`
+is the router's status, with the shared run's error while its feed is down. A
+live feed that fails or ends is reported once and reopened from now, after a
+wait of 1 s that doubles to 30 s while it keeps failing. While it is down, the
+shared run repeats its status every 2 s, so a viewer who switches to it later
+is told too. While following,
 a command for a module that reads the stream (auto-pause) is refused with a
 409. A module that reads no stream, such as the range summary, still answers.
 
@@ -509,6 +514,7 @@ await router.start()        # a recording: paused at its start; a live feed: fol
 router.validate(command)    # raises CommandRefused: the web API's 409
 await router.handle(command)
 router.status()             # PlayerStatus: mode, source, cursor, speed, can_seek, error, ...
+run.status()                # the same, with a followed live run's error: what a page shows
 ```
 
 *Why.* A source yields as fast as it reads, but a person watching a

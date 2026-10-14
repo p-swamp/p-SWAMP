@@ -13,7 +13,7 @@ from pswamp_core.command_routing import CommandRefused, NoReceiver
 from pswamp_core.host import serve_hosts
 from pswamp_core.modules import Module
 from pswamp_core.pipeline import Pipeline, PipelineRun, start_live_runs
-from pswamp_core.sources import SourceSet
+from pswamp_core.sources import SourceModule, SourceSet
 from pswamp_core.subscription import Overflow
 from pswamp_core.transport import InMemoryTransport
 from pswamp_core.util.tasks import cancel_and_wait
@@ -246,6 +246,37 @@ async def test_a_switch_stops_a_command_stuck_on_the_source_it_leaves():
     assert switch.message == "player stopped applying switch.source: switch.source came after it"
     assert run.router.status().paused  # the play was for the source it left
     await run.stop()
+
+
+async def test_a_viewer_who_comes_to_a_failed_live_run_hears_why(monkeypatch):
+    import pswamp_core.pipeline as pipeline_module
+
+    monkeypatch.setattr(pipeline_module, "_STATUS_EVERY_S", 0.05)
+
+    class Down(SourceModule):
+        name = "down-source"
+        kind = "live"
+
+        async def aread(self, start=None, end=None):
+            raise ConnectionError("no route to the PMU")
+            yield  # pragma: no cover
+
+    transport = InMemoryTransport()
+    pipeline = Pipeline("app", lambda: SourceSet([ListSource("rec"), Down("pmu")]))
+    (live,) = await start_live_runs(pipeline, transport)
+    await until(lambda: live.router.status().error is not None)  # failed before anyone watched
+    run = PipelineRun("late", pipeline, transport)
+    await run.start()
+    run.dispatch(SwitchSourceCommand(source="pmu"))
+    await until(lambda: run.following == "live.pmu")
+    assert run.router.status().error is None  # its own router opened nothing
+    await until(lambda: run.status().error is not None)
+    assert "no route to the PMU" in run.status().error and run.status().mode == "live"
+    run.dispatch(SwitchSourceCommand(source="rec"))
+    await until(lambda: run.following is None)
+    assert run.status().error is None
+    for each in (run, live):
+        await each.stop()
 
 
 class ResetCount(Command):

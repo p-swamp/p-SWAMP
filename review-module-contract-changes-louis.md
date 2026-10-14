@@ -35,7 +35,7 @@ and is left out. "Decision" names the decision below that settles a comment;
 | # | Issue | Origin | Decision |
 |---|---|---|---|
 | 28 | Kafka losing its topics stops the stack until every process restarts; probes stay green (recovery fixed 2026-10-14; probes open) | before | — |
-| 29 | A live source that fails stays failed; later viewers are not told | before | — |
+| 29 | A live source that fails stays failed; later viewers are not told (fixed 2026-10-14) | before | — |
 | 31 | A command sent during a broker outage is acknowledged, then lost or applied late (fixed 2026-10-14) | before | — |
 | 30 | Module state belongs to the key: settings lost on a worker restart, inherited after a crash | before | D1 |
 
@@ -635,6 +635,13 @@ Unlike comments 1 to 27, these are about the branch as a whole: all but 33 and
   client.
 - Suggestion: reopen a live stream with backoff in its shared run; publish the
   shared run's `PlayerStatus` and show it to followers.
+- Fixed 2026-10-14 as suggested. The router's pump reopens a live feed that
+  fails or ends, from now, after 1 s doubling to 30 s. An outage is reported
+  once, and the feed counts as back at its next frame. A shared run puts its
+  `PlayerStatus` on the transport and repeats it every 2 s while its feed is
+  down. A follower keeps it apart from its own, and `PipelineRun.status()`
+  (what the streamer page now reads) carries its error. The script below now
+  prints `frame=True` for the late client.
 
 **30. Module state belongs to the key, not to the run.**
 - Seen (compose, excursion's `auto_pause` and count): after a module-worker

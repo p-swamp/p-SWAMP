@@ -312,7 +312,7 @@ class PeakFrequencyState(BaseModel):
 
 
 def state_message(run: PipelineRun) -> PeakFrequencyState:
-    return PeakFrequencyState(player=run.router.status(), result=run.latest.get(PeakFrequencyResult))
+    return PeakFrequencyState(player=run.status(), result=run.latest.get(PeakFrequencyResult))
 ```
 
 - To show more, add a field and fill it in `state_message`. Another module's

@@ -23,7 +23,9 @@ this is the receiver of the commands that steer it, like any command receiver
 - A source that is not playable is **pumped**: its stream is read from now (a
   live feed) or from the start (a history that is not playable), and frames go
   out as they arrive, unpaced. Its status is ``mode="live"`` for a live feed,
-  with no coverage, no cursor control and nothing to seek.
+  with no coverage, no cursor control and nothing to seek. A live feed that
+  fails or ends is reported and reopened from now, after a wait that doubles
+  while it keeps failing: a PMU connection drops, and comes back.
 - With ``follow_live``, a live source is not opened here: the router of a
   client's run only reports that it is on the live source, and the run follows
   the shared live run's topics instead (``pswamp_core.pipeline``).
@@ -41,6 +43,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import time
 from typing import TYPE_CHECKING, Any, ClassVar
 
 from pswamp_models.common import Command, ErrorEvent
@@ -64,6 +67,11 @@ logger = get_logger("pswamp_core.active_source")
 
 #: Every command the router receives: the playback commands, and the switch.
 ROUTER_COMMANDS: tuple[type[PlayerCommand], ...] = (*PLAYBACK_COMMANDS, SwitchSourceCommand)  # type: ignore[assignment]
+
+#: A live feed that fails or ends is reopened after this many seconds, doubling
+#: to ``_MAX_REOPEN_S`` while it keeps failing; a feed that ran for
+#: ``_MAX_REOPEN_S`` before failing starts the wait over.
+_REOPEN_S, _MAX_REOPEN_S = 1.0, 30.0
 
 
 class ActiveSource:
@@ -207,29 +215,58 @@ class ActiveSource:
                 await stream.aclose()
 
     async def _run_pump(self, stream: SourceStream, live: bool) -> None:
-        """Publish a source's frames as they arrive, until it ends or fails."""
-        try:
-            async for frame in stream:
-                self.cursor = frame.timestamp
-                self._last_frame = frame
-                self._sink.publish(frame)
-        except Exception as error:
-            self._fail(error)
-            return
-        if live:
-            self._fail(EOFError("the live feed ended"))
-        else:
-            self.ended, self.paused = True, True
-            self._publish_status()
+        """Publish a source's frames as they arrive, until a history ends or
+        fails. A live feed that fails or ends is reopened from now, with
+        backoff, until the source is switched away from. An outage is
+        reported once, when it starts; the feed is back at its next frame."""
+        delay, down = _REOPEN_S, False
+        while True:
+            opened = time.monotonic()
+            try:
+                async for frame in stream:
+                    if down:
+                        down = False
+                        self.error, self.ended, self.paused = None, False, False
+                        logger.info("the live feed from %s is back", self._sources.source)
+                        self._publish_status()
+                    self.cursor = frame.timestamp
+                    self._last_frame = frame
+                    self._sink.publish(frame)
+            except Exception as error:
+                self._fail(error, report=not down)
+            else:
+                if not live:
+                    self.ended, self.paused = True, True
+                    self._publish_status()
+                    return
+                self._fail(EOFError("the live feed ended"), report=not down)
+            if not live:
+                return
+            if not down and time.monotonic() - opened >= _MAX_REOPEN_S:
+                delay = _REOPEN_S  # it ran a good while: this is a new outage
+            down = True
+            with contextlib.suppress(Exception):
+                await stream.aclose()
+            while True:
+                await asyncio.sleep(delay)
+                delay = min(delay * 2, _MAX_REOPEN_S)
+                try:
+                    stream = self._stream = await self._sources.consume(utcnow())
+                    break
+                except Exception as error:
+                    self._fail(error, report=False)
 
-    def _fail(self, error: BaseException) -> None:
+    def _fail(self, error: BaseException, *, report: bool = True) -> None:
+        """Say the stream stopped: in the status, and with ``report`` as an
+        ``ErrorEvent`` on the tray."""
         source = self._sources.source
         self.error = f"{source}: {type(error).__name__}: {error}"
         self.ended, self.paused = True, True
         logger.error("the stream from %s stopped: %s", source, self.error)
-        self._sink.publish(
-            ErrorEvent(timestamp=utcnow(), source=self.name, message=f"the stream from {source} stopped", detail=self.error)
-        )
+        if report:
+            self._sink.publish(
+                ErrorEvent(timestamp=utcnow(), source=self.name, message=f"the stream from {source} stopped", detail=self.error)
+            )
         self._publish_status()
 
     def _publish_status(self) -> None:

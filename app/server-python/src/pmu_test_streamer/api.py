@@ -81,7 +81,7 @@ class PmuStreamState(BaseModel):
 
 
 def state_message(run: PipelineRun) -> PmuStreamState:
-    status = run.router.status()
+    status = run.status()
     frame = run.frame if isinstance(run.frame, PmuFrame) else None
     index = count = None
     if frame is not None and status.mode == "replay" and status.coverage_start and status.coverage_end:
