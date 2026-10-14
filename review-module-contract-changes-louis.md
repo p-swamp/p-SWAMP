@@ -802,6 +802,30 @@ was run again, in bare, compose and minikube.
   37 in the code.
 - Comment 33: still fails.
 
+### Retest after the fixes (2026-10-14)
+
+At `9d40858` (the fixes for 33, 1, 2, 40, 31, 32, 28 and 29), in bare,
+compose and minikube, with the scratch scripts of this pass (sockets for the
+page and the tray, POSTs, docker or kubectl for the outages).
+
+- Regression: `pswamp check` passes. `pswamp test server` gives 457 passed,
+  45 skipped, plus 11 Kafka cases against a broker. `check-generators`
+  passes. Smoke passes in all three setups. Playwright: 11 passed bare, 12
+  compose, 12 minikube. Every route renders clean in headless Chromium and
+  Firefox in all three, and the monitor opens 5 data sockets plus the tray's.
+- 28: compose, Kafka recreated: ten fresh module results 0.9 s after play,
+  0 server log lines in 5 s, no process restarted. Minikube, Kafka pod
+  deleted: the same, 3.0 s after play, no pod restarted.
+- 31: compose, Kafka stopped: play is reported on the tray at 10 s ("not
+  delivered within 10 s, so it was not applied") and stays unapplied once
+  the broker is back. Kafka paused for 3 s: the play is applied when it
+  returns.
+- 32: compose, the stub paused mid-replay, a seek, then a switch to sample:
+  the switch lands 0.1 s after its POST (it was ~10 s). The seek is reported
+  as stopped.
+- 29, 1, 2: the appendix scripts now print `frame=True`,
+  `overlapped = False` and "other task ran 335 times".
+
 ---
 
 ## Found in the contract pass (2026-10-14)
