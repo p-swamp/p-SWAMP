@@ -658,6 +658,13 @@ Unlike comments 1 to 27, these are about the branch as a whole: all but 33 and
   end (`kafka.py:172`, `:206`).
 - Note: this is "nothing reports a command that never reaches its receiver"
   (`dispatch_command` in `app/server-python/src/shared.py`), now reproduced.
+- Partly fixed 2026-10-14 (as decided): an outbox retries a control message
+  with backoff until `CONTROL_DEADLINE_S` (10 s) after it was queued, then
+  gives it up and calls `on_undelivered`. One still queued at its deadline is
+  given up unsent, so `play` is no longer applied 24 s after its 200. A run
+  turns that into an `ErrorEvent` for `on_error`, and `shared.run_registry`
+  hands it to the tray directly. Still open: a consumer that reconnects starts
+  every topic at its end (4b).
 
 **32. A remote data service that hangs holds up every command of the run.**
 - Seen (compose, the stub frozen with `docker pause`): a seek waited 10 s, the

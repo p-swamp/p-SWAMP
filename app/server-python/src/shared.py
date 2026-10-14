@@ -34,6 +34,8 @@ which every app over a core pipeline uses:
 
     transport()           the process's transport, from PSWAMP_TRANSPORT
     app_pipeline(app)     an app's pipeline, from pipelines/<app>.toml
+    run_registry(...)     an app's runs, one per client, each reporting what it cannot
+                          put on the transport straight to the tray
     serve_pipeline(...)   an app's lifespan: its shared live runs, its errors
                           forwarded to the tray, its modules hosted here when the
                           transport is in-memory, and every run stopped on the way out
@@ -196,6 +198,28 @@ async def lifespan(app: FastAPI):
             await closing.close()
 
 
+def run_registry(pipeline: Pipeline, **options) -> PipelineRegistry[PipelineRun]:
+    """An app's runs, one per client, over the process's transport. What a
+    run cannot put on the transport (a command not delivered in time) goes to
+    the client's tray directly. ``options`` go to ``PipelineRegistry``."""
+    registry: PipelineRegistry[PipelineRun] = PipelineRegistry(
+        lambda client_id: PipelineRun(client_id, pipeline, transport(), on_error=report), **options
+    )
+    report = _to_trays(pipeline.app, registry)
+    return registry
+
+
+def _to_trays(app: str, registry: PipelineRegistry) -> Callable[[str, ErrorEvent], None]:
+    """An ``ErrorEvent`` under a run's key, to the tray of each client
+    watching that run."""
+
+    def report(key: str, event: ErrorEvent) -> None:
+        for client_id in registry.watching(key):
+            HUB.publish(client_id, app, event)
+
+    return report
+
+
 @contextlib.asynccontextmanager
 async def serve_pipeline(pipeline: Pipeline, registry: PipelineRegistry) -> AsyncIterator[None]:
     """An app's lifespan. With the in-memory transport, its modules are hosted
@@ -210,7 +234,7 @@ async def serve_pipeline(pipeline: Pipeline, registry: PipelineRegistry) -> Asyn
         await asyncio.sleep(0)  # the hosts subscribe before the live runs publish
     for task in tasks:
         task.add_done_callback(_log_a_failure)
-    live_runs = await start_live_runs(pipeline, link)
+    live_runs = await start_live_runs(pipeline, link, on_error=_to_trays(pipeline.app, registry))
     try:
         yield
     finally:
@@ -230,10 +254,10 @@ def _log_a_failure(task: asyncio.Task) -> None:
 async def _forward_errors(link: Transport, app: str, registry: PipelineRegistry) -> None:
     """Every ``ErrorEvent`` on ``app``'s error topic, to the tray of each client
     watching the run it came from."""
+    report = _to_trays(app, registry)
     with link.subscribe(ErrorEvent, app=app, overflow=Overflow.GROW) as errors:
         async for key, event in errors:
-            for client_id in registry.watching(key):
-                HUB.publish(client_id, app, event)
+            report(key, event)
 
 
 @contextlib.asynccontextmanager
@@ -304,8 +328,10 @@ def dispatch_command(registry: PipelineRegistry, command: Command, log: logging.
     live run the client follows, with the reason as the detail. The ack means
     *accepted*: the command is queued for its receiver, and its effect arrives
     on the socket, or a refusal or failure on the error tray, carrying the
-    ack's ``request_id``. Nothing reports a command that never reaches its
-    receiver (a worker that is not running, say).
+    ack's ``request_id``. A command the transport does not take within the
+    outbox's deadline is reported on the tray (``run_registry``). Nothing yet
+    reports one the transport took that no receiver reads (a worker that is
+    not running, say).
     """
     client_id = command.client_id or ""
     run = registry.peek(client_id)

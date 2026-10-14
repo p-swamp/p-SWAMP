@@ -262,8 +262,8 @@ Two deployables, one wire protocol:
   `ClientId`, `CommandAck`, `read_client_id`, `get_logger` re-exported from
   `pswamp_web/` (see "The p-SWAMP web layer" for why the definitions live down
   there and the import runs inward), and the web API side of the server data
-  architecture (`transport()`, `serve_pipeline`, `connected_pipeline`,
-  `push_changes`, `dispatch_command`); it is *not* an app package and never
+  architecture (`transport()`, `run_registry`, `serve_pipeline`,
+  `connected_pipeline`, `push_changes`, `dispatch_command`); it is *not* an app package and never
   appears in `APPS`.
   Note the spelling split: a package dir must be a Python identifier
   (`reference_subapp`) while its URL prefix is hyphenated to match the page route

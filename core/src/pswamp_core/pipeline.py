@@ -252,21 +252,38 @@ class PipelineRun:
         loop: A recording starts over at its end.
         live_source: Make this the shared run of that live source, instead of
             a client's run.
+        on_error: Called with the run's key and an ``ErrorEvent`` for what the
+            run could not put on the transport: a command not delivered within
+            the outbox's deadline, or an error report itself. The web API hands
+            it to the tray directly, since the tray is fed through the transport.
     """
 
     def __init__(
-        self, key: str, pipeline: Pipeline, transport: Transport, *, loop: bool = True, live_source: str | None = None
+        self,
+        key: str,
+        pipeline: Pipeline,
+        transport: Transport,
+        *,
+        loop: bool = True,
+        live_source: str | None = None,
+        on_error: Callable[[str, ErrorEvent], None] | None = None,
     ) -> None:
         self.key = key
         self.pipeline = pipeline
         self.transport = transport
+        self._on_error = on_error
         self.sources = pipeline.sources()
         self.shared = live_source is not None
         if live_source is not None:
             self.sources.switch(live_source)
         self.latest = NewestByClass()
         self.outbox = Outbox(
-            transport, app=pipeline.app, key=key, keep_up=KeepUp(), label=f"the server-side publisher for {key}"
+            transport,
+            app=pipeline.app,
+            key=key,
+            keep_up=KeepUp(),
+            label=f"the server-side publisher for {key}",
+            on_undelivered=self._undelivered,
         )
         # A client's run leaves live sources to their shared runs.
         self.router = ActiveSource(self.sources, self, loop=loop, follow_live=not self.shared)
@@ -329,6 +346,27 @@ class PipelineRun:
         if self._following is not None:
             self._following.close()  # ends its _receive task
             self._following = None
+
+    def _undelivered(self, message: DataModel, error: Exception | None) -> None:
+        """What the outbox gave up on, to ``on_error``: a command or an error
+        report is someone's business; a ``PipelineClosed`` is nobody's."""
+        if self._on_error is None or isinstance(message, PipelineClosed):
+            return
+        if isinstance(message, ErrorEvent):
+            self._on_error(self.key, message)
+            return
+        what = message.name if isinstance(message, Command) else type(message).__name__
+        cause = f"{type(error).__name__}: {error}" if error is not None else "it waited in the queue past its deadline"
+        self._on_error(
+            self.key,
+            ErrorEvent(
+                timestamp=utcnow(),
+                source="server",
+                message=f"{what} was not delivered within {self.outbox.deadline:g} s, so it was not applied",
+                detail=cause,
+                request_id=getattr(message, "request_id", None),
+            ),
+        )
 
     # -- commands -------------------------------------------------------------------
 
@@ -411,10 +449,12 @@ class PipelineRun:
             self._remember(message)
 
 
-async def start_live_runs(pipeline: Pipeline, transport: Transport) -> list[PipelineRun]:
+async def start_live_runs(
+    pipeline: Pipeline, transport: Transport, *, on_error: Callable[[str, ErrorEvent], None] | None = None
+) -> list[PipelineRun]:
     """One started shared run per live source of ``pipeline``."""
     runs = [
-        PipelineRun(live_key(source), pipeline, transport, live_source=source)
+        PipelineRun(live_key(source), pipeline, transport, live_source=source, on_error=on_error)
         for source in pipeline.live_sources()
     ]
     for run in runs:

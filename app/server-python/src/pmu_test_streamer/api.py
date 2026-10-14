@@ -28,11 +28,11 @@ from shared import (
     dispatch_command,
     get_logger,
     push_changes,
+    run_registry,
     serve_pipeline,
-    transport,
 )
 
-from pswamp_core.pipeline import PipelineRegistry, PipelineRun
+from pswamp_core.pipeline import PipelineRun
 from pswamp_models.common import Command
 from pswamp_models.excursion import AutoPauseCommand, ExcursionResult
 from pswamp_models.frame_stats import FrameStatsResult
@@ -53,9 +53,7 @@ logger = get_logger("pmu")
 #: Frames → frame stats → excursion, plus a range summary answering commands.
 PIPELINE = app_pipeline("pmu-test-streamer")
 
-REGISTRY: PipelineRegistry[PipelineRun] = PipelineRegistry(
-    lambda client_id: PipelineRun(client_id, PIPELINE, transport(), loop=True)
-)
+REGISTRY = run_registry(PIPELINE)
 
 
 @contextlib.asynccontextmanager

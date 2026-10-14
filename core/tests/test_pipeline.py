@@ -200,6 +200,27 @@ async def test_live_is_one_shared_run_that_client_runs_follow():
     await cancel_and_wait(hosting)
 
 
+async def test_a_command_the_transport_does_not_take_in_time_goes_to_on_error():
+    class NoCommands(InMemoryTransport):
+        async def publish(self, message, *, app, key):
+            if isinstance(message, Command):
+                raise ConnectionError("broker down")
+            await super().publish(message, app=app, key=key)
+
+    reports = []
+    pipeline = Pipeline("app", sources, modules=(Halver,))
+    run = PipelineRun("k", pipeline, NoCommands(), on_error=lambda key, event: reports.append((key, event)))
+    run.outbox.deadline = 0.1
+    await run.start()
+    command = HalveCommand(value=2)
+    run.dispatch(command)
+    await until(lambda: reports)
+    ((key, event),) = reports
+    assert (key, event.source, event.request_id) == ("k", "server", command.request_id)
+    assert "halve" in event.message and "not delivered" in event.message and event.detail == "ConnectionError: broker down"
+    await run.stop()
+
+
 class ResetCount(Command):
     version: Literal["v1"] = "v1"
 

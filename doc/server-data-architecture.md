@@ -591,7 +591,7 @@ what the core does not do: the state message it pushes, and the POSTs that
 build commands.
 
 ```python
-REGISTRY = PipelineRegistry(lambda client_id: PipelineRun(client_id, PIPELINE, transport()))
+REGISTRY = run_registry(PIPELINE)      # one run per client, reporting to its tray
 
 @router.post("/playback/seek", responses=COMMAND_RESPONSES)
 async def seek(client_id: ClientId, body: SeekBody) -> CommandAck:
@@ -606,6 +606,8 @@ async def ws_endpoint(ws: WebSocket) -> None:
 
 *Why.* The shared pieces are in `shared.py`:
 - `transport()`: one per process, from `PSWAMP_TRANSPORT`.
+- `run_registry`: the app's runs, one per client. A run reports what it could
+  not put on the transport straight to the client's tray.
 - `serve_pipeline`: the app's lifespan. It starts the shared live runs,
   forwards the error topic to the tray, hosts the modules in the server when
   the transport is in-memory, and stops every run on the way out.
@@ -616,7 +618,9 @@ async def ws_endpoint(ws: WebSocket) -> None:
 - `dispatch_command`: 404 without a run, 409 when the router refuses, else a
   `CommandAck` meaning *accepted*: the command is queued for its receiver. The
   ack carries the command's `request_id`, as does whatever answers or refuses
-  it.
+  it. A command the transport does not take within 10 s
+  (`CONTROL_DEADLINE_S`; a broker outage) is given up and reported on the
+  tray, never applied late.
 
 The browser contract is the one `doc/the-client-server-api.md` describes,
 unchanged: commands up as POSTs, state down one socket, the acknowledgement
@@ -632,7 +636,10 @@ same classes.
 *What.* `ErrorEvent` is what a pipeline publishes when something *operational*
 fails: the player's provider raised, a module's `process` raised, a module
 instance failed, or a module refused a command. Every one goes on the app's
-error topic (`<app>.error.event`) under its run's key. `serve_pipeline`
+error topic (`<app>.error.event`) under its run's key. The exception is what
+a run could not publish at all (a command not delivered in time, or an error
+report itself): the run hands that straight to the hub (`PipelineRun`'s
+`on_error`), since the topic is on the same transport. `serve_pipeline`
 forwards that topic to the `errors` app's hub. Each notice goes to the clients
 watching that run: its own client, or every client following a shared live
 run. The layout's `<ErrorTray>` shows them on every page, from
@@ -644,7 +651,7 @@ the browser, since that command was accepted with a 200 before the module saw
 it. It is not a grid alarm: an alarm is a module's normal result.
 
 *Where.* `models/src/pswamp_models/common/errors.py`;
-`app/server-python/src/errors/`, `shared._forward_errors`;
+`app/server-python/src/errors/`, `shared._forward_errors`, `shared.run_registry`;
 `app/client-web/src/components/ErrorTray.tsx`, `hooks/useErrorFeed.ts`.
 
 ### Keeping up

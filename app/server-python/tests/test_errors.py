@@ -46,3 +46,31 @@ def test_a_refused_module_command_reaches_the_client_s_tray(server):
         notice = tray.receive_json()
     assert (notice["app"], notice["source"]) == ("pmu-test-streamer", "range-summary")
     assert "live" in notice["detail"] and notice["request_id"] == ack["request_id"]
+
+
+def test_a_command_the_transport_does_not_take_reaches_the_tray_directly(server, monkeypatch):
+    import shared
+    from pmu_test_streamer import api
+
+    from pswamp_models.common import Command
+
+    link = shared.transport()
+    publish = link.publish
+
+    async def no_commands(message, *, app, key):
+        if isinstance(message, Command):
+            raise ConnectionError("broker down")
+        await publish(message, app=app, key=key)
+
+    with (
+        server.websocket_connect("/api/pmu-test-streamer/ws?client_id=402") as page,
+        server.websocket_connect("/api/errors/ws?client_id=402") as tray,
+    ):
+        page.receive_json()
+        api.REGISTRY.peek("402").outbox.deadline = 0.1
+        monkeypatch.setattr(link, "publish", no_commands)  # the error topic is on it too
+        ack = server.post("/api/pmu-test-streamer/playback/play?client_id=402")
+        notice = tray.receive_json()
+    assert ack.status_code == 200 and notice["request_id"] == ack.json()["request_id"]
+    assert notice["source"] == "server" and "not delivered" in notice["message"]
+    assert notice["detail"] == "ConnectionError: broker down"

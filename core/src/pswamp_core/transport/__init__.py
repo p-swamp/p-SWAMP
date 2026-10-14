@@ -40,6 +40,7 @@ import os
 import time
 from abc import ABC, abstractmethod
 from collections import deque
+from collections.abc import Callable
 from typing import TYPE_CHECKING, ClassVar
 
 from pswamp_models.common import Command, ErrorEvent, PipelineClosed, ResultEnvelope, stamp_sent_at
@@ -54,6 +55,7 @@ if TYPE_CHECKING:
     from pswamp_models.common import DataModel
 
 __all__ = [
+    "CONTROL_DEADLINE_S",
     "TRANSPORT_VARIABLE",
     "InMemoryTransport",
     "Outbox",
@@ -205,6 +207,16 @@ class InMemoryTransport(Transport):
 #: Never dropped by a full outbox: what changes something, or reports it.
 _CONTROL = (Command, ErrorEvent, PipelineClosed)
 
+#: How long a control message may wait to be published. Past it, it is given
+#: up and reported: a command applied long after its 200 is worse than one
+#: reported lost.
+CONTROL_DEADLINE_S = 10.0
+
+#: The first wait before a control message is published again; it doubles, to
+#: at most ``_MAX_RETRY_S``.
+_RETRY_S = 0.25
+_MAX_RETRY_S = 2.0
+
 
 def _is_control(message: DataModel) -> bool:
     """``_CONTROL``, or a result that answers a command: someone asked for it."""
@@ -217,8 +229,15 @@ class Outbox:
     ``publish`` queues and returns; a task sends in order. When more than
     ``maxsize`` data messages wait, the oldest is dropped (a live stream would
     rather lose a stale frame than fall further behind), and reported under
-    ``keep_up``. Commands, answers to commands, errors and ``PipelineClosed``
-    are never dropped.
+    ``keep_up``. A data message the transport refuses is dropped too.
+
+    Control messages (commands, answers to commands, errors and
+    ``PipelineClosed``) are never dropped for room. One the transport refuses
+    is published again, with backoff, until ``deadline`` seconds after it was
+    queued. Then it is given up, logged, and handed to ``on_undelivered`` with
+    the last error (``None`` when it waited in the queue past its deadline and
+    was never tried). So a command is applied within ``deadline`` of its
+    acknowledgement, or reported.
     """
 
     def __init__(
@@ -230,16 +249,21 @@ class Outbox:
         maxsize: int = 64,
         keep_up: KeepUp | None = None,
         label: str | None = None,
+        deadline: float = CONTROL_DEADLINE_S,
+        on_undelivered: Callable[[DataModel, Exception | None], None] | None = None,
     ) -> None:
         self.transport = transport
         self.app = app
         self.key = key
         self.maxsize = maxsize
-        self._queue: deque[DataModel] = deque()
+        self.deadline = deadline
+        self.on_undelivered = on_undelivered
+        #: Each queued message, with when (monotonic) it was queued.
+        self._queue: deque[tuple[DataModel, float]] = deque()
         self._data = 0
         self._wake = asyncio.Event()
         self._task: asyncio.Task | None = None
-        self.published = self.failed = self.dropped = 0
+        self.published = self.failed = self.dropped = self.undelivered = 0
         self.monitor = KeepUpMonitor(app, "cannot publish as fast as it produces", keep_up, label=label)
 
     def publish(self, message: DataModel) -> None:
@@ -247,7 +271,7 @@ class Outbox:
         control = _is_control(message)
         if not control and self._data >= self.maxsize:
             self._drop_oldest_data()
-        self._queue.append(message)
+        self._queue.append((message, time.monotonic()))
         self._data += 0 if control else 1
         self._wake.set()
 
@@ -263,10 +287,10 @@ class Outbox:
         with contextlib.suppress(TimeoutError):
             async with asyncio.timeout(timeout):
                 while self._queue:
-                    await self._send(self._pop())
+                    await self._send(*self._pop())
 
     def _drop_oldest_data(self) -> None:
-        for i, queued in enumerate(self._queue):
+        for i, (queued, _) in enumerate(self._queue):
             if not _is_control(queued):
                 del self._queue[i]
                 self._data -= 1
@@ -274,19 +298,35 @@ class Outbox:
                 self.monitor.note(self, 1)
                 return
 
-    def _pop(self) -> DataModel:
-        message = self._queue.popleft()
+    def _pop(self) -> tuple[DataModel, float]:
+        message, queued_at = self._queue.popleft()
         self._data -= 0 if _is_control(message) else 1
-        return message
+        return message, queued_at
 
     async def _run(self) -> None:
         while True:
             while not self._queue:
                 self._wake.clear()
                 await self._wake.wait()
-            await self._send(self._pop())
+            await self._send(*self._pop())
 
-    async def _send(self, message: DataModel) -> None:
+    async def _send(self, message: DataModel, queued_at: float) -> None:
+        if not _is_control(message):
+            with contextlib.suppress(Exception):  # counted and logged by _attempt
+                await self._attempt(message)
+            return
+        give_up_at, wait, error = queued_at + self.deadline, _RETRY_S, None
+        while time.monotonic() < give_up_at:
+            try:
+                await self._attempt(message)
+                return
+            except Exception as failure:
+                error = failure
+            await asyncio.sleep(min(wait, max(0.0, give_up_at - time.monotonic())))
+            wait = min(wait * 2, _MAX_RETRY_S)
+        self._give_up(message, error)
+
+    async def _attempt(self, message: DataModel) -> None:
         try:
             await self.transport.publish(message, app=self.app, key=self.key)
         except Exception as error:
@@ -296,8 +336,20 @@ class Outbox:
                     "%s@%s: could not publish %s (%d failed): %s",
                     self.app, self.key, type(message).__name__, self.failed, error,
                 )
-            return
+            raise
         self.published += 1
+
+    def _give_up(self, message: DataModel, error: Exception | None) -> None:
+        self.undelivered += 1
+        logger.warning(
+            "%s@%s: gave up on %s after %g s: %s", self.app, self.key, type(message).__name__, self.deadline,
+            error if error is not None else "it waited in the queue past its deadline",
+        )
+        if self.on_undelivered is not None:
+            try:
+                self.on_undelivered(message, error)
+            except Exception:
+                logger.exception("%s@%s: reporting an undelivered %s failed", self.app, self.key, type(message).__name__)
 
 
 def transport_from_env(variable: str = TRANSPORT_VARIABLE) -> Transport:
