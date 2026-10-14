@@ -34,7 +34,7 @@ and is left out. "Decision" names the decision below that settles a comment;
 
 | # | Issue | Origin | Decision |
 |---|---|---|---|
-| 28 | Kafka losing its topics stops the stack until every process restarts; probes stay green | before | — |
+| 28 | Kafka losing its topics stops the stack until every process restarts; probes stay green (recovery fixed 2026-10-14; probes open) | before | — |
 | 29 | A live source that fails stays failed; later viewers are not told | before | — |
 | 31 | A command sent during a broker outage is acknowledged, then lost or applied late (fixed 2026-10-14) | before | — |
 | 30 | Module state belongs to the key: settings lost on a worker restart, inherited after a crash | before | D1 |
@@ -611,6 +611,16 @@ Unlike comments 1 to 27, these are about the branch as a whole: all but 33 and
 - Suggestion: forget a topic in `_created` on `UnknownTopicOrPartitionError`,
   and re-create every topic when the consumer finds one missing. Let the
   transport's state reach a probe.
+- Recovery fixed 2026-10-14. A failed publish forgets its topic, so the next
+  try makes it again. The consumer checks every 2 s that the topics it holds
+  exist (aiokafka only logs a lost one) and reopens if not. On assigning, it
+  asks the broker which topics exist instead of trusting `_created`. The last
+  was the actual wedge in compose: a consumer reopened on a connection error
+  skipped making its topics, and its offset calls timed out every 40 s, for
+  ever. Seen again (compose, Kafka recreated): ten fresh module results 0.9 s
+  after play, 1 server log line in 5 s, CPU back to normal, no process
+  restarted. Probes are still open: `/healthz` does not cover the broker
+  (AGENTS.md says why), and the workers still have none.
 
 **29. A live source that fails stays failed until the server restarts, and whoever switches to it later is not told.**
 - Seen (in process, a live source that raises after 20 frames): the shared

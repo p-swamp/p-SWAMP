@@ -444,9 +444,13 @@ Key invariants to preserve:
   endpoint — live PMU data, a store that outlives the process, or any notion of a
   user.
 - **One cheap probe.** `GET /healthz` is both the liveness and readiness probe (and
-  the compose healthcheck). The server has no external dependencies, so "is the
-  process serving?" is the whole health story; there is no `/readyz`. It stays at
-  the root, not under `/api`: it is the process's health, not any one app's.
+  the compose healthcheck): "is the process serving?". There is no `/readyz`. It
+  stays at the root, not under `/api`: it is the process's health, not any one
+  app's. It does not cover the broker. With Kafka configured the server depends
+  on it, but `KafkaTransport` reconnects and makes lost topics again by itself,
+  and a command the outage swallowed reaches the tray. A readiness probe failing
+  on the broker would also take the grid monitor, which needs no broker, off the
+  Service.
 - **Every api lives under `/api/<app>/`.** The prefix is `AppEntry.prefix`,
   derived from that entry's slug in `APPS` in `server.py` rather than from the
   package, so a router declares plain paths (`"/ws"`, `"/count/bump"`) and is

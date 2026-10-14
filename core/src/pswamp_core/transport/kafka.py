@@ -24,6 +24,11 @@
   (``CommandInbox``). A data topic starts again at its end. A control topic
   whose offsets no longer fit (the broker lost it and made it again) is read
   from its start.
+- **A broker that lost its topics** (a new broker with no volume) is noticed
+  both ways. A publish that fails makes its topic again on the next try. The
+  consumer checks every ``_TOPIC_CHECK_S`` that the topics it holds still
+  exist, and reopens if not; assigning, it asks the broker which exist rather
+  than trusting what this process made, and makes the others again.
 - **Backpressure.** ``publish`` waits for the broker's acknowledgement, so a
   slow broker backs up into the caller's ``Outbox``, which drops old data.
 
@@ -34,6 +39,7 @@ this class costs nothing without it.
 from __future__ import annotations
 
 import asyncio
+import time
 from collections.abc import Sequence
 from typing import TYPE_CHECKING, Any
 
@@ -65,6 +71,8 @@ _TOPIC_ALREADY_EXISTS = 36
 #: How long one fetch waits, and so how soon a new topic is taken on.
 _POLL_MS = 200
 _RECONNECT_DELAY, _MAX_RECONNECT_DELAY = 1.0, 30.0
+#: How often the consumer checks that the topics it holds still exist.
+_TOPIC_CHECK_S = 2.0
 
 
 class KafkaTransport(Transport):
@@ -128,7 +136,11 @@ class KafkaTransport(Transport):
             await self.open()
         topic = self.topic(type(message), app)
         await self._create(topic)
-        await self._producer.send_and_wait(topic, value=message.model_dump_json().encode(), key=key.encode())
+        try:
+            await self._producer.send_and_wait(topic, value=message.model_dump_json().encode(), key=key.encode())
+        except Exception:
+            self._created.discard(topic)  # it may be gone: make it again on the next try
+            raise
 
     async def _create(self, topic: str) -> None:
         """Create ``topic`` if the broker lacks it. A refusal is logged and left
@@ -176,10 +188,12 @@ class KafkaTransport(Transport):
                 group_id=None,
                 enable_auto_commit=False,
                 auto_offset_reset="latest",
+                request_timeout_ms=10_000,  # a request that cannot succeed fails in 10 s, not 40
             )
             try:
                 await consumer.start()
                 self._unassigned |= set(self._ready)  # a fresh consumer holds nothing
+                checked = time.monotonic()
                 while True:
                     if self._unassigned:
                         await self._assign(consumer)
@@ -187,6 +201,9 @@ class KafkaTransport(Transport):
                     for partition, records in batches.items():
                         self._decode(partition.topic, records)
                     delay = _RECONNECT_DELAY
+                    if time.monotonic() - checked >= _TOPIC_CHECK_S:
+                        checked = time.monotonic()
+                        await self._check_topics(consumer)
             except asyncio.CancelledError:
                 raise
             except Exception as error:
@@ -205,7 +222,10 @@ class KafkaTransport(Transport):
 
         new = sorted(self._unassigned)
         self._unassigned.clear()
+        present = await consumer.topics()  # fresh metadata: a new broker has none of them
         for topic in new:
+            if topic not in present:
+                self._created.discard(topic)
             await self._create(topic)
         held = {tp: await consumer.position(tp) for tp in consumer.assignment()}
         fresh = [TopicPartition(topic, 0) for topic in new if TopicPartition(topic, 0) not in held]
@@ -227,6 +247,19 @@ class KafkaTransport(Transport):
                     self._resume_at[tp.topic] = position
         for topic in new:
             self._ready[topic].set()
+
+    async def _check_topics(self, consumer: Any) -> None:
+        """Raise when a topic the consumer holds is gone from the broker, so
+        that it is reopened and, re-assigning, makes the topic again. A
+        consumer of a lost topic only logs; it never raises on its own."""
+        held = {tp.topic for tp in consumer.assignment()}
+        if not held:
+            return
+        missing = held - await consumer.topics()  # fresh metadata from the broker
+        if missing:
+            self._created.difference_update(missing)
+            names = ", ".join(sorted(missing)[:3]) + (", ..." if len(missing) > 3 else "")
+            raise LookupError(f"the broker lost {len(missing)} of the topics read here ({names}); making them again")
 
     def _is_control(self, topic: str) -> bool:
         model = self._models.get(topic)

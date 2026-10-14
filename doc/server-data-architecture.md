@@ -260,7 +260,10 @@ about a minute of retention. It reads every topic its process listens to with
 one consumer, from the topic's end, with no consumer group. A consumer that
 fails is reopened with backoff and resumes each control topic (commands,
 errors, `PipelineClosed`) where it was, so what was sent meanwhile still
-arrives; a data topic starts again at its end. Compose runs the broker as
+arrives; a data topic starts again at its end. A broker that lost its topics
+(a new one, with no volume) is noticed on both sides, and the topics are made
+again: a failed publish makes its topic on the next try, and the consumer
+checks every 2 s that the topics it holds still exist. Compose runs the broker as
 `kafka` (Apache Kafka, one KRaft node, no volume).
 
 *Where.* `core/src/pswamp_core/transport/`, `subscription.py`, `settings.py`

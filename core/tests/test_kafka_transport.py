@@ -9,6 +9,7 @@ and is skipped without one.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import os
 import sys
 
@@ -73,3 +74,56 @@ async def test_a_reopened_consumer_resumes_the_command_topics_and_not_the_data(a
     finally:
         await receiver.close()
         await sender.close()
+
+
+@pytest.mark.skipif(not BOOTSTRAP, reason="KAFKA_TEST_BOOTSTRAP_SERVERS is not set")
+async def test_topics_the_broker_lost_are_made_again_both_ways(app):
+    from aiokafka.admin import AIOKafkaAdminClient
+
+    receiver, sender = KafkaTransport("receiver", BOOTSTRAP), KafkaTransport("sender", BOOTSTRAP)
+    admin = AIOKafkaAdminClient(bootstrap_servers=BOOTSTRAP)
+    await admin.start()
+    try:
+        with receiver.subscribe(PauseCommand, app=app, overflow=Overflow.GROW) as feed:
+            await feed.ready(20)
+            await sender.publish(PauseCommand(), app=app, key="k")
+            await take(feed, 1, timeout=20)
+            await admin.delete_topics([receiver.topic(PauseCommand, app)])  # a new broker, with no volume
+            await asyncio.sleep(1)
+            command = PauseCommand()
+
+            async def until_received():
+                while True:
+                    with contextlib.suppress(Exception):  # the first tries fail: the topic is gone
+                        await sender.publish(command, app=app, key="k")
+                    got = feed.get_nowait()
+                    if got is not None and got[1].request_id == command.request_id:
+                        return
+                    await asyncio.sleep(0.5)
+
+            await asyncio.wait_for(until_received(), 60)
+    finally:
+        await admin.close()
+        await receiver.close()
+        await sender.close()
+
+
+@pytest.mark.skipif(not BOOTSTRAP, reason="KAFKA_TEST_BOOTSTRAP_SERVERS is not set")
+async def test_a_consumer_reopened_on_a_new_broker_makes_its_topics_again(app):
+    from aiokafka.admin import AIOKafkaAdminClient
+
+    transport = KafkaTransport("receiver", BOOTSTRAP)
+    admin = AIOKafkaAdminClient(bootstrap_servers=BOOTSTRAP)
+    await admin.start()
+    try:
+        with transport.subscribe(PauseCommand, app=app, overflow=Overflow.GROW) as feed:
+            await feed.ready(20)
+            await cancel_and_wait(transport._consumer_task)  # the broker went away...
+            await admin.delete_topics([transport.topic(PauseCommand, app)])  # ...and came back with nothing
+            await asyncio.sleep(1)
+            transport._consumer_task = asyncio.create_task(transport._consume())  # reopened, as on a connection error
+            await feed.ready(15)  # it made the topic again, so its offsets answer
+            assert transport.topic(PauseCommand, app) in await admin.list_topics()
+    finally:
+        await admin.close()
+        await transport.close()
