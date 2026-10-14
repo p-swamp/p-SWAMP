@@ -89,8 +89,9 @@ def test_a_live_source_cannot_be_playable():
             name = "wrong"
             kind = "live"
 
-            def read(self, start=None, end=None):
-                yield from ()
+            async def aread(self, start=None, end=None):
+                for record in ():
+                    yield record
 
 
 def test_a_playable_answers_the_transport_commands_only():

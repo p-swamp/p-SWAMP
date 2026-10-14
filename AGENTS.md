@@ -549,7 +549,8 @@ The rules to keep:
 - **Sources are modules.** A `SourceModule` is a `Module` with no inputs that produces `PmuFrame`
   (`kind = "history"` or `"live"`). Its author writes **one** of `read(start, end)`
   (plain code; a script iterates it) or `aread` (async, when the data is); the
-  base derives the other, plus `coverage` for a history. A history that mixes
+  base derives the other, plus `coverage` for a history. A live feed written as
+  `read` must set `blocking = True`, or its class is refused. A history that mixes
   in `Playable` is its own player — paced, seekable, looping, answering
   `Play`/`Pause`/`Step`/`Seek`/`Speed` in its `ahandle` — and a live source simply has no
   transport. A run holds its sources in a `SourceSet` (named instances, one

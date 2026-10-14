@@ -12,7 +12,7 @@ from support import AsyncListSource, ListSource, TickingSource, frame
 from pswamp_core.enrich import CimReferenceEnricher
 from pswamp_core.modules import Module
 from pswamp_core.settings import EnvSetting, MissingSettingError
-from pswamp_core.sources import SourceModule, SourceSet
+from pswamp_core.sources import YIELD_EVERY, SourceModule, SourceSet
 from pswamp_core.testing import SourceConformance
 from pswamp_models.pmu import PmuFrame
 
@@ -79,6 +79,30 @@ async def test_a_sync_source_is_read_asynchronously_inline_or_in_a_thread(blocki
     assert await Source().acoverage() == Source().coverage()
 
 
+async def test_a_long_sync_read_hands_the_loop_back_as_it_goes():
+    class Long(ListSource):
+        name = "long"
+
+        def read(self, start=None, end=None):
+            for n in range(YIELD_EVERY * 10):
+                yield self.frames[n % len(self.frames)]
+
+    turns = 0
+
+    async def other():
+        nonlocal turns
+        while True:
+            turns += 1
+            await asyncio.sleep(0)
+
+    task = asyncio.create_task(other())
+    await asyncio.sleep(0)
+    before = turns
+    assert len([f async for f in Long().aread()]) == YIELD_EVERY * 10
+    assert turns - before >= 9  # once per YIELD_EVERY records, give or take the start
+    task.cancel()
+
+
 async def test_closing_an_async_read_closes_the_sync_iterator():
     closed = []
 
@@ -127,6 +151,7 @@ async def test_a_source_opens_once_however_many_ask():
 class Configured(SourceModule):
     name = "configured"
     kind = "live"
+    blocking = True  # a live feed written as read waits for its records
     env_settings = (
         EnvSetting("PATH", "a file", default="default.txt", kind="path"),
         EnvSetting("RATE", "a rate", kind="float"),
@@ -211,11 +236,18 @@ def test_a_source_class_is_checked_when_defined():
             kind = "live"
             outputs = ()
 
+    with pytest.raises(TypeError, match="live feed written as `read`.*blocking = True"):
+
+        class Waits(Reading):
+            name = "x"
+            kind = "live"
+
 
 def test_an_abstract_base_is_not_checked_and_its_subclasses_are():
     class Sub(Reading):
         name = "sub"
         kind = "live"
+        blocking = True
 
     assert Sub.model is PmuFrame and TickingSource.outputs == (PmuFrame,)
     with pytest.raises(TypeError):

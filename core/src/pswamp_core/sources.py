@@ -44,8 +44,11 @@ and ``close``. It is of one of two ``kind``s:
         stats.run_one(frame)
 
 *The host* (the server, a worker) calls ``aread``. Implemented as ``read``, it
-runs inline, or in a thread per record when ``blocking = True`` (the right
-setting for a source that waits on a file or a socket). Implemented as
+runs inline, handing the event loop back every ``YIELD_EVERY`` records, or in a
+thread per record when ``blocking = True`` (the right setting for a source that
+waits on a file or a socket). A live feed written as ``read`` waits for its
+records, so it must set ``blocking = True``; the class check refuses it
+otherwise. Implemented as
 ``aread``, ``read`` drives it on a private event loop, and raises a clear
 ``RuntimeError`` when called from inside a running one: use ``aread`` there.
 ``coverage`` / ``acoverage`` and ``open`` / ``aopen`` / ``close`` / ``aclose``
@@ -69,7 +72,8 @@ They arrive as ``self.settings``.
 
 A class is checked when it is defined (``__init_subclass__``): ``name`` set,
 ``kind`` known, ``read`` or ``aread`` implemented, a history's ``coverage``
-implemented, ``outputs`` made of ``DataModel`` classes. A class that is only a
+implemented, ``outputs`` made of ``DataModel`` classes, and a live feed written
+as ``read`` set ``blocking``. A class that is only a
 base for others sets ``abstract = True`` in its own body to skip the check.
 
 ``SourceSet`` is a run's sources: named instances, one of them active.
@@ -94,11 +98,15 @@ from .modules import Module
 from .settings import Configurable, EnvSetting, MissingSettingError, parse_setting, read_setting
 from .time_range import TimeRange
 
-__all__ = ["SourceModule", "SourceSet", "SourceStream"]
+__all__ = ["YIELD_EVERY", "SourceModule", "SourceSet", "SourceStream"]
 
 logger = get_logger("pswamp_core.sources")
 
 _END = object()
+
+#: How many records a ``read`` yields inline before ``aread`` hands the event
+#: loop back: a long range read must not starve every socket and run.
+YIELD_EVERY = 64
 _KINDS = ("live", "history")
 
 
@@ -202,6 +210,11 @@ class SourceModule(Module, Configurable):
         for setting in cls.env_settings:
             if not isinstance(setting, EnvSetting):
                 raise TypeError(f"{label}.env_settings must hold EnvSetting entries, not {setting!r}")
+        if cls.kind == "live" and not _defines(cls, "aread") and not cls.blocking:
+            raise TypeError(
+                f"{label} is a live feed written as `read`, which would hold the event loop while it waits "
+                f"for records: set `blocking = True` (it then runs in a thread), or write `aread`"
+            )
         cls.model = outputs[0]
 
     def __init__(self, source: str | None = None, **settings: Any) -> None:
@@ -251,11 +264,19 @@ class SourceModule(Module, Configurable):
 
     async def aread(self, start: datetime | None = None, end: datetime | None = None) -> AsyncIterator[DataModel]:
         """The same records, for the host. A source written as ``read`` runs
-        inline, or in a thread per record when ``blocking``."""
+        inline, handing the loop back every ``YIELD_EVERY`` records, or in a
+        thread per record when ``blocking``."""
         iterator = iter(self.read(start, end))
         try:
+            count = 0
             while True:
-                record = await asyncio.to_thread(next, iterator, _END) if self.blocking else next(iterator, _END)
+                if self.blocking:
+                    record = await asyncio.to_thread(next, iterator, _END)
+                else:
+                    record = next(iterator, _END)
+                    count += 1
+                    if count % YIELD_EVERY == 0:
+                        await asyncio.sleep(0)
                 if record is _END:
                     return
                 yield record

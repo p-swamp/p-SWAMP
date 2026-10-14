@@ -719,7 +719,9 @@ its entry point.
   `coverage`. `--playable` adds the `Playable` mixin, so a history is replayed
   paced, seekable and looping in a run (play, pause, step, seek, speed); a live
   source is not playable and a run simply follows it. Set `blocking = True` on a
-  source that waits on a file or a socket. `modules/sample-replay/` (history,
+  source that waits on a file or a socket; a live feed written as `read` is
+  refused without it, since its `read` would hold the event loop while it waits.
+  `modules/sample-replay/` (history,
   playable) and `modules/live-synthetic/` (live) are the worked examples.
 - **Using it:** it is installed with the workspace (`uv sync`), and a pipeline
   names it, by entry point, in its `[[sources]]`, or `<APP>_SOURCES` replaces the

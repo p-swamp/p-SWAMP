@@ -47,7 +47,7 @@ module contract for the next module.
 | 32 | A hung remote data service holds up every command of the run | before | — |
 | 40 | A module command sent while following the shared live run reaches an instance that gets no frames | before | Decided |
 | 1 | A `blocking` module runs `process` and `handle` in two threads at once (fixed 2026-10-14) | Louis | D5 |
-| 2 | A sync `read` source holds the event loop; a live one would freeze the server | Louis | — |
+| 2 | A sync `read` source holds the event loop; a live one would freeze the server (fixed 2026-10-14) | Louis | — |
 | 11 | A module with a dependency of its own fails to import in the image | Louis | D4 |
 | 33 | The models layering test fails, so the unit tests are red (fixed 2026-10-14) | Louis | — |
 | 6 | No teardown hook: a resource leaks per evicted key | before | D1 |
@@ -359,6 +359,9 @@ output is designed.
   refuses it.
 - Suggestion: `await asyncio.sleep(0)` every N records in the inline path;
   refuse `kind = "live"` with a sync `read` unless `blocking = True`.
+- Fixed 2026-10-14 as suggested, N being `YIELD_EVERY = 64`
+  (`sources.py`). The appendix script now prints "other task ran 335 times"
+  for the same read (0.46 s).
 
 **3. The join builds its bundle when the trigger is dequeued.**
 - Where: `host.py:244` queues the raw trigger; `modules.py:371` feeds the join

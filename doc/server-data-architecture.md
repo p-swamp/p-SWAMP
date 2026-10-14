@@ -402,7 +402,10 @@ router, never in a `ModuleHost` (ADR-006). It reads nothing and
 produces `PmuFrame`s. It is a `history` (it holds a range, reports it as
 `coverage`, and yields any part of it) or a `live` feed (it yields records as
 they arrive). The author writes one of `read` (plain code, for a script too) or
-`aread`; the base derives the other. A history that mixes in `Playable` is also
+`aread`; the base derives the other. A `read` runs on the event loop and hands
+it back every 64 records (`YIELD_EVERY`); a source whose `read` waits on a file
+or a socket sets `blocking = True` to run it in a thread, and a live feed
+written as `read` must, or its class is refused. A history that mixes in `Playable` is also
 its own player: it paces, seeks, steps, loops and answers the playback commands
 (in `ahandle`, the slot a `Module` uses for an answer that awaits).
 A `SourceSet` holds a run's sources as named instances, one of them active.

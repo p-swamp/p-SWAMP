@@ -43,7 +43,9 @@ gets the synchronous forms for free.
   `class __NAME__Source(Playable, SourceModule)`.
   `pswamp new module <name> <label> --source --playable` generates it that way.
 - A **live** feed sets `kind = "live"`, has no `coverage`, and yields frames
-  stamped now as they arrive, until `end` or for ever. It is not `Playable`:
+  stamped now as they arrive, until `end` or for ever. Write it as `aread`, or as
+  `read` with `blocking = True`: a live `read` without it is refused, since it
+  would hold the event loop while it waits. It is not `Playable`:
   `modules/live-synthetic/` is the example.
 
 ## Using it in a pipeline

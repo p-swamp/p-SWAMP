@@ -57,6 +57,7 @@ class Feed(SourceModule):
 
     name = "test-feed"
     kind = "live"
+    blocking = True  # a live feed written as read waits for its records
 
     def read(self, start=None, end=None):
         yield frame(0)
