@@ -165,6 +165,34 @@ async def test_stopping_a_run_drops_its_module_instances():
     await cancel_and_wait(hosting)
 
 
+async def test_a_new_run_of_a_key_gets_fresh_instances_even_if_the_old_one_never_closed():
+    transport = InMemoryTransport()
+    pipeline = Pipeline("app", sources, modules=(FrameCounter,))
+    (host,) = pipeline.hosts(transport)
+    hosting = asyncio.create_task(host.serve())
+    crashed = PipelineRun("k", pipeline, transport)
+    await crashed.start()
+    crashed.dispatch(PlayCommand())
+
+    def counted(run: PipelineRun) -> float:
+        result = run.latest.get(NumberResult)
+        return 0 if result is None else result.result.value
+
+    await until(lambda: counted(crashed) >= 3)
+    await crashed.router.stop()  # it stops publishing, and never says PipelineClosed
+    old = crashed.latest.get(NumberResult).app.uuid
+    run = PipelineRun("k", pipeline, transport)
+    await run.start()  # publishes the frame at the start: the first one counted
+    await until(lambda: counted(run) > 0)
+    assert run.latest.get(NumberResult).app.uuid != old and counted(run) == 1 and host.keys() == ["k"]
+    await crashed.stop()  # its late PipelineClosed leaves the new run's instance
+    await asyncio.sleep(0.05)
+    assert host.keys() == ["k"]
+    await run.stop()
+    await until(lambda: host.keys() == [])
+    await cancel_and_wait(hosting)
+
+
 def test_hosts_can_be_limited_to_named_modules():
     pipeline = Pipeline("app", sources, modules=(FrameCounter, Halver))
     assert [h.name for h in pipeline.hosts(InMemoryTransport(), only={"halver"})] == ["halver"]

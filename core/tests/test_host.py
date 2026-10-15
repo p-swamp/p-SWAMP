@@ -76,6 +76,85 @@ async def test_an_idle_instance_is_dropped():
     await cancel_and_wait(task)
 
 
+class TornDown(Doubler):
+    """Doubler that records its teardown."""
+
+    def __init__(self, fail: bool = False) -> None:
+        super().__init__()
+        self.fail = fail
+        self.torn_down = 0
+
+    async def teardown(self) -> None:
+        self.torn_down += 1
+        if self.fail:
+            raise RuntimeError("teardown failed")
+
+
+def recording(fail: bool = False):
+    """A factory of ``TornDown`` instances, and the list it builds into
+    (the first is the host's template)."""
+    instances: list[TornDown] = []
+
+    def build() -> TornDown:
+        instances.append(TornDown(fail))
+        return instances[-1]
+
+    return build, instances
+
+
+async def test_a_newer_run_of_a_key_gets_a_fresh_instance_and_an_older_one_is_ignored():
+    build, instances = recording()
+    broker = InMemoryTransport()
+    host = ModuleHost(build, broker, app="a")
+    task = asyncio.create_task(host.serve())
+    await settle()
+    with broker.subscribe(NumberResult, app="a", overflow=Overflow.GROW) as results:
+        await broker.publish(measurement(1), app="a", key="k#100.0")
+        await broker.publish(measurement(2), app="a", key="k#200.0")
+        (_, first), (_, second) = await take(results, 2)
+        await broker.publish(measurement(3), app="a", key="k#100.0")  # late, from the old run
+        await asyncio.sleep(0.05)  # and the old instance's drop runs to its teardown
+        assert results.get_nowait() is None
+    assert first.app.uuid != second.app.uuid and host.keys() == ["k"]
+    old, new = instances[1:]
+    assert old.torn_down == 1 and new.torn_down == 0
+    await cancel_and_wait(task)
+    assert new.torn_down == 1  # at shutdown
+
+
+async def test_a_late_pipeline_closed_of_an_older_run_leaves_the_newer_instance():
+    build, instances = recording()
+    broker = InMemoryTransport()
+    host = ModuleHost(build, broker, app="a")
+    task = asyncio.create_task(host.serve())
+    await settle()
+    await broker.publish(measurement(1), app="a", key="k#200.0")
+    await settle()
+    await broker.publish(PipelineClosed(timestamp=utcnow(), reason="idle"), app="a", key="k#100.0")
+    await settle()
+    assert host.keys() == ["k"]
+    await broker.publish(PipelineClosed(timestamp=utcnow(), reason="idle"), app="a", key="k#200.3")
+    await asyncio.sleep(0.05)  # the drop runs to its teardown
+    assert host.keys() == [] and instances[1].torn_down == 1
+    await cancel_and_wait(task)
+
+
+async def test_an_idle_instance_is_torn_down_and_a_failing_teardown_is_only_logged():
+    build, instances = recording(fail=True)
+    broker = InMemoryTransport()
+    host = ModuleHost(build, broker, app="a", idle_seconds=0.1)
+    task = asyncio.create_task(host.serve())
+    await settle()
+    await broker.publish(measurement(1), app="a", key="k1")
+    await asyncio.sleep(0.3)
+    assert host.keys() == [] and instances[1].torn_down == 1
+    with broker.subscribe(NumberResult, app="a", key="k2") as results:
+        await broker.publish(measurement(2), app="a", key="k2")
+        (_, result), = await take(results, 1)
+    assert result.result.value == 4  # the host still serves
+    await cancel_and_wait(task)
+
+
 async def test_commands_reach_the_instance_for_their_key_and_refusals_come_back():
     broker = InMemoryTransport()
     task = asyncio.create_task(ModuleHost(Halver, broker, app="a").serve())

@@ -53,6 +53,30 @@ async def test_the_outbox_sends_in_order_under_its_key():
     assert [(key, m.mRID) for key, m in got] == [("k", "m0"), ("k", "m1"), ("k", "m2")]
 
 
+async def test_the_outbox_takes_a_key_per_message_and_a_new_key_applies_from_then_on():
+    broker = InMemoryTransport()
+    outbox = Outbox(broker, app="a", key="k#1.0")
+    with broker.subscribe(Measurement, app="a", overflow=Overflow.GROW) as feed:
+        outbox.publish(measurement(0))
+        outbox.publish(measurement(1), key="k#1.0")
+        outbox.key = "k#1.1"
+        outbox.publish(measurement(2))
+        outbox.start()
+        got = await take(feed, 3)
+        await outbox.close()
+    assert [key for key, _ in got] == ["k#1.0", "k#1.0", "k#1.1"]
+
+
+async def test_a_subscription_to_a_run_hears_every_key_of_that_run_and_no_other():
+    broker = InMemoryTransport()
+    with broker.subscribe(Measurement, app="a", key="42", overflow=Overflow.GROW) as feed:
+        for key in ("42", "42#7.0", "42#8.3", "420", "4", "42x#1.0"):
+            await broker.publish(measurement(1), app="a", key=key)
+        got = [feed.get_nowait() for _ in range(3)]
+        assert feed.get_nowait() is None
+    assert [key for key, _ in got] == ["42", "42#7.0", "42#8.3"]
+
+
 async def test_a_full_outbox_drops_old_data_but_never_a_command():
     broker = InMemoryTransport()
     outbox = Outbox(broker, app="a", key="k", maxsize=2)

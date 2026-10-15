@@ -587,7 +587,10 @@ The rules to keep:
   server's `src/`, so a module that imports the web backend fails at start.
 - **Recordings are per client, live is shared.** A client's run is keyed by its
   client id; each live source has one always-on run keyed `live.<source>`, which
-  client runs follow. While following, a command for a module that reads the
+  client runs follow. A run publishes under its key plus a run id of its own
+  (`42#<run id>.<stream>`, `pswamp_core.keys`), so a module instance lives as
+  long as its run: a new run gets a fresh one, and `teardown` is called on the
+  old. While following, a command for a module that reads the
   stream is refused (409): that instance is every viewer's. A live feed that
   fails is reopened with backoff, and a page reads `run.status()`, which carries
   the shared run's error, rather than `run.router.status()`.

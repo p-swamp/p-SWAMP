@@ -13,7 +13,9 @@ as data, in ``pipelines/<app>.toml``, which ``Pipeline.load`` reads (see
 A test may declare one in code: ``Pipeline("app", sources, modules=(FrameStatsModule,))``.
 
 A **``PipelineRun``** is one running instance under one key: a set of sources,
-a router over them (``ActiveSource``) and an outbox. It publishes the active
+a router over them (``ActiveSource``) and an outbox. It publishes under
+``<key>#<run id>.<stream>`` (``pswamp_core.keys``): a run id of its own, so a
+module host gives a new run of the same client fresh instances. It publishes the active
 source's frames to the modules and listens for their results. The modules themselves run in module hosts,
 wherever the deployment puts them (``Pipeline.hosts``, ``pswamp_core.worker``);
 the run and the hosts meet only on the transport::
@@ -58,6 +60,7 @@ from .active_source import ROUTER_COMMANDS, ActiveSource
 from .command_routing import CommandInbox, CommandRefused, NoReceiver, concrete_commands
 from .host import DEFAULT_IDLE_SECONDS, ModuleHost
 from .keep_up import KeepUp
+from .keys import StreamKey, next_run_id, run_of
 from .log import get_logger
 from .sources import SourceModule
 from .subscription import Overflow
@@ -274,6 +277,9 @@ class PipelineRun:
         on_error: Callable[[str, ErrorEvent], None] | None = None,
     ) -> None:
         self.key = key
+        #: This run's id: a module host builds fresh instances for a new one.
+        self.run_id = next_run_id()
+        self._stream = 0
         self.pipeline = pipeline
         self.transport = transport
         self._on_error = on_error
@@ -285,7 +291,7 @@ class PipelineRun:
         self.outbox = Outbox(
             transport,
             app=pipeline.app,
-            key=key,
+            key=str(self.stream_key),
             keep_up=KeepUp(),
             label=f"the server-side publisher for {key}",
             on_undelivered=self._undelivered,
@@ -330,6 +336,11 @@ class PipelineRun:
     def changes(self) -> Changes:
         """Wake-ups on every change; close it (or use ``with``) when done."""
         return Changes(self._waiters)
+
+    @property
+    def stream_key(self) -> StreamKey:
+        """What this run publishes under now."""
+        return StreamKey(self.key, self.run_id, self._stream)
 
     @property
     def following(self) -> str | None:
@@ -440,7 +451,10 @@ class PipelineRun:
             self._tasks.append(asyncio.create_task(self._repeat_status(), name=f"{key}.status"))
         # A switch stops a command still waiting on the source it leaves (one that hangs).
         self._inbox = CommandInbox(
-            (command async for _, command in commands), self.router, self, preempt=(SwitchSourceCommand,)
+            (command async for key, command in commands if self._ours(key)),
+            self.router,
+            self,
+            preempt=(SwitchSourceCommand,),
         )
         self._inbox.start()
 
@@ -461,9 +475,15 @@ class PipelineRun:
         await self.outbox.close()
         await self.sources.close()
 
+    def _ours(self, key: str) -> bool:
+        """``key`` is this run's, not an earlier run's of the same key (a
+        plain key, as a test publishes by hand, counts as ours)."""
+        return StreamKey.parse(key).run_id in (0, self.run_id)
+
     async def _receive(self, results: TransportSubscription) -> None:
-        async for _, result in results:
-            self._remember(result)
+        async for key, result in results:
+            if self._ours(key):
+                self._remember(result)
 
     async def _receive_followed(self, messages: TransportSubscription, frames: type[DataModel]) -> None:
         async for _, message in messages:
@@ -553,11 +573,13 @@ class PipelineRegistry(Generic[R]):
         return 0 if entry is None else entry.sockets
 
     def watching(self, key: str) -> list[str]:
-        """The keys of the runs that show what is published under ``key``: the
-        run itself, or every run following the shared live run ``key``."""
-        if key in self._entries:
-            return [key]
-        return [k for k, entry in self._entries.items() if entry.run.following == key]
+        """The keys of the runs that show what is published under ``key`` (a
+        run's key, or any key it publishes under): the run itself, or every run
+        following the shared live run ``key``."""
+        run = run_of(key)
+        if run in self._entries:
+            return [run]
+        return [k for k, entry in self._entries.items() if entry.run.following == run]
 
     def peek(self, key: str) -> R | None:
         """The key's run if it has one. Never builds: what a command uses."""

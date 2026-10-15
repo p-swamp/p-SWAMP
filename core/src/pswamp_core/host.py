@@ -1,10 +1,10 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright Contributors to the p-SWAMP Project.
 
-"""``ModuleHost``: runs a module, one instance per run key, off the transport.
+"""``ModuleHost``: runs a module, one instance per run, off the transport.
 
-    topic <app>.<input>,   key k ─▶ the instance for key k ─▶ Module.arun
-    topic <app>.<command>, key k ─▶ its command inbox       ─▶ Module.ahandle
+    topic <app>.<input>,   key k ─▶ the instance for k's run ─▶ Module.arun
+    topic <app>.<command>, key k ─▶ its command inbox        ─▶ Module.ahandle
     topic <app>.<output>,  key k ◀─ each of its outputs (and ErrorEvents)
 
 The host subscribes to every input of the module. Inputs go to the instance's
@@ -14,10 +14,14 @@ other input only replaces the newest of its kind in the join (``observe``), so
 a fast stream never backs up behind a slow trigger. Each output of a call is
 published on its own topic, under the key the input came with.
 
-An instance is built on the first message for its key, so a per-client run
-costs one instance per client, and a shared live run one in total. It is
-dropped when its run publishes ``PipelineClosed``, or, if that was lost, after
-``idle_seconds`` with nothing for it.
+An instance is built on the first message of its run (``StreamKey.run``), so
+a per-client run costs one instance per client, and a shared live run one in
+total. A key also carries its run's id (``pswamp_core.keys``): a message of a
+newer run of the same client (after a server restart, say) replaces the
+instance with a fresh one, and a late message of an older run is dropped. An
+instance is dropped when its run publishes ``PipelineClosed``, or, if that was
+lost, after ``idle_seconds`` with nothing for it. Its ``teardown`` is called
+then.
 
 An instance that fails (its ``setup`` raises, say) is logged, reported as an
 ``ErrorEvent`` under its key, and dropped. The first message for that key
@@ -41,6 +45,7 @@ from pswamp_models.common import ErrorEvent, PipelineClosed
 
 from .command_routing import CommandInbox, concrete_commands
 from .keep_up import KeepUpMonitor
+from .keys import StreamKey
 from .log import get_logger
 from .subscription import Overflow, Subscription
 from .transport import Outbox
@@ -145,23 +150,27 @@ class _Local:
 
 
 class _Slot:
-    """One key's module instance, with its queues, outbox and tasks."""
+    """One run's module instance, with its queues, outbox and tasks."""
 
-    def __init__(self, key: str, module: Module, transport: Transport, app: str) -> None:
+    def __init__(self, key: StreamKey, module: Module, transport: Transport, app: str) -> None:
         self.key = key
+        self.run = key.run
+        self.run_id = key.run_id
         self.module = module
         # Queues exist before the module is set up, so nothing arriving
         # meanwhile is lost.
         self.inputs = Subscription(_Local(), module.queued_inputs(), module.overflow, module.maxsize)
         self.commands = Subscription(_Local(), module.commands, Overflow.GROW, 0)
-        self.out = Outbox(transport, app=app, key=key)
+        self.out = Outbox(transport, app=app, key=str(key))
         self.inbox: CommandInbox | None = None
         self.tasks: list[asyncio.Task] = []
         self.seen = time.monotonic()
+        self.set_up = False
+        self.dropped = False
 
 
 class ModuleHost:
-    """Runs one instance of a module per run key.
+    """Runs one instance of a module per run.
 
     Args:
         module: The module class, or a factory building a fresh instance.
@@ -196,14 +205,15 @@ class ModuleHost:
         self.observed = tuple(m for m in template.input_models() if m not in self.inputs)
         self.outputs = template.outputs
         self.commands = concrete_commands(type(template).__name__, template.commands)
+        #: Per run: its instance.
         self._slots: dict[str, _Slot] = {}
-        #: The instances that failed, for ``_reap`` to drop.
-        self._failed: asyncio.Queue[_Slot] = asyncio.Queue()
-        #: Per key whose instance failed: when (monotonic) it may be rebuilt.
+        #: The instances that failed or were replaced, for ``_reap`` to drop.
+        self._retired: asyncio.Queue[tuple[_Slot, str]] = asyncio.Queue()
+        #: Per run whose instance failed: when (monotonic) it may be rebuilt.
         self._retry_at: dict[str, float] = {}
 
     def keys(self) -> list[str]:
-        """The keys with a running instance."""
+        """The runs with a running instance."""
         return list(self._slots)
 
     async def serve(self) -> None:
@@ -232,13 +242,17 @@ class ModuleHost:
             await cancel_and_wait(*tasks, ignore=(Exception,))
             for key in list(self._slots):
                 await self._evict(key, "shutdown")
+            while not self._retired.empty():
+                slot, reason = self._retired.get_nowait()
+                if not slot.dropped:
+                    await finish(self._drop(slot, reason))
 
     async def _feed(self, feed: TransportSubscription, queue: str | None) -> None:
         """Hand each message to its key's instance: into ``queue``, or with
         none, straight into the instance's join."""
         with feed:
             async for key, message in feed:
-                slot = self._slot(key)
+                slot = self._slot(StreamKey.parse(key))
                 if slot is None:
                     continue
                 slot.seen = time.monotonic()
@@ -250,19 +264,35 @@ class ModuleHost:
     async def _closed(self, feed: TransportSubscription) -> None:
         with feed:
             async for key, closed in feed:
-                await self._evict(key, closed.reason)
+                closing = StreamKey.parse(key)
+                slot = self._slots.get(closing.run)
+                # A plain key closes whatever runs under it; otherwise not a newer run's instance.
+                if slot is not None and (closing.run_id == 0 or closing.run_id >= slot.run_id):
+                    await self._evict(closing.run, closed.reason)
 
-    def _slot(self, key: str) -> _Slot | None:
-        """The key's slot, built if it has none; ``None`` while the key is
-        left alone after its instance failed."""
-        slot = self._slots.get(key)
-        if slot is None:
-            if time.monotonic() < self._retry_at.get(key, 0.0):
-                return None
-            self._retry_at.pop(key, None)
-            slot = self._slots[key] = _Slot(key, self._factory(), self.transport, self.app)
-            slot.tasks.append(asyncio.create_task(self._run(slot), name=f"{self.name}@{key}"))
+    def _slot(self, key: StreamKey) -> _Slot | None:
+        """The slot of the key's run, built if it has none or holds an older
+        run; ``None`` for a message of an older run, and while the run is left
+        alone after its instance failed."""
+        slot = self._slots.get(key.run)
+        if slot is not None:
+            if key.run_id == slot.run_id:
+                return slot
+            if key.run_id < slot.run_id:
+                return None  # a late message of the run this one replaced
+            self._retire(slot, "a new run")
+        if time.monotonic() < self._retry_at.get(key.run, 0.0):
+            return None
+        self._retry_at.pop(key.run, None)
+        slot = self._slots[key.run] = _Slot(key, self._factory(), self.transport, self.app)
+        slot.tasks.append(asyncio.create_task(self._run(slot), name=f"{self.name}@{key}"))
         return slot
+
+    def _retire(self, slot: _Slot, reason: str) -> None:
+        """Take ``slot`` out of service now; ``_reap`` drops it."""
+        if self._slots.get(slot.run) is slot:
+            del self._slots[slot.run]
+        self._retired.put_nowait((slot, reason))
 
     async def _run(self, slot: _Slot) -> None:
         """One instance from setup until its ``run`` ends. A failure on the
@@ -280,8 +310,8 @@ class ModuleHost:
                     detail=f"{type(error).__name__}: {error}",
                 )
             )
-            self._retry_at[slot.key] = time.monotonic() + self.retry_seconds
-            self._failed.put_nowait(slot)
+            self._retry_at[slot.run] = time.monotonic() + self.retry_seconds
+            self._retire(slot, "failed")
 
     async def _start(self, slot: _Slot) -> None:
         module = slot.module
@@ -289,18 +319,20 @@ class ModuleHost:
         if module.reads_sources and self._sources is not None:
             module.sources = self._sources()
         await module.setup()
+        slot.set_up = True
         if module.commands:
             slot.inbox = command_inbox(module, slot.commands, slot.out)
             slot.inbox.start()
         logger.info("%s: instance started for key %s (%d running)", self.name, slot.key, len(self._slots))
 
     async def _reap(self) -> None:
-        """Drop the instances that failed. Here and not in the instance's own
-        task, which cannot wait for its own end."""
+        """Drop the instances that failed or were replaced. Here, and not in
+        the instance's own task (which cannot wait for its own end) or a feed
+        (which would hold up every other run meanwhile)."""
         while True:
-            slot = await self._failed.get()
-            if self._slots.get(slot.key) is slot:
-                await self._evict(slot.key, "failed")
+            slot, reason = await self._retired.get()
+            if not slot.dropped:
+                await finish(self._drop(slot, reason))
 
     async def _sweep(self) -> None:
         interval = max(0.05, min(self.idle_seconds / 2, 5.0))
@@ -319,11 +351,17 @@ class ModuleHost:
             await finish(self._drop(slot, reason))
 
     async def _drop(self, slot: _Slot, reason: str) -> None:
+        slot.dropped = True
         if slot.inbox is not None:
             await slot.inbox.stop()
         await cancel_and_wait(*slot.tasks, ignore=(Exception,))
         slot.inputs.close()
         slot.commands.close()
+        if slot.set_up:
+            try:
+                await slot.module.teardown()
+            except Exception:  # one instance's teardown must not end the host's feeds
+                logger.exception("%s: the teardown for key %s failed", self.name, slot.key)
         await slot.out.close()
         if slot.module.sources is not None:
             try:

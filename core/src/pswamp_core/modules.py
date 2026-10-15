@@ -71,6 +71,10 @@ A module never sees the transport. A ``ModuleHost`` feeds it one run's input
 and publishes its outputs (``pswamp_core.host``); whether the host is in the
 server or in a worker is the deployment's choice.
 
+**An instance lives as long as its run.** A host builds one per run (a new
+run of the same client, after a server restart, gets a new one), calls
+``setup`` before its first input, and ``teardown`` when it drops it.
+
 A module may also read data itself, a batch question over a range, say: it
 sets ``reads_sources = True`` and its host gives each instance a ``SourceSet``
 of its own (``self.sources``) over the pipeline's sources, wherever it runs.
@@ -242,6 +246,11 @@ class Module(ABC):
 
     async def setup(self) -> None:
         """Called once by a host, after ``sources`` is set and before any input."""
+
+    async def teardown(self) -> None:
+        """Called once by a host when it drops the instance (its run closed,
+        went idle, or was replaced by a new run), after its last call and
+        before its ``sources`` close. Release what ``setup`` took."""
 
     def process(self, *args: Any, **named: Any) -> Any:
         """Analyse one input (or one bundle, by name). Return a body, a

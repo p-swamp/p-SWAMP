@@ -12,7 +12,9 @@
         async for key, frame in frames: ...                             # every key
 
 - The key says which run a record belongs to (a client id, or a live source).
-  It is transport metadata, not a message field.
+  It is transport metadata, not a message field. A run publishes under
+  ``<run>#<run id>.<stream>`` (``pswamp_core.keys``); a subscriber to
+  ``<run>`` hears all of those.
 - The app is part of the topic, so two apps reading the same class under the
   same key never hear each other.
 - A topic carries exactly one class: a subscriber to ``ResultEnvelope`` hears
@@ -88,7 +90,9 @@ class TransportSubscription(Subscription):
         self.key = key
 
     def wants(self, topic: str, key: str) -> bool:
-        return topic in self.topics and (self.key is None or key == self.key)
+        if topic not in self.topics or self.key is None:
+            return topic in self.topics
+        return key == self.key or key.startswith(self.key + "#")
 
     async def ready(self, timeout: float | None = None) -> None:
         """Wait until this process receives every topic here. Needed by a
@@ -144,6 +148,7 @@ class Transport(Configurable, ABC):
         maxsize: int = 256,
     ) -> TransportSubscription:
         """A queue over the topics of ``models`` in ``app``, for ``key`` or every key.
+        A run's key (``42``) takes every key of that run (``42#…``).
 
         Raises ``ValueError`` for a class whose topic already carries another
         class (two classes of one name): a topic carries one class.
@@ -224,7 +229,8 @@ def _is_control(message: DataModel) -> bool:
 
 
 class Outbox:
-    """A synchronous sink onto the transport, for one app and key.
+    """A synchronous sink onto the transport, for one app, under ``key`` or
+    a key given per message (``publish(message, key=...)``).
 
     ``publish`` queues and returns; a task sends in order. When more than
     ``maxsize`` data messages wait, the oldest is dropped (a live stream would
@@ -258,20 +264,21 @@ class Outbox:
         self.maxsize = maxsize
         self.deadline = deadline
         self.on_undelivered = on_undelivered
-        #: Each queued message, with when (monotonic) it was queued.
-        self._queue: deque[tuple[DataModel, float]] = deque()
+        #: Each queued message, with when (monotonic) it was queued, and its key.
+        self._queue: deque[tuple[DataModel, float, str]] = deque()
         self._data = 0
         self._wake = asyncio.Event()
         self._task: asyncio.Task | None = None
         self.published = self.failed = self.dropped = self.undelivered = 0
         self.monitor = KeepUpMonitor(app, "cannot publish as fast as it produces", keep_up, label=label)
 
-    def publish(self, message: DataModel) -> None:
-        """Queue ``message``. Never blocks."""
+    def publish(self, message: DataModel, key: str | None = None) -> None:
+        """Queue ``message``, under ``key`` or the outbox's key as it is now.
+        Never blocks."""
         control = _is_control(message)
         if not control and self._data >= self.maxsize:
             self._drop_oldest_data()
-        self._queue.append((message, time.monotonic()))
+        self._queue.append((message, time.monotonic(), self.key if key is None else key))
         self._data += 0 if control else 1
         self._wake.set()
 
@@ -290,7 +297,7 @@ class Outbox:
                     await self._send(*self._pop())
 
     def _drop_oldest_data(self) -> None:
-        for i, (queued, _) in enumerate(self._queue):
+        for i, (queued, _, _) in enumerate(self._queue):
             if not _is_control(queued):
                 del self._queue[i]
                 self._data -= 1
@@ -298,10 +305,10 @@ class Outbox:
                 self.monitor.note(self, 1)
                 return
 
-    def _pop(self) -> tuple[DataModel, float]:
-        message, queued_at = self._queue.popleft()
+    def _pop(self) -> tuple[DataModel, float, str]:
+        message, queued_at, key = self._queue.popleft()
         self._data -= 0 if _is_control(message) else 1
-        return message, queued_at
+        return message, queued_at, key
 
     async def _run(self) -> None:
         while True:
@@ -310,15 +317,15 @@ class Outbox:
                 await self._wake.wait()
             await self._send(*self._pop())
 
-    async def _send(self, message: DataModel, queued_at: float) -> None:
+    async def _send(self, message: DataModel, queued_at: float, key: str) -> None:
         if not _is_control(message):
             with contextlib.suppress(Exception):  # counted and logged by _attempt
-                await self._attempt(message)
+                await self._attempt(message, key)
             return
         give_up_at, wait, error = queued_at + self.deadline, _RETRY_S, None
         while time.monotonic() < give_up_at:
             try:
-                await self._attempt(message)
+                await self._attempt(message, key)
                 return
             except Exception as failure:
                 error = failure
@@ -326,15 +333,15 @@ class Outbox:
             wait = min(wait * 2, _MAX_RETRY_S)
         self._give_up(message, error)
 
-    async def _attempt(self, message: DataModel) -> None:
+    async def _attempt(self, message: DataModel, key: str) -> None:
         try:
-            await self.transport.publish(message, app=self.app, key=self.key)
+            await self.transport.publish(message, app=self.app, key=key)
         except Exception as error:
             self.failed += 1
             if self.failed <= 3 or self.failed % 50 == 0:
                 logger.warning(
                     "%s@%s: could not publish %s (%d failed): %s",
-                    self.app, self.key, type(message).__name__, self.failed, error,
+                    self.app, key, type(message).__name__, self.failed, error,
                 )
             raise
         self.published += 1

@@ -41,10 +41,10 @@ worked example of every piece.
 | router (`ActiveSource`) | A run's receiver of `SwitchSourceCommand` and the playback commands: switches the active source and hands the playback commands to it. Reported as "the player" to the page and in errors. |
 | transport | Keyed publish/subscribe: in-memory in one process, or Kafka between processes. |
 | topic | `<app>.<message class>`, e.g. `pmu-test-streamer.pmu.frame`. One class per topic. |
-| key | Which pipeline run a record belongs to: a client id, or `live.<source>`. |
+| key | Which pipeline run a record belongs to: the run key (a client id, or `live.<source>`), then the run's id, as in `42#1760512345678.0`. |
 | module | p-SWAMP's microservice: one analysis that declares the message classes it reads (`inputs`) and publishes (`outputs`), may answer commands, and can run in a process of its own. Plain synchronous code; callable from a script with `run`. |
 | join (`Latest`) | How a module with several simultaneous inputs gets one call: a trigger input starts it, the newest of each other input comes along, age judged in message time. |
-| host / worker | A host runs one module instance per key. A worker is a process that runs hosts. |
+| host / worker | A host runs one module instance per run. A worker is a process that runs hosts. |
 | pipeline | The declaration: an app's sources and modules. |
 | run | One running pipeline under one key: a source set, a router over it, and the latest message of each class. |
 | web API | An app's FastAPI package under `/api/<app>/`, which the browser talks to: POSTs become commands, and the socket pushes state. `doc/the-client-server-api.md` describes the convention. |
@@ -375,10 +375,14 @@ and `validate` if it can refuse one. What it returns is published like a
 published as an `ErrorEvent` carrying it too.
 
 A `ModuleHost` runs a module. It subscribes to every input and command topic
-of the module for every key, and builds one instance per run key on that
-key's first message. With a join, only the trigger input is queued; the others
+of the module for every key, and builds one instance per run on that run's
+first message. With a join, only the trigger input is queued; the others
 only replace the newest of their kind. It drops the instance when the run publishes `PipelineClosed`, or
-after five minutes with nothing for it.
+after five minutes with nothing for it, and calls its `teardown` then.
+
+A key carries its run's id (`pswamp_core.keys`), so an instance never outlives
+its run: a new run of the same client, after a server restart, replaces it
+with a fresh one, and a late message of the old run is dropped.
 
 An instance that fails (its `setup` raises, say) is logged, reported as an
 `ErrorEvent` under its key, and dropped. The first message for that key five
@@ -855,7 +859,7 @@ becomes `frame-stats` (step 2).
 - **What it gives.** The module has its own process, so a slow or crashing
   one cannot stall the modules in other workers, and its own limits, so it can be given more
   memory or CPU alone. A worker rests at about 30 MB before its module holds
-  anything; a module's own state is per run key, one instance per client on a
+  anything; a module's own state is per run, one instance per client on a
   recording and one in total on a live source.
 - **What it does not give.** More replicas of one module. Each topic has one
   partition and workers have no consumer group, so two replicas of a worker
