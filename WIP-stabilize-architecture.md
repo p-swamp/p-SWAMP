@@ -1,121 +1,151 @@
-# Review comments: module contract changes on `e2e-refactor-organisation-louis`
+# Stabilising the server data architecture
 
-For Louis. Scope: the models package, the module API and join, one project per
-module, TOML pipelines, sources as modules, and their docs (`deef05a` to
-`dbf635b`).
+Working context, kept until its list is empty. The goal: make the server data
+architecture (`models/`, `core/`, `modules/`, `pipelines/`) stable enough that
+other developers can build on its edges — modules, CIM lookup, remote data
+sources and front-end pages — while the plumbing behind those edges is still
+being fixed. `AGENTS.md` and `doc/server-data-architecture.md` say how the
+system works. This file says what is still wrong with it, what is decided,
+what each kind of contributor can start on now, and the evidence for each
+item.
 
-How it was reviewed: `core/src/pswamp_core/`, the models bases and the six
-projects under `modules/` were read in full; compose, k8s, the Dockerfile, the
-docs and the generator were read against that code. Comments 1 to 4, 9 and 13
-were reproduced with the script in the appendix. The test suites were not run
-then; on 2026-10-14 the branch was run end to end (comments 28 to 39, under
-"Running it"). Whether other developers can start on modules, CIM lookup and
-remote data, and the decisions to make first, are under "Readiness for edge
-work". How hard it is to lift the desktop WAMPAC apps into modules is
-under "Lifting the desktop WAMPAC apps". Comment 40 came later, under "Found in the contract
-pass".
-
-Compose, k8s and the pipeline file agree with the code today, and the module
-index in `modules/README.md` matches all six projects.
+**Where it comes from.** The module-contract work (`deef05a` to `dbf635b`: the
+models package, the module API and join, one project per module, TOML
+pipelines, sources as modules) read against the code; the branch run end to
+end in a bare container, compose and minikube; and the fix passes since.
+Issues keep the numbers they were found under (1 to 44), which commit
+messages cite. "Origin" says when an issue came in: **older** (already there
+at `069f88f`), **contract** (with `f70d7d6` to `dbf635b`), or **fix** (with a
+fix made here).
 
 ---
 
-## By severity, at `dbf635b`
+## Where it stands (2026-10-15)
 
-Every comment below, ranked. "Before" means it was already there at `069f88f`,
-before this review's scope; "Louis" means it came with `f70d7d6` to `dbf635b`.
-Comment 39 is about the refused-socket change (`924221e`), not Louis's commits,
-and is left out. "Decision" names the decision below that settles a comment;
-"—" is a fix that needs no decision (step 5 under "Order"). Retested at
-`16f36a5`: all still present except 23 to 27, which are fixed (see "Retest at
-`16f36a5`").
+- **Done.** Five of the six soundness fixes below, plus 33, 40 and 41,
+  committed as `2826d49` to `5dcf338`. At `5dcf338`, three regression rounds
+  each in compose and minikube passed (see "Verification").
+- **Next: D1**, an instance per run, in a plan round of its own. It is the
+  last soundness fix, and the one that changes the key on the transport.
+- **Then** D7, D3, D2, D14 and D4, one round each. They change what edge code
+  is written against, so they land before more edge code is written.
+- **Deferred.** D6 (but write its additive-only rule down now), D8 to D13
+  (until CIM work starts), the join and several `@on` inputs (issues 3(a) and
+  14; mark them experimental, per D5), and every Low issue.
+- **Open, not scheduled.** 28's probes and 42, aiokafka's metadata spin. Both
+  Medium, neither needs a decision.
+
+### The soundness bar
+
+Six places where the design was wrong, not only the code. They are fixed
+before the edges open, so nobody builds on them.
+
+| | Fault | Issues | State |
+|---|---|---|---|
+| S1 | The transport key names a client, not a run. Module state outlives its run, is lost silently on a worker restart, and nothing resets it on a seek. | 30, 3(b), 6 | Open: D1, next |
+| S2 | An acknowledged command can vanish, and the tray cannot say so. | 31, 32 | Fixed |
+| S3 | A broker that loses its topics stops the stack, and the probes stay green. | 28 | Recovery fixed; probes open |
+| S4 | No promise of one call at a time per instance, though modules are written as synchronous code. | 1 | Fixed |
+| S5 | A sync `read` source can hold the event loop; a live one would hold it for good. | 2 | Fixed |
+| S6 | A shared live run that fails stays failed, and its followers are not told. | 29 | Fixed |
+
+Issue 40 (a module command sent while following the shared live run lands on
+an instance that gets no frames) is S1 seen from a page. It is fixed by
+refusing the command with a 409, independently of D1.
+
+---
+
+## Open issues, by severity
+
+"Settled by" names the decision that settles an issue; "—" needs none.
 
 **High**: breaks a running deployment, or silently loses what a user asked for.
 
-| # | Issue | Origin | Decision |
+| # | Issue | Origin | Settled by |
 |---|---|---|---|
-| 28 | Kafka losing its topics stops the stack until every process restarts; probes stay green (recovery fixed 2026-10-14; probes open) | before | — |
-| 29 | A live source that fails stays failed; later viewers are not told (fixed 2026-10-14) | before | — |
-| 31 | A command sent during a broker outage is acknowledged, then lost or applied late (fixed 2026-10-14) | before | — |
-| 30 | Module state belongs to the key: settings lost on a worker restart, inherited after a crash | before | D1 |
-| 41 | Commands of different classes sent while a Kafka consumer reopens apply out of order (fixed 2026-10-14) | 31 fix | — |
+| 30 | Module state belongs to the client id, not the run: a setting is lost silently on a worker restart, and a new run inherits the old instance after a server crash | older | D1 |
 
 **Medium**: wrong in situations the project will soon reach, or a trap in the
 module contract for the next module.
 
-| # | Issue | Origin | Decision |
+| # | Issue | Origin | Settled by |
 |---|---|---|---|
-| 32 | A hung remote data service holds up every command of the run (fixed 2026-10-14) | before | — |
-| 40 | A module command sent while following the shared live run reaches an instance that gets no frames (fixed 2026-10-14) | before | Decided |
-| 42 | aiokafka spins on metadata while a broker comes and goes: up to 24 000 log lines/s, for up to 11 s | before | — |
-| 1 | A `blocking` module runs `process` and `handle` in two threads at once (fixed 2026-10-14) | Louis | D5 |
-| 2 | A sync `read` source holds the event loop; a live one would freeze the server (fixed 2026-10-14) | Louis | — |
-| 11 | A module with a dependency of its own fails to import in the image | Louis | D4 |
-| 33 | The models layering test fails, so the unit tests are red (fixed 2026-10-14) | Louis | — |
-| 6 | No teardown hook: a resource leaks per evicted key | before | D1 |
-| 9 | Two producers of one class, or a cycle, pass every check | before | D14 |
-| 5 | A module cannot publish outside a call | Louis | D2 |
-| 3 | The join builds its bundle at dequeue; an input from after a seek back stays fresh | Louis | D1, D5 |
-| 4 | `class X(SourceModule, Playable)` is accepted and half works | Louis | — |
-| 14 | Several `@on` inputs share one drop-oldest queue | Louis | D5 |
-| 18 | A non-playable history is pumped unpaced; the generator writes that shape | Louis | — |
-| 10 | One flat namespace for source settings; modules cannot be configured | Louis | D3 |
-| 21 | A generated source's pipeline file is loaded by nothing | Louis | — |
-| 20 | The remote-data stub is in the image by an unchecked `.dockerignore` exception | Louis | — |
+| 28 | What is left of 28: the workers have no probe. (`/healthz` leaves the broker out on purpose: AGENTS.md, "One cheap probe".) | older | — |
+| 42 | aiokafka spins on metadata while a broker comes and goes: up to 24 000 log lines/s, for up to 11 s | older | — |
+| 11 | A module with a dependency of its own fails to import in the image | contract | D4 |
+| 6 | No teardown hook: a resource leaks per evicted instance | older | D1 |
+| 9 | Two producers of one class, or a cycle, pass every check | older | D14 |
+| 5 | A module cannot publish outside a call | contract | D2 |
+| 3 | The join builds its bundle at dequeue; an input from after a seek back stays fresh | contract | D1, D5 |
+| 4 | `class X(SourceModule, Playable)` is accepted and half works | contract | — |
+| 14 | Several `@on` inputs share one drop-oldest queue | contract | D5 |
+| 18 | A non-playable history is pumped unpaced; the generator writes that shape | contract | — |
+| 10 | One flat namespace for source settings; modules cannot be configured | contract | D3 |
+| 21 | A generated source's pipeline file is loaded by nothing | contract | — |
+| 20 | The remote-data stub is in the image by an unchecked `.dockerignore` exception | contract | — |
 
 **Low**: edge cases, small leaks, tooling.
 
-| # | Issue | Origin | Decision |
+| # | Issue | Origin | Settled by |
 |---|---|---|---|
-| 38 | A run keeps playing for 300 s after its last socket closes | before | — |
-| 43 | "Not delivered within 10 s" reaches the tray up to 2.7 s late | 31 fix | — |
-| 44 | A process that starts without a broker exits with its producer unclosed | before | — |
-| 36 | An outbox reports falling behind, never catching up | before | — |
-| 34 | A seek whose end is not after its start answers 500 | before | — |
-| 35 | A huge negative step reaches the tray as `OverflowError` | before | — |
-| 13 | An input without a `timestamp` fails every body result | before | — |
-| 15 | `missing="skip"` skips silently | Louis | — |
-| 8 | "A source is a module" holds for the type, not the behaviour | Louis | — |
-| 7 | A source's outputs past the first are half supported | Louis | — |
-| 37 | The error tray keeps 20 notices per client id for ever | before | — |
-| 12 | Code shared by two modules has no home | Louis | D4 |
-| 19 | Three rules AGENTS.md calls test-enforced are not | Louis | D7 (part) |
-| 22 | The generator's worker-list patterns are not bounded to their block | Louis | — |
-| 16 | `SourceConformance` reads without `open()` | Louis | — |
-| 17 | `Module` has no `abstract = True` | Louis | — |
+| 38 | A run keeps playing for 300 s after its last socket closes | older | — |
+| 43 | "Not delivered within 10 s" reaches the tray up to 2.7 s late | fix | — |
+| 44 | A process that starts without a broker exits with its producer unclosed | older | — |
+| 36 | An outbox reports falling behind, never catching up | older | — |
+| 34 | A seek whose end is not after its start answers 500 | older | — |
+| 35 | A huge negative step reaches the tray as `OverflowError` | older | — |
+| 13 | An input without a `timestamp` fails every body result | older | — |
+| 15 | `missing="skip"` skips silently | contract | — |
+| 8 | "A source is a module" holds for the type, not the behaviour | contract | — |
+| 7 | A source's outputs past the first are half supported | contract | — |
+| 37 | The error tray keeps 20 notices per client id for ever | older | — |
+| 12 | Code shared by two modules has no home | contract | D4 |
+| 19 | Three rules AGENTS.md calls test-enforced are not | contract | D7 (part) |
+| 22 | The generator's worker-list patterns are not bounded to their block | contract | — |
+| 16 | `SourceConformance` reads without `open()` | contract | — |
+| 17 | `Module` has no `abstract = True` | contract | — |
+| 39 | `useServerSocket.ts` says 1008 means "client id rejected"; it also means a path no app serves | `924221e` | — |
 
-**Docs and wording**: 23 to 27 (Louis). Fixed in `16f36a5`; see the note under
-"Docs and wording".
+### Fixed
+
+| # | Issue | Commit |
+|---|---|---|
+| 28 | Kafka losing its topics stops the stack until every process restarts (recovery; the probes are still open) | `554301c` |
+| 29 | A live source that fails stays failed; later viewers are not told | `9d40858` |
+| 31 | A command sent during a broker outage is acknowledged, then lost or applied late | `03c5cb0`, `bf94a73` |
+| 41 | Commands of different classes sent while a Kafka consumer reopens apply out of order | `5dcf338` |
+| 32 | A hung remote data service holds up every command of the run | `985f2a5` |
+| 40 | A module command sent while following the shared live run reaches an instance that gets no frames | `8326a48` |
+| 1 | A `blocking` module runs `process` and `handle` in two threads at once | `bc2e8db` |
+| 2 | A sync `read` source holds the event loop | `09c1b98` |
+| 33 | The models layering test fails, so the unit tests are red | `2826d49` |
+| 23–27 | Docs and wording left from the removed design | `16f36a5` |
 
 ---
 
-## Readiness for edge work, and the contract pass (2026-10-14)
+## What contributors can start on
 
-The question: can other developers start on modules, CIM lookup and remote
-data integration while the pipeline, transport and the rest of the plumbing
-keep changing under them?
+**The line.** A module declares inputs and outputs and writes plain code; a
+source writes `read` or `aread`. Neither sees the transport, runs, hosts or
+the broker. Edge code imports `Module`, `SourceModule`, `Playable`,
+`EnvSetting`, `TimeRange`, `SourceConformance`, `CommandRefused`, three time
+helpers and `pswamp_models`, nothing else. A fix behind that line changes no
+module or source: S2 to S6 were all fixed that way. Messages leave pydantic's
+default (unknown fields ignored), so an optional field added within `v1` does
+not break an older reader.
 
-**The split is right.** A module declares inputs and outputs and writes plain
-code; a source writes `read` or `aread`; neither sees the transport, runs,
-hosts or the broker. Edge code today imports `Module`, `SourceModule`,
-`Playable`, `EnvSetting`, `TimeRange`, `SourceConformance`, `CommandRefused`,
-three time helpers and `pswamp_models`, nothing else. Comments 28, 29, 31, 32,
-1, 2 and 14 can be fixed behind that line, with no module or source changing.
-Messages leave pydantic's default (unknown fields ignored), so an optional
-field added within `v1` does not break an older reader.
+**What is not settled is what edge code is written against**: D1 to D4 and D7
+for modules, D8 to D11 for CIM lookup, D3 for settings names. Those are
+decided and built before that kind of edge work starts.
 
-**What is not settled is what edge code is written against.** Deciding those
-later changes edge code, so they are decided first (the decisions below), then
-the edges open.
-
-### Readiness
-
-| Plug point | Ready? | Waits for |
+| Work | Start now? | Waits for |
 |---|---|---|
-| Remote data integration | Now. The integration is the HTTP contract (`doc/remote-data-integration-contract.md`): a deployment's service never touches the core. | D3 (settings names, before deployments are configured); D13 later |
-| CIM lookup | After D8 to D11. | Only D8 and D10 need code, both small |
-| Modules, per-frame | Now. | |
-| Modules, stateful, periodic, configured, or with dependencies | After D1 to D5. | |
+| Remote data source (a deployment's history service) | Yes. The integration is the HTTP contract, `doc/remote-data-integration-contract.md`; the service never touches the core. | D3 renames the settings (`REMOTE_URL`) before deployments are configured; D13 later. |
+| Module, per frame, no settings | Yes. | D7 will move its imports to `pswamp_core`. |
+| Module that keeps state, runs periodically, takes settings or brings a dependency | Not yet. | D1 (state per run, teardown, reset, sticky settings), D2 (output outside a call), D3 (settings), D4 (dependencies, shared code). |
+| CIM lookup | Not yet. | D8 to D11; only D8 and D10 need code, both small. |
+| Front-end page over the core | Yes. A page takes its types from the generated contract (`Wire['…']`, `doc/api/openapi.json`) and sends commands as POSTs; `pswamp new subapp` and `pswamp new module` write one. | D1, for a control whose setting must survive a worker restart (today it flips back: issue 30). D14, for a page that lists events: `run.latest` keeps only the newest message of a class, so it needs a store at the edge, as the grid monitor's `AlarmStore`. |
+| Grid monitor panel | Yes, on its own thread-based Hub and Bus (`pswamp_web/`; AGENTS.md, "Adding a p-SWAMP view"). | Moving its panels onto modules waits for the WAMPAC apps to be lifted (below). |
 
 ### The CIM scope (decided 2026-10-14)
 
@@ -126,147 +156,153 @@ called once per channel layout, cached, stamped on every frame as
 `PmuHeader.cimReferenceId`, applied to every source stream in every process
 that builds a `SourceSet`. Today it returns the configured stub id.
 
-### Decisions
+---
 
-Each: the question, the options, a recommendation. Nothing is built until they
-are decided.
+## Decisions
 
-**D1. When a module instance starts and stops.** Settles comments 30, 3(b)
-and 6. Today
-an instance belongs to the client id (`host.py:251-261`): it survives seeks and
-switches, a worker restart drops it silently, and a new run inherits it after a
-crash. No teardown. Options: (a) an instance per run: the run's transport key
-carries a run id, so a new run always gets fresh instances; (b) keep the client
-id, and the run announces its start so a host rebuilds; (c) as now, documented.
-Recommend (a), plus a `teardown()` hook, a `reset(reason)` hook called on seek
-and source switch (default: nothing), and **sticky settings**: a command class
-marked `sticky` is replayed by the run to a rebuilt instance, so a user's
-setting (auto-pause) survives a worker restart. Touches: every stateful module.
+Each: the question, the options, the recommendation, and its state.
 
-**D2. Output outside a call.** Settles comment 5. Options: (a) a periodic hook:
-`every = 1.0` and `tick(now)`, returning outputs like `process` does; (b) an
+**D1. When a module instance starts and stops.** Settles 30, 3(b) and 6 (S1).
+Today an instance belongs to the client id (`ModuleHost._slot` in
+`core/src/pswamp_core/host.py`): it survives seeks and switches, a worker
+restart drops it silently, and a new run inherits it after a crash. No
+teardown. Options: (a) an instance per run: the run's transport key carries a
+run id, so a new run always gets fresh instances; (b) keep the client id, and
+the run announces its start so a host rebuilds; (c) as now, documented.
+Recommended: (a), plus a `teardown()` hook, a `reset(reason)` hook called on
+seek and source switch (default: nothing), and **sticky settings**: a command
+class marked `sticky` is replayed by the run to a rebuilt instance, so a
+user's setting (auto-pause) survives a worker restart. Touches every stateful
+module.
+*State: next, in its own plan round.* The sketch going in: the key becomes
+`<client id>.<run id>`, a fresh run id per `PipelineRun`, while
+`PipelineRegistry` stays keyed by client id, so a host builds fresh instances
+per run and `PipelineClosed` and idle eviction need no change; `teardown()`
+is called from `ModuleHost._drop`; a host announces each instance it starts,
+and the run replays the latest command of each sticky class to it. To settle
+in the round: for seeks and switches, a `reset` hook driven by a control
+message, or a new run id per segment.
+
+**D2. Output outside a call.** Settles 5. Options: (a) a periodic hook:
+`every = 1.0` and `tick(now)`, returning outputs as `process` does; (b) an
 injected `publish` (the `setup(out)` that was removed); (c) none, documented.
-Recommend (a): it keeps "return, don't emit" and covers watchdogs, periodic
-summaries and windowed analyses (buffer in `process`, compute in `tick`). Open
-within (a): whether `tick` may run in a thread while `process` keeps reading.
+Recommended: (a). It keeps "return, don't emit" and covers watchdogs,
+periodic summaries and windowed analyses (buffer in `process`, compute in
+`tick`). Open within (a): whether `tick` may run in a thread while `process`
+keeps reading.
+*State: open; third of the rounds after D1.*
 
-**D3. Configuration.** Settles comment 10. Today module settings are constants, the
+**D3. Configuration.** Settles 10. Today module settings are constants, the
 pipeline file forbids settings, and sources read `{NAME}_{SETTING}` in one
 namespace across apps (`REMOTE_URL`, `LIVE_PATH`). Options: (a) one style for
 modules and sources: declared settings, values in the pipeline file
 (`[modules.<name>]`, `[sources.<name>]`), app-scoped environment overrides
-(`<APP>_<NAME>_<SETTING>`, beside the existing `<APP>_SOURCES`); (b) environment
-only, app-scoped. Recommend (a), now: it renames every deployed setting, so it
-lands before remote-data teams configure deployments. A module listed twice
-under two names follows from it.
+(`<APP>_<NAME>_<SETTING>`, beside the existing `<APP>_SOURCES`); (b)
+environment only, app-scoped. Recommended: (a). It renames every deployed
+setting, so it lands before remote-data teams configure deployments. A module
+listed twice under two names follows from it.
+*State: open; second of the rounds after D1.*
 
-**D4. Dependencies and shared code.** Settles comments 11 and 12. The image gets a
-module's third-party dependencies only through the server's manifest, which the
-generator edits; a module added by hand ships without them. Recommend: a
-`pswamp check` step that every `modules/*` project is a server dependency; and a
-home for shared code, `libs/<name>/` projects that modules may depend on (the
-layering test allows module → lib, never module → module).
+**D4. Dependencies and shared code.** Settles 11 and 12. The image gets a
+module's third-party dependencies only through the server's manifest, which
+the generator edits; a module added by hand ships without them. Recommended:
+a `pswamp check` step that every `modules/*` project is a server dependency;
+and a home for shared code, `libs/<name>/` projects that modules may depend on
+(the layering test allows module → lib, never module → module).
+*State: open; last of the rounds after D1.*
 
-**D5. Guarantees, and what is experimental.** Settles comment 1, and parks 3
-and 14 until they are fixed (step 4). Recommend:
-guarantee one call at a time per instance (a per-instance lock in the host;
-internal); mark the join and several `@on` inputs experimental until 3 and 14
-are fixed, in the docstring and the cookbook.
+**D5. Guarantees, and what is experimental.** Settles 1, and parks 3 and 14
+until they are fixed. Recommended: guarantee one call at a time per instance
+(a per-instance lock; internal); mark the join and several `@on` inputs
+experimental until 3 and 14 are fixed, in the docstring and the cookbook.
+*State: the lock is built (`Module._calling`, issue 1). The experimental note
+is not written yet.*
 
-**D6. How messages change.** Settles no comment: it comes from the readiness
-question and the remote contract's "Not settled yet". Recommend the rule: within a version, add
-optional fields only; a breaking change is a new class or version, published
-beside the old one during a move. Make "unknown fields ignored" explicit on
-`DataModel` with a test, and have `pswamp check` flag a field removed or
-changed in `pswamp_models` against a committed schema snapshot, as it does for
-the api contract.
+**D6. How messages change.** Settles no issue: it comes from the readiness
+question and the remote contract's "Not settled yet". Recommended: within a
+version, add optional fields only; a breaking change is a new class or
+version, published beside the old one during a move. Make "unknown fields
+ignored" explicit on `DataModel` with a test, and have `pswamp check` flag a
+field removed or changed in `pswamp_models` against a committed schema
+snapshot, as it does for the api contract.
+*State: deferred. Write the additive-only rule down now; it is not written
+yet.*
 
-**D7. The public API.** Settles part of comment 19 (a module importing
-another module gets caught). `pswamp_core/__init__.py` exports nothing. Recommend:
+**D7. The public API.** Settles part of 19 (a module importing another module
+gets caught). `pswamp_core/__init__.py` exports nothing. Recommended:
 re-export the edge surface from `pswamp_core` (`Module`, `on`, `Latest`,
 `SourceModule`, `Playable`, `EnvSetting`, `TimeRange`, `CommandRefused`,
 `SourceConformance`, the time helpers, the CIM lookup base), call everything
 else internal, and have the layering test hold module and source code to it.
+*State: open; first of the rounds after D1.*
 
-**D8. Installing a CIM lookup.** From the CIM scope; settles no comment. Today `pipeline_config.py:203` hard-codes
-`CimReferenceEnricher`; the pipeline file takes only `cim_reference`.
-Recommend: `[enrich] cim = "<entry point>"` in a `pswamp.enrichers` group,
-configured as in D3; `cim_reference` stays as the stub's setting.
+**D8. Installing a CIM lookup.** From the CIM scope. Today
+`pipeline_config.py:203` hard-codes `CimReferenceEnricher`; the pipeline file
+takes only `cim_reference`. Recommended: `[enrich] cim = "<entry point>"` in a
+`pswamp.enrichers` group, configured as in D3; `cim_reference` stays as the
+stub's setting.
+*State: deferred until CIM work starts (as are D9 to D12).*
 
-**D9. What a lookup receives.** From the CIM scope; settles no comment. Today the layout only: no stream (`mRID`), no
-source name, no time, so a recording from before a grid change cannot get the
-old model's id. Recommend a small frozen context object (header, stream
-`mRID`, source name, the first frame's timestamp), so it can grow without
-breaking a lookup.
+**D9. What a lookup receives.** From the CIM scope. Today the layout only: no
+stream (`mRID`), no source name, no time, so a recording from before a grid
+change cannot get the old model's id. Recommended: a small frozen context
+object (header, stream `mRID`, source name, the first frame's timestamp), so
+it can grow without breaking a lookup.
 
-**D10. I/O and failure.** From the CIM scope; settles no comment. Today it is synchronous on the event loop ("no
-I/O"), and a lookup that raises stops the stream. Recommend: an async form,
-awaited once per new layout before its first frame goes out, plus `open` /
-`aopen` for loading at start (as sources have); a failed lookup passes the
-frame with no id and reports once per layout on the error tray.
+**D10. I/O and failure.** From the CIM scope. Today it is synchronous on the
+event loop ("no I/O"), and a lookup that raises stops the stream.
+Recommended: an async form, awaited once per new layout before its first
+frame goes out, plus `open` / `aopen` for loading at start (as sources have);
+a failed lookup passes the frame with no id and reports once per layout on
+the error tray.
 
-**D11. How long an id holds.** From the CIM scope; settles no comment. Today per layout, for the life of the run.
-Recommend: cache per (layout, stream); a lookup may return a validity end,
-after which the next frame triggers a new lookup.
+**D11. How long an id holds.** From the CIM scope. Today per layout, for the
+life of the run. Recommended: cache per (layout, stream); a lookup may return
+a validity end, after which the next frame triggers a new lookup.
 
-**D12. One id per layout or per column.** From the CIM scope; settles no
-comment, only a doc mismatch on `cimReferenceId`. Recommend one per layout now. Under
-D6 a per-column list is an optional field added later without breaking anyone.
+**D12. One id per layout or per column.** From the CIM scope; settles only a
+doc mismatch on `cimReferenceId`. Recommended: one per layout now. Under D6 a
+per-column list is an optional field added later without breaking anyone.
 Also settle the doc mismatch: a source may carry its own id (a recording made
 with one); the lookup fills it when absent, which is what the code does.
 
-**D13. Remote data, later.** Settles no comment: it is the remote contract's
-own "Not settled yet" list. Authentication and TLS, limits, and models beyond
-`pmu.frame` stay in the contract's "Not settled yet". Recommend naming the
-settings now (`<APP>_REMOTE_TOKEN`, a CA bundle) under D3, so adding them is
-additive. Live data over a remote service is a second contract, not this one.
+**D13. Remote data, later.** The remote contract's own "Not settled yet"
+list: authentication and TLS, limits, and models beyond `pmu.frame`.
+Recommended: name the settings now (`<APP>_REMOTE_TOKEN`, a CA bundle) under
+D3, so adding them is additive. Live data over a remote service is a second
+contract, not this one.
+*State: deferred, apart from naming the settings under D3.*
 
-**D14. One class, several producers.** Settles comment 9 (two producers of
-one class). Comment 9 suggests refusing them. The WAMPAC apps need the
-opposite for events: every app reports a status, several raise alarms, each
-onto one topic that one consumer reads (`AlarmSender` in
-`desktop/src/pswamp/coordination/alarm_handling.py` does exactly that). Options:
-(a) refuse, and give each app status and alarm classes of its own; (b) allow
-several producers for a class marked as an event stream (status, alarms),
-refuse it for anything else; (c) allow it everywhere, as now. Recommend (b);
-a cycle stays refused either way. Note `run.latest` keeps only the newest
-message of a class, so a page showing a stream needs a store at the edge, as
-the grid monitor's `AlarmStore` is today.
+**D14. One class, several producers.** Settles 9 (two producers of one
+class). Issue 9 suggests refusing them. The WAMPAC apps need the opposite for
+events: every app reports a status, several raise alarms, each onto one topic
+that one consumer reads (`AlarmSender` in
+`desktop/src/pswamp/coordination/alarm_handling.py` does exactly that).
+Options: (a) refuse, and give each app status and alarm classes of its own;
+(b) allow several producers for a class marked as an event stream (status,
+alarms), refuse it for anything else; (c) allow it everywhere, as now.
+Recommended: (b); a cycle stays refused either way. `run.latest` keeps only
+the newest message of a class, so a page showing a stream needs a store at
+the edge, as the grid monitor's `AlarmStore` is today.
+*State: open; fourth of the rounds after D1.*
 
 ### Decided (2026-10-14)
 
-- **What "sound" takes.** Six comments are design faults, not code faults,
-  and are fixed first: 30 with 3(b), 6 and 40 (D1: the transport key names a
-  client, not a run); 31 and 32 (an acknowledged command can vanish); 28 (a
-  broken broker leaves the probes green); 1 (D5's per-instance lock); 2; 29.
-  Then D7, D3, D2, D14 and D4, one at a time. Deferred: D6 (write the
-  additive-only rule down for now), D8 to D13 (until CIM work starts), the
-  join and several `@on` inputs (3(a) and 14: experimental, per D5), and every
-  Low comment.
-- **Comment 40: refuse.** A module command sent while following a shared live
+- **What "sound" takes.** The six faults S1 to S6 are fixed first, one small
+  pass each, in the order 33; 1; 2; 40; D1; 31 and 32; 28; 29. D1 has since
+  moved last, to a plan round of its own. Then D7, D3,
+  D2, D14 and D4, one round each. Deferred: D6 (write the additive-only rule
+  down for now), D8 to D13 (until CIM work starts), the join and several `@on`
+  inputs (3(a) and 14: experimental, per D5), and every Low issue.
+- **Issue 40: refuse.** A module command sent while following a shared live
   run answers 409. Module settings apply only to a client's own replay. As
   built, only a module that reads the stream is refused. A module with no
   inputs (the range summary) reads its own sources, so its instance under the
   client's key is the right one, and it still answers.
-- **Comment 31: retry, then report.** An outbox retries a command until a
+- **Issue 31: retry, then report.** An outbox retries a command until a
   deadline (~10 s). If it gives up, the server reports to that client's tray
   in process, not over the transport. Command topics resume from their last
   position after a consumer reconnect; data topics still start at the end.
-
-This replaces "Order" below, which is kept for the record. The new order: 33;
-1; 2; 40; D1 (30, 3(b), 6); 31 and 32; 28; 29; then the five decisions.
-
-### Order
-
-1. Decide D1 to D14.
-2. Build the decisions that change edge code: D7, D3, D1, D2, D8 to D10, D4,
-   D6, D5.
-3. Open the edges: remote data now; CIM lookup after D8 to D11; modules after
-   D1 to D5.
-4. Any time, behind the line: 28, 29, 31, 32, 2, 14, 3.
-5. Fixes that need no decision, any time: 33 first (it keeps the unit tests
-   red), then 4, 7, 8, 13, 15, 16, 17, 18, 20, 21, 22, 34, 35, 36, 37, 38, 39,
-   and the two rules of 19 that D7 leaves.
 
 ---
 
@@ -339,7 +375,15 @@ output is designed.
 
 ---
 
-## Defects
+## Issues
+
+Every issue by number, as found: what was seen, where (file and line at the
+commit it was found at, so line numbers drift), why it matters, and a
+suggested fix. A fixed one ends with how it was fixed. 1 to 27 come from
+reading the contract work at `dbf635b`; 28 to 39 from running the branch end
+to end; 40 from planning the fixes; 41 to 44 from the regression after them.
+
+### The contract: defects (1 to 4)
 
 **1. A `blocking` module runs `process` and `handle` in two threads at once.**
 - Where: `core/src/pswamp_core/modules.py:383` (`_call`),
@@ -380,8 +424,8 @@ output is designed.
   (b) After a seek backwards, an input from before the seek stays fresh:
   trigger at 10 s, other input from 58 s, `max_age` 10 s, bundled. Nothing
   resets a module on a seek or a source switch.
-- Suggestion: (a) build the bundle on arrival and queue that. (b) is your
-  call: an input far ahead of the trigger counts as stale, or a seek resets
+- Suggestion: (a) build the bundle on arrival and queue that. (b) is part
+  of D1: an input far ahead of the trigger counts as stale, or a seek resets
   module state. `test_age_is_message_time_and_an_unstamped_or_newer_input_is_fresh`
   asserts today's rule.
 - Note: no module in the repo uses the join; no test covers a slow joined
@@ -395,7 +439,7 @@ output is designed.
 - Suggestion: in `Playable.__init_subclass__`, refuse a class whose `ahandle`
   is not `Playable.ahandle` ("list Playable first").
 
-## Gaps in the contract
+### The contract: gaps (5 to 12)
 
 **5. A module cannot publish outside a call.** `setup(out)` lost its `out` and
 there is no `emit()` (`modules.py:234`).
@@ -429,7 +473,7 @@ branch; now the two halves of "a module" differ.
 - `commands` on a source that is not `Playable` pass the class check and
   nothing routes them: `pipeline.py:343-346` raises `NoReceiver`.
 - `pipeline_config.py:287` derives "playable" from `cls.commands`, not from
-  `issubclass(cls, Playable)`: wrong for both cases above and for comment 4.
+  `issubclass(cls, Playable)`: wrong for both cases above and for issue 4.
 - ADR-006 lists the unused members; it does not list these.
 - Suggestion: refuse `commands` on a non-playable source and an overridden
   `setup` at class creation.
@@ -466,7 +510,7 @@ listed twice with different settings.
 `sample_data.txt` are byte-identical in `sample-replay` and `live-synthetic`,
 because a module may not import another.
 
-## Smaller
+### The contract: smaller (13 to 18)
 
 **13.** An input without a `timestamp` makes every body result fail validation
 (`modules.py:335`; `models/src/pswamp_models/common/results.py:42`).
@@ -488,7 +532,7 @@ with inputs and no `process` is refused.
 active (`active_source.py:190`). `pswamp new module --source` without
 `--playable` generates that shape.
 
-## Deployment and the layout rules
+### Deployment and the layout rules (19 to 22)
 
 **19. Three rules AGENTS.md calls test-enforced are not** (`AGENTS.md:1316-1319`).
 - Test file names unique repo-wide: no test.
@@ -510,9 +554,9 @@ files; `pswamp check` validates the files only.
 variable, the pattern would patch batch-worker's list, and `check-generators`
 reads back with the same pattern, so it would pass.
 
-## Docs and wording
+### Docs and wording (23 to 27, fixed)
 
-Fixed 2026-10-14 in `16f36a5`. Comments 23 to 27 as below,
+Fixed 2026-10-14 in `16f36a5`: 23 to 27 as below,
 plus the same leftovers elsewhere: `FrameTable.tsx` (the gateway), the `pswamp
 pipelines validate` help (a data client), the "spec loading" line in
 `server-data-architecture.md`, `core/pyproject.toml`, `models/pyproject.toml`
@@ -557,39 +601,10 @@ the workspace". The generator edits compose, k8s and the server manifest
 - `core/src/pswamp_core/settings.py:13-15`: "the transport and data providers
   are configured this way"; only the transport is now.
 
----
+### Seen end to end (28 to 32)
 
-## Running it (2026-10-14)
-
-What was run: `dbf635b` plus a change, then uncommitted and since committed as
-`924221e`, that refuses an unservable socket by accepting it and closing it
-with 1008 (`refuse_socket`, `unknown_socket`). In three setups: the image under a bare `docker run`
-(in-memory transport), the compose stack (Kafka, both workers, the remote
-stub), and minikube (`pswamp deploy minikube`, `k8s/p-swamp-local.yaml`).
-Steps to reproduce are in the appendix.
-
-Unlike comments 1 to 27, these are about the branch as a whole: all but 33 and
-39 were already there at `069f88f`, before this review's scope (see "At
-`069f88f`" below).
-
-### Regression
-
-- `pswamp check`: passes.
-- `pswamp test server`: 442 passed, 42 skipped, 1 failed (comment 33).
-- `pswamp check-generators`: the generated tree passes `pswamp check`; its
-  tests fail on comment 33 only.
-- `pswamp test smoke`: passes, bare, compose and minikube.
-- Playwright (`E2E_BASE_URL`): 11 passed bare, 12 compose, 12 minikube. The
-  rest skip by design: no remote source bare, and "a provider that goes away"
-  runs only against compose on :8000, so it was done by hand (comment 32).
-- Every route (the monitor, its five focused views, the streamer, the
-  reference page, an unknown path), in headless Chromium and Firefox, in all
-  three setups: renders, no console errors. The monitor opens five data
-  sockets plus the tray's.
-- The appendix script prints the same as before for comments 1, 2, 3, 4, 9
-  and 13.
-
-### Defects seen end to end
+About the branch as a whole, not the contract work: all of 28 to 39 but 33
+and 39 were already there at `069f88f`.
 
 **28. Kafka losing its topics stops the stack until every process is restarted.**
 - Seen (compose, the Kafka container recreated, so its topics are gone): a new
@@ -659,7 +674,7 @@ Unlike comments 1 to 27, these are about the branch as a whole: all but 33 and
   its first message; only `PipelineClosed` (`:246`) or 300 s without input
   (`:301`) drops it. The key is the client id, stable per browser, and a crash
   sends no `PipelineClosed`.
-- Why: with comments 3(b) and 6, a module cannot tell a new run, a seek or a
+- Why: with issues 3(b) and 6, a module cannot tell a new run, a seek or a
   lost instance from more of the same stream. A setting the user made lives
   only in a worker's memory.
 - Suggestion: a run id in the key, or on every message, so a host builds a
@@ -709,7 +724,7 @@ Unlike comments 1 to 27, these are about the branch as a whole: all but 33 and
   its commands in its own task, which the switch stops anyway. The coverage
   timeout is `REMOTE_COVERAGE_TIMEOUT` (default 10 s).
 
-### Regression and smaller
+### Smaller, seen end to end (33 to 39)
 
 **33. `test_the_models_import_pydantic_only` fails.** pydantic's
 `_internal._validators` imports `zoneinfo`, which loads `sysconfig` and
@@ -745,124 +760,7 @@ new viewer was unaffected at this frame size.
 **39.** `app/client-web/src/hooks/useServerSocket.ts:22` says 1008 means "our
 client id was rejected". Since `924221e` it also means a path no app serves.
 
-### Looked for and not found
-
-- A module instance left behind when its run stops: none in 30 runs, in
-  memory and over Kafka.
-- Results falling behind frames: at 10x over Kafka, 99% of pushes carry the
-  frame's stats.
-- A late auto-pause: at 10x over Kafka, the player stops one frame after the
-  trip.
-- The grid monitor's threads disturbing the core's pacing: with 0 to 8 monitor
-  viewers, the streamer's frame gap stays 50 ms and `/healthz` 2 ms.
-- The run cap failing: 8 served, the 9th and 10th closed with 1013.
-- The k8s limits being too tight: in minikube, at both caps at once (8 monitor
-  viewers, 8 streamers at 10x) for a minute, the server peaks at ~505 MiB of
-  its 768 MiB and 60-80% of a core; no restart, refusal or tray notice.
-
-### At `069f88f`, before this review's scope
-
-`069f88f` is the last commit before `f70d7d6`, where this review's scope
-begins. Run the same way, in compose and minikube, from a worktree with its own
-scripts (`scripts/e2e-smoke-test.sh`,
-`scripts/start-pswamp-in-local-minikube-cluster.sh`); the Playwright specs are
-byte-identical to today's.
-
-- Regression: green. Unit tests 160 passed, 28 skipped; the smoke script and
-  12 Playwright specs pass (1 skipped) in both setups; every route renders in
-  Chromium and Firefox.
-- Comments 28 to 32 and 34 to 38 reproduce, with the same numbers (29 with
-  the script rewritten for that commit's `DataClient` and `Player`; 37 seen in
-  the code, not run). The code
-  behind each has the same shape there: `_created` in `kafka.py`, the
-  per-key slots in `host.py`, the outbox's drop, the 10 s timeouts in the
-  remote data client, `SeekBody`.
-- Comment 33 does not apply (`pswamp_models` and its test came later);
-  comment 39 is about the refused-socket change (`924221e`).
-- At both caps in minikube the server peaked at ~586 MiB of 768 MiB, against
-  ~505 MiB today.
-
-### Retest at `16f36a5` (2026-10-14)
-
-`16f36a5` is `dbf635b` plus two commits: the refused-socket change
-(`924221e`) and the fixes for comments 23 to 27 (`16f36a5`). Everything above
-was run again, in bare, compose and minikube.
-
-- Regression: as before. `pswamp check` passes; `pswamp test server` 442
-  passed, 42 skipped, 1 failed (33); `check-generators` fails on 33 only;
-  smoke passes in all three; Playwright 11 bare, 12 compose, 12 minikube; every
-  route clean in Chromium and Firefox in all three. Minikube at both caps:
-  server peak ~542 MiB of 768 MiB, no restart.
-- Comments 1 to 22: all still present. Executed this time where the first pass
-  only read the code: 5, 6, 7, 8, 10, 12, 14 (two `@on` inputs, queue of 8:
-  43 dropped, the rare input never handled), 15 (20 triggers, nothing
-  published, no log), 16 (both sync cases fail on a source that needs
-  `open()`), 17, 18 (240 frames of 12 s published in 0.1 ms), 19 (an import
-  inside a function is not seen), 22 (the pattern patches batch-worker's list
-  once module-worker lacks the variable). 11, 20 and 21 were read again.
-- Comments 23 to 27: fixed; no old wording left.
-- Comments 28 to 38: all still present, with the same numbers: 28, 30, 31
-  and 32 in compose and minikube; 29 in process; 34, 35 bare; 36, 38 compose;
-  37 in the code.
-- Comment 33: still fails.
-
-### Retest after the fixes (2026-10-14)
-
-At `9d40858` (the fixes for 33, 1, 2, 40, 31, 32, 28 and 29), in bare,
-compose and minikube, with the scratch scripts of this pass (sockets for the
-page and the tray, POSTs, docker or kubectl for the outages).
-
-- Regression: `pswamp check` passes. `pswamp test server` gives 457 passed,
-  45 skipped, plus 11 Kafka cases against a broker. `check-generators`
-  passes. Smoke passes in all three setups. Playwright: 11 passed bare, 12
-  compose, 12 minikube. Every route renders clean in headless Chromium and
-  Firefox in all three, and the monitor opens 5 data sockets plus the tray's.
-- 28: compose, Kafka recreated: ten fresh module results 0.9 s after play,
-  0 server log lines in 5 s, no process restarted. Minikube, Kafka pod
-  deleted: the same, 3.0 s after play, no pod restarted.
-- 31: compose, Kafka stopped: play is reported on the tray at 10 s ("not
-  delivered within 10 s, so it was not applied") and stays unapplied once
-  the broker is back. Kafka paused for 3 s: the play is applied when it
-  returns.
-- 32: compose, the stub paused mid-replay, a seek, then a switch to sample:
-  the switch lands 0.1 s after its POST (it was ~10 s). The seek is reported
-  as stopped.
-- 29, 1, 2: the appendix scripts now print `frame=True`,
-  `overlapped = False` and "other task ran 335 times".
-
-### Regression, three rounds each (2026-10-14)
-
-At `5dcf338`, compose (project `pswamp-review`, server on :8132) and
-minikube, three rounds each: compose fresh, warm, then `down` and `up`;
-minikube freshly deployed, warm, then every deployment restarted. Before
-that, `pswamp check` passed and `pswamp test server` gave 457 passed in
-each of 5 runs; the 12 Kafka cases passed 5 runs against the compose broker,
-and again in each compose round.
-
-Every round ran: smoke; the 12 Playwright specs in Chromium and in Firefox;
-the compose-only provider spec in both (with the helper patched to accept
-:8132; skipped on minikube); every route in both browsers (18 × ok, the
-dashboard at 6 sockets); then these checks over sockets and POSTs:
-- 40: auto-pause while live is a 409; range-summary still answers.
-- Order: 30 sequences of three commands apply in order.
-- Compose: the 12 Kafka cases; 31 with Kafka paused 3 s (applied) and
-  stopped (reported at 10.1 s, not applied late); 32 (the switch lands in
-  0.1 s); 28 (Kafka recreated: ten results in 0.9 s).
-- Minikube: 31 with Kafka scaled to 0 (reported at 10.6 to 12.7 s, see
-  43; not applied late; ten results 0.9 s after the next play); 28 (the pod
-  deleted: playing, ten results in 2.0 to 3.8 s).
-- After the faults: smoke, Playwright and routes again.
-
-All six rounds passed every step, with no traceback in their logs and no
-restart except the cold start in 44. Before `5dcf338`, the same rounds
-(three compose, one minikube) failed once on the product: 41, in minikube.
-One compose failure came from the check reusing a client id, whose tray
-replayed the last round's notice; the check now uses fresh ids. The laptop
-slept 15 minutes in compose round 3; the steps after it passed.
-
----
-
-## Found in the contract pass (2026-10-14)
+### Found while fixing (40 to 44)
 
 **40. A module command sent while following the shared live run reaches an instance that gets no frames.**
 - Seen (in process, `SampleReplay` and `LiveSynthetic` as sources, the
@@ -877,14 +775,11 @@ slept 15 minutes in compose round 3; the steps after it passed.
 - Why: one case of D1. A module command is aimed at the client's run, but
   while following, the modules that matter run under the live run's key.
   Sending it there instead would change the setting for every viewer.
-- Decided: refuse it with a 409 while following (see "Decided").
+- Decided: refuse it with a 409 while following (see "Decided" under
+  "Decisions").
 - Fixed 2026-10-14 in `PipelineRun.dispatch`: `CommandRefused` for a module
   with inputs while `_following` is set. The streamer's auto-pause box was
   already disabled while live; the Playwright spec now checks that.
-
----
-
-## Found in the regression (2026-10-14)
 
 **41. Commands of different classes sent while a Kafka consumer reopens apply out of order.**
 - Seen (minikube, the Kafka pod deleted while a client plays): the check
@@ -945,10 +840,163 @@ slept 15 minutes in compose round 3; the steps after it passed.
 
 ---
 
+## Verification
+
+How the branch has been run, and what each run showed. Recipes for the setups
+and the faults are in the appendix. The scripted checks of the latest rounds
+(sockets for the page and the tray, POSTs, docker or kubectl for the faults)
+were scratch and are not in the repo.
+
+### Three rounds each in compose and minikube, at `5dcf338` (latest)
+
+At `5dcf338`, compose (project `pswamp-review`, server on :8132) and
+minikube, three rounds each: compose fresh, warm, then `down` and `up`;
+minikube freshly deployed, warm, then every deployment restarted. Before
+that, `pswamp check` passed and `pswamp test server` gave 457 passed in
+each of 5 runs; the 12 Kafka cases passed 5 runs against the compose broker,
+and again in each compose round.
+
+Every round ran: smoke; the 12 Playwright specs in Chromium and in Firefox;
+the compose-only provider spec in both (with the helper patched to accept
+:8132; skipped on minikube); every route in both browsers (18 × ok, the
+dashboard at 6 sockets); then these checks over sockets and POSTs:
+- 40: auto-pause while live is a 409; range-summary still answers.
+- Order: 30 sequences of three commands apply in order.
+- Compose: the 12 Kafka cases; 31 with Kafka paused 3 s (applied) and
+  stopped (reported at 10.1 s, not applied late); 32 (the switch lands in
+  0.1 s); 28 (Kafka recreated: ten results in 0.9 s).
+- Minikube: 31 with Kafka scaled to 0 (reported at 10.6 to 12.7 s, see
+  43; not applied late; ten results 0.9 s after the next play); 28 (the pod
+  deleted: playing, ten results in 2.0 to 3.8 s).
+- After the faults: smoke, Playwright and routes again.
+
+All six rounds passed every step, with no traceback in their logs and no
+restart except the cold start in 44. Before `5dcf338`, the same rounds
+(three compose, one minikube) failed once on the product: 41, in minikube.
+One compose failure came from the check reusing a client id, whose tray
+replayed the last round's notice; the check now uses fresh ids. The laptop
+slept 15 minutes in compose round 3; the steps after it passed.
+
+### Looked for and not found
+
+- A module instance left behind when its run stops: none in 30 runs, in
+  memory and over Kafka.
+- Results falling behind frames: at 10x over Kafka, 99% of pushes carry the
+  frame's stats.
+- A late auto-pause: at 10x over Kafka, the player stops one frame after the
+  trip.
+- The grid monitor's threads disturbing the core's pacing: with 0 to 8 monitor
+  viewers, the streamer's frame gap stays 50 ms and `/healthz` 2 ms.
+- The run cap failing: 8 served, the 9th and 10th closed with 1013.
+- The k8s limits being too tight (at `dbf635b`): in minikube, at both caps at once (8 monitor
+  viewers, 8 streamers at 10x) for a minute, the server peaks at ~505 MiB of
+  its 768 MiB and 60-80% of a core; no restart, refusal or tray notice.
+
+### Earlier runs
+
+#### The first end-to-end run, at `dbf635b`
+
+`dbf635b` plus a change, since committed as `924221e`, that refuses an
+unservable socket by accepting it and closing it with 1008 (`refuse_socket`,
+`unknown_socket`). In three setups: the image under a bare `docker run`
+(in-memory transport), the compose stack (Kafka, both workers, the remote
+stub), and minikube (`pswamp deploy minikube`, `k8s/p-swamp-local.yaml`).
+Compose, k8s and the pipeline file agreed with the code, and
+`modules/README.md` listed all six projects. Issues 28 to 39 came from this
+run.
+
+- `pswamp check`: passes.
+- `pswamp test server`: 442 passed, 42 skipped, 1 failed (issue 33).
+- `pswamp check-generators`: the generated tree passes `pswamp check`; its
+  tests fail on issue 33 only.
+- `pswamp test smoke`: passes, bare, compose and minikube.
+- Playwright (`E2E_BASE_URL`): 11 passed bare, 12 compose, 12 minikube. The
+  rest skip by design: no remote source bare, and "a provider that goes away"
+  runs only against compose on :8000, so it was done by hand (issue 32).
+- Every route (the monitor, its five focused views, the streamer, the
+  reference page, an unknown path), in headless Chromium and Firefox, in all
+  three setups: renders, no console errors. The monitor opens five data
+  sockets plus the tray's.
+- The appendix script prints the same as before for issues 1, 2, 3, 4, 9
+  and 13.
+
+#### Before the contract work, at `069f88f`
+
+`069f88f` is the last commit before `f70d7d6`, where the contract work
+begins. Run the same way, in compose and minikube, from a worktree with its own
+scripts (`scripts/e2e-smoke-test.sh`,
+`scripts/start-pswamp-in-local-minikube-cluster.sh`); the Playwright specs are
+byte-identical to today's.
+
+- Regression: green. Unit tests 160 passed, 28 skipped; the smoke script and
+  12 Playwright specs pass (1 skipped) in both setups; every route renders in
+  Chromium and Firefox.
+- Issues 28 to 32 and 34 to 38 reproduce, with the same numbers (29 with
+  the script rewritten for that commit's `DataClient` and `Player`; 37 seen in
+  the code, not run). The code
+  behind each has the same shape there: `_created` in `kafka.py`, the
+  per-key slots in `host.py`, the outbox's drop, the 10 s timeouts in the
+  remote data client, `SeekBody`.
+- Issue 33 does not apply (`pswamp_models` and its test came later);
+  issue 39 is about the refused-socket change (`924221e`).
+- At both caps in minikube the server peaked at ~586 MiB of 768 MiB, against
+  ~505 MiB at `dbf635b`.
+
+#### Retest at `16f36a5`
+
+`16f36a5` is `dbf635b` plus two commits: the refused-socket change
+(`924221e`) and the fixes for issues 23 to 27 (`16f36a5`). The first run was
+repeated, in bare, compose and minikube.
+
+- Regression: as before. `pswamp check` passes; `pswamp test server` 442
+  passed, 42 skipped, 1 failed (33); `check-generators` fails on 33 only;
+  smoke passes in all three; Playwright 11 bare, 12 compose, 12 minikube; every
+  route clean in Chromium and Firefox in all three. Minikube at both caps:
+  server peak ~542 MiB of 768 MiB, no restart.
+- Issues 1 to 22: all still present. Executed this time where the first pass
+  only read the code: 5, 6, 7, 8, 10, 12, 14 (two `@on` inputs, queue of 8:
+  43 dropped, the rare input never handled), 15 (20 triggers, nothing
+  published, no log), 16 (both sync cases fail on a source that needs
+  `open()`), 17, 18 (240 frames of 12 s published in 0.1 ms), 19 (an import
+  inside a function is not seen), 22 (the pattern patches batch-worker's list
+  once module-worker lacks the variable). 11, 20 and 21 were read again.
+- Issues 23 to 27: fixed; no old wording left.
+- Issues 28 to 38: all still present, with the same numbers: 28, 30, 31
+  and 32 in compose and minikube; 29 in process; 34, 35 bare; 36, 38 compose;
+  37 in the code.
+- Issue 33: still fails.
+
+#### Retest after the fixes, at `9d40858`
+
+At `9d40858` (the fixes for 33, 1, 2, 40, 31, 32, 28 and 29), in bare,
+compose and minikube, with the scratch scripts of this pass (sockets for the
+page and the tray, POSTs, docker or kubectl for the outages).
+
+- Regression: `pswamp check` passes. `pswamp test server` gives 457 passed,
+  45 skipped, plus 11 Kafka cases against a broker. `check-generators`
+  passes. Smoke passes in all three setups. Playwright: 11 passed bare, 12
+  compose, 12 minikube. Every route renders clean in headless Chromium and
+  Firefox in all three, and the monitor opens 5 data sockets plus the tray's.
+- 28: compose, Kafka recreated: ten fresh module results 0.9 s after play,
+  0 server log lines in 5 s, no process restarted. Minikube, Kafka pod
+  deleted: the same, 3.0 s after play, no pod restarted.
+- 31: compose, Kafka stopped: play is reported on the tray at 10 s ("not
+  delivered within 10 s, so it was not applied") and stays unapplied once
+  the broker is back. Kafka paused for 3 s: the play is applied when it
+  returns.
+- 32: compose, the stub paused mid-replay, a seek, then a switch to sample:
+  the switch lands 0.1 s after its POST (it was ~10 s). The seek is reported
+  as stopped.
+- 29, 1, 2: the appendix scripts now print `frame=True`,
+  `overlapped = False` and "other task ran 335 times".
+
+---
+
 ## Appendix: reproductions
 
 Run from the repo root: `.venv/bin/python repro.py` (or paste into
-`python -`). Observed on `dbf635b`:
+`python -`). Observed on `dbf635b`; since the fixes, 1 prints
+`overlapped = False | threads: 1` and 2 prints "other task ran 335 times":
 
 ```
 1  blocking module: process/handle overlapped = True | threads: 2
@@ -1076,6 +1124,9 @@ print("3  trigger at t=10s after a seek back, other input from t=58s ->", "bundl
 
 ### Running it: the setups
 
+The recipes say what was seen before the fixes. Since them, 28, 31 and 32
+recover or report as their entries say; 30 still reproduces.
+
 A stack under its own project name and ports, so a developer's `p-swamp`
 stack on :8000 is untouched:
 
@@ -1140,7 +1191,7 @@ inside the node: `minikube ssh -- docker kill $(minikube ssh -- docker ps -q
   for the worker restart and a kill of the `p-swamp` container for the crash.
 - **31**: kill the `kafka` container and post speed, then play, at once.
 
-Comment 29, run from the repo root with `.venv/bin/python`:
+Issue 29, run from the repo root with `.venv/bin/python`:
 
 ```python
 import asyncio
@@ -1181,7 +1232,7 @@ async def main():
 asyncio.run(main())
 ```
 
-Observed:
+Observed before the fix (it now prints `frame=True`):
 
 ```
 29 shared live run: live: ConnectionError: the PMU connection dropped
