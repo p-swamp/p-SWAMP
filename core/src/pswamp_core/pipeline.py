@@ -19,7 +19,9 @@ module host gives a new run of the same client fresh instances, and a stream
 number that goes up each time the stream starts over (a seek, a step back, a
 loop, a switch), so a host resets its instances in order with the frames. A
 result from before the stream started over is dropped, unless it answers a
-command. It publishes the active
+command. A module instance that starts (a rebuilt one, after a worker
+restart) is sent the run's sticky settings again (``Command.sticky``). It
+publishes the active
 source's frames to the modules and listens for their results. The modules themselves run in module hosts,
 wherever the deployment puts them (``Pipeline.hosts``, ``pswamp_core.worker``);
 the run and the hosts meet only on the transport::
@@ -57,7 +59,7 @@ from collections.abc import AsyncIterator, Callable, Collection
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Generic, TypeVar
 
-from pswamp_models.common import Command, ErrorEvent, PipelineClosed
+from pswamp_models.common import Command, ErrorEvent, ModuleStarted, PipelineClosed
 from pswamp_models.player import PlayerStatus, SwitchSourceCommand
 
 from .active_source import ROUTER_COMMANDS, ActiveSource
@@ -148,7 +150,7 @@ class Pipeline:
                 if issubclass(model, Command) and model not in taken:
                     raise ValueError(f"{self.app}: {module.__name__} sends {model.__name__}, which nothing in the pipeline takes")
         on_topic: dict[str, type[DataModel]] = {}
-        for model in (ErrorEvent, PipelineClosed, *taken, *self.inputs, *self.outputs):
+        for model in (ErrorEvent, PipelineClosed, ModuleStarted, *taken, *self.inputs, *self.outputs):
             other = on_topic.setdefault(model.topic, model)
             if other is not model:
                 raise ValueError(
@@ -310,6 +312,9 @@ class PipelineRun:
         #: The shared live run's newest status, while following it.
         self._followed_status: PlayerStatus | None = None
         self._waiters: set[asyncio.Event] = set()
+        #: The last command of each sticky class sent to a module: sent again
+        #: to an instance of it that starts.
+        self._sticky: dict[type[Command], Command] = {}
         self._inbox: CommandInbox | None = None
         self._subscriptions: list[TransportSubscription] = []
         self._tasks: list[asyncio.Task] = []
@@ -435,6 +440,8 @@ class PipelineRun:
                     f"{module.name} reads the shared live run {self._following.key}, so its settings are not "
                     f"per viewer: switch to a recording to change them"
                 )
+            if command.sticky:
+                self._sticky[type(command)] = command
         self.outbox.publish(command)
 
     # -- lifecycle ------------------------------------------------------------------
@@ -453,6 +460,10 @@ class PipelineRun:
             results = subscribe(*self.pipeline.results, app=app, key=key)
             self._subscriptions.append(results)
             self._tasks.append(asyncio.create_task(self._receive(results), name=f"{app}@{key}.results"))
+        if any(command.sticky for module in self.pipeline.modules for command in module.commands):
+            started = subscribe(ModuleStarted, app=app, key=key, overflow=Overflow.GROW)
+            self._subscriptions.append(started)
+            self._tasks.append(asyncio.create_task(self._resend_settings(started), name=f"{app}@{key}.started"))
         # A command dispatched once start() returns must find its topic received.
         for subscription in self._subscriptions:
             await subscription.ready(_READY_TIMEOUT_S)
@@ -499,6 +510,19 @@ class PipelineRun:
             if 0 < stream < self._stream and getattr(result, "request_id", None) is None:
                 continue  # from before the stream started over, and nobody asked for it
             self._remember(result)
+
+    async def _resend_settings(self, started: TransportSubscription) -> None:
+        """Send a module instance that starts the sticky settings this run
+        has sent its module, stamped now: a rebuilt instance has lost them,
+        and a command stamped long ago would be refused as late."""
+        async for key, message in started:
+            if not self._ours(key):
+                continue
+            for cls, command in list(self._sticky.items()):
+                module = self.pipeline.module_for(cls)
+                if module is not None and module.name == message.module:
+                    logger.info("%s: %s started; sending it %s again", self.key, module.name, command.name)
+                    self.outbox.publish(command.model_copy(update={"timestamp": utcnow()}))
 
     async def _receive_followed(self, messages: TransportSubscription, frames: type[DataModel]) -> None:
         async for _, message in messages:

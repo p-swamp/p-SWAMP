@@ -215,6 +215,7 @@ FrameStatsResult.model_validate_json(text)           # the whole codec
 | `ResultEnvelope[T]` | A module's result body `T`, with the module's identity and the command it answers, if any. |
 | `ErrorEvent` | An operational failure, for the person using the run. |
 | `PipelineClosed` | A run stopped; hosts drop its module instances. |
+| `ModuleStarted` | A host started a module instance for a run; the run sends it the sticky settings it has seen. |
 
 *Why.* One codec from provider to browser. A message can be logged,
 validated on receipt, and published in the browser's api contract without an
@@ -264,7 +265,7 @@ with `KAFKA_BOOTSTRAP_SERVERS`) creates each topic with one partition and
 about a minute of retention. It reads every topic its process listens to with
 one consumer, from the topic's end, with no consumer group. A consumer that
 fails is reopened with backoff and resumes each control topic (commands,
-errors, `PipelineClosed`) where it was, so what was sent meanwhile still
+errors, `PipelineClosed`, `ModuleStarted`) where it was, so what was sent meanwhile still
 arrives; a data topic starts again at its end. Kafka keeps order within a
 topic only, and each class has its own, so the consumer delivers each fetch
 in the order it was sent: a pause then a play sent meanwhile arrive in that
@@ -393,6 +394,13 @@ rides on the frames' own key, this holds over Kafka, where two topics keep no
 order between them. A call's outputs go under its input's key, so a chained
 module sees the stream too, and the run drops a result from an older stream
 unless it answers a command.
+
+A user's setting lives in the module instance, so a rebuilt instance (after a
+worker restart, or a failure) would lose it. A command class marked
+`sticky = True` (`AutoPauseCommand`) is a setting: the run keeps the last one
+it sent, and when a host announces an instance (`ModuleStarted`) the run sends
+it again, stamped now so it is not refused as late. Applying a sticky command
+twice must change nothing. A new run starts with no settings.
 
 An instance that fails (its `setup` raises, say) is logged, reported as an
 `ErrorEvent` under its key, and dropped. The first message for that key five

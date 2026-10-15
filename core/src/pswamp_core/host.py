@@ -32,6 +32,10 @@ input it was for, so a module reading them (a chain) sees the stream too.
 Commands are not tied to a stream: a play sent while a seek is still pending
 applies.
 
+Once an instance is set up, the host announces it (``ModuleStarted``, under
+its key), and the run sends it the sticky settings it has seen
+(``Command.sticky``): what a rebuilt instance would otherwise have lost.
+
 An instance that fails (its ``setup`` raises, say) is logged, reported as an
 ``ErrorEvent`` under its key, and dropped. The first message for that key
 after ``retry_seconds`` builds a new one; what arrives before is ignored.
@@ -50,7 +54,7 @@ import time
 from collections.abc import Callable, Sequence
 from typing import TYPE_CHECKING
 
-from pswamp_models.common import ErrorEvent, PipelineClosed
+from pswamp_models.common import ErrorEvent, ModuleStarted, PipelineClosed
 
 from .command_routing import CommandInbox, concrete_commands
 from .keep_up import KeepUpMonitor
@@ -376,6 +380,7 @@ class ModuleHost:
         if module.commands:
             slot.inbox = command_inbox(module, slot.commands, slot.out)
             slot.inbox.start()
+        slot.out.publish(ModuleStarted(timestamp=utcnow(), module=self.name))
         logger.info("%s: instance started for key %s (%d running)", self.name, slot.key, len(self._slots))
 
     async def _reap(self) -> None:

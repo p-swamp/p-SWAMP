@@ -45,7 +45,7 @@ from collections import deque
 from collections.abc import Callable
 from typing import TYPE_CHECKING, ClassVar
 
-from pswamp_models.common import Command, ErrorEvent, PipelineClosed, ResultEnvelope, stamp_sent_at
+from pswamp_models.common import Command, ErrorEvent, ModuleStarted, PipelineClosed, ResultEnvelope, stamp_sent_at
 
 from ..keep_up import KeepUp, KeepUpMonitor
 from ..log import get_logger
@@ -210,7 +210,7 @@ class InMemoryTransport(Transport):
 
 
 #: Never dropped by a full outbox: what changes something, or reports it.
-_CONTROL = (Command, ErrorEvent, PipelineClosed)
+_CONTROL = (Command, ErrorEvent, PipelineClosed, ModuleStarted)
 
 #: How long a control message may wait to be published. Past it, it is given
 #: up and reported: a command applied long after its 200 is worse than one

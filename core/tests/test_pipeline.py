@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+from datetime import timedelta
 from typing import Literal
 
 import pytest
@@ -18,8 +19,9 @@ from pswamp_core.sources import SourceModule, SourceSet
 from pswamp_core.subscription import Overflow
 from pswamp_core.transport import InMemoryTransport
 from pswamp_core.util.tasks import cancel_and_wait
+from pswamp_core.util.time import utcnow
 from pswamp_models.common import Command, ErrorEvent, ResultEnvelope
-from pswamp_models.player import PauseCommand, PlayCommand, SeekCommand, SpeedCommand, SwitchSourceCommand
+from pswamp_models.player import PauseCommand, PlayCommand, SeekCommand, SpeedCommand, StepCommand, SwitchSourceCommand
 from pswamp_models.pmu import PmuFrame
 
 
@@ -235,6 +237,83 @@ async def test_a_result_from_before_the_stream_started_over_is_dropped_unless_as
     await transport.publish(result(3), app="app", key=str(run.stream_key))
     await until(lambda: run.latest.get(NumberResult).result.value == 3)
     await run.stop()
+
+
+class GateCommand(Command):
+    """Open or shut the gate: a setting."""
+
+    sticky = True
+    version: Literal["v1"] = "v1"
+    open: bool
+
+
+class GateResult(ResultEnvelope[Number]):
+    version: Literal["v1"] = "v1"
+
+
+class Gate(Module):
+    """1 per frame while open, 0 while shut."""
+
+    name = "gate"
+    inputs = (PmuFrame,)
+    outputs = (GateResult,)
+    commands = (GateCommand,)
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.open = False
+
+    def process(self, frame: PmuFrame) -> Number:
+        return Number(value=1 if self.open else 0)
+
+    def handle(self, command: GateCommand) -> Number:
+        self.open = command.open
+        return Number(value=1 if self.open else 0)
+
+
+async def test_a_rebuilt_instance_gets_the_run_s_sticky_settings_back_stamped_now():
+    transport = InMemoryTransport()
+    pipeline = Pipeline("app", sources, modules=(Gate, Halver))
+
+    def hosts() -> asyncio.Task:
+        return asyncio.create_task(serve_hosts(pipeline.hosts(transport)))
+
+    def gate(run: PipelineRun) -> GateResult | None:
+        return run.latest.get(GateResult)
+
+    hosting = hosts()
+    await asyncio.sleep(0)
+    run = PipelineRun("k", pipeline, transport)
+    with transport.subscribe(GateCommand, app="app", overflow=Overflow.GROW) as sent:
+        await run.start()  # its frame at the start builds the gate: nothing to send it yet
+        await until(lambda: gate(run) is not None)  # (set before its announcement, it would be sent twice)
+        run.dispatch(GateCommand(open=True))
+        await until(lambda: gate(run) is not None and gate(run).result.value == 1)
+        before = gate(run).app.uuid
+        # As if set long ago: sent again as it was, it would be refused as late.
+        run._sticky[GateCommand] = run._sticky[GateCommand].model_copy(update={"timestamp": utcnow() - timedelta(minutes=5)})
+        run.dispatch(HalveCommand(value=8))  # another module starting is sent nothing
+        await until(lambda: run.latest.get(NumberResult) is not None)
+        await cancel_and_wait(hosting)  # a worker restart
+        hosting = hosts()
+        await asyncio.sleep(0)
+        run.dispatch(StepCommand(n=1))  # a frame rebuilds the gate, which is sent its setting
+        await until(lambda: gate(run).app.uuid != before and gate(run).result.value == 1)
+        run.dispatch(StepCommand(n=1))
+        await until(lambda: gate(run).request_id is None and gate(run).app.uuid != before)
+        assert gate(run).result.value == 1  # a frame through the rebuilt gate: open
+        await run.stop()
+        fresh = PipelineRun("k", pipeline, transport)  # a new run starts shut
+        await fresh.start()
+        await until(lambda: gate(fresh) is not None)
+        assert gate(fresh).result.value == 0
+        await asyncio.sleep(0.05)
+        commands = [command for _, command in [sent.get_nowait() for _ in range(2)]]
+        assert sent.get_nowait() is None  # the original and one resend, no more
+    assert [c.open for c in commands] == [True, True]
+    assert (utcnow() - commands[1].timestamp).total_seconds() < 5
+    await fresh.stop()
+    await cancel_and_wait(hosting)
 
 
 def test_hosts_can_be_limited_to_named_modules():

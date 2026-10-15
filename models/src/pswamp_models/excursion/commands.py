@@ -15,5 +15,7 @@ __all__ = ["AutoPauseCommand"]
 class AutoPauseCommand(Command):
     """Pause the player when the frequency leaves the band, or stop doing so."""
 
+    sticky = True
+
     version: Literal["v1"] = "v1"
     enabled: bool

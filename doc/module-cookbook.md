@@ -467,6 +467,19 @@ class ExcursionModule(Module):
 A script reading a second recording through the same instance calls
 `reset()` itself.
 
+**A setting survives a worker restart** when its command is marked sticky. A
+restarted worker builds a fresh instance, and the run sends it the last
+command of each sticky class again:
+
+```python
+class AutoPauseCommand(Command):
+    sticky = True                 # a setting: applying it twice changes nothing
+    version: Literal["v1"] = "v1"
+    enabled: bool
+```
+
+Leave an action (summarize this range, step) unsticky.
+
 ### Chain it onto another module
 
 A chained module reads another module's results instead of raw frames. Set

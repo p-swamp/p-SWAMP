@@ -11,7 +11,7 @@
 """
 
 from .command import Command
-from .control import PipelineClosed
+from .control import ModuleStarted, PipelineClosed
 from .data_model import DataModel, sent_at, stamp_sent_at, topic_from_name
 from .errors import ErrorEvent
 from .results import AppIdentity, ResultEnvelope
@@ -21,6 +21,7 @@ __all__ = [
     "Command",
     "DataModel",
     "ErrorEvent",
+    "ModuleStarted",
     "PipelineClosed",
     "ResultEnvelope",
     "sent_at",

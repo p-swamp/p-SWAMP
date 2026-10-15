@@ -54,3 +54,7 @@ class Command(DataModel):
     client_id: str | None = Field(default=None, description="The client that issued it, if any.")
 
     name: ClassVar[_Name] = _Name()
+    #: A setting, not an action: a run sends the last one it saw again to a
+    #: module instance that is rebuilt (a worker restart), so the setting
+    #: survives. Applying one twice must change nothing.
+    sticky: ClassVar[bool] = False

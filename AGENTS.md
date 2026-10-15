@@ -540,7 +540,8 @@ The rules to keep:
   await overrides `ahandle`. Test modules with `run`: no loop, no transport.
   An instance lives as long as its run: `setup` before its first input,
   `reset` each time the run's stream starts over (a seek, a switch, a loop),
-  `teardown` when its host drops it.
+  `teardown` when its host drops it. A command marked `sticky` is a setting:
+  the run sends it again to an instance that is rebuilt (`ModuleStarted`).
 - **A module never sees the transport.** A `ModuleHost` runs it, in the server
   with the in-memory transport or in a worker with Kafka. Where a module runs is
   configuration (`PSWAMP_TRANSPORT`, `PSWAMP_WORKER_PIPELINES`,
