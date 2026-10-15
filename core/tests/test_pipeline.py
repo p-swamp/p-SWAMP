@@ -6,11 +6,12 @@ import asyncio
 from typing import Literal
 
 import pytest
-from support import ListSource, Number, NumberResult, TickingSource, take
+from support import ListSource, Number, NumberResult, TickingSource, at, take
 from test_modules import HalveCommand, Halver
 
 from pswamp_core.command_routing import CommandRefused, NoReceiver
 from pswamp_core.host import serve_hosts
+from pswamp_core.keys import StreamKey
 from pswamp_core.modules import Module
 from pswamp_core.pipeline import Pipeline, PipelineRun, start_live_runs
 from pswamp_core.sources import SourceModule, SourceSet
@@ -18,7 +19,7 @@ from pswamp_core.subscription import Overflow
 from pswamp_core.transport import InMemoryTransport
 from pswamp_core.util.tasks import cancel_and_wait
 from pswamp_models.common import Command, ErrorEvent, ResultEnvelope
-from pswamp_models.player import PauseCommand, PlayCommand, SeekCommand, SwitchSourceCommand
+from pswamp_models.player import PauseCommand, PlayCommand, SeekCommand, SpeedCommand, SwitchSourceCommand
 from pswamp_models.pmu import PmuFrame
 
 
@@ -191,6 +192,49 @@ async def test_a_new_run_of_a_key_gets_fresh_instances_even_if_the_old_one_never
     await run.stop()
     await until(lambda: host.keys() == [])
     await cancel_and_wait(hosting)
+
+
+async def test_a_seek_a_switch_and_a_loop_each_start_a_new_stream_on_the_wire():
+    transport = InMemoryTransport()
+    run = PipelineRun("k", Pipeline("app", two_sources, modules=(FrameCounter,)), transport)
+    with transport.subscribe(PmuFrame, app="app", key="k", overflow=Overflow.GROW) as frames:
+        await run.start()  # the frame at the start
+        run.dispatch(SeekCommand(offset_s=0.5))
+        await until(lambda: run.frame is not None and run.frame.timestamp == at(0.5))
+        run.dispatch(SwitchSourceCommand(source="tick"))  # live, followed: nothing of its own
+        await until(lambda: run.router.status().mode == "live")
+        run.dispatch(SwitchSourceCommand(source="rec"))
+        await until(lambda: run.router.status().mode == "replay")
+        run.dispatch(SpeedCommand(speed=10))
+        run.dispatch(PlayCommand())  # 1 s of frames at 10x: it loops
+        streams: list[int] = []
+        while 5 not in streams:
+            key, _ = await asyncio.wait_for(frames.get(), 5)
+            parsed = StreamKey.parse(key)
+            assert parsed.run_id == run.run_id
+            streams.append(parsed.stream)
+    assert list(dict.fromkeys(streams)) == [1, 2, 4, 5]
+    await run.stop()
+
+
+async def test_a_result_from_before_the_stream_started_over_is_dropped_unless_asked_for():
+    transport = InMemoryTransport()
+    run = PipelineRun("k", Pipeline("app", sources, modules=(FrameCounter,)), transport)
+    await run.start()
+    run.dispatch(SeekCommand(offset_s=0.5))
+    await until(lambda: run.stream_key.stream == 2)
+
+    def result(value: float, request_id: str | None = None) -> NumberResult:
+        return NumberResult(timestamp=at(0), app={"name": "counter", "uuid": "u"}, request_id=request_id, result=Number(value=value))
+
+    stale = f"k#{run.run_id}.1"
+    await transport.publish(result(1), app="app", key=stale)
+    await transport.publish(result(2, request_id="r"), app="app", key=stale)  # an answer: kept
+    await until(lambda: run.latest.get(NumberResult) is not None)
+    assert run.latest.get(NumberResult).result.value == 2
+    await transport.publish(result(3), app="app", key=str(run.stream_key))
+    await until(lambda: run.latest.get(NumberResult).result.value == 3)
+    await run.stop()
 
 
 def test_hosts_can_be_limited_to_named_modules():

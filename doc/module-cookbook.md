@@ -443,6 +443,30 @@ as the next state, not in the POST's answer.
   when the frequency leaves its band. The pipeline refuses a module that sends
   a command nothing in it takes.
 
+### Keep state across frames
+
+An instance lives as long as its client's run, and its host tells it when the
+stream starts over:
+
+- `reset()` runs before the first input after a seek, a step back, a loop to
+  the start, a switch of source or a live feed reopened. Clear what came from
+  the stream (a window, a count); keep settings. A join's inputs are cleared
+  for you.
+- `async def teardown()` runs when the host drops the instance: its run
+  closed, went idle, or a new run of the same client replaced it. Release
+  what `setup` took.
+
+```python
+class ExcursionModule(Module):
+    def reset(self):              # a seek: the count starts over, auto-pause stays
+        self.excursions = 0
+        self._in_band = True
+        self._deviation = None
+```
+
+A script reading a second recording through the same instance calls
+`reset()` itself.
+
 ### Chain it onto another module
 
 A chained module reads another module's results instead of raw frames. Set

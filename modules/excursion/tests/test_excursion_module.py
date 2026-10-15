@@ -31,3 +31,15 @@ def test_the_excursion_module_counts_excursions_and_can_pause_the_player():
     module.run(stats_at(50.0))
     (back_out,) = module.run(stats_at(49.99))  # out again, auto-pause off: no pause
     assert back_out.result.excursions == 2
+
+
+def test_a_reset_starts_the_count_over_and_keeps_auto_pause():
+    module = ExcursionModule()
+    module.run_command(AutoPauseCommand(enabled=True))
+    module.run(stats_at(50.0))
+    module.run(stats_at(50.01))
+    module.reset()  # a seek: the stream starts over
+    (back,) = module.run(stats_at(50.0))
+    assert (back.result.excursions, back.result.in_band, back.result.auto_pause) == (0, True, True)
+    left, pause = module.run(stats_at(50.01))
+    assert left.result.excursions == 1 and isinstance(pause, PauseCommand)

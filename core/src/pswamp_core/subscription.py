@@ -82,6 +82,20 @@ class Subscription:
             names = ",".join(model.__name__ for model in self.models)
             logger.warning("subscriber on %s is not keeping up; %d dropped", names, self.dropped)
 
+    def clear(self) -> int:
+        """Drop every queued item, uncounted (they are not late, they are
+        void); how many."""
+        cleared = 0
+        while True:
+            try:
+                item = self._queue.get_nowait()
+            except asyncio.QueueEmpty:
+                return cleared
+            if item is _CLOSED:
+                self._queue.put_nowait(_CLOSED)
+                return cleared
+            cleared += 1
+
     async def get(self) -> Any:
         """The next item; ``StopAsyncIteration`` once closed."""
         item = await self._queue.get()

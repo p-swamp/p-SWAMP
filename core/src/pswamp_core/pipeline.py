@@ -15,7 +15,11 @@ A test may declare one in code: ``Pipeline("app", sources, modules=(FrameStatsMo
 A **``PipelineRun``** is one running instance under one key: a set of sources,
 a router over them (``ActiveSource``) and an outbox. It publishes under
 ``<key>#<run id>.<stream>`` (``pswamp_core.keys``): a run id of its own, so a
-module host gives a new run of the same client fresh instances. It publishes the active
+module host gives a new run of the same client fresh instances, and a stream
+number that goes up each time the stream starts over (a seek, a step back, a
+loop, a switch), so a host resets its instances in order with the frames. A
+result from before the stream started over is dropped, unless it answers a
+command. It publishes the active
 source's frames to the modules and listens for their results. The modules themselves run in module hosts,
 wherever the deployment puts them (``Pipeline.hosts``, ``pswamp_core.worker``);
 the run and the hosts meet only on the transport::
@@ -280,6 +284,8 @@ class PipelineRun:
         #: This run's id: a module host builds fresh instances for a new one.
         self.run_id = next_run_id()
         self._stream = 0
+        #: The router's ``stream_mark`` when the stream number last went up.
+        self._mark: tuple[int, int] | None = None
         self.pipeline = pipeline
         self.transport = transport
         self._on_error = on_error
@@ -315,6 +321,11 @@ class PipelineRun:
         """What the active source publishes: remembered here, and put on the transport
         when a module reads it, it is an error, or it is a shared run's frame or
         status."""
+        mark = self.router.stream_mark
+        if mark != self._mark:
+            self._mark = mark
+            self._stream += 1
+            self.outbox.key = str(self.stream_key)
         if isinstance(message, PlayerStatus):
             self._follow(message)
         elif message is self.router.last_frame:
@@ -482,8 +493,12 @@ class PipelineRun:
 
     async def _receive(self, results: TransportSubscription) -> None:
         async for key, result in results:
-            if self._ours(key):
-                self._remember(result)
+            if not self._ours(key):
+                continue
+            stream = StreamKey.parse(key).stream
+            if 0 < stream < self._stream and getattr(result, "request_id", None) is None:
+                continue  # from before the stream started over, and nobody asked for it
+            self._remember(result)
 
     async def _receive_followed(self, messages: TransportSubscription, frames: type[DataModel]) -> None:
         async for _, message in messages:

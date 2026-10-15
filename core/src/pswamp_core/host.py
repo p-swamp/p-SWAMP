@@ -23,6 +23,15 @@ instance is dropped when its run publishes ``PipelineClosed``, or, if that was
 lost, after ``idle_seconds`` with nothing for it. Its ``teardown`` is called
 then.
 
+A key's stream number goes up each time the run's stream starts over (a seek,
+a switch, a loop). On the first input of a new stream the host empties the
+instance's queue, resets its join, and has ``serve_module`` call its
+``reset`` before that input; an input of an older stream (sent before the
+seek, still on its way) is dropped. A call's outputs go under the key of the
+input it was for, so a module reading them (a chain) sees the stream too.
+Commands are not tied to a stream: a play sent while a seek is still pending
+applies.
+
 An instance that fails (its ``setup`` raises, say) is logged, reported as an
 ``ErrorEvent`` under its key, and dropped. The first message for that key
 after ``retry_seconds`` builds a new one; what arrives before is ignored.
@@ -55,7 +64,7 @@ from .util.time import utcnow
 if TYPE_CHECKING:
     from collections.abc import AsyncIterable
 
-    from pswamp_models.common import Command
+    from pswamp_models.common import Command, DataModel
 
     from .modules import Module
     from .sources import SourceSet
@@ -84,31 +93,53 @@ DEFAULT_RETRY_SECONDS = 5.0
 _FEED_MAXSIZE = 1024
 
 
-async def serve_module(module: Module, inputs: Subscription, out: Sink) -> None:
+async def serve_module(module: Module, inputs: Subscription, out: Sink, *, slot: _Slot | None = None) -> None:
     """Feed ``module`` from ``inputs`` and publish its outputs into ``out``,
     until cancelled or ``inputs`` closes. A failing call, or an output that is
     undeclared or does not fit its envelope, is logged, reported as an
     ``ErrorEvent``, and the next input is read. Falling behind is reported
-    per the module's ``keep_up``."""
+    per the module's ``keep_up``. With a host's ``slot``: a reset it has due
+    runs before the next input, and each call's outputs go under its input's
+    key."""
     if not inputs.models:
         return
     what = f"is not keeping up with {', '.join(model.topic for model in inputs.models)}"
     monitor = KeepUpMonitor(module.name, what, module.keep_up)
     async for message in inputs:
+        # The queue holds only the slot's current stream (``_Slot.new_stream``
+        # empties it), so its key now is the input's.
+        key = None if slot is None else str(slot.key)
+        if slot is not None and slot.reset_due:
+            slot.reset_due = False
+            try:
+                await module.areset()
+            except Exception as error:
+                _report(module, out, key, "failed to reset", error)
         try:
             monitor.observe(inputs, message, out)
             for output in await module.arun(message):
-                out.publish(output)
+                _publish(out, output, key)
         except Exception as error:
-            logger.exception("module %s failed on %s", module.name, type(message).__name__)
-            out.publish(
-                ErrorEvent(
-                    timestamp=utcnow(),
-                    source=module.name,
-                    message=f"module {module.name} failed on {type(message).__name__}",
-                    detail=f"{type(error).__name__}: {error}",
-                )
-            )
+            _report(module, out, key, f"failed on {type(message).__name__}", error)
+
+
+def _report(module: Module, out: Sink, key: str | None, what: str, error: Exception) -> None:
+    logger.exception("module %s %s", module.name, what)
+    event = ErrorEvent(
+        timestamp=utcnow(),
+        source=module.name,
+        message=f"module {module.name} {what}",
+        detail=f"{type(error).__name__}: {error}",
+    )
+    _publish(out, event, key)
+
+
+def _publish(out: Sink, message: DataModel, key: str | None) -> None:
+    """Into ``out``: under ``key`` when given (an ``Outbox``), as it is otherwise."""
+    if key is None:
+        out.publish(message)
+    else:
+        out.publish(message, key)  # type: ignore[call-arg]
 
 
 class _Answering:
@@ -167,6 +198,20 @@ class _Slot:
         self.seen = time.monotonic()
         self.set_up = False
         self.dropped = False
+        #: The newest stream of the run's inputs, and whether the instance
+        #: has yet to be reset for it.
+        self.stream = key.stream
+        self.reset_due = False
+
+    def new_stream(self, key: StreamKey) -> None:
+        """The run's stream started over: what is queued is void, the join
+        forgets, and the instance is reset before its next input."""
+        self.key = key
+        self.stream = key.stream
+        self.out.key = str(key)
+        self.inputs.clear()
+        self.module._reset_join()
+        self.reset_due = True
 
 
 class ModuleHost:
@@ -252,14 +297,22 @@ class ModuleHost:
         none, straight into the instance's join."""
         with feed:
             async for key, message in feed:
-                slot = self._slot(StreamKey.parse(key))
+                stream_key = StreamKey.parse(key)
+                slot = self._slot(stream_key)
                 if slot is None:
                     continue
                 slot.seen = time.monotonic()
+                if queue == "commands":
+                    slot.commands.offer(message)
+                    continue
+                if stream_key.stream < slot.stream:
+                    continue  # sent before the run's stream started over
+                if stream_key.stream > slot.stream:
+                    slot.new_stream(stream_key)
                 if queue is None:
                     slot.module.observe(message)
                 else:
-                    getattr(slot, queue).offer(message)
+                    slot.inputs.offer(message)
 
     async def _closed(self, feed: TransportSubscription) -> None:
         with feed:
@@ -299,7 +352,7 @@ class ModuleHost:
         way is logged, reported under the key, and handed to ``_reap``."""
         try:
             await self._start(slot)
-            await serve_module(slot.module, slot.inputs, slot.out)
+            await serve_module(slot.module, slot.inputs, slot.out, slot=slot)
         except Exception as error:
             logger.exception("%s: the instance for key %s failed", self.name, slot.key)
             slot.out.publish(

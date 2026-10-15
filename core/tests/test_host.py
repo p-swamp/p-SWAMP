@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import time
 from datetime import timedelta
 
 from support import Measurement, Number, NumberResult, at, measurement, take
@@ -20,6 +21,7 @@ from test_modules import (
 )
 
 from pswamp_core.host import ModuleHost
+from pswamp_core.modules import Module
 from pswamp_core.subscription import Overflow
 from pswamp_core.transport import CONTROL_DEADLINE_S, InMemoryTransport
 from pswamp_core.util.tasks import cancel_and_wait
@@ -152,6 +154,74 @@ async def test_an_idle_instance_is_torn_down_and_a_failing_teardown_is_only_logg
         await broker.publish(measurement(2), app="a", key="k2")
         (_, result), = await take(results, 1)
     assert result.result.value == 4  # the host still serves
+    await cancel_and_wait(task)
+
+
+class Streamed(Module):
+    """Records its calls; slow on a value of 1, to have a call in flight."""
+
+    name = "streamed"
+    inputs = (Measurement,)
+    outputs = (NumberResult,)
+    blocking = True
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.calls: list[str] = []
+
+    def process(self, message: Measurement) -> Number:
+        if message.value == 1:
+            time.sleep(0.1)
+        self.calls.append(f"process {message.value:g}")
+        return Number(value=message.value)
+
+    def reset(self) -> None:
+        self.calls.append("reset")
+
+
+async def test_a_new_stream_voids_the_queue_and_resets_after_the_call_in_flight():
+    instances: list[Streamed] = []
+
+    def build() -> Streamed:
+        instances.append(Streamed())
+        return instances[-1]
+
+    broker = InMemoryTransport()
+    task = asyncio.create_task(ModuleHost(build, broker, app="a").serve())
+    await settle()
+    with broker.subscribe(NumberResult, app="a", key="k", overflow=Overflow.GROW) as results:
+        await broker.publish(measurement(1), app="a", key="k#1.1")
+        await asyncio.sleep(0.03)  # 1 is being processed
+        await broker.publish(measurement(2), app="a", key="k#1.1")  # queued, then void
+        await broker.publish(measurement(3), app="a", key="k#1.2")  # a seek
+        await broker.publish(measurement(4), app="a", key="k#1.1")  # late, from before it
+        got = await take(results, 2)
+        await asyncio.sleep(0.05)
+        assert results.get_nowait() is None
+    assert [(key, r.result.value) for key, r in got] == [("k#1.1", 1), ("k#1.2", 3)]
+    assert instances[1].calls == ["process 1", "reset", "process 3"]
+    await cancel_and_wait(task)
+
+
+async def test_a_join_forgets_its_inputs_when_the_stream_starts_over():
+    broker = InMemoryTransport()
+    task = asyncio.create_task(ModuleHost(Assessment, broker, app="a").serve())
+    await settle()
+    with broker.subscribe(NumberResult, app="a", key="k", overflow=Overflow.GROW) as outputs:
+        for message in (Snapshot(load_mw=100, timestamp=at(58)), Measurement(value=1, timestamp=at(58))):
+            await broker.publish(message, app="a", key="k#1.1")
+        await broker.publish(Estimate(n=1, timestamp=at(58.5)), app="a", key="k#1.1")
+        ((_, before),) = await take(outputs, 1)
+        # Seek back to 10 s: the inputs from 58 s are not "fresh" for a trigger at 10 s.
+        await broker.publish(Estimate(n=2, timestamp=at(10)), app="a", key="k#1.2")
+        await settle()
+        assert outputs.get_nowait() is None
+        # A new stream's other inputs, arriving before its first trigger, are kept.
+        for message in (Snapshot(load_mw=200, timestamp=at(20)), Measurement(value=2, timestamp=at(20))):
+            await broker.publish(message, app="a", key="k#1.3")
+        await broker.publish(Estimate(n=3, timestamp=at(20)), app="a", key="k#1.3")
+        ((key, after),) = await take(outputs, 1)
+    assert before.result.value == 1 + 100 + 1 and (key, after.result.value) == ("k#1.3", 2 + 200 + 3)
     await cancel_and_wait(task)
 
 

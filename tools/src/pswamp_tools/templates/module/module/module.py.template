@@ -10,6 +10,10 @@ that split.
 it in ``__NAME__Result``. The same module runs hosted, or from a script::
 
     __NAME__Module().run_one(frame).result
+
+This one keeps no state between frames. One that does (a window, a count)
+clears it in ``reset``, which its host calls when the stream starts over (a
+seek, a loop), and releases what ``setup`` took in ``teardown``.
 """
 
 from pswamp_core.modules import Module

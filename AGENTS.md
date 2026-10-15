@@ -538,6 +538,9 @@ The rules to keep:
   inline, or in a thread with `blocking = True`, and an instance takes one call
   at a time either way (a lock in `Module`). A module whose answer must
   await overrides `ahandle`. Test modules with `run`: no loop, no transport.
+  An instance lives as long as its run: `setup` before its first input,
+  `reset` each time the run's stream starts over (a seek, a switch, a loop),
+  `teardown` when its host drops it.
 - **A module never sees the transport.** A `ModuleHost` runs it, in the server
   with the in-memory transport or in a worker with Kafka. Where a module runs is
   configuration (`PSWAMP_TRANSPORT`, `PSWAMP_WORKER_PIPELINES`,

@@ -73,7 +73,11 @@ server or in a worker is the deployment's choice.
 
 **An instance lives as long as its run.** A host builds one per run (a new
 run of the same client, after a server restart, gets a new one), calls
-``setup`` before its first input, and ``teardown`` when it drops it.
+``setup`` before its first input, and ``teardown`` when it drops it. Each time
+the run's stream starts over (a seek, a step back, a loop to the start, a
+switch of source, a live feed reopened) it calls ``reset`` before the first
+input of the new stream: forget what came from the stream (a window, a
+count), keep settings. A join is reset by the base class.
 
 A module may also read data itself, a batch question over a range, say: it
 sets ``reads_sources = True`` and its host gives each instance a ``SourceSet``
@@ -252,6 +256,11 @@ class Module(ABC):
         went idle, or was replaced by a new run), after its last call and
         before its ``sources`` close. Release what ``setup`` took."""
 
+    def reset(self) -> None:
+        """Called by a host when the run's stream starts over, before the
+        first input of the new one: forget what came from the stream, keep
+        settings. A script reading a second recording calls it itself."""
+
     def process(self, *args: Any, **named: Any) -> Any:
         """Analyse one input (or one bundle, by name). Return a body, a
         declared message, a list of them, or ``None`` for nothing."""
@@ -299,6 +308,19 @@ class Module(ABC):
                 return []
             handler, args, kwargs, timestamp = call
             return self.outputs_of(await self._call(handler, *args, **kwargs), timestamp=timestamp)
+
+    async def areset(self) -> None:
+        """``reset``, as a host calls it: one call at a time, in a thread if
+        ``blocking``."""
+        async with self._calling:
+            await self._call(self.reset)
+
+    def _reset_join(self) -> None:
+        """Forget the join's inputs. The host does this as soon as a new
+        stream arrives, so an input of the new stream observed before its
+        trigger is kept."""
+        if self._join is not None:
+            self._join = type(self).join.bound(self.inputs)
 
     def observe(self, message: DataModel) -> None:
         """Take a non-trigger input of a join: it only replaces that input's

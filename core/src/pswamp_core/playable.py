@@ -33,7 +33,9 @@ back to this source; ``speed`` and ``loop`` carry over, the stream restarts.
 - **Paused, it shows the frame at its cursor.** A seek, a step and the start
   all publish the frame there, so a page always has one to show.
 - **A seek is a new stream**; a stream only moves forward. A seek with an end
-  plays that chunk and stops there, paused, without looping.
+  plays that chunk and stops there, paused, without looping. ``streams``
+  counts them: the start, a seek, a step back, a loop to the start and a play
+  after the end each open one, and a run resets its modules on each.
 - **Pacing drops time rather than bursting** when the loop falls behind.
 - **A provider failure stops the stream**: paused, ``error`` set in the
   status, and an ``ErrorEvent`` published. Play or seek tries again.
@@ -45,7 +47,7 @@ One task does everything: it reads the stream, paces frames, and applies
 commands, which ``ahandle`` queues for it. So nothing here needs a lock.
 
 The mixin keeps its state in ``speed``, ``paused``, ``ended``, ``error``,
-``cursor``, ``last_frame``, ``loop`` and attributes prefixed ``_pl_``: names a
+``cursor``, ``last_frame``, ``loop``, ``streams`` and attributes prefixed ``_pl_``: names a
 source class using it should not reuse. It needs from its host class what a
 ``SourceModule`` has: ``source``, ``kind``, ``aread``, ``acoverage``, and
 ``_ensure_open``. It reads the source through a ``SourceStream``, so the
@@ -109,6 +111,8 @@ class Playable:
     cursor: datetime | None = None
     #: The last frame published: the one at the cursor.
     last_frame: Any = None
+    #: How many streams it has opened (see the module docstring).
+    streams: int = 0
 
     _pl_task: asyncio.Task | None = None
 
@@ -301,6 +305,7 @@ class Playable:
         """Close the current stream and open the source at ``start`` (default:
         the recording's start), up to ``end``."""
         await self._pl_close()
+        self.streams += 1
         self.error, self.ended, self.last_frame = None, False, None
         self._pl_anchor, self._pl_played_since_open, self._pl_range_end = None, False, None
         try:

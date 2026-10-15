@@ -41,7 +41,7 @@ worked example of every piece.
 | router (`ActiveSource`) | A run's receiver of `SwitchSourceCommand` and the playback commands: switches the active source and hands the playback commands to it. Reported as "the player" to the page and in errors. |
 | transport | Keyed publish/subscribe: in-memory in one process, or Kafka between processes. |
 | topic | `<app>.<message class>`, e.g. `pmu-test-streamer.pmu.frame`. One class per topic. |
-| key | Which pipeline run a record belongs to: the run key (a client id, or `live.<source>`), then the run's id, as in `42#1760512345678.0`. |
+| key | Which pipeline run a record belongs to: the run key (a client id, or `live.<source>`), then the run's id and its stream number, as in `42#1760512345678.3`. |
 | module | p-SWAMP's microservice: one analysis that declares the message classes it reads (`inputs`) and publishes (`outputs`), may answer commands, and can run in a process of its own. Plain synchronous code; callable from a script with `run`. |
 | join (`Latest`) | How a module with several simultaneous inputs gets one call: a trigger input starts it, the newest of each other input comes along, age judged in message time. |
 | host / worker | A host runs one module instance per run. A worker is a process that runs hosts. |
@@ -383,6 +383,16 @@ after five minutes with nothing for it, and calls its `teardown` then.
 A key carries its run's id (`pswamp_core.keys`), so an instance never outlives
 its run: a new run of the same client, after a server restart, replaces it
 with a fresh one, and a late message of the old run is dropped.
+
+A key also carries a stream number, which the run raises each time its stream
+starts over: a seek, a step back, a loop to the start, a switch of source, a
+live feed reopened. On the first input of a new stream the host empties the
+instance's queue, clears its join, and calls its `reset` before that input; an
+input of an older stream, still on its way, is dropped. Because the number
+rides on the frames' own key, this holds over Kafka, where two topics keep no
+order between them. A call's outputs go under its input's key, so a chained
+module sees the stream too, and the run drops a result from an older stream
+unless it answers a command.
 
 An instance that fails (its `setup` raises, say) is logged, reported as an
 `ErrorEvent` under its key, and dropped. The first message for that key five

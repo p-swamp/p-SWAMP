@@ -8,7 +8,9 @@ form a chain: frame → frame stats → excursion. It reports whether the mean
 frequency is outside a band around 50 Hz, and counts excursions.
 
 Two commands go through it. ``AutoPauseCommand`` (from the page) turns
-pausing on excursion on or off for this run. When it is on and the frequency
+pausing on excursion on or off for this run: a setting, which a seek leaves
+alone, while the count and the band state start over with the stream
+(``reset``). When it is on and the frequency
 leaves the band, the module returns a ``PauseCommand`` beside its result: a
 command is one more declared output, published on its topic as the web API
 publishes it, and the player takes it.
@@ -57,6 +59,11 @@ class ExcursionModule(Module):
         if left and self.auto_pause:
             return [self._state(), PauseCommand()]
         return self._state()
+
+    def reset(self) -> None:
+        self.excursions = 0
+        self._in_band = True
+        self._deviation = None
 
     def handle(self, command: AutoPauseCommand) -> Excursion:
         self.auto_pause = command.enabled

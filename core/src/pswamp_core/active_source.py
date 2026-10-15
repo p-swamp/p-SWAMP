@@ -99,6 +99,9 @@ class ActiveSource:
         self.error: str | None = None
         self.cursor: datetime | None = None
         self._last_frame: Any = None
+        #: Sources activated, and streams a pump opened: see ``stream_mark``.
+        self._activations = 0
+        self._opens = 0
         self._playable: Playable | None = None
         self._stream: SourceStream | None = None
         self._pump: asyncio.Task | None = None
@@ -110,6 +113,13 @@ class ActiveSource:
     def last_frame(self) -> Any:
         """The last frame published: the one at the cursor."""
         return self._playable.last_frame if self._playable is not None else self._last_frame
+
+    @property
+    def stream_mark(self) -> tuple[int, int]:
+        """Changes whenever the stream starts over: a switch, a live feed
+        reopened, or on a playable source a seek, a step back, a loop to the
+        start (``Playable.streams``)."""
+        return (self._activations, self._playable.streams if self._playable is not None else self._opens)
 
     def status(self) -> PlayerStatus:
         if self._playable is not None:
@@ -181,6 +191,7 @@ class ActiveSource:
 
     async def _activate(self) -> None:
         """Start the source the set has active, and publish where it is."""
+        self._activations += 1
         source = self._sources.active
         if isinstance(source, Playable):
             self._playable = source
@@ -196,6 +207,7 @@ class ActiveSource:
         if not (source.kind == "live" and self.follow_live):
             try:
                 self._stream = await self._sources.consume(utcnow() if source.kind == "live" else None)
+                self._opens += 1
                 self._pump = asyncio.create_task(self._run_pump(self._stream, source.kind == "live"), name="player.pump")
             except Exception as error:
                 self._fail(error)
@@ -252,6 +264,7 @@ class ActiveSource:
                 delay = min(delay * 2, _MAX_REOPEN_S)
                 try:
                     stream = self._stream = await self._sources.consume(utcnow())
+                    self._opens += 1
                     break
                 except Exception as error:
                     self._fail(error, report=False)

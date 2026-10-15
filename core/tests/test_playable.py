@@ -177,6 +177,19 @@ async def test_seek_shows_the_frame_there_and_a_chunk_ends_paused():
     await player.stop()
 
 
+async def test_streams_count_the_start_a_seek_a_step_back_and_a_loop():
+    player, out = await running(ListSource(frames=[frame(i / 20) for i in range(3)]), loop=True, speed=10)
+    assert player.streams == 1
+    await command(player, StepCommand(n=2))
+    assert player.streams == 1  # forward is the same stream
+    await command(player, StepCommand(n=-1))
+    await command(player, SeekCommand(offset_s=0.05))
+    assert player.streams == 3
+    await command(player, PlayCommand())
+    await until(lambda: player.streams >= 5)  # it loops
+    await player.stop()
+
+
 async def test_what_does_not_apply_is_refused():
     player, _ = await running(ListSource())
     with pytest.raises(CommandRefused):
