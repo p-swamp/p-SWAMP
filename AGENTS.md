@@ -731,8 +731,9 @@ Three things worth knowing before touching it:
 Sanity values, for checking a change did not quietly break the pipeline: median
 frequency **50.0009 Hz**, median voltage **418.6 kV**, islanded stations **6500,
 6700, 6701**, island groups summing to exactly **44** stations with no overlap,
-and the main window opening exactly **5** WebSockets — for **one** pipeline,
-however many views read them. The grid view draws **44** buses and **77** of the
+and the main window opening exactly **5** WebSockets of its own — for **one**
+pipeline, however many views read them — plus the error tray's, which every
+page holds. The grid view draws **44** buses and **77** of the
 model's 79 branches (the diagram does not route `L5102-6001` and `T5500-5501`);
 during the trip it paints **7** branches red — the 4 tripped lines plus 3
 transformers left with nothing to carry.

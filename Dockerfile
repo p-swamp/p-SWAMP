@@ -238,6 +238,13 @@ WORKDIR ${SERVER_DIR}/src
 # 0.0.0.0 so the port is reachable outside the container; see server.py.
 ENV HOST=0.0.0.0 \
     PORT=8000
+
+# Two malloc arenas, not glibc's default of 8 per CPU the container sees (the
+# node's, whatever its limit). Every grid-monitor pipeline starts four threads,
+# each new thread may take an arena, and memory freed in one is seldom returned:
+# without this the server leaves ~12 MB behind per pipeline it builds and runs
+# out of memory after ~60 new clients.
+ENV MALLOC_ARENA_MAX=2
 EXPOSE 8000
 
 # Plain python: deps are already installed, so the PEP 723 metadata is ignored

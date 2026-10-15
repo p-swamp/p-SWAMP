@@ -13,10 +13,10 @@ item.
 models package, the module API and join, one project per module, TOML
 pipelines, sources as modules) read against the code; the branch run end to
 end in a bare container, compose and minikube; and the fix passes since.
-Issues keep the numbers they were found under (1 to 44), which commit
+Issues keep the numbers they were found under (1 to 48), which commit
 messages cite. "Origin" says when an issue came in: **older** (already there
 at `cc03f0b`), **contract** (with `b0a8b5d` to `4f5f94b`), or **fix** (with a
-fix made here).
+fix made here), or **rebase** (from `main`, met on the rebase onto it).
 
 ---
 
@@ -25,6 +25,12 @@ fix made here).
 - **Done.** All six soundness fixes below, plus 33, 40 and 41, committed as
   `819c41a` to `82c55d9`; the last, D1, as `0bc28b8`, `16619b9` and
   `82c55d9` (2026-10-15). See "Verification" for the runs.
+- **The rebased tree** (`1be21f3`, onto `main`) passes every check and
+  round. Two of `main`'s grid-monitor specs failed on it (45, 46); both are
+  fixed, uncommitted.
+- **Before the pull request:** 47, the server running out of memory after
+  about 60 new clients, where expected use is up to 100. The fix, one line
+  in the Dockerfile, holds in minikube; it is uncommitted.
 - **Next:** D7, D3, D2, D14 and D4, one round each. They change what edge
   code is written against, so they land before more edge code is written.
 - **Deferred.** D6 (but write its additive-only rule down now), D8 to D13
@@ -59,7 +65,9 @@ refusing the command with a 409, independently of D1.
 
 **High**: breaks a running deployment, or silently loses what a user asked for.
 
-None open.
+| # | Issue | Origin | Settled by |
+|---|---|---|---|
+| 47 | The server runs out of memory after about 60 new clients: each pipeline built leaves ~12 MB in malloc arenas | older | — |
 
 **Medium**: wrong in situations the project will soon reach, or a trap in the
 module contract for the next module.
@@ -83,6 +91,7 @@ module contract for the next module.
 
 | # | Issue | Origin | Settled by |
 |---|---|---|---|
+| 48 | A page closed during a push logs an unhandled `WebSocketDisconnect` | older | — |
 | 38 | A run keeps playing for 300 s after its last socket closes | older | — |
 | 43 | "Not delivered within 10 s" reaches the tray up to 2.7 s late | fix | — |
 | 44 | A process that starts without a broker exits with its producer unclosed | older | — |
@@ -105,6 +114,8 @@ module contract for the next module.
 
 | # | Issue | Commit |
 |---|---|---|
+| 45 | `main`'s grid-monitor spec expects five sockets on `/`; the error tray makes six, so the PR's `playwright-e2e` fails | uncommitted |
+| 46 | A grid-monitor spec fails at once when two panels are still waiting | uncommitted |
 | 30 | Module state belongs to the client id, not the run: a setting lost on a worker restart, the old instance inherited after a server crash | `0bc28b8`, `82c55d9` |
 | 3(b) | After a seek back, a join keeps an input from before it as fresh; nothing resets a module on a seek or a switch | `16619b9` |
 | 6 | No teardown hook | `0bc28b8` |
@@ -861,6 +872,76 @@ client id was rejected". Since `3511332` it also means a path no app serves.
   failed. The exit itself is the intended fail-fast: `pswamp deploy
   minikube` rolls Kafka out first, and compose waits for its healthcheck.
 
+### Found on the rebased tree (45 to 48)
+
+**45. `main`'s grid-monitor spec expects five sockets on `/`; this branch opens six.**
+- Seen (every run, both browsers, compose, and CI's own config): "opens
+  five sockets, one per stream" also gets `/api/errors/ws`. The describe
+  block is serial, so the 12 tests after it do not run.
+- Where: `e2e/grid-monitor.spec.ts:71-88`, written on `main`, which has no
+  error tray. Here `ErrorTray` sits in `AppLayout`, so every page holds the
+  tray's socket.
+- Fixed 2026-10-15 (uncommitted): the tray's socket is left out of the
+  set, and AGENTS.md's "exactly 5 WebSockets" now names the tray as a sixth.
+  CI's `playwright-e2e`, run as CI runs it: 28 of 28.
+
+**46. A grid-monitor spec fails at once when two panels are still waiting.**
+- Seen once in the 18 runs of the spec that reached it (Firefox, minikube
+  round 2): `/islanding renders its panel full size` failed in 0.5 s on a
+  strict-mode violation, two "Waiting for state…" notices.
+- Where: `e2e/grid-monitor.spec.ts:220`. `/islanding` shows `GridViewPanel`
+  and `AlarmsPanel`, each with `Panel`'s notice until its socket's first
+  message, and `toBeHidden()` on a locator that matches two elements throws
+  rather than waits. The client is `main`'s; this branch changes two
+  cosmetic lines of it.
+- Fixed 2026-10-15 (uncommitted): `toHaveCount(0)`. The spec three times
+  over in both browsers: 84 of 84.
+
+**47. The server runs out of memory after about 60 new clients.**
+- Seen (minikube, after round 3): a scratch spec ran the five focused routes
+  25 times each in both browsers on 6 workers, about 4 pages a second, each
+  a new browser context and so a new client id and pipeline. The kernel
+  killed the server twice in about a minute (anon-rss ~780 MB against its
+  768 MiB limit), and it crash-looped until the load stopped, then
+  recovered by itself. Every client's state goes with a kill.
+- Seen again with the image bare under the pod's limits (768 MiB, 2 CPUs),
+  one new browser context per client on the focused routes: killed after
+  ~54 clients at 6 at a time, and after 60 to 66 at 2 at a time. The same
+  on `main` (`0640f0b`) and before the rebase (`ae08b04`), so it is older.
+  Expected use is up to 100 clients, and a returning client whose pipeline
+  was evicted counts again.
+- Why: glibc's malloc arenas. Every pipeline starts four new threads, glibc
+  gives allocating threads arenas of their own (up to 8 per CPU the
+  container sees: 12 here, so 96), and memory freed in an arena is seldom
+  given back. Each pipeline built left ~12 MB behind, whichever page it
+  served, with never more than 8 alive and every thread stopped on
+  eviction. It is not a reference leak: one `Hub` built and stopped at a
+  time levels off at 127 MiB, and the garbage collector finds no stopped
+  `Hub` alive.
+- With `MALLOC_ARENA_MAX=2` set in the container: 100 clients at 2 at a
+  time, peak 514 MiB and level; 250 at 6 at a time (242 evictions), peak
+  525 MiB, every page served.
+- Fix, tried 2026-10-15 and uncommitted: `ENV MALLOC_ARENA_MAX=2` in the
+  Dockerfile's runtime stage, which compose, k8s and a downstream build all
+  inherit. In minikube, on one server process: 100 new clients at 2 at a
+  time, peak 555 MiB, then flat; 250 at 6 at a time, peak 626 MiB; after a
+  regression round, 300 more in bursts of 100, between 500 and 575 MiB at
+  each checkpoint. Every page served, no restart, `/healthz` 4 to 66 ms.
+  The regression round on it passed every step. AGENTS.md's "peak RSS
+  follows `MAX_PIPELINES`" holds only with it.
+- These are new clients over time, at most 6 at once. Clients viewing at
+  the same time are a separate limit, `MAX_PIPELINES` (8): a ninth is
+  refused when none of the eight is idle.
+
+**48. A page closed during a push logs an unhandled `WebSocketDisconnect`.**
+- Seen once (minikube, the churn run after 47's fix, ~320 page closes at 6
+  at a time): "Exception in ASGI application" from `time_window`'s socket,
+  `send_state` raising `WebSocketDisconnect` on a closing connection.
+- Where: `pswamp_web/pump.py`, `_serve`, which suppresses only
+  `CancelledError` from the push task. `connected_hub` still releases the
+  pipeline in its `finally`, so nothing leaks; it is a traceback in the
+  log. Older: `pump.py` came with `main`.
+
 ---
 
 ## Verification
@@ -871,11 +952,42 @@ and the faults are in the appendix. The scripted checks of the latest rounds
 were scratch and are not in the repo.
 
 Commit ids in this file are the ones after the rebase onto `main`
-(`a812798`). Every run below was made before that rebase, on the same commits
-without `main`'s changes (branch `e2e-continued-refactor-pre-rebase`). Nothing
-has been run on the rebased tree yet.
+(`1be21f3`). The first run below was made on the rebased tree; the others
+before the rebase, on the same commits without `main`'s changes (branch
+`e2e-continued-refactor-pre-rebase`).
 
-### D1: rounds in compose and minikube, at `82c55d9` (latest)
+### The rebased tree, at `1be21f3` (latest)
+
+The tree at `1be21f3`, clean: built as `p-swamp:review` for compose and with
+`pswamp deploy minikube`.
+
+- Static: `pswamp check` and `check-generators` pass; `pswamp test server`
+  gives 492 passed, 46 skipped.
+- The pull request's jobs, run as CI runs them. `unit-tests`, against a
+  broker configured as CI's service container: 502 passed, the 10 Kafka
+  cases among them. `e2e-smoke-test`, the image built for `linux/amd64` and
+  run with its own CMD and no broker: passes. `playwright-e2e`, the repo's
+  config with `CI` set and compose under a project name of its own: fails
+  on 45, and the 12 tests after it do not run; with 45 fixed in a scratch
+  copy, 28 of 28 pass. `dependency-review` and `windows-checks` were not
+  run.
+- Three rounds in compose (fresh, warm, after `down` and `up`) and three in
+  minikube (freshly deployed, warm, every deployment restarted), the steps
+  of the rounds at `82c55d9` below. The Playwright copy now holds `main`'s
+  grid-monitor spec, 27 tests a browser against 12. Compose round 1 ran it
+  as it is and failed on 45; the rounds after it ran with 45 patched in the
+  copy. Every other step passed, but for one Firefox run in minikube round
+  2 (46). No traceback in any log. Restarts as at `82c55d9`: 44 at the full
+  restart, and the server killed by 30crash.
+- After the rounds, a stress run of the focused routes OOM-killed the
+  server (47). The runs against `main`, the pre-rebase tree and
+  `MALLOC_ARENA_MAX=2` are under 47.
+- With 45 and 46 fixed in the repo: CI's `playwright-e2e`, run as CI runs
+  it, 28 of 28; every spec in both browsers against compose, 54 passed and
+  the provider spec 2 of 2; the grid-monitor spec three times over in both
+  browsers, 84 of 84.
+
+### D1: rounds in compose and minikube, at `82c55d9`
 
 The working tree at `82c55d9` (D1's three commits), built as `p-swamp:review`
 for compose and with `pswamp deploy minikube`. Before that: `pswamp check`
