@@ -22,13 +22,11 @@ fix made here).
 
 ## Where it stands (2026-10-15)
 
-- **Done.** Five of the six soundness fixes below, plus 33, 40 and 41,
-  committed as `2826d49` to `5dcf338`. At `5dcf338`, three regression rounds
-  each in compose and minikube passed (see "Verification").
-- **Next: D1**, an instance per run, in a plan round of its own. It is the
-  last soundness fix, and the one that changes the key on the transport.
-- **Then** D7, D3, D2, D14 and D4, one round each. They change what edge code
-  is written against, so they land before more edge code is written.
+- **Done.** All six soundness fixes below, plus 33, 40 and 41, committed as
+  `2826d49` to `37119f3`; the last, D1, as `bad6a00`, `679e5cc` and
+  `37119f3` (2026-10-15). See "Verification" for the runs.
+- **Next:** D7, D3, D2, D14 and D4, one round each. They change what edge
+  code is written against, so they land before more edge code is written.
 - **Deferred.** D6 (but write its additive-only rule down now), D8 to D13
   (until CIM work starts), the join and several `@on` inputs (issues 3(a) and
   14; mark them experimental, per D5), and every Low issue.
@@ -42,7 +40,7 @@ before the edges open, so nobody builds on them.
 
 | | Fault | Issues | State |
 |---|---|---|---|
-| S1 | The transport key names a client, not a run. Module state outlives its run, is lost silently on a worker restart, and nothing resets it on a seek. | 30, 3(b), 6 | Open: D1, next |
+| S1 | The transport key names a client, not a run. Module state outlives its run, is lost silently on a worker restart, and nothing resets it on a seek. | 30, 3(b), 6 | Fixed (D1) |
 | S2 | An acknowledged command can vanish, and the tray cannot say so. | 31, 32 | Fixed |
 | S3 | A broker that loses its topics stops the stack, and the probes stay green. | 28 | Recovery fixed; probes open |
 | S4 | No promise of one call at a time per instance, though modules are written as synchronous code. | 1 | Fixed |
@@ -61,9 +59,7 @@ refusing the command with a 409, independently of D1.
 
 **High**: breaks a running deployment, or silently loses what a user asked for.
 
-| # | Issue | Origin | Settled by |
-|---|---|---|---|
-| 30 | Module state belongs to the client id, not the run: a setting is lost silently on a worker restart, and a new run inherits the old instance after a server crash | older | D1 |
+None open.
 
 **Medium**: wrong in situations the project will soon reach, or a trap in the
 module contract for the next module.
@@ -73,10 +69,9 @@ module contract for the next module.
 | 28 | What is left of 28: the workers have no probe. (`/healthz` leaves the broker out on purpose: AGENTS.md, "One cheap probe".) | older | — |
 | 42 | aiokafka spins on metadata while a broker comes and goes: up to 24 000 log lines/s, for up to 11 s | older | — |
 | 11 | A module with a dependency of its own fails to import in the image | contract | D4 |
-| 6 | No teardown hook: a resource leaks per evicted instance | older | D1 |
 | 9 | Two producers of one class, or a cycle, pass every check | older | D14 |
 | 5 | A module cannot publish outside a call | contract | D2 |
-| 3 | The join builds its bundle at dequeue; an input from after a seek back stays fresh | contract | D1, D5 |
+| 3 | What is left of 3, (a): the join builds its bundle at dequeue, so a joined module that is behind pairs a trigger with inputs from after it | contract | D5 |
 | 4 | `class X(SourceModule, Playable)` is accepted and half works | contract | — |
 | 14 | Several `@on` inputs share one drop-oldest queue | contract | D5 |
 | 18 | A non-playable history is pumped unpaced; the generator writes that shape | contract | — |
@@ -110,6 +105,9 @@ module contract for the next module.
 
 | # | Issue | Commit |
 |---|---|---|
+| 30 | Module state belongs to the client id, not the run: a setting lost on a worker restart, the old instance inherited after a server crash | `bad6a00`, `37119f3` |
+| 3(b) | After a seek back, a join keeps an input from before it as fresh; nothing resets a module on a seek or a switch | `679e5cc` |
+| 6 | No teardown hook | `bad6a00` |
 | 28 | Kafka losing its topics stops the stack until every process restarts (recovery; the probes are still open) | `554301c` |
 | 29 | A live source that fails stays failed; later viewers are not told | `9d40858` |
 | 31 | A command sent during a broker outage is acknowledged, then lost or applied late | `03c5cb0`, `bf94a73` |
@@ -134,7 +132,7 @@ module or source: S2 to S6 were all fixed that way. Messages leave pydantic's
 default (unknown fields ignored), so an optional field added within `v1` does
 not break an older reader.
 
-**What is not settled is what edge code is written against**: D1 to D4 and D7
+**What is not settled is what edge code is written against**: D2 to D4 and D7
 for modules, D8 to D11 for CIM lookup, D3 for settings names. Those are
 decided and built before that kind of edge work starts.
 
@@ -142,9 +140,10 @@ decided and built before that kind of edge work starts.
 |---|---|---|
 | Remote data source (a deployment's history service) | Yes. The integration is the HTTP contract, `doc/remote-data-integration-contract.md`; the service never touches the core. | D3 renames the settings (`REMOTE_URL`) before deployments are configured; D13 later. |
 | Module, per frame, no settings | Yes. | D7 will move its imports to `pswamp_core`. |
-| Module that keeps state, runs periodically, takes settings or brings a dependency | Not yet. | D1 (state per run, teardown, reset, sticky settings), D2 (output outside a call), D3 (settings), D4 (dependencies, shared code). |
+| Module that keeps state | Yes: an instance lives as long as its run, `reset` clears what came from the stream, `teardown` releases what `setup` took, and a command marked `sticky` survives a worker restart. | |
+| Module that runs periodically, takes settings or brings a dependency | Not yet. | D2 (output outside a call), D3 (settings), D4 (dependencies, shared code). |
 | CIM lookup | Not yet. | D8 to D11; only D8 and D10 need code, both small. |
-| Front-end page over the core | Yes. A page takes its types from the generated contract (`Wire['…']`, `doc/api/openapi.json`) and sends commands as POSTs; `pswamp new subapp` and `pswamp new module` write one. | D1, for a control whose setting must survive a worker restart (today it flips back: issue 30). D14, for a page that lists events: `run.latest` keeps only the newest message of a class, so it needs a store at the edge, as the grid monitor's `AlarmStore`. |
+| Front-end page over the core | Yes. A page takes its types from the generated contract (`Wire['…']`, `doc/api/openapi.json`) and sends commands as POSTs; `pswamp new subapp` and `pswamp new module` write one. A control that is a module setting has its command marked `sticky`, so it survives a worker restart. | D14, for a page that lists events: `run.latest` keeps only the newest message of a class, so it needs a store at the edge, as the grid monitor's `AlarmStore`. |
 | Grid monitor panel | Yes, on its own thread-based Hub and Bus (`pswamp_web/`; AGENTS.md, "Adding a p-SWAMP view"). | Moving its panels onto modules waits for the WAMPAC apps to be lifted (below). |
 
 ### The CIM scope (decided 2026-10-14)
@@ -174,14 +173,21 @@ seek and source switch (default: nothing), and **sticky settings**: a command
 class marked `sticky` is replayed by the run to a rebuilt instance, so a
 user's setting (auto-pause) survives a worker restart. Touches every stateful
 module.
-*State: next, in its own plan round.* The sketch going in: the key becomes
-`<client id>.<run id>`, a fresh run id per `PipelineRun`, while
-`PipelineRegistry` stays keyed by client id, so a host builds fresh instances
-per run and `PipelineClosed` and idle eviction need no change; `teardown()`
-is called from `ModuleHost._drop`; a host announces each instance it starts,
-and the run replays the latest command of each sticky class to it. To settle
-in the round: for seeks and switches, a `reset` hook driven by a control
-message, or a new run id per segment.
+*State: built 2026-10-15, as (a), in three commits.*
+- `bad6a00`: a run publishes under `<run key>#<run id>.<stream>`
+  (`pswamp_core.keys`), and a subscription to the run key hears all of it. A
+  host keeps one instance per run key: a newer run id replaces it, a late
+  message of an older one is dropped. `Module.teardown()`.
+- `679e5cc`: the stream number goes up on a seek, a step back, a loop, a
+  switch and a reopened live feed. It rides on the frames' own key, so the
+  reset is in order with them over Kafka too, where a control message on its
+  own topic would not be (the lesson of 41). On a new stream the host voids
+  the queue, clears the join and calls `Module.reset()` before the next
+  input; outputs go under their input's key, so chains see it. `reset()`
+  takes no reason: the host knows only that the stream started over.
+- `37119f3`: `ModuleStarted`, and `Command.sticky` (`AutoPauseCommand`).
+  A setting sent before the first instance's announcement is sent to it
+  twice, which a sticky command must tolerate.
 
 **D2. Output outside a call.** Settles 5. Options: (a) a periodic hook:
 `every = 1.0` and `tick(now)`, returning outputs as `process` does; (b) an
@@ -215,8 +221,8 @@ and a home for shared code, `libs/<name>/` projects that modules may depend on
 until they are fixed. Recommended: guarantee one call at a time per instance
 (a per-instance lock; internal); mark the join and several `@on` inputs
 experimental until 3 and 14 are fixed, in the docstring and the cookbook.
-*State: the lock is built (`Module._calling`, issue 1). The experimental note
-is not written yet.*
+*State: the lock is built (`Module._calling`, issue 1). 3(b) is fixed by D1;
+3(a) and 14 remain. The experimental note is not written yet.*
 
 **D6. How messages change.** Settles no issue: it comes from the readiness
 question and the remote contract's "Not settled yet". Recommended: within a
@@ -290,7 +296,7 @@ the edge, as the grid monitor's `AlarmStore` is today.
 
 - **What "sound" takes.** The six faults S1 to S6 are fixed first, one small
   pass each, in the order 33; 1; 2; 40; D1; 31 and 32; 28; 29. D1 has since
-  moved last, to a plan round of its own. Then D7, D3,
+  moved last, to a plan round of its own, and was built on 2026-10-15. Then D7, D3,
   D2, D14 and D4, one round each. Deferred: D6 (write the additive-only rule
   down for now), D8 to D13 (until CIM work starts), the join and several `@on`
   inputs (3(a) and 14: experimental, per D5), and every Low issue.
@@ -299,6 +305,10 @@ the edge, as the grid monitor's `AlarmStore` is today.
   built, only a module that reads the stream is refused. A module with no
   inputs (the range summary) reads its own sources, so its instance under the
   client's key is the right one, and it still answers.
+- **D1 (2026-10-15): the reset is in order with the frames, and settings
+  are replayed.** The same instance stays across seeks, with a `reset()`
+  hook, and the stream number rides in the transport key. Hosts announce each
+  instance, and the run sends it the sticky settings it has seen.
 - **Issue 31: retry, then report.** An outbox retries a command until a
   deadline (~10 s). If it gives up, the server reports to that client's tray
   in process, not over the transport. Command topics resume from their last
@@ -360,8 +370,8 @@ JSON):
 3. Result models in `pswamp_models`: islands as station names, events with
    stations, eigenvalues as pairs; today's results are dicts of numpy arrays
    and uuids.
-4. A window reset on seek and source switch (D1's `reset`). Without it a seek
-   back mixes the old window with the new stream.
+4. A window reset on seek and source switch: `Module.reset()` (D1, built).
+   A port clears its window there.
 5. The grid monitor's pages read the desktop apps today (`pswamp_web`, on
    threads). Modules help those pages only once they are re-pointed at them.
 
@@ -430,6 +440,11 @@ to end; 40 from planning the fixes; 41 to 44 from the regression after them.
   asserts today's rule.
 - Note: no module in the repo uses the join; no test covers a slow joined
   module in a host.
+- (b) fixed 2026-10-15 (`679e5cc`): a host clears the join when the run's
+  stream starts over, so the input from 58 s is gone by the trigger at 10 s
+  (`test_a_join_forgets_its_inputs_when_the_stream_starts_over`). The
+  appendix script still prints "bundled as fresh": it feeds a `Latest` by
+  hand, outside a host. (a) is open.
 
 **4. `class X(SourceModule, Playable)` is accepted and half works.**
 - Where: `core/src/pswamp_core/playable.py:115-118` checks only `kind`.
@@ -456,6 +471,9 @@ there is no `emit()` (`modules.py:234`).
 an instance (`host.py:317-329`). A module holding a thread, a file or a model
 leaks one per evicted key. Sources have `open`/`close`. Older than this
 branch; now the two halves of "a module" differ.
+- Fixed 2026-10-15 (`bad6a00`): `async def teardown()`, called by the host
+  after the instance's last call and before its sources close; a failure is
+  logged.
 
 **7. A source's `outputs` past the first are half supported.**
 - The class check and `SourceConformance` allow them.
@@ -680,6 +698,11 @@ and 39 were already there at `069f88f`.
 - Suggestion: a run id in the key, or on every message, so a host builds a
   fresh instance for a new run; the run re-sends module settings when an
   instance is rebuilt.
+- Fixed 2026-10-15 as suggested (D1): the run id in the key (`bad6a00`), and
+  the run sending a rebuilt instance its sticky settings (`37119f3`). The
+  recipe below now gives: after the worker restart the box stays ticked and
+  the player pauses at the trip; after the server crash, auto-pause is off and
+  the count starts from 1.
 
 **31. A command sent while the broker is down is acknowledged, then lost or applied late, and the tray cannot say which.**
 - Seen (compose, Kafka stopped for 20 s): `speed` and `play` answer 200 and
@@ -847,7 +870,42 @@ and the faults are in the appendix. The scripted checks of the latest rounds
 (sockets for the page and the tray, POSTs, docker or kubectl for the faults)
 were scratch and are not in the repo.
 
-### Three rounds each in compose and minikube, at `5dcf338` (latest)
+### D1: rounds in compose and minikube, at `37119f3` (latest)
+
+The working tree at `37119f3` (D1's three commits), built as `p-swamp:review`
+for compose and with `pswamp deploy minikube`. Before that: `pswamp check`
+passed, `pswamp test server` gave 473 passed, the 12 Kafka cases passed
+against the compose broker after each pass, and `check-generators` passed.
+
+Four rounds in compose (the stack recreated on the new image, warm, warm
+again, then `down` and `up`) and three in minikube (freshly deployed, warm,
+then every deployment restarted). Each ran the same steps as the rounds at
+`5dcf338` below (smoke; Playwright in Chromium and Firefox; the provider spec
+in compose; every route in both browsers; 40, order, 31, 32, 28; smoke,
+Playwright and routes again after the faults), plus five D1 checks:
+
+- **3b**: auto-pause on, play to the trip, seek to 0: the count is 0 at once
+  and auto-pause still on; play: paused at the trip again, count 1.
+- **30, worker restart** (compose `restart module-worker`; minikube, its pod
+  deleted): seek to 0; the first result from the new instance has
+  auto-pause on (sent again by the run); play: paused at the trip.
+- **30crash** (the server container killed): the same browser's new run has
+  auto-pause off and counts the trip as 1. The worker logs the old
+  instance dropped for "a new run" on the new run's first message.
+- **loop**: at 4x, three loops: the count is 2 in each (one pass of the
+  sample leaves the band twice; a script over it counts 2), not 2, 4, 6.
+- **live detour**: auto-pause on, follow live for 2 s, back to the sample:
+  paused at the trip.
+
+All seven rounds passed every step, with no traceback in any log. In
+minikube, after every deployment was restarted at once, the server and both
+workers restarted twice before running (44); the server's third restart is
+30crash's kill. The log bursts (up to ~17 000 lines/s in the server for 1 to
+2 s) are 42, at the Kafka stop and recreate of 31 and 28. One compose round
+meant to follow a `down` and `up` ran warm (the driver's mistake); it was run
+again after a real `down` and `up`.
+
+### Three rounds each in compose and minikube, at `5dcf338`
 
 At `5dcf338`, compose (project `pswamp-review`, server on :8132) and
 minikube, three rounds each: compose fresh, warm, then `down` and `up`;
@@ -1124,8 +1182,8 @@ print("3  trigger at t=10s after a seek back, other input from t=58s ->", "bundl
 
 ### Running it: the setups
 
-The recipes say what was seen before the fixes. Since them, 28, 31 and 32
-recover or report as their entries say; 30 still reproduces.
+The recipes say what was seen before the fixes. Since them, 28, 30, 31 and
+32 recover or report as their entries say.
 
 A stack under its own project name and ports, so a developer's `p-swamp`
 stack on :8000 is untouched:
