@@ -16,6 +16,7 @@ name = "pswamp-remote-history"
 version = "0.1.0"
 description = "The remote history source (remote-history): a history served by a remote data service."
 readme = "README.md"
+license = "Apache-2.0"
 requires-python = ">=3.11"
 dependencies = ["pswamp-core", "pswamp-models", "httpx>=0.28,<1"]
 

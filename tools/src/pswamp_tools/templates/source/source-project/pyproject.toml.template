@@ -15,6 +15,7 @@ name = "pswamp-__SLUG__"
 version = "0.1.0"
 description = "The __LABEL__ source (__SLUG__)."
 readme = "README.md"
+license = "Apache-2.0"
 requires-python = ">=3.11"
 dependencies = ["pswamp-core", "pswamp-models"]
 

@@ -18,6 +18,7 @@ name = "pswamp-live-synthetic"
 version = "0.1.0"
 description = "The synthetic live source (live-synthetic): the sample recording's frames, stamped now, at 20 Hz."
 readme = "README.md"
+license = "Apache-2.0"
 requires-python = ">=3.11"
 dependencies = ["pswamp-core", "pswamp-models"]
 

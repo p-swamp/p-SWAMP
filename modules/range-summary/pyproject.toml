@@ -16,6 +16,7 @@ name = "pswamp-range-summary"
 version = "0.1.0"
 description = "The range summary module (range-summary): a batch query over a recorded range."
 readme = "README.md"
+license = "Apache-2.0"
 requires-python = ">=3.11"
 dependencies = ["pswamp-core", "pswamp-models"]
 

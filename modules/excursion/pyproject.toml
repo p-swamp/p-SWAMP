@@ -16,6 +16,7 @@ name = "pswamp-excursion"
 version = "0.1.0"
 description = "The excursion module (excursion): counts frequency excursions and can pause the player."
 readme = "README.md"
+license = "Apache-2.0"
 requires-python = ">=3.11"
 dependencies = ["pswamp-core", "pswamp-models"]
 
