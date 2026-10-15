@@ -12,12 +12,13 @@ Checks, in order:
 1. ``/healthz`` answers — the process is serving
 2. ``/`` serves the built web client — the client is baked into the image
 3. a deep link serves the shell — SPAStaticFiles' history fallback
-4. a missing asset still 404s — that fallback isn't swallowing everything
-5. ``/openapi.json`` has the commands — the api describes itself
-6. the counter flow — app/server-python/tools/smoketest_reference_subapp.py
-7. the PMU test streamer — app/server-python/tools/smoketest_pmu_test_streamer.py
+4. a trailing slash redirects — the shell only works at the bare route
+5. a missing asset still 404s — that fallback isn't swallowing everything
+6. ``/openapi.json`` has the commands — the api describes itself
+7. the counter flow — app/server-python/tools/smoketest_reference_subapp.py
+8. the PMU test streamer — app/server-python/tools/smoketest_pmu_test_streamer.py
 
-6 and 7 run in the server's environment (``websockets`` comes with
+7 and 8 run in the server's environment (``websockets`` comes with
 ``uvicorn[standard]``). Every check runs even if one fails, except that nothing
 runs against a server that never answered ``/healthz``.
 """
@@ -83,6 +84,16 @@ def http_checks(base: str, report: _ui.Report) -> None:
         body = _body(f"{base}/reference-subapp")
         return body is not None and 'id="root"' in body
 
+    def trailing_slash_redirect() -> bool:
+        # The shell's asset urls are relative, so served at /reference-subapp/ it
+        # would look for them under /reference-subapp/assets/ and render blank.
+        # The server redirects to the bare route instead; urllib follows it.
+        try:
+            with urllib.request.urlopen(f"{base}/reference-subapp/", timeout=5.0) as response:
+                return response.url == f"{base}/reference-subapp"
+        except OSError:
+            return False
+
     def missing_asset_404() -> bool:
         try:
             return http_get(f"{base}/assets/does-not-exist.js")[0] == 404
@@ -95,6 +106,7 @@ def http_checks(base: str, report: _ui.Report) -> None:
 
     report.step("GET / serves the built web client", built_client)
     report.step("GET /reference-subapp serves the shell (deep link)", deep_link)
+    report.step("GET /reference-subapp/ redirects to /reference-subapp", trailing_slash_redirect)
     report.step("GET /assets/does-not-exist.js still 404s", missing_asset_404)
     report.step("GET /openapi.json describes the Reference example's commands", openapi)
 

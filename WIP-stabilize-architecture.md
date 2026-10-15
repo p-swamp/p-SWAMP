@@ -9,13 +9,13 @@ system works. This file says what is still wrong with it, what is decided,
 what each kind of contributor can start on now, and the evidence for each
 item.
 
-**Where it comes from.** The module-contract work (`deef05a` to `dbf635b`: the
+**Where it comes from.** The module-contract work (`f8dc263` to `4f5f94b`: the
 models package, the module API and join, one project per module, TOML
 pipelines, sources as modules) read against the code; the branch run end to
 end in a bare container, compose and minikube; and the fix passes since.
 Issues keep the numbers they were found under (1 to 44), which commit
 messages cite. "Origin" says when an issue came in: **older** (already there
-at `069f88f`), **contract** (with `f70d7d6` to `dbf635b`), or **fix** (with a
+at `cc03f0b`), **contract** (with `b0a8b5d` to `4f5f94b`), or **fix** (with a
 fix made here).
 
 ---
@@ -23,8 +23,8 @@ fix made here).
 ## Where it stands (2026-10-15)
 
 - **Done.** All six soundness fixes below, plus 33, 40 and 41, committed as
-  `2826d49` to `37119f3`; the last, D1, as `bad6a00`, `679e5cc` and
-  `37119f3` (2026-10-15). See "Verification" for the runs.
+  `819c41a` to `82c55d9`; the last, D1, as `0bc28b8`, `16619b9` and
+  `82c55d9` (2026-10-15). See "Verification" for the runs.
 - **Next:** D7, D3, D2, D14 and D4, one round each. They change what edge
   code is written against, so they land before more edge code is written.
 - **Deferred.** D6 (but write its additive-only rule down now), D8 to D13
@@ -99,25 +99,25 @@ module contract for the next module.
 | 22 | The generator's worker-list patterns are not bounded to their block | contract | — |
 | 16 | `SourceConformance` reads without `open()` | contract | — |
 | 17 | `Module` has no `abstract = True` | contract | — |
-| 39 | `useServerSocket.ts` says 1008 means "client id rejected"; it also means a path no app serves | `924221e` | — |
+| 39 | `useServerSocket.ts` says 1008 means "client id rejected"; it also means a path no app serves | `3511332` | — |
 
 ### Fixed
 
 | # | Issue | Commit |
 |---|---|---|
-| 30 | Module state belongs to the client id, not the run: a setting lost on a worker restart, the old instance inherited after a server crash | `bad6a00`, `37119f3` |
-| 3(b) | After a seek back, a join keeps an input from before it as fresh; nothing resets a module on a seek or a switch | `679e5cc` |
-| 6 | No teardown hook | `bad6a00` |
-| 28 | Kafka losing its topics stops the stack until every process restarts (recovery; the probes are still open) | `554301c` |
-| 29 | A live source that fails stays failed; later viewers are not told | `9d40858` |
-| 31 | A command sent during a broker outage is acknowledged, then lost or applied late | `03c5cb0`, `bf94a73` |
-| 41 | Commands of different classes sent while a Kafka consumer reopens apply out of order | `5dcf338` |
-| 32 | A hung remote data service holds up every command of the run | `985f2a5` |
-| 40 | A module command sent while following the shared live run reaches an instance that gets no frames | `8326a48` |
-| 1 | A `blocking` module runs `process` and `handle` in two threads at once | `bc2e8db` |
-| 2 | A sync `read` source holds the event loop | `09c1b98` |
-| 33 | The models layering test fails, so the unit tests are red | `2826d49` |
-| 23–27 | Docs and wording left from the removed design | `16f36a5` |
+| 30 | Module state belongs to the client id, not the run: a setting lost on a worker restart, the old instance inherited after a server crash | `0bc28b8`, `82c55d9` |
+| 3(b) | After a seek back, a join keeps an input from before it as fresh; nothing resets a module on a seek or a switch | `16619b9` |
+| 6 | No teardown hook | `0bc28b8` |
+| 28 | Kafka losing its topics stops the stack until every process restarts (recovery; the probes are still open) | `f8b7f6c` |
+| 29 | A live source that fails stays failed; later viewers are not told | `edf895c` |
+| 31 | A command sent during a broker outage is acknowledged, then lost or applied late | `e956fe3`, `da4bb0b` |
+| 41 | Commands of different classes sent while a Kafka consumer reopens apply out of order | `87ae7f9` |
+| 32 | A hung remote data service holds up every command of the run | `4b03c81` |
+| 40 | A module command sent while following the shared live run reaches an instance that gets no frames | `4618218` |
+| 1 | A `blocking` module runs `process` and `handle` in two threads at once | `253b44e` |
+| 2 | A sync `read` source holds the event loop | `add4ccb` |
+| 33 | The models layering test fails, so the unit tests are red | `819c41a` |
+| 23–27 | Docs and wording left from the removed design | `0c26bab` |
 
 ---
 
@@ -174,18 +174,18 @@ class marked `sticky` is replayed by the run to a rebuilt instance, so a
 user's setting (auto-pause) survives a worker restart. Touches every stateful
 module.
 *State: built 2026-10-15, as (a), in three commits.*
-- `bad6a00`: a run publishes under `<run key>#<run id>.<stream>`
+- `0bc28b8`: a run publishes under `<run key>#<run id>.<stream>`
   (`pswamp_core.keys`), and a subscription to the run key hears all of it. A
   host keeps one instance per run key: a newer run id replaces it, a late
   message of an older one is dropped. `Module.teardown()`.
-- `679e5cc`: the stream number goes up on a seek, a step back, a loop, a
+- `16619b9`: the stream number goes up on a seek, a step back, a loop, a
   switch and a reopened live feed. It rides on the frames' own key, so the
   reset is in order with them over Kafka too, where a control message on its
   own topic would not be (the lesson of 41). On a new stream the host voids
   the queue, clears the join and calls `Module.reset()` before the next
   input; outputs go under their input's key, so chains see it. `reset()`
   takes no reason: the host knows only that the stream started over.
-- `37119f3`: `ModuleStarted`, and `Command.sticky` (`AutoPauseCommand`).
+- `82c55d9`: `ModuleStarted`, and `Command.sticky` (`AutoPauseCommand`).
   A setting sent before the first instance's announcement is sent to it
   twice, which a sticky command must tolerate.
 
@@ -390,7 +390,7 @@ output is designed.
 Every issue by number, as found: what was seen, where (file and line at the
 commit it was found at, so line numbers drift), why it matters, and a
 suggested fix. A fixed one ends with how it was fixed. 1 to 27 come from
-reading the contract work at `dbf635b`; 28 to 39 from running the branch end
+reading the contract work at `4f5f94b`; 28 to 39 from running the branch end
 to end; 40 from planning the fixes; 41 to 44 from the regression after them.
 
 ### The contract: defects (1 to 4)
@@ -440,7 +440,7 @@ to end; 40 from planning the fixes; 41 to 44 from the regression after them.
   asserts today's rule.
 - Note: no module in the repo uses the join; no test covers a slow joined
   module in a host.
-- (b) fixed 2026-10-15 (`679e5cc`): a host clears the join when the run's
+- (b) fixed 2026-10-15 (`16619b9`): a host clears the join when the run's
   stream starts over, so the input from 58 s is gone by the trigger at 10 s
   (`test_a_join_forgets_its_inputs_when_the_stream_starts_over`). The
   appendix script still prints "bundled as fresh": it feeds a `Latest` by
@@ -471,7 +471,7 @@ there is no `emit()` (`modules.py:234`).
 an instance (`host.py:317-329`). A module holding a thread, a file or a model
 leaks one per evicted key. Sources have `open`/`close`. Older than this
 branch; now the two halves of "a module" differ.
-- Fixed 2026-10-15 (`bad6a00`): `async def teardown()`, called by the host
+- Fixed 2026-10-15 (`0bc28b8`): `async def teardown()`, called by the host
   after the instance's last call and before its sources close; a failure is
   logged.
 
@@ -574,7 +574,7 @@ reads back with the same pattern, so it would pass.
 
 ### Docs and wording (23 to 27, fixed)
 
-Fixed 2026-10-14 in `16f36a5`: 23 to 27 as below,
+Fixed 2026-10-14 in `0c26bab`: 23 to 27 as below,
 plus the same leftovers elsewhere: `FrameTable.tsx` (the gateway), the `pswamp
 pipelines validate` help (a data client), the "spec loading" line in
 `server-data-architecture.md`, `core/pyproject.toml`, `models/pyproject.toml`
@@ -622,7 +622,7 @@ the workspace". The generator edits compose, k8s and the server manifest
 ### Seen end to end (28 to 32)
 
 About the branch as a whole, not the contract work: all of 28 to 39 but 33
-and 39 were already there at `069f88f`.
+and 39 were already there at `cc03f0b`.
 
 **28. Kafka losing its topics stops the stack until every process is restarted.**
 - Seen (compose, the Kafka container recreated, so its topics are gone): a new
@@ -698,8 +698,8 @@ and 39 were already there at `069f88f`.
 - Suggestion: a run id in the key, or on every message, so a host builds a
   fresh instance for a new run; the run re-sends module settings when an
   instance is rebuilt.
-- Fixed 2026-10-15 as suggested (D1): the run id in the key (`bad6a00`), and
-  the run sending a rebuilt instance its sticky settings (`37119f3`). The
+- Fixed 2026-10-15 as suggested (D1): the run id in the key (`0bc28b8`), and
+  the run sending a rebuilt instance its sticky settings (`82c55d9`). The
   recipe below now gives: after the worker restart the box stays ticked and
   the player pauses at the trip; after the server crash, auto-pause is off and
   the count starts from 1.
@@ -781,7 +781,7 @@ that way held ~26% of a core in the server and ~33% in the module-worker. A
 new viewer was unaffected at this frame size.
 
 **39.** `app/client-web/src/hooks/useServerSocket.ts:22` says 1008 means "our
-client id was rejected". Since `924221e` it also means a path no app serves.
+client id was rejected". Since `3511332` it also means a path no app serves.
 
 ### Found while fixing (40 to 44)
 
@@ -813,7 +813,7 @@ client id was rejected". Since `924221e` it also means a path no app serves.
   has its own topic, and Kafka keeps order within a topic only. The consumer
   delivered a fetch topic by topic. A reopened consumer resumes the command
   topics (the fix for 31), so everything sent meanwhile is one fetch.
-- Fixed 2026-10-14 (`5dcf338`): each fetch is merged by send time (the
+- Fixed 2026-10-14 (`87ae7f9`): each fetch is merged by send time (the
   record's CreateTime; within one ms, the command's issue time), keeping
   each topic's own order. `test_commands_from_meanwhile_arrive_in_the_order_sent_across_their_topics`
   failed 3 of 3 runs before, and passes since.
@@ -870,9 +870,14 @@ and the faults are in the appendix. The scripted checks of the latest rounds
 (sockets for the page and the tray, POSTs, docker or kubectl for the faults)
 were scratch and are not in the repo.
 
-### D1: rounds in compose and minikube, at `37119f3` (latest)
+Commit ids in this file are the ones after the rebase onto `main`
+(`a812798`). Every run below was made before that rebase, on the same commits
+without `main`'s changes (branch `e2e-continued-refactor-pre-rebase`). Nothing
+has been run on the rebased tree yet.
 
-The working tree at `37119f3` (D1's three commits), built as `p-swamp:review`
+### D1: rounds in compose and minikube, at `82c55d9` (latest)
+
+The working tree at `82c55d9` (D1's three commits), built as `p-swamp:review`
 for compose and with `pswamp deploy minikube`. Before that: `pswamp check`
 passed, `pswamp test server` gave 473 passed, the 12 Kafka cases passed
 against the compose broker after each pass, and `check-generators` passed.
@@ -880,7 +885,7 @@ against the compose broker after each pass, and `check-generators` passed.
 Four rounds in compose (the stack recreated on the new image, warm, warm
 again, then `down` and `up`) and three in minikube (freshly deployed, warm,
 then every deployment restarted). Each ran the same steps as the rounds at
-`5dcf338` below (smoke; Playwright in Chromium and Firefox; the provider spec
+`87ae7f9` below (smoke; Playwright in Chromium and Firefox; the provider spec
 in compose; every route in both browsers; 40, order, 31, 32, 28; smoke,
 Playwright and routes again after the faults), plus five D1 checks:
 
@@ -905,9 +910,9 @@ workers restarted twice before running (44); the server's third restart is
 meant to follow a `down` and `up` ran warm (the driver's mistake); it was run
 again after a real `down` and `up`.
 
-### Three rounds each in compose and minikube, at `5dcf338`
+### Three rounds each in compose and minikube, at `87ae7f9`
 
-At `5dcf338`, compose (project `pswamp-review`, server on :8132) and
+At `87ae7f9`, compose (project `pswamp-review`, server on :8132) and
 minikube, three rounds each: compose fresh, warm, then `down` and `up`;
 minikube freshly deployed, warm, then every deployment restarted. Before
 that, `pswamp check` passed and `pswamp test server` gave 457 passed in
@@ -929,7 +934,7 @@ dashboard at 6 sockets); then these checks over sockets and POSTs:
 - After the faults: smoke, Playwright and routes again.
 
 All six rounds passed every step, with no traceback in their logs and no
-restart except the cold start in 44. Before `5dcf338`, the same rounds
+restart except the cold start in 44. Before `87ae7f9`, the same rounds
 (three compose, one minikube) failed once on the product: 41, in minikube.
 One compose failure came from the check reusing a client id, whose tray
 replayed the last round's notice; the check now uses fresh ids. The laptop
@@ -946,15 +951,15 @@ slept 15 minutes in compose round 3; the steps after it passed.
 - The grid monitor's threads disturbing the core's pacing: with 0 to 8 monitor
   viewers, the streamer's frame gap stays 50 ms and `/healthz` 2 ms.
 - The run cap failing: 8 served, the 9th and 10th closed with 1013.
-- The k8s limits being too tight (at `dbf635b`): in minikube, at both caps at once (8 monitor
+- The k8s limits being too tight (at `4f5f94b`): in minikube, at both caps at once (8 monitor
   viewers, 8 streamers at 10x) for a minute, the server peaks at ~505 MiB of
   its 768 MiB and 60-80% of a core; no restart, refusal or tray notice.
 
 ### Earlier runs
 
-#### The first end-to-end run, at `dbf635b`
+#### The first end-to-end run, at `4f5f94b`
 
-`dbf635b` plus a change, since committed as `924221e`, that refuses an
+`4f5f94b` plus a change, since committed as `3511332`, that refuses an
 unservable socket by accepting it and closing it with 1008 (`refuse_socket`,
 `unknown_socket`). In three setups: the image under a bare `docker run`
 (in-memory transport), the compose stack (Kafka, both workers, the remote
@@ -978,9 +983,9 @@ run.
 - The appendix script prints the same as before for issues 1, 2, 3, 4, 9
   and 13.
 
-#### Before the contract work, at `069f88f`
+#### Before the contract work, at `cc03f0b`
 
-`069f88f` is the last commit before `f70d7d6`, where the contract work
+`cc03f0b` is the last commit before `b0a8b5d`, where the contract work
 begins. Run the same way, in compose and minikube, from a worktree with its own
 scripts (`scripts/e2e-smoke-test.sh`,
 `scripts/start-pswamp-in-local-minikube-cluster.sh`); the Playwright specs are
@@ -996,14 +1001,14 @@ byte-identical to today's.
   per-key slots in `host.py`, the outbox's drop, the 10 s timeouts in the
   remote data client, `SeekBody`.
 - Issue 33 does not apply (`pswamp_models` and its test came later);
-  issue 39 is about the refused-socket change (`924221e`).
+  issue 39 is about the refused-socket change (`3511332`).
 - At both caps in minikube the server peaked at ~586 MiB of 768 MiB, against
-  ~505 MiB at `dbf635b`.
+  ~505 MiB at `4f5f94b`.
 
-#### Retest at `16f36a5`
+#### Retest at `0c26bab`
 
-`16f36a5` is `dbf635b` plus two commits: the refused-socket change
-(`924221e`) and the fixes for issues 23 to 27 (`16f36a5`). The first run was
+`0c26bab` is `4f5f94b` plus two commits: the refused-socket change
+(`3511332`) and the fixes for issues 23 to 27 (`0c26bab`). The first run was
 repeated, in bare, compose and minikube.
 
 - Regression: as before. `pswamp check` passes; `pswamp test server` 442
@@ -1024,9 +1029,9 @@ repeated, in bare, compose and minikube.
   37 in the code.
 - Issue 33: still fails.
 
-#### Retest after the fixes, at `9d40858`
+#### Retest after the fixes, at `edf895c`
 
-At `9d40858` (the fixes for 33, 1, 2, 40, 31, 32, 28 and 29), in bare,
+At `edf895c` (the fixes for 33, 1, 2, 40, 31, 32, 28 and 29), in bare,
 compose and minikube, with the scratch scripts of this pass (sockets for the
 page and the tray, POSTs, docker or kubectl for the outages).
 
@@ -1053,7 +1058,7 @@ page and the tray, POSTs, docker or kubectl for the outages).
 ## Appendix: reproductions
 
 Run from the repo root: `.venv/bin/python repro.py` (or paste into
-`python -`). Observed on `dbf635b`; since the fixes, 1 prints
+`python -`). Observed on `4f5f94b`; since the fixes, 1 prints
 `overlapped = False | threads: 1` and 2 prints "other task ran 335 times":
 
 ```

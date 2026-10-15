@@ -698,9 +698,10 @@ What is in there:
   each bus, and the polyline it routes each branch along. It is
   `pswamp_web/data/n44_grid_geometry.json` (~65 kB), a committed fixture like the
   recording. `tools/build_n44_grid_geometry.py` regenerates it with p-SWAMP's own
-  DXF and shapefile readers, which need `ezdxf` and `pyshp` — in the root
-  `[full]` extra, not in the server's environment — so run it with the root
-  venv: `.venv/bin/python app/server-python/tools/build_n44_grid_geometry.py`.
+  DXF and shapefile readers, which need `ezdxf` and `pyshp` — in the desktop
+  package's `[full]` extra, not in the server's environment — so run it in the
+  desktop package's env:
+  `uv run --project desktop --extra full python app/server-python/tools/build_n44_grid_geometry.py`.
   `tests/test_grid_model.py` fails if the fixture no longer matches the
   database's topology.
 - Page packages: **`app_status/`**, **`grid/`** (HTTP only), **`time_window/`**,
@@ -843,7 +844,7 @@ no grid never fetches it. Without WebGL the view says so instead of drawing.
   voltage field shows, so the panel is not subscribed to the phasor socket
   otherwise.
 - `../palette.ts` — Qt's plot background and island colours
-  (`src/pswamp/styles/colors.py`). Every plot keeps that background in light and
+  (`desktop/src/pswamp/styles/colors.py`). Every plot keeps that background in light and
   dark mode, since the palette is chosen against it.
 
 Server side, the backend package under `src/pswamp_web/<app>/` exporting `router`
@@ -1204,7 +1205,8 @@ SMOKETEST_URL=http://host:port uv run pswamp test smoke # test a server already 
 `pswamp check` never starts the app; this only starts it. Run both. It brings
 up the compose server (reusing one already running, and only tearing down what it
 started), checks the HTTP surface over plain HTTP — `/healthz`, the built client at `/`,
-the SPA deep-link fallback, a missing asset still 404ing, `/openapi.json` — and
+the SPA deep-link fallback, a trailing slash redirecting to the bare route, a
+missing asset still 404ing, `/openapi.json` — and
 then runs the counter flow: connect a socket, POST bumps, assert the pushed
 counts, POST reset, assert zero, and assert a second client id starts at zero. Two
 things worth knowing before extending it:
@@ -1224,9 +1226,10 @@ things worth knowing before extending it:
   The specs are in `e2e/`: `reference-subapp.spec.ts`, and
   `grid-monitor.spec.ts` for the main window — its docks, the five sockets, the
   grid drawn in 3D and 2D, a layer toggled, an alarm opened, acknowledged and
-  annotated, and each focused route. Run them with `npx playwright test` from
-  `e2e/`. **That run ends with `docker compose down`** (`global-teardown.ts`),
-  so it stops a compose stack you already had up.
+  annotated, and each focused route. Run them with `uv run pswamp test
+  playwright`. **Unless given `--url` or `E2E_KEEP_STACK=1`, that run ends with
+  `docker compose down`** (`global-teardown.ts`), so it stops a compose stack you
+  already had up.
 
 Note the api-contract check is the one step that needs the **full server
 environment** rather than just the pinned linter, because it imports the FastAPI

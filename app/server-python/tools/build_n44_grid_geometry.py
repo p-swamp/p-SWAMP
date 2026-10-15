@@ -4,10 +4,11 @@
 """Build the geometry the web grid view draws: country outlines and routed branches.
 
 Run once, by hand, to produce the artifact the server serves. It needs ``ezdxf``
-and ``pyshp``, which live in p-SWAMP's ``[full]`` extra and are therefore *not*
-in this project's environment -- so run it with the root project's interpreter:
+and ``pyshp``, which live in the desktop package's ``[full]`` extra and are
+therefore *not* in this project's environment -- so run it, from the repo root,
+in the desktop package's environment:
 
-    .venv/bin/python app/server-python/tools/build_n44_grid_geometry.py
+    uv run --project desktop --extra full python app/server-python/tools/build_n44_grid_geometry.py
 
 Nothing that *consumes* the result needs either library: the server reads the
 resulting JSON with the standard library.
@@ -68,7 +69,7 @@ DATABASE_PATH = (
     / "grid_database.db"
 )
 
-# Verbatim from [single_line_diagrams.geo] in examples/nordic44_rtsim/config.toml,
+# Verbatim from [single_line_diagrams.geo] in desktop/examples/nordic44_rtsim/config.toml,
 # which is what the Qt example's grid view is configured with.
 SLD_ID = "geo"
 COUNTRIES = ["Norway", "Sweden", "Denmark", "Finland"]
