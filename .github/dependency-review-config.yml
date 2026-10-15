@@ -31,6 +31,17 @@ allow-licenses:
 allow-dependencies-licenses:
   - pkg:pypi/typing-extensions   # licensed PSF-2.0 (same as CPython) but GitHub
                                  # (mistakenly?) lists other licenses for it.
+  # The qt desktop package is going away soon. Until then the Qt stack of its
+  # [full] extra (desktop/uv.lock) is left out of the license check: the action
+  # cannot leave out a path, so its packages are listed instead. None of them is
+  # in the server image. PySide6 and shiboken6 are LGPL-3.0/GPL; GitHub lists
+  # PyOpenGL's BSD-style license with identifiers the allowlist does not hold.
+  # Their vulnerabilities are still checked.
+  - pkg:pypi/pyside6
+  - pkg:pypi/pyside6-addons
+  - pkg:pypi/pyside6-essentials
+  - pkg:pypi/shiboken6
+  - pkg:pypi/pyopengl
 
 # Results remain in the check log and job summary, so the workflow needs no
 # pull-request write permission.
