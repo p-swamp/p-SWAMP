@@ -153,15 +153,13 @@ class KafkaTransport(Transport):
         to the produce or consume that follows."""
         if topic in self._created:
             return
-        from aiokafka.admin import AIOKafkaAdminClient, NewTopic
+        from aiokafka.admin import NewTopic
         from aiokafka.errors import TopicAlreadyExistsError
 
-        if self._admin is None:
-            self._admin = AIOKafkaAdminClient(bootstrap_servers=self.bootstrap_servers)
-            await self._admin.start()
+        admin = await self._admin_client()
         new = NewTopic(topic, num_partitions=1, replication_factor=self.replication_factor, topic_configs=LIVE_TOPIC_CONFIGS)
         try:
-            response = await self._admin.create_topics([new])
+            response = await admin.create_topics([new])
         except TopicAlreadyExistsError:
             self._created.add(topic)
             return
@@ -174,6 +172,19 @@ class KafkaTransport(Transport):
                 logger.warning("%s: could not create topic %s: %s", self.name, name, text)
                 return
         self._created.add(topic)
+
+    async def _admin_client(self) -> Any:
+        """The admin client, started on first use. It is kept only once started:
+        aiokafka's client answers nothing until its start has succeeded, so one
+        kept after a failed start made every later ``_create`` wait for ever."""
+        async with self._open_lock:
+            if self._admin is None:
+                from aiokafka.admin import AIOKafkaAdminClient
+
+                admin = AIOKafkaAdminClient(bootstrap_servers=self.bootstrap_servers, request_timeout_ms=10_000)
+                await admin.start()
+                self._admin = admin
+            return self._admin
 
     def _watch(self, topic: str, model: type[DataModel]) -> None:
         if topic in self._ready:

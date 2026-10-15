@@ -46,6 +46,19 @@ def test_it_is_configured_from_its_env_block(monkeypatch):
         transport_from_env("T")
 
 
+async def test_an_admin_client_that_failed_to_start_is_started_again_not_waited_on():
+    from aiokafka.errors import KafkaConnectionError
+
+    transport = KafkaTransport("k", "127.0.0.1:1")  # nothing listens there
+    try:
+        for _ in range(2):  # an unstarted client kept from the first try made the second wait for ever
+            with pytest.raises(KafkaConnectionError):
+                await asyncio.wait_for(transport._create("app.topic"), 15)
+        assert transport._admin is None
+    finally:
+        await transport.close()
+
+
 @pytest.mark.skipif(not BOOTSTRAP, reason="KAFKA_TEST_BOOTSTRAP_SERVERS is not set")
 class TestKafkaTransport(TransportSuite):
     @pytest.fixture

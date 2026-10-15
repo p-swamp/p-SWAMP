@@ -13,10 +13,8 @@ item.
 models package, the module API and join, one project per module, TOML
 pipelines, sources as modules) read against the code; the branch run end to
 end in a bare container, compose and minikube; and the fix passes since.
-Issues keep the numbers they were found under (1 to 48), which commit
-messages cite. "Origin" says when an issue came in: **older** (already there
-at `cc03f0b`), **contract** (with `b0a8b5d` to `4f5f94b`), or **fix** (with a
-fix made here), or **rebase** (from `main`, met on the rebase onto it).
+Issues keep the numbers they were found under (1 to 50), which commit
+messages cite.
 
 ---
 
@@ -26,11 +24,12 @@ fix made here), or **rebase** (from `main`, met on the rebase onto it).
   `819c41a` to `82c55d9`; the last, D1, as `0bc28b8`, `16619b9` and
   `82c55d9` (2026-10-15). See "Verification" for the runs.
 - **The rebased tree** (`1be21f3`, onto `main`) passes every check and
-  round. Two of `main`'s grid-monitor specs failed on it (45, 46); both are
-  fixed, uncommitted.
-- **Before the pull request:** 47, the server running out of memory after
-  about 60 new clients, where expected use is up to 100. The fix, one line
-  in the Dockerfile, holds in minikube; it is uncommitted.
+  round. Two of `main`'s grid-monitor specs failed on it (45, 46), and the
+  server ran out of memory after about 60 new clients (47). All three are
+  fixed in `22057ad`.
+- **Re-checked at `22057ad`.** Every issue listed open below still holds,
+  and no decision from D2 on is built. The re-check found 49, a Kafka admin
+  client that could wait for ever (fixed in `3c69b05`), and 50.
 - **Next:** D7, D3, D2, D14 and D4, one round each. They change what edge
   code is written against, so they land before more edge code is written.
 - **Deferred.** D6 (but write its additive-only rule down now), D8 to D13
@@ -65,57 +64,58 @@ refusing the command with a 409, independently of D1.
 
 **High**: breaks a running deployment, or silently loses what a user asked for.
 
-| # | Issue | Origin | Settled by |
-|---|---|---|---|
-| 47 | The server runs out of memory after about 60 new clients: each pipeline built leaves ~12 MB in malloc arenas | older | — |
+None open.
 
 **Medium**: wrong in situations the project will soon reach, or a trap in the
 module contract for the next module.
 
-| # | Issue | Origin | Settled by |
-|---|---|---|---|
-| 28 | What is left of 28: the workers have no probe. (`/healthz` leaves the broker out on purpose: AGENTS.md, "One cheap probe".) | older | — |
-| 42 | aiokafka spins on metadata while a broker comes and goes: up to 24 000 log lines/s, for up to 11 s | older | — |
-| 11 | A module with a dependency of its own fails to import in the image | contract | D4 |
-| 9 | Two producers of one class, or a cycle, pass every check | older | D14 |
-| 5 | A module cannot publish outside a call | contract | D2 |
-| 3 | What is left of 3, (a): the join builds its bundle at dequeue, so a joined module that is behind pairs a trigger with inputs from after it | contract | D5 |
-| 4 | `class X(SourceModule, Playable)` is accepted and half works | contract | — |
-| 14 | Several `@on` inputs share one drop-oldest queue | contract | D5 |
-| 18 | A non-playable history is pumped unpaced; the generator writes that shape | contract | — |
-| 10 | One flat namespace for source settings; modules cannot be configured | contract | D3 |
-| 21 | A generated source's pipeline file is loaded by nothing | contract | — |
-| 20 | The remote-data stub is in the image by an unchecked `.dockerignore` exception | contract | — |
+| # | Issue | Settled by |
+|---|---|---|
+| 28 | What is left of 28: the workers have no probe. (`/healthz` leaves the broker out on purpose: AGENTS.md, "One cheap probe".) | — |
+| 42 | aiokafka spins on metadata while a broker comes and goes: up to 24 000 log lines/s, for up to 11 s | — |
+| 11 | A module with a dependency of its own fails to import in the image | D4 |
+| 9 | Two producers of one class, or a cycle, pass every check | D14 |
+| 5 | A module cannot publish outside a call | D2 |
+| 3 | What is left of 3, (a): the join builds its bundle at dequeue, so a joined module that is behind pairs a trigger with inputs from after it | D5 |
+| 4 | `class X(SourceModule, Playable)` is accepted and half works | — |
+| 14 | Several `@on` inputs share one drop-oldest queue | D5 |
+| 18 | A non-playable history is pumped unpaced; the generator writes that shape | — |
+| 10 | One flat namespace for source settings; modules cannot be configured | D3 |
+| 21 | A generated source's pipeline file is loaded by nothing | — |
+| 20 | The remote-data stub is in the image by an unchecked `.dockerignore` exception | — |
 
 **Low**: edge cases, small leaks, tooling.
 
-| # | Issue | Origin | Settled by |
-|---|---|---|---|
-| 48 | A page closed during a push logs an unhandled `WebSocketDisconnect` | older | — |
-| 38 | A run keeps playing for 300 s after its last socket closes | older | — |
-| 43 | "Not delivered within 10 s" reaches the tray up to 2.7 s late | fix | — |
-| 44 | A process that starts without a broker exits with its producer unclosed | older | — |
-| 36 | An outbox reports falling behind, never catching up | older | — |
-| 34 | A seek whose end is not after its start answers 500 | older | — |
-| 35 | A huge negative step reaches the tray as `OverflowError` | older | — |
-| 13 | An input without a `timestamp` fails every body result | older | — |
-| 15 | `missing="skip"` skips silently | contract | — |
-| 8 | "A source is a module" holds for the type, not the behaviour | contract | — |
-| 7 | A source's outputs past the first are half supported | contract | — |
-| 37 | The error tray keeps 20 notices per client id for ever | older | — |
-| 12 | Code shared by two modules has no home | contract | D4 |
-| 19 | Three rules AGENTS.md calls test-enforced are not | contract | D7 (part) |
-| 22 | The generator's worker-list patterns are not bounded to their block | contract | — |
-| 16 | `SourceConformance` reads without `open()` | contract | — |
-| 17 | `Module` has no `abstract = True` | contract | — |
-| 39 | `useServerSocket.ts` says 1008 means "client id rejected"; it also means a path no app serves | `3511332` | — |
+| # | Issue | Settled by |
+|---|---|---|
+| 50 | A seek offset far out of range answers 500, or reaches the tray as `OverflowError` | — |
+| 48 | A page closed during a push logs an unhandled `WebSocketDisconnect` | — |
+| 38 | A run keeps playing for 300 s after its last socket closes | — |
+| 43 | "Not delivered within 10 s" reaches the tray up to 2.7 s late | — |
+| 44 | A process that starts without a broker exits with its producer unclosed | — |
+| 36 | An outbox reports falling behind, never catching up | — |
+| 34 | A seek whose end is not after its start answers 500 | — |
+| 35 | A huge negative step reaches the tray as `OverflowError` | — |
+| 13 | An input without a `timestamp` fails every body result | — |
+| 15 | `missing="skip"` skips silently | — |
+| 8 | "A source is a module" holds for the type, not the behaviour | — |
+| 7 | A source's outputs past the first are half supported | — |
+| 37 | The error tray keeps 20 notices per client id for ever | — |
+| 12 | Code shared by two modules has no home | D4 |
+| 19 | Three rules AGENTS.md calls test-enforced are not | D7 (part) |
+| 22 | The generator's worker-list patterns are not bounded to their block | — |
+| 16 | `SourceConformance` reads without `open()` | — |
+| 17 | `Module` has no `abstract = True` | — |
+| 39 | `useServerSocket.ts` says 1008 means "client id rejected"; it also means a path no app serves | — |
 
 ### Fixed
 
 | # | Issue | Commit |
 |---|---|---|
-| 45 | `main`'s grid-monitor spec expects five sockets on `/`; the error tray makes six, so the PR's `playwright-e2e` fails | uncommitted |
-| 46 | A grid-monitor spec fails at once when two panels are still waiting | uncommitted |
+| 49 | A Kafka admin client that failed to start made every later topic creation wait for ever | `3c69b05` |
+| 47 | The server runs out of memory after about 60 new clients: each pipeline built leaves ~12 MB in malloc arenas | `22057ad` |
+| 45 | `main`'s grid-monitor spec expects five sockets on `/`; the error tray makes six, so the PR's `playwright-e2e` fails | `22057ad` |
+| 46 | A grid-monitor spec fails at once when two panels are still waiting | `22057ad` |
 | 30 | Module state belongs to the client id, not the run: a setting lost on a worker restart, the old instance inherited after a server crash | `0bc28b8`, `82c55d9` |
 | 3(b) | After a seek back, a join keeps an input from before it as fresh; nothing resets a module on a seek or a switch | `16619b9` |
 | 6 | No teardown hook | `0bc28b8` |
@@ -243,7 +243,10 @@ ignored" explicit on `DataModel` with a test, and have `pswamp check` flag a
 field removed or changed in `pswamp_models` against a committed schema
 snapshot, as it does for the api contract.
 *State: deferred. Write the additive-only rule down now; it is not written
-yet.*
+yet. Today "unknown fields ignored" is pydantic's implicit default, with no
+test. The api contract check covers 5 of the 20 message classes, the ones
+that ride in socket messages; commands and `ErrorEvent` are not among
+them.*
 
 **D7. The public API.** Settles part of 19 (a module importing another module
 gets caught). `pswamp_core/__init__.py` exports nothing. Recommended:
@@ -281,7 +284,10 @@ a validity end, after which the next frame triggers a new lookup.
 doc mismatch on `cimReferenceId`. Recommended: one per layout now. Under D6 a
 per-column list is an optional field added later without breaking anyone.
 Also settle the doc mismatch: a source may carry its own id (a recording made
-with one); the lookup fills it when absent, which is what the code does.
+with one); the lookup fills it when absent, which is what the code does
+(`enrich.py`). What says otherwise: `PmuHeader.cimReferenceId`'s description
+("never by a source", and so `doc/api/openapi.json` and `schema.ts`) and
+`doc/remote-data-integration-contract.md` ("leave `cimReferenceId` out").
 
 **D13. Remote data, later.** The remote contract's own "Not settled yet"
 list: authentication and TLS, limits, and models beyond `pmu.frame`.
@@ -298,7 +304,8 @@ that one consumer reads (`AlarmSender` in
 Options: (a) refuse, and give each app status and alarm classes of its own;
 (b) allow several producers for a class marked as an event stream (status,
 alarms), refuse it for anything else; (c) allow it everywhere, as now.
-Recommended: (b); a cycle stays refused either way. `run.latest` keeps only
+Recommended: (b). A cycle, accepted today (issue 9), is refused under every
+option. `run.latest` keeps only
 the newest message of a class, so a page showing a stream needs a store at
 the edge, as the grid monitor's `AlarmStore` is today.
 *State: open; fourth of the rounds after D1.*
@@ -402,7 +409,8 @@ Every issue by number, as found: what was seen, where (file and line at the
 commit it was found at, so line numbers drift), why it matters, and a
 suggested fix. A fixed one ends with how it was fixed. 1 to 27 come from
 reading the contract work at `4f5f94b`; 28 to 39 from running the branch end
-to end; 40 from planning the fixes; 41 to 44 from the regression after them.
+to end; 40 from planning the fixes; 41 to 44 from the regression after them;
+45 to 48 from the rebased tree; 49 and 50 from re-checking it at `22057ad`.
 
 ### The contract: defects (1 to 4)
 
@@ -503,6 +511,9 @@ branch; now the two halves of "a module" differ.
   nothing routes them: `pipeline.py:343-346` raises `NoReceiver`.
 - `pipeline_config.py:287` derives "playable" from `cls.commands`, not from
   `issubclass(cls, Playable)`: wrong for both cases above and for issue 4.
+- `teardown()` and `reset()`, added by D1, are never called on a source
+  either. The generated source test (`test___PKG___source.py.template`) also
+  takes `commands` to mean playable.
 - ADR-006 lists the unused members; it does not list these.
 - Suggestion: refuse `commands` on a non-playable source and an overridden
   `setup` at class creation.
@@ -511,9 +522,12 @@ branch; now the two halves of "a module" differ.
 - Two modules publishing the same class: results interleave on one topic and
   `run.latest` keeps whichever came last.
 - A module reading a class it publishes, or a longer cycle: an unbounded loop.
+  It passes because the producer check counts a module's own outputs as
+  produced.
 - Where: `pipeline.py:122-152`. Two modules sending the same *command* is
   fine and should stay allowed.
-- `doc/module-cookbook.md:745-746` already says the first is refused.
+- `doc/module-cookbook.md` (on `pswamp pipelines validate`) says the first
+  is refused. It is not.
 
 **10. A pipeline file says which modules run, not how they are set.**
 `[[sources]]` takes `name` and `module` only (`pipeline_config.py:93-99`);
@@ -559,12 +573,15 @@ with inputs and no `process` is refused.
 
 **18.** A history that is not `Playable` is pumped whole and unpaced when made
 active (`active_source.py:190`). `pswamp new module --source` without
-`--playable` generates that shape.
+`--playable` generates that shape. The `active_source.py` docstring calls it
+intended; once the pump ends, play is refused as "not playable".
 
 ### Deployment and the layout rules (19 to 22)
 
 **19. Three rules AGENTS.md calls test-enforced are not** (`AGENTS.md:1316-1319`).
-- Test file names unique repo-wide: no test.
+- Test file names unique repo-wide: no test of its own. The one-session run
+  (`pswamp test server`, and CI's) stops at collection on a duplicate
+  basename; `pswamp test module <name>` alone does not.
 - Messages live in `pswamp_models`, never in a module: no test.
 - A module imports no other module: `tools/tests/test_tools_layering.py:124`
   sees what importing the `src/` package loads, not an import inside a function.
@@ -581,7 +598,8 @@ files; `pswamp check` validates the files only.
 **22. The generator's worker-list patterns are not bounded to their block**
 (`tools/src/pswamp_tools/generate.py:66-69`). If module-worker lost its
 variable, the pattern would patch batch-worker's list, and `check-generators`
-reads back with the same pattern, so it would pass.
+reads back with the same pattern, so it would pass. The comment above them
+says they are anchored on the worker's own name.
 
 ### Docs and wording (23 to 27, fixed)
 
@@ -668,7 +686,10 @@ and 39 were already there at `cc03f0b`.
   ever. Seen again (compose, Kafka recreated): ten fresh module results 0.9 s
   after play, 1 server log line in 5 s, CPU back to normal, no process
   restarted. Probes are still open: `/healthz` does not cover the broker
-  (AGENTS.md says why), and the workers still have none.
+  (AGENTS.md says why), and the workers still have none. The `/healthz`
+  docstring (`server.py`) and the compose comment on the server's
+  healthcheck still say the server has no external dependencies; AGENTS.md
+  says it depends on Kafka when one is configured.
 
 **29. A live source that fails stays failed until the server restarts, and whoever switches to it later is not told.**
 - Seen (in process, a live source that raises after 20 frames): the shared
@@ -863,6 +884,10 @@ client id was rejected". Since `3511332` it also means a path no app serves.
   minikube an attempt takes up to the producer's 10 s request timeout. The
   receiver refuses a command older than 10 s, so a late attempt that
   succeeds is still not applied.
+- By the code, an attempt can take longer than one request timeout. One
+  whose topic was forgotten makes the topic first, through the admin client,
+  whose requests waited aiokafka's default 40 s until 49's fix (now 10 s),
+  and then sends it. So about 20 s at worst; not measured.
 
 **44. A process that starts without a broker exits with its producer unclosed.**
 - Seen (minikube, every deployment restarted at once): the server restarted
@@ -871,6 +896,10 @@ client id was rejected". Since `3511332` it also means a path no app serves.
 - Where: `KafkaTransport.open` does not stop a producer whose `start()`
   failed. The exit itself is the intended fail-fast: `pswamp deploy
   minikube` rolls Kafka out first, and compose waits for its healthcheck.
+- It exits only where the transport opens at start: the workers, and the
+  server with a live source. A server with none opens it at a client's
+  first connect. By the code (not run), each connect then fails with 1011,
+  the client retries every 2 s, and each retry leaves an unclosed producer.
 
 ### Found on the rebased tree (45 to 48)
 
@@ -881,7 +910,7 @@ client id was rejected". Since `3511332` it also means a path no app serves.
 - Where: `e2e/grid-monitor.spec.ts:71-88`, written on `main`, which has no
   error tray. Here `ErrorTray` sits in `AppLayout`, so every page holds the
   tray's socket.
-- Fixed 2026-10-15 (uncommitted): the tray's socket is left out of the
+- Fixed 2026-10-15 in `22057ad`: the tray's socket is left out of the
   set, and AGENTS.md's "exactly 5 WebSockets" now names the tray as a sixth.
   CI's `playwright-e2e`, run as CI runs it: 28 of 28.
 
@@ -894,7 +923,7 @@ client id was rejected". Since `3511332` it also means a path no app serves.
   message, and `toBeHidden()` on a locator that matches two elements throws
   rather than waits. The client is `main`'s; this branch changes two
   cosmetic lines of it.
-- Fixed 2026-10-15 (uncommitted): `toHaveCount(0)`. The spec three times
+- Fixed 2026-10-15 in `22057ad`: `toHaveCount(0)`. The spec three times
   over in both browsers: 84 of 84.
 
 **47. The server runs out of memory after about 60 new clients.**
@@ -921,7 +950,7 @@ client id was rejected". Since `3511332` it also means a path no app serves.
 - With `MALLOC_ARENA_MAX=2` set in the container: 100 clients at 2 at a
   time, peak 514 MiB and level; 250 at 6 at a time (242 evictions), peak
   525 MiB, every page served.
-- Fix, tried 2026-10-15 and uncommitted: `ENV MALLOC_ARENA_MAX=2` in the
+- Fixed 2026-10-15 in `22057ad`: `ENV MALLOC_ARENA_MAX=2` in the
   Dockerfile's runtime stage, which compose, k8s and a downstream build all
   inherit. In minikube, on one server process: 100 new clients at 2 at a
   time, peak 555 MiB, then flat; 250 at 6 at a time, peak 626 MiB; after a
@@ -929,6 +958,10 @@ client id was rejected". Since `3511332` it also means a path no app serves.
   each checkpoint. Every page served, no restart, `/healthz` 4 to 66 ms.
   The regression round on it passed every step. AGENTS.md's "peak RSS
   follows `MAX_PIPELINES`" holds only with it.
+- Left open: AGENTS.md does not mention the setting yet. It also says both
+  manifests size `limits.memory` from the cap, but there is one manifest
+  (compose sets no limit). A server run outside the image (`uv run
+  src/server.py`) does not get the setting, and no test checks for it.
 - These are new clients over time, at most 6 at once. Clients viewing at
   the same time are a separate limit, `MAX_PIPELINES` (8): a ninth is
   refused when none of the eight is idle.
@@ -941,6 +974,46 @@ client id was rejected". Since `3511332` it also means a path no app serves.
   `CancelledError` from the push task. `connected_hub` still releases the
   pipeline in its `finally`, so nothing leaks; it is a traceback in the
   log. Older: `pump.py` came with `main`.
+- Only the grid monitor's pages: the streamer's `push_changes` (`shared.py`)
+  already ignores `WebSocketDisconnect`.
+
+### Found re-checking at `22057ad` (49, 50)
+
+**49. A Kafka admin client that failed to start made every later topic creation wait for ever.**
+- Seen (in process, a broker address nothing listens on): the first
+  `_create` raised `KafkaConnectionError`; the second waited in
+  `create_topics` until cancelled, the controller unknown.
+- Where: `core/src/pswamp_core/transport/kafka.py`, `_create`. It stored
+  `self._admin` before `await start()`, and skipped `start()` once one was
+  stored. aiokafka starts its metadata task only after a successful
+  bootstrap, so an unstarted client's metadata update never answers, not
+  even once the broker is back.
+- Why: a publish that reaches it never returns, so its outbox stops for
+  good; a consumer that reaches it in `_assign` reads nothing. Only a
+  restart helps, and no probe sees it (28). It takes a process whose first
+  topic creation runs while the broker is unreachable, after its producer
+  has started: rare, but permanent. The same code is at `cc03f0b`.
+- Fixed 2026-10-15 in `3c69b05`: `_admin_client()` keeps the client only
+  once it has started, under the open lock, and gives it the producer's
+  10 s request timeout instead of aiokafka's 40 s.
+  `test_an_admin_client_that_failed_to_start_is_started_again_not_waited_on`
+  waited out its 15 s before the fix and passes in 0.4 s since. Against a
+  broker stopped, then started: the failed try keeps no client, and the
+  next makes the topic in 0.05 s.
+
+**50. A seek offset far out of range answers 500, or reaches the tray as `OverflowError`.**
+- Seen (in process, the server app under FastAPI's TestClient):
+  `offset_s=1e15` answers 500, an `OverflowError` from `Playable.validate`.
+  `end_offset_s=1e15` answers 200, then the tray reports `OverflowError:
+  date value out of range`. A huge positive step is harmless: it plays to
+  the end.
+- Where: neither `SeekBody`
+  (`app/server-python/src/pmu_test_streamer/api.py`) nor `SeekCommand`
+  (`models/src/pswamp_models/player/commands.py`) bounds the offsets, and
+  `core/src/pswamp_core/playable.py` adds them to a datetime. The sibling of
+  34 and 35. The same code is at `cc03f0b` (`player.py`).
+- Suggestion: bound both offsets, and `StepBody.n` (35), in the API, so a
+  value out of range is a 422.
 
 ---
 
@@ -952,11 +1025,32 @@ and the faults are in the appendix. The scripted checks of the latest rounds
 were scratch and are not in the repo.
 
 Commit ids in this file are the ones after the rebase onto `main`
-(`1be21f3`). The first run below was made on the rebased tree; the others
-before the rebase, on the same commits without `main`'s changes (branch
-`e2e-continued-refactor-pre-rebase`).
+(`1be21f3`). The first two runs below were made on the rebased tree; the
+others before the rebase, on the same commits without `main`'s changes
+(branch `e2e-continued-refactor-pre-rebase`).
 
-### The rebased tree, at `1be21f3` (latest)
+### Re-check at `22057ad` (latest)
+
+No stack rounds. Every open issue and decision was read against the code
+at `22057ad`, and run where that needs no stack: in-process scripts, the
+server app under FastAPI's TestClient, the appendix script.
+
+- Static: `pswamp check` passes; `pswamp test server` gives 492 passed, 46
+  skipped.
+- Every issue listed open still holds. The re-check's corrections are in
+  the entries for 8, 9, 18, 19, 22, 28, 43, 44, 47 and 48, and in D6, D12
+  and D14. Run this time: 3(a) in a host (a trigger at 1 s bundled with an
+  input from 5 s), 4 through `ActiveSource` (play fails with
+  `NotImplementedError` rather than a 409), 9 (a two-module cycle is
+  accepted too), 14, 15, 16, 18, 19, 22, 34, 35, 36, 37, 38, 43 (an `Outbox`
+  over a scripted transport) and 44.
+- None of D2 to D14 is built. D5's experimental note and D6's additive-only
+  rule are not written.
+- It found 49 and 50. After 49's fix, `pswamp check` passes and `pswamp
+  test server` against a broker gives 503 passed, the 13 Kafka cases among
+  them.
+
+### The rebased tree, at `1be21f3`
 
 The tree at `1be21f3`, clean: built as `p-swamp:review` for compose and with
 `pswamp deploy minikube`.
