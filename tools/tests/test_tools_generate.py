@@ -7,6 +7,7 @@ import shutil
 from pathlib import Path
 
 import pytest
+from click import unstyle
 from typer.testing import CliRunner
 
 from pswamp_tools import generate, main
@@ -332,7 +333,10 @@ def test_help_renders(command):
 
 def test_the_module_command_offers_the_source_flags():
     result = CliRunner().invoke(main.app, ["new", "module", "--help"])
-    assert "--source" in result.output and "--playable" in result.output
+    # Under GitHub Actions Typer forces rich's colours, which style "-" and
+    # "-source" apart.
+    output = unstyle(result.output)
+    assert "--source" in output and "--playable" in output
 
 
 def test_a_bad_name_is_one_error_line_and_exit_1(monkeypatch, tree):

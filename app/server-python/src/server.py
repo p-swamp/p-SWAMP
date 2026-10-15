@@ -306,10 +306,13 @@ class SPAStaticFiles(StaticFiles):
     _REVALIDATE = "no-cache"
 
     async def get_response(self, path: str, scope: Scope):
+        # `path` comes from get_path with the OS's separators (assets\app.js on
+        # Windows); the prefixes are matched on the url's.
+        route = path.replace(os.sep, "/")
         try:
             response = await super().get_response(path, scope)
         except StarletteHTTPException as exc:
-            if exc.status_code == 404 and not path.startswith(self._NO_FALLBACK):
+            if exc.status_code == 404 and not route.startswith(self._NO_FALLBACK):
                 redirect = self._bare_route_redirect(scope)
                 if redirect is not None:
                     return redirect
@@ -319,7 +322,7 @@ class SPAStaticFiles(StaticFiles):
             raise
 
         # favicon.svg and index.html change in place, so only assets/ is cacheable.
-        cacheable = path.startswith("assets/") and response.status_code == 200
+        cacheable = route.startswith("assets/") and response.status_code == 200
         response.headers["cache-control"] = (
             self._IMMUTABLE if cacheable else self._REVALIDATE
         )
