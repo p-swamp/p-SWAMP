@@ -15,7 +15,8 @@ extending, or finishing the port, or deciding where the code lives.
 **At a glance.** §1–§2: what exists and what was decided. §3–§6: the lessons (§4
 is the expensive part). §7: the layout decision (plans in §8/§9). §10: the
 roadmap for finishing the port and retiring Qt — read it *before* §7, it changes
-the answer. §11–§12: backlog. §13: performance issues for a live feed.
+the answer; §10.6 rates lifting each analysis app into a core module instead.
+§11–§12: backlog. §13: performance issues for a live feed.
 
 ---
 
@@ -725,6 +726,9 @@ panel" (§6) — established shape, repetitive not hard:
   `consumer_seek_relative_offset` (Kafka-only, before any window exists). The
   algorithm (`calculate_fft_spectrum`) is a pure function and the part to reuse.
 
+Both ratings are for wiring an app into the hub. As a core module, under the
+server data architecture, the costs differ: §10.6.
+
 **Only port what Qt actually runs.** Voltage heatmap, SSI, Prony, "Time window
 plot V1.5" buttons are commented out in `app_launcher.py`; `monitoring/fft_v2.py`
 is dead (§11). Check `gui/main_window.py` + `gui/app_launcher.py` first. Two traps:
@@ -828,6 +832,75 @@ which §7 resolves to B.
 analysis paths, and §10.1 was derived by reading it. It's the specification for
 the remaining work; keep it until that work is done.
 
+### 10.6 Lifting the analysis apps into modules
+
+**What.** The port above runs the desktop apps as they are, on `pswamp_web/`'s
+threads. The other route moves each monitoring application in
+`desktop/src/pswamp/monitoring/` into a project under `modules/`, on the server
+data architecture (`doc/server-data-architecture.md`), so it runs in a worker
+like any module and the grid monitor's pages read it from the core. This rates
+each app for that move under today's module contract. The open decisions it
+depends on (D1, D3, D13) are in `doc/WIP-architecture-open-points.md`.
+
+**What there is.** Five files, 70 to 190 lines each, on shared templates
+(`app_templates/`: `SnapshotApp`, `TimeWindowApp`, status reporting and
+`AlarmHandler`), labelled time windows (`utils/`), a C37.118 decoder
+(`utils/pypmu.py`), Kafka/MQTT I/O (`streaming/`) and alarm handling
+(`coordination/`): ~2,100 lines in all, under `desktop/src/pswamp/`. The
+analysis inside each app is a small numpy function; the rest is a run loop, I/O
+and windowing that the core already does.
+
+**A spike** (scratch, not in the repo) wrote islanding and line outage as
+`Module`s calling the desktop algorithms unchanged, run as a script over the N44
+recording (3,501 frames, 700 columns, 40 KB per frame as JSON):
+
+- Islanding: islands 6500, 6700, 6701 from t=23 s (the §1 sanity values);
+  0.03 ms per frame. After the reconnection (41 to 52 s) `detect_islands`
+  returns overlapping groups (§4.5), so a port moves `island_groups`' fix into
+  the module.
+- Line outage: disconnect at 20.2 s, connect at 40.0 s; 0.02 ms per frame.
+- Each is ~40 lines, plus a ~40-line window over a frame's columns that both
+  need.
+- N4SID, timed on its own over a 45 s window of the 44 frequencies: 0.21 s per
+  identification on a Mac laptop (0.26 s with one BLAS thread; 0.62 s measured
+  in a container). The least damped modes come out at 0.019, below the app's
+  0.03 "Emergency".
+
+| App | Port | Why |
+|---|---|---|
+| Islanding (`islanding.py`) | Easy | Pure function; evaluating on data time (1 Hz over a 10 s window) fits `process` as is. Move in the overlapping-groups fix; alarms per D13. |
+| Line outage (`line_outage_detection.py`) | Easy | Threshold over 10 samples, with state. Needs current channels, which no source in `modules/` has (below). |
+| N4SID mode estimation (`n4sid.py`) | Medium to hard | `blocking = True`, and while an identification runs the instance reads nothing: at 1x the queue (64 frames) covers it, faster replays drop frames, and the window gets gaps N4SID does not expect (D1's open question). One identification per second per client watching a replay. `nfoursid` brings pandas and matplotlib (D3). Its `warnings.simplefilter("error", ...)` at import changes every module in the worker. Eigenvalues and mode shapes are complex, so they need a wire shape. Without `window_length` its window grows for ever. |
+| FFT (`fft.py`) | Medium: design, not code | Publishes nothing: the Qt plot reads its spectra off the app object, so its output (a spectrum per channel per evaluation) needs a message designed. Its constructor talks to Kafka directly; that goes. Its thresholds say "need to be adjusted". |
+| FFT v2 (`fft_v2.py`) | Not portable | Imports `monitoring/utils.py`, which no longer exists. Dead code (§11). |
+| Voltage stability, SSI, Prony | Not in the repo | The examples and the app launcher import them; the analysis was never here (§10.1). |
+| Status and alarms (`AlarmHandler`, `AlarmSender`, `ReportingApp`) | Medium: contract | Each app's status (OK, Alert, Emergency) feeds one alarm consumer: several producers of one class (D13). Status once a second when nothing else is published needs D1's tick. |
+
+**Work shared by all of them, done once:**
+
+1. A window over a frame's columns (by measurement, NaN handling, a new layout
+   resets it). The desktop's `TimeWindowLabeled` and `PMUDecoder` work on
+   C37.118 frames and live in the desktop package, which a module may not
+   import, so it needs a home (D3's `libs/`).
+2. A source with the data. `sample-replay` holds 60 frames (3 s at 20 Hz,
+   voltage and frequency only). Islanding needs 10 s, N4SID 45 s, line outage
+   currents. A source over `n44_line_trip_50hz.npz` (70 s, 50 Hz, 700 columns)
+   covers all three.
+3. Result models in `pswamp_models`: islands as station names, events with
+   stations, eigenvalues as pairs. Today's results are dicts of numpy arrays
+   and uuids (§6).
+4. A window reset on seek and source switch: a port clears its window in
+   `Module.reset()`, which the host calls when the run's stream starts over.
+5. The grid monitor's pages, re-pointed at the modules. Until then they read
+   the desktop apps through `pswamp_web/`'s Hub, and the modules help nobody.
+
+**Verdict.** The algorithms lift with little change, and the contract fits a
+windowed, data-time-driven analysis. The cost is around them: the window helper
+and its home (D3), a source with the data, D1 for N4SID and status, D13 for
+alarms, an output design for FFT, then the pages. Suggested order: islanding and
+line outage first (after D3 and the N44 source); status and alarms with D13;
+N4SID after D1 and D3; FFT once its output is designed.
+
 ---
 
 ## 11. Changes to the analysis core deliberately not made
@@ -878,6 +951,8 @@ Further out:
 ## 12. Not done
 
 - **Everything in §10** — the port is a vertical slice, not a replacement.
+- **Lifting the analysis apps into modules** (§10.6) — rated and spiked, nothing
+  in the repo.
 - **Either move in §7.**
 - **Wheel packaging of the data files** (§9.6).
 - **Tuning the main window against real viewports.** It fills the viewport
