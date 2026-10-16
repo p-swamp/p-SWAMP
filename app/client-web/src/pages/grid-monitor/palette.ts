@@ -3,7 +3,7 @@
  *
  * Every plot there -- the grid view, the frequency trace, the phasor diagram --
  * sits on one dark teal, and the island palette was chosen against it. Both are
- * `src/pswamp/styles/colors.py`, verbatim, which is why the plots here keep that
+ * `desktop/src/pswamp/styles/colors.py`, verbatim, which is why the plots here keep that
  * background in light and dark mode alike: the palette only works on it.
  */
 

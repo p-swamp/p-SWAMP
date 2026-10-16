@@ -26,7 +26,7 @@ from contextlib import AsyncExitStack, asynccontextmanager
 from pathlib import Path
 from urllib.parse import quote
 
-from fastapi import FastAPI
+from fastapi import FastAPI, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException as StarletteHTTPException
@@ -34,9 +34,11 @@ from starlette.responses import RedirectResponse
 from starlette.types import Scope
 
 import api_contract
+import errors
 import pmu_test_streamer
 import pswamp_web
 import reference_subapp
+import shared
 import pswamp_web.app_status
 import pswamp_web.grid
 import pswamp_web.islanding
@@ -45,18 +47,24 @@ import pswamp_web.phasors
 import pswamp_web.time_window
 from api_contract import AppEntry
 
+logger = shared.get_logger("server")
+
 # --- shared services --------------------------------------------------------
 #
 # Packages with no url surface of their own, whose lifespan must be running
 # before any app package handles a request. Entered before everything in APPS and
 # exited after it, so a websocket handler can assume its dependencies are up.
 #
-# pswamp_web is the one: it owns the registry of per-client PMU pipelines that
-# its page packages all draw theirs from. Its lifespan starts no pipeline — those
-# are built on a client's first connect and evicted when idle — it only binds the
+# pswamp_web owns the registry of per-client PMU pipelines that its page
+# packages all draw theirs from. Its lifespan starts no pipeline — those are
+# built on a client's first connect and evicted when idle — it only binds the
 # registry to this event loop and drains it on shutdown.
+#
+# shared owns the process's transport (PSWAMP_TRANSPORT) for the apps over a
+# core pipeline. Entered first and exited last, it closes the transport once
+# they are done with it.
 
-SERVICES = [pswamp_web]
+SERVICES = [shared, pswamp_web]
 
 # --- the app registry -------------------------------------------------------
 #
@@ -78,7 +86,8 @@ APPS = [
     AppEntry(
         "pmu-test-streamer",
         pmu_test_streamer,
-        "Scaffold demo: replays sample PMU records line by line.",
+        "The server data architecture's worked example: a recorded and a live PMU "
+        "feed through a core pipeline per client, with player commands and a stats module.",
     ),
     AppEntry(
         "app-status",
@@ -117,6 +126,11 @@ APPS = [
         "reference-subapp",
         reference_subapp,
         "The reference example: a per-client counter over the whole stack.",
+    ),
+    AppEntry(
+        "errors",
+        errors,
+        "Operational errors from any of a client's pipeline runs, for the layout's error tray.",
     ),
 ]
 
@@ -212,10 +226,31 @@ for _app in APPS:
 # include_router loop above, or the document would describe an empty api.
 #
 # /openapi.json, /docs and /redoc all serve this, and it is the same function
-# scripts/generate-api-contract.sh dumps to doc/api/openapi.json -- so the served
+# uv run pswamp api generate dumps to doc/api/openapi.json -- so the served
 # document and the committed one cannot drift.
 
 api_contract.install(app, APPS)
+
+
+# --- sockets no app serves --------------------------------------------------
+#
+# A socket on a path nothing above has: typically a tab left open from another
+# build, asking for an app this server does not have. Without this route it
+# falls into the static mount below, which speaks only HTTP, and the handshake
+# fails. The page reads that as "the server is down" and retries every 2 s for
+# as long as the tab is open, and Firefox holds every other socket to this host
+# behind the failing one for up to a minute. Refused the way shared.refuse_socket
+# does it, the page stops and asks for a reload instead.
+#
+# Must stay BELOW the include_router loop (an app's own socket matches first)
+# and ABOVE the mount. A socket route matches sockets only, so a plain request
+# for an unknown path still reaches the mount and its 404.
+
+
+@app.websocket("/{path:path}")
+async def unknown_socket(ws: WebSocket, path: str) -> None:
+    logger.warning("refused a socket on /%s: no app serves it", path)
+    await shared.refuse_socket(ws)
 
 
 # --- web client assets ------------------------------------------------------
@@ -228,7 +263,7 @@ api_contract.install(app, APPS)
 # mount is guarded on the dir existing so the api-only paths still boot without it
 # — i.e. `uv run src/server.py` from app/server-python/ for quick backend dev (the
 # web client is run separately with hot reload via
-# scripts/start-local-hotloaded-pswamp-web-client.sh). It's registered AFTER
+# uv run pswamp dev client). It's registered AFTER
 # /healthz and the routers above because a mount at "/" is greedy and would shadow
 # them — so must any api route added later.
 
@@ -271,10 +306,13 @@ class SPAStaticFiles(StaticFiles):
     _REVALIDATE = "no-cache"
 
     async def get_response(self, path: str, scope: Scope):
+        # `path` comes from get_path with the OS's separators (assets\app.js on
+        # Windows); the prefixes are matched on the url's.
+        route = path.replace(os.sep, "/")
         try:
             response = await super().get_response(path, scope)
         except StarletteHTTPException as exc:
-            if exc.status_code == 404 and not path.startswith(self._NO_FALLBACK):
+            if exc.status_code == 404 and not route.startswith(self._NO_FALLBACK):
                 redirect = self._bare_route_redirect(scope)
                 if redirect is not None:
                     return redirect
@@ -284,7 +322,7 @@ class SPAStaticFiles(StaticFiles):
             raise
 
         # favicon.svg and index.html change in place, so only assets/ is cacheable.
-        cacheable = path.startswith("assets/") and response.status_code == 200
+        cacheable = route.startswith("assets/") and response.status_code == 200
         response.headers["cache-control"] = (
             self._IMMUTABLE if cacheable else self._REVALIDATE
         )

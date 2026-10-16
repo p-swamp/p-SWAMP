@@ -122,7 +122,7 @@ To catch it before the PR does, turn on the repo's pre-push hook, once per clone
 `git config core.hooksPath .githooks`
 
 It refuses a push that contains a commit without your sign-off, lists the commits, and prints the rebase command to run.
-It then runs `scripts/error_check.sh`, the same static checks CI runs.
+It then runs `uv run pswamp check`, the same static checks CI runs.
 
 ## Write down the decisions that shape the system
 

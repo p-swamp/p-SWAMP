@@ -1,11 +1,11 @@
 # Dependency manifest for the Python state server — the single source of truth
 # for what this deployable depends on. Mirrors app/client-web/package.json on the
 # other half of the repo: this file states intent (compatible version ranges),
-# and the committed uv.lock beside it pins the exact resolved versions of the
-# full transitive closure, with hashes.
+# and the committed uv.lock at the repo root (the workspace lock) pins the exact
+# resolved versions of the full transitive closure, with hashes.
 #
-# Add or change a dependency by editing this file, then run `uv lock` (from this
-# directory) and commit both files together.
+# Add or change a dependency by editing this file, then run `uv lock` (anywhere
+# in the workspace) and commit both files together.
 
 [project]
 name = "pswamp-server"
@@ -16,44 +16,76 @@ dependencies = [
     "fastapi>=0.141.1,<0.142",
     "uvicorn[standard]>=0.52.4,<0.53",
     "p-swamp",
+    # The server data architecture (core/). The extra brings the Kafka transport.
+    "pswamp-core[kafka]",
+    # The modules, one project each (modules/<name>/).
+    "pswamp-frame-stats",
+    "pswamp-excursion",
+    "pswamp-range-summary",
+    # The sources (also modules/<name>/): the data a run replays or follows.
+    "pswamp-sample-replay",
+    "pswamp-live-synthetic",
+    "pswamp-remote-history",
+    # The message models (models/): the server imports them directly.
+    "pswamp-models",
 ]
 
-# p-swamp is the desktop package at the repo root (root pyproject.toml, root
-# src/pswamp/). It supplies the PMU decoding, the time-window storage and the
-# monitoring applications this server is a front end for, and the code under
+# p-swamp is the desktop package in desktop/ (desktop/pyproject.toml,
+# desktop/src/pswamp/). It supplies the PMU decoding, the time-window storage and
+# the monitoring applications this server is a front end for, and the code under
 # src/pswamp_web/ is written so it could fold into it as src/pswamp/web/.
 #
-# This is the ONE place where the two Python projects in this repo are wired
-# together — everywhere else in AGENTS.md still holds: the web backend keeps its
-# own manifest and lockfile, and nothing under src/pswamp/ imports pswamp_web.
+# It is NOT a workspace member: it keeps its own desktop/uv.lock, and reaches
+# this workspace only through this one path dependency. Everywhere else in
+# AGENTS.md still holds: nothing under desktop/src/pswamp/ imports pswamp_web.
 # The dependency points one way only, web → desktop.
 #
-# Editable, so an edit to root src/pswamp/ is live here with no reinstall.
+# Editable, so an edit to desktop/src/pswamp/ is live here with no reinstall.
 #
 # Deliberately no extras. p-swamp's [full] extra is what carries PySide6,
 # pyqtgraph, kafka, nqkafka and tops-rt; none of that belongs in a headless
 # server image, and the base dependency set (numpy, scipy, pandas) is all the
 # analysis core needs.
 #
-# The path is relative to this file's directory: app/server-python/ → repo root.
+# The path is relative to this file's directory: app/server-python/ → desktop/.
 # It is deliberately the same string on the host and inside the image, which is
 # why the image mirrors the repo at its real depth rather than flattening the
 # server to /app — see the workspace note at the top of the runtime stage in the
-# Dockerfile.
+# Dockerfile. After editing desktop/pyproject.toml, run
+# `uv lock --upgrade-package p-swamp` at the repo root.
 [tool.uv.sources]
-p-swamp = { path = "../../", editable = true }
+p-swamp = { path = "../../desktop", editable = true }
+# The message models at models/, the shared core at core/, the modules at
+# modules/<name>/ are members of the uv workspace rooted at the repo root (one
+# uv.lock there). Same one-way rule: nothing under models/, core/ or modules/
+# imports from app/.
+pswamp-models = { workspace = true }
+pswamp-core = { workspace = true }
+pswamp-frame-stats = { workspace = true }
+pswamp-excursion = { workspace = true }
+pswamp-range-summary = { workspace = true }
+pswamp-sample-replay = { workspace = true }
+pswamp-live-synthetic = { workspace = true }
+pswamp-remote-history = { workspace = true }
+pswamp-tools = { workspace = true }
 
-# Tooling that must never ship in the image — the Dockerfile installs with
-# --no-dev. Declared here so the versions are locked and hash-verified like
-# everything else, and defined in exactly one place rather than duplicated across
-# the scripts that invoke them. ruff is pinned exactly so everyone runs the
-# identical linter; pytest drives the server unit tests under tests/, which
-# error_check.sh runs alongside the static checks.
+# Tooling that must never ship in the image — the Dockerfile exports with
+# --no-dev. Declared here so the versions are locked (in the workspace uv.lock)
+# and hash-verified like everything else, and defined in exactly one place rather
+# than duplicated across the scripts that invoke them. ruff is pinned exactly so
+# everyone runs the identical linter; pytest drives the server, core and modules
+# unit tests. It lives on this member rather than on the virtual workspace root
+# because a root group is not installed by `uv sync`/`uv run` from this
+# directory, while a member's dev group is installed from both (see the root
+# pyproject.toml).
 [dependency-groups]
 dev = [
     "ruff==0.16.4",
     "pytest>=8.0",
     "pytest-asyncio>=0.24",
+    # The repo CLI (tools/), here so its tests (tools/tests, in testpaths below)
+    # can import it from this member's environment.
+    "pswamp-tools",
 ]
 
 # Not an installable package: src/ is a plain source folder that the process runs
@@ -67,7 +99,7 @@ dev = [
 # is just a new folder under src/, with no manifest change.
 #
 # Deliberately no [tool.ruff] section: ruff treats a pyproject.toml as config only
-# when one is present, and the explicit `--select F` in scripts/error_check.sh is
+# when one is present, and the explicit `--select F` in `pswamp check` is
 # meant to stay authoritative (see the note there about not inheriting ruff's
 # opinionated defaults).
 [tool.uv]
@@ -80,6 +112,15 @@ package = false
 # treat the file as config; only a [tool.ruff] section would, and there
 # deliberately isn't one (see the note above).
 [tool.pytest.ini_options]
-pythonpath = ["src"]
-testpaths = ["tests"]
+# modules/remote-history/examples holds the remote data stub, which the tests
+# run in-process.
+pythonpath = ["src", "../../modules/remote-history/examples"]
+# models/tests, core/tests and the modules' tests run here too: one runner and
+# one CI job cover every suite. Each module project carries its tests in
+# modules/<name>/tests/, found by recursing into modules/; the transitional
+# repo CLI's tests (tools/tests)
+# run here too. None of these folders is a package, so a test file name must be
+# unique across ALL of them (hence test_models_*, test_tools_*,
+# test_<module>_module.py).
+testpaths = ["tests", "../../models/tests", "../../core/tests", "../../modules", "../../tools/tests"]
 asyncio_mode = "auto"

@@ -1,0 +1,46 @@
+# pswamp-core: the shared pieces of the server data architecture (transport,
+# modules, sources, pipelines), over the messages in models/. See
+# doc/server-data-architecture.md.
+#
+# The third Python project in the repo, beside the desktop package
+# (desktop/pyproject.toml) and the web backend (app/server-python/pyproject.toml).
+# It is a member of the uv workspace rooted at the repo root, locked in the one
+# uv.lock there, and its tests run with the web backend's, so there is no
+# lockfile here. The module projects,
+# modules/<name>/ (pswamp-<name>), depend on this one; this one imports nothing
+# from them.
+#
+# pydantic and the message models (models/, pswamp-models, itself pydantic only)
+# are the only required dependencies, so a module or source written outside
+# this repo can depend on the core alone. The extra is imported lazily:
+#   [kafka]        aiokafka, for pswamp_core.transport.kafka
+
+[project]
+name = "pswamp-core"
+version = "0.1.0"
+description = "p-SWAMP server data architecture: transport, modules, sources, pipelines."
+readme = "README.md"
+license = "Apache-2.0"
+requires-python = ">=3.11"
+dependencies = ["pydantic>=2.12", "pswamp-models"]
+
+[project.optional-dependencies]
+kafka = ["aiokafka>=0.14,<1"]
+
+[tool.uv.sources]
+pswamp-models = { workspace = true }
+
+[build-system]
+requires = ["uv_build"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-name = "pswamp_core"
+
+# No [tool.ruff] section: `pswamp check` passes `--select F` explicitly.
+
+# Used when pytest is pointed at core/tests directly; the usual runner is
+# `uv run pswamp test server`, which takes the server's config.
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"

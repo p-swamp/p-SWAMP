@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright Contributors to the p-SWAMP Project.
 
-"""Write the api contract to a file. Driven by scripts/generate-api-contract.sh.
+"""Write the api contract to a file. Driven by uv run pswamp api generate.
 
     python tools/dump_openapi.py <output.json>
 

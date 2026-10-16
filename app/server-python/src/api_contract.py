@@ -32,7 +32,7 @@ By exporting a name. `server.py` already discovers optional package features wit
 
 `ws_channels` walks the very `APPS` list `server.py` mounts and picks up whatever
 each package exports under that name. There is no second registry to keep in
-step, and `scripts/generate-new-subapp.sh` needs no extra anchor to patch -- a
+step, and `uv run pswamp new subapp` needs no extra anchor to patch -- a
 scaffolded subapp is in the contract the moment it is generated, because its
 template exports the name. An app with no socket (`pswamp_web/grid/`, which is
 HTTP only) simply omits it.
@@ -106,7 +106,7 @@ API_TITLE = "p-SWAMP api"
 # Not read from pyproject.toml on purpose: this project is `package = false`, so
 # there is no installed distribution to read a version from, and the api's
 # compatibility is not the same fact as the server's release number anyway.
-API_VERSION = "1.0.0"
+API_VERSION = "2.0.0"
 
 API_DESCRIPTION = """\
 The api between the p-SWAMP web client and its state server.
@@ -146,7 +146,7 @@ than hand-copying the Python model's fields — `Wire['ReferenceSubappState']` f
 and all, all the way to the frontend components.
 
 This document is generated from the server and committed at `doc/api/openapi.json`;
-`scripts/error_check.sh` fails if the two disagree. See
+`uv run pswamp check` fails if the two disagree. See
 `doc/the-client-server-api.md` for more detail.
 """
 

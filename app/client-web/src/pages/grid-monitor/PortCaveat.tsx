@@ -6,7 +6,7 @@ import { AlertTriangleIcon } from 'lucide-react'
  * This page is a rough port of the Qt front end and is not yet something to
  * trust or build on, so it says so where it will actually be read — on the page
  * itself, rather than only in the repo docs. The split matters: the *analysis*
- * below is the long-standing Python in `src/pswamp/`, reached unchanged; only
+ * below is the long-standing Python in `desktop/src/pswamp/`, reached unchanged; only
  * this presentation layer is new and unreviewed.
  *
  * One line, with the rest behind it: the monitor is a window with the

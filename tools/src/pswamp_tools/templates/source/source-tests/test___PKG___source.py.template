@@ -1,0 +1,28 @@
+"""The __LABEL__ source: the conformance every source passes, and what is its own."""
+
+import pytest
+
+from pswamp_core.testing import SourceConformance
+from pswamp_modules.__PKG__ import __NAME__Source, synthetic_frames
+
+
+class Test__NAME__Source(SourceConformance):
+    @pytest.fixture
+    def source_under_test(self):
+        return __NAME__Source()
+
+    @pytest.fixture
+    def conformance_records(self):
+        return synthetic_frames(3.0)  # what it holds by default, in order
+
+
+def test_it_holds_as_much_as_its_setting_says():
+    source = __NAME__Source(seconds=1.0)
+    frames = list(source.read())
+    assert len(frames) == 20
+    assert source.coverage().contains(frames[-1].timestamp)
+
+
+def test_it_is_a_history_and_playable_only_if_asked_to_be():
+    assert __NAME__Source.kind == "history"
+    assert bool(__NAME__Source.commands) is __IS_PLAYABLE__

@@ -30,6 +30,21 @@ ENV VITE_GIT_SHA=$GIT_SHA
 COPY app/client-web/ ./
 RUN npm run build
 
+# --- module manifests stage -------------------------------------------------
+#
+# Every module is its own workspace member (modules/<name>/, one project each),
+# (analysis modules and sources alike). `uv export --locked` below
+# needs every member's pyproject.toml (and the README.md it names) to validate
+# the lock, but a COPY glob would flatten modules/*/pyproject.toml into one
+# directory. So this stage copies the folder whole and deletes everything
+# but each project's own manifest and README; the server stage copies the
+# result. Its output only changes when a manifest does, so the dependency
+# install below stays cached across source edits, and a new module needs no
+# edit here. Same base image as the server stage (already pulled), for `find`.
+FROM ghcr.io/astral-sh/uv:python3.11-bookworm-slim@sha256:4f5d923c9dcea037f57bda425dd209f3ec643da2f0b74227f68d09dab0b3bb36 AS module-manifests
+COPY modules/ /manifests/modules/
+RUN find /manifests -maxdepth 2 -type f -delete     && find /manifests -mindepth 4 -type f -delete     && find /manifests -type f ! -name pyproject.toml ! -name README.md -delete     && find /manifests -type d -empty -delete
+
 # --- server stage -----------------------------------------------------------
 #
 # Base: Astral's official uv image (Python 3.11 on Debian 12 "bookworm" slim).
@@ -47,52 +62,78 @@ FROM ghcr.io/astral-sh/uv:python3.11-bookworm-slim@sha256:4f5d923c9dcea037f57bda
 # flattened to /app. The depth is required for the build to work at all, not a
 # matter of taste.
 #
-# app/server-python/pyproject.toml declares p-swamp -- the desktop package at the
-# repo root -- as an editable path dependency, "../../", resolved relative to the
-# manifest's own directory. uv refuses to normalise a relative path above its
-# base directory: it does not clamp at the filesystem root the way a shell does.
-# So with the server at /app, "../../" would be unresolvable and the manifest
-# would need a second, image-only variant. Keeping the repo's own depth means one
-# literal path string is correct both on a development machine and here.
+# The repo root is a uv workspace (root pyproject.toml + the one uv.lock), with
+# models/, core/, every modules/<name>/, tools/ and
+# app/server-python/ as members, so the root manifest and
+# lock land at ${REPO_DIR} and each member at its own path below it.
+# app/server-python/pyproject.toml also declares p-swamp -- the desktop package
+# in desktop/, outside the workspace -- as an editable path dependency,
+# "../../desktop", resolved relative to the manifest's own directory. uv refuses
+# to normalise a relative path above its base directory: it does not clamp at
+# the filesystem root the way a shell does. So with the server at /app,
+# "../../desktop" would be unresolvable and the manifest would need a second,
+# image-only variant. Keeping the repo's own depth means one literal path string
+# is correct both on a development machine and here.
 ARG REPO_DIR=/workspace/p-SWAMP
 ARG SERVER_DIR=${REPO_DIR}/app/server-python
 
-WORKDIR ${SERVER_DIR}
+WORKDIR ${REPO_DIR}
 
 # curl is used by the compose healthcheck to probe /healthz.
 RUN apt-get update \
     && apt-get install -y --no-install-recommends curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Dependency manifest first, on its own layer: the install below is then cached
-# and re-runs only when pyproject.toml/uv.lock actually change, not on every
-# source edit. Same trick as `npm ci` in the web-build stage above.
-COPY app/server-python/pyproject.toml app/server-python/uv.lock ./
+# Dependency manifests first, on their own layers: the install below is then
+# cached and re-runs only when a pyproject.toml/uv.lock actually changes, not on
+# every source edit. Same trick as `npm ci` in the web-build stage above. The
+# workspace root's manifest and its one lockfile first, then the server member's
+# manifest.
+COPY pyproject.toml uv.lock ./
+COPY app/server-python/pyproject.toml ${SERVER_DIR}/
 
-# The root manifest, and only the manifest, before the dependency install.
-# p-swamp is an editable path dependency, and uv insists on generating its
-# package metadata while resolving -- even with --no-emit-package below, which
-# only suppresses it from the *output*. So the root project has to exist here,
-# but nothing of it is needed yet except what declares its metadata (README.md
-# comes along because the root manifest's `readme =` points at it, and uv reads
-# it to build the metadata). Copying those two files rather than the whole tree
-# is what keeps the expensive wheel install below on a layer that a change to
-# root src/pswamp/ does not invalidate.
-COPY pyproject.toml README.md ${REPO_DIR}/
+# The desktop package's manifest, and only the manifest, before the dependency
+# install. p-swamp is an editable path dependency, and uv insists on generating
+# its package metadata while resolving -- even with --no-emit-package below,
+# which only suppresses it from the *output*. So the desktop project has to
+# exist here, but nothing of it is needed yet except what declares its metadata
+# (README.md comes along because its manifest's `readme =` points at it, and uv
+# reads it to build the metadata). Copying those two files rather than the
+# whole tree is what keeps the expensive wheel install below on a layer that a
+# change to desktop/src/pswamp/ does not invalidate.
+COPY desktop/pyproject.toml desktop/README.md ${REPO_DIR}/desktop/
 
-# pyproject.toml declares the direct dependencies; uv.lock pins the whole
-# transitive closure resolved from it. Install system-wide at build time, so
+# The message models (models/), a workspace member: its manifest now, for
+# resolving; its source further down.
+COPY models/pyproject.toml models/README.md ${REPO_DIR}/models/
+
+# The shared core (core/), the next member: same again.
+COPY core/pyproject.toml core/README.md ${REPO_DIR}/core/
+
+# The module projects (modules/<name>/): every manifest and README, from the
+# stage above.
+COPY --from=module-manifests /manifests/ ${REPO_DIR}/
+
+# The repo CLI (tools/, pswamp-tools): manifest only, and never installed. It is
+# a workspace member (and in the server's dev group), so `uv export --locked`
+# needs its manifest to validate the lock; --no-dev keeps it out of the export.
+COPY tools/pyproject.toml tools/README.md ${REPO_DIR}/tools/
+
+# The manifests declare the direct dependencies; the workspace uv.lock pins the
+# whole transitive closure resolved from them. --package pswamp-server exports
+# what the server needs (and so, through it, what the models, core and modules need). Install system-wide at build time, so
 # container startup needs no network and no runtime resolution.
 #
 # --locked asserts the lockfile exists and still matches pyproject.toml: change a
 # dependency without re-running `uv lock`, or forget to COPY the lock, and the
 # build fails loudly here instead of silently re-resolving to whatever the index
-# serves today. --no-emit-project skips this non-packaged project itself, and
-# --no-dev keeps the linter out of the image. Hashes are kept (no --no-hashes),
+# serves today. --no-emit-workspace skips the workspace members themselves (the
+# non-packaged server, and the models, core and modules, installed from their own layers
+# below), and --no-dev keeps the linter out of the image. Hashes are kept (no --no-hashes),
 # so uv verifies every artifact it installs; the lock carries wheel hashes for
 # both amd64 and arm64, so this stays multi-arch.
 #
-# --no-emit-package p-swamp excludes the root project itself, which is a path
+# --no-emit-package p-swamp excludes the desktop project itself, which is a path
 # dependency rather than something to fetch from an index; it is installed from
 # its own layer below. Its third-party requirements (numpy, scipy, pandas) are
 # still emitted here, so they stay in this cached, hash-verified layer.
@@ -105,41 +146,69 @@ COPY pyproject.toml README.md ${REPO_DIR}/
 # network access to GitHub, and no hashless VCS pin sitting among otherwise
 # fully hash-verified packages. The import check after the source copy below is
 # what keeps that a checked decision rather than a hopeful one.
-RUN uv export --locked --no-emit-project --no-dev \
-      --no-emit-package p-swamp --no-emit-package synchrophasor \
+RUN uv export --locked --package pswamp-server --no-emit-workspace --no-dev \
+      --no-emit-package p-swamp \
+      --no-emit-package synchrophasor \
       -o /tmp/requirements.txt \
     && uv pip install --system -r /tmp/requirements.txt \
     && rm /tmp/requirements.txt
 
-# The desktop package's source: root src/pswamp/, which supplies the PMU
+# The desktop package's source: desktop/src/pswamp/, which supplies the PMU
 # decoding, time-window storage and monitoring applications this server is a
-# front end for. It lands at ${REPO_DIR}/src, exactly where the manifest's
-# "../../" resolves to from the server directory -- see the workspace note at the
-# top of this stage.
+# front end for. It lands at ${REPO_DIR}/desktop/src, under exactly where the
+# manifest's "../../desktop" resolves to from the server directory -- see the
+# workspace note at the top of this stage.
 #
-# Only src/ is copied, not the whole repo: examples/, tests/ and build/ are
-# excluded in .dockerignore, so they never reach the daemon in the first place.
+# Only desktop/src/ is copied, not the whole desktop tree: desktop/examples/,
+# desktop/tests/ and desktop/build/ are excluded in .dockerignore, so they never
+# reach the daemon in the first place.
 #
-# Copied after the dependency install so editing src/pswamp/ does not invalidate
+# Copied after the dependency install so editing desktop/src/pswamp/ does not invalidate
 # the layer holding every third-party wheel; only the few seconds of --no-deps
 # below re-run. --no-deps is safe precisely because those dependencies were
-# installed above, and asserts it: were the root manifest to gain a dependency
-# without app/server-python/uv.lock being refreshed, this would fail at import
-# rather than silently resolving.
+# installed above, and asserts it: were desktop/pyproject.toml to gain a
+# dependency without the workspace uv.lock being refreshed, this would fail at
+# import rather than silently resolving.
 #
 # Editable, so the copied source is the live import path and `docker compose
-# watch` can sync edits to root src/pswamp/ into a running container for uvicorn
+# watch` can sync edits to desktop/src/pswamp/ into a running container for uvicorn
 # --reload to pick up — the same loop the server's own src/ already has. Nothing
 # is published from here, so an editable install in the image costs nothing.
-COPY src/ ${REPO_DIR}/src/
-RUN uv pip install --system --no-deps -e ${REPO_DIR}
+COPY desktop/src/ ${REPO_DIR}/desktop/src/
+RUN uv pip install --system --no-deps -e ${REPO_DIR}/desktop
+
+# The message models, installed editable like the desktop package so compose
+# watch can sync edits in. models/tests/ is kept out by .dockerignore.
+COPY models/ ${REPO_DIR}/models/
+RUN uv pip install --system --no-deps -e ${REPO_DIR}/models
+
+# The shared core, installed the same way. core/tests/ is kept out by
+# .dockerignore.
+COPY core/ ${REPO_DIR}/core/
+RUN uv pip install --system --no-deps -e ${REPO_DIR}/core
+
+# The module projects, one per module (analysis modules and sources),
+# installed the same way: every project found,
+# so a new module needs no edit here. Each is a portion of the pswamp_modules
+# namespace and depends on the core and the models only, so a worker imports
+# them from any working directory. tests/ and examples/ are kept out by
+# .dockerignore.
+COPY modules/ ${REPO_DIR}/modules/
+RUN uv pip install --system --no-deps       $(for manifest in ${REPO_DIR}/modules/*/pyproject.toml; do           printf -- '-e %s ' "$(dirname "$manifest")";         done)
+
+# The pipeline files (pipelines/<app>.toml): data, read by the server at import
+# (found from shared.py at the repo-mirrored path, or PSWAMP_PIPELINES_DIR) and
+# by each worker, which runs from this folder and names them relative to it
+# (PSWAMP_WORKER_PIPELINES=pmu-test-streamer.toml). The import check below
+# loads them, so a missing or broken file fails the build.
+COPY pipelines/ ${REPO_DIR}/pipelines/
 
 # Server source last, so editing it doesn't invalidate the dependency layer
 # above. The image mirrors the repo, so server.py and the app packages beside it
 # land in <server dir>/src exactly as they sit in the working tree.
 # Copying the directory rather than naming files means a new module — or a whole
 # new app package — needs no Dockerfile edit.
-COPY app/server-python/src/ ./src/
+COPY app/server-python/src/ ${SERVER_DIR}/src/
 
 # Prove the dependency set is actually sufficient. Importing server.py pulls in
 # every app package, and through them the whole p-SWAMP import graph this server
@@ -147,13 +216,13 @@ COPY app/server-python/src/ ./src/
 # in a container someone has already deployed. In particular it is what makes
 # excluding synchrophasor above a checked decision. Importing is side-effect
 # free: the server only binds a port under __main__.
-RUN cd src && python -c "import server" && echo "import graph OK"
+RUN cd ${SERVER_DIR}/src && python -c "import server" && echo "import graph OK"
 
 # Web client assets: the Vite build output from the web-build stage above,
 # dropped where server.py mounts it — static/ beside the source, i.e.
 # Path(__file__).parent / "static". Content-hashed filenames, so it's safe to
 # cache hard.
-COPY --from=web-build /web/dist ./src/static
+COPY --from=web-build /web/dist ${SERVER_DIR}/src/static
 
 # Run as a non-root user (k8s-friendly).
 RUN useradd --create-home --uid 10001 app
@@ -169,6 +238,13 @@ WORKDIR ${SERVER_DIR}/src
 # 0.0.0.0 so the port is reachable outside the container; see server.py.
 ENV HOST=0.0.0.0 \
     PORT=8000
+
+# Two malloc arenas, not glibc's default of 8 per CPU the container sees (the
+# node's, whatever its limit). Every grid-monitor pipeline starts four threads,
+# each new thread may take an arena, and memory freed in one is seldom returned:
+# without this the server leaves ~12 MB behind per pipeline it builds and runs
+# out of memory after ~60 new clients.
+ENV MALLOC_ARENA_MAX=2
 EXPOSE 8000
 
 # Plain python: deps are already installed, so the PEP 723 metadata is ignored

@@ -13,7 +13,8 @@ So this module is where the shapes get named. Every message a page receives is
 declared here, and every page sends through :func:`send_state`.
 
 It also holds the names every REST command endpoint declares itself with --
-:data:`ClientId`, :class:`CommandAck`, :func:`read_client_id` -- for the whole
+:data:`ClientId`, :class:`CommandAck`, :func:`read_client_id` (and
+:func:`refuse_socket`, for a socket it cannot place) -- for the whole
 backend, not just this package. They live here rather than in ``src/shared.py``
 because the import may only run one way: this package is kept self-contained so
 that the repo's two Python projects can be consolidated in whichever direction the
@@ -43,7 +44,7 @@ import re
 from typing import Annotated, Literal
 
 from fastapi import Query, WebSocket
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 # A measurement that may be missing. NaN and infinities become null on the wire.
 Sample = float | None
@@ -111,6 +112,19 @@ def read_client_id(ws: WebSocket) -> str | None:
     return raw.strip() if re.match(CLIENT_ID_PATTERN, raw.strip()) else None
 
 
+async def refuse_socket(ws: WebSocket, code: int = 1008) -> None:
+    """Accept ``ws``, then close it with ``code`` (1008: policy violation).
+
+    Accepted first because a close code only reaches the browser on an
+    established connection. A refused handshake reads as 1006 there, which the
+    web client retries every 2 s for as long as the tab is open; 1008 it treats
+    as final. Firefox also holds every other socket to the host behind one that
+    keeps failing its handshake, for up to a minute.
+    """
+    await ws.accept()
+    await ws.close(code=code)
+
+
 ClientId = Annotated[
     str,
     Query(
@@ -150,12 +164,22 @@ class CommandAck(BaseModel):
     Deliberately NOT the resulting state. That arrives on whichever socket the
     page has open, on the server's own schedule, so state has exactly one path
     and there is no ordering for a client to reconcile between two of them. What
-    this carries is only "the command was understood and applied, and here is
-    what it was" -- enough to log and to assert on, and nothing a page renders.
+    this carries is only "the command was accepted, and here is what it was" --
+    enough to log and to assert on, and nothing a page renders.
+
+    *Accepted* is all it promises. A handler that applies the command itself
+    has applied it by now. A handler that hands it on (to a pipeline's player
+    or module) has checked what it can and queued it for its receiver: the
+    outcome arrives on the socket, or as an error notice carrying this
+    ``request_id``.
     """
 
     status: Literal["ok"] = "ok"
     applied: str
+    request_id: str | None = Field(
+        default=None,
+        description="Set when the command was handed on to a receiver: what answers or refuses it carries the same id.",
+    )
 
 
 async def send_state(ws: WebSocket, message: BaseModel) -> None:

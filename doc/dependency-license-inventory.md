@@ -13,7 +13,8 @@ The inventory covers the dependency inputs committed to this repository:
 - `app/client-web/package-lock.json`: 572 npm package records, including
   transitive and platform-specific optional packages;
 - `e2e/package-lock.json`: 6 npm package records;
-- root `uv.lock` and `app/server-python/uv.lock`: 82 unique registry package and
+- `desktop/uv.lock` and the root `uv.lock` (formerly the root `uv.lock` and
+  `app/server-python/uv.lock`, before the desktop package moved to `desktop/`): 82 unique registry package and
   version pairs, plus four commit-pinned Git dependencies; and
 - actions referenced by `.github/workflows/*.yml`.
 
@@ -173,6 +174,17 @@ are a baseline; Dependency Review evaluates additions and changes, so an update
 involving one of the latter licenses will stop for explicit review. Allowlisting
 a license is a dependency-admission policy, not evidence that redistribution
 obligations have been satisfied.
+
+The qt desktop package is going away soon. Until then the Qt stack of its
+`[full]` extra is a package-level exception (`allow-dependencies-licenses`):
+`pyside6`, `pyside6-addons`, `pyside6-essentials` and `shiboken6` (the LGPL
+and GPL alternatives above), and `pyopengl`, whose BSD classifier GitHub reads
+as a compound expression with identifiers the allowlist does not hold. None of
+them is in the server image. They are part of the baseline, but moving the
+desktop lock to `desktop/uv.lock` made the review count them as additions, and
+the action cannot leave out a path. The exception covers the license check
+only; their vulnerabilities are still checked. Remove it with the desktop
+package.
 
 Unknown licenses are reported by GitHub but do not fail Dependency Review. The
 Python packages with broad or alternative metadata above should therefore also

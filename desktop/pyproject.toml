@@ -1,0 +1,50 @@
+[project]
+name = "p-swamp"
+version = "0.1.1"
+description = ""
+authors = [
+    {name = "Hallvar Haugdal", email = "hallvar.haugdal@sintef.no"},
+    {name = "Hallvar Haugdal", email = "hallvhau@gmail.com"},
+]
+dependencies = [
+    "numpy>=2.2.5",
+    "scipy",
+    "tomli",
+    "pandas>=2.3.1",
+    "numpy-dynamic-array",
+    "synchrophasor @ git+https://github.com/hallvar-h/pypmu",
+    "pydantic>=2.12.5",
+]
+requires-python = ">=3.11"
+readme = "README.md"
+license = {text = "Apache-2.0"}
+
+[project.optional-dependencies]
+full = [
+    "tqdm>=4.67.1",
+    "PySide6==6.8.3",
+	"pyqtgraph",
+    "kafka-python",
+    # "synchrophasor @ git+https://github.com/hallvar-h/pypmu",
+    "nqkafka @ git+https://github.com/hallvar-h/nqkafka",
+    "tops-rt @ git+https://github.com/hallvar-h/tops-rt",
+    "nfoursid",
+	"pyshp",
+	"pyopengl",
+	"qtrangeslider",
+	"ezdxf",
+    "paho-mqtt",
+    "matplotlib",
+    "p-swamp[dev]"
+]
+dev = [
+    "pytest>=9.0.2",
+    "ipython>=9.9.0",
+    "pre-commit"
+]
+[build-system]
+requires = ["uv_build"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-name="pswamp"

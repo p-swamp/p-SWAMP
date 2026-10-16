@@ -69,12 +69,12 @@ test.describe('Grid monitor', () => {
     })
 
     test('opens five sockets, one per stream, however many views read them', async ({ page }) => {
-        // Only the api's: under the Vite dev server the page also holds a
-        // hot-reload socket, which is no part of the app.
+        // Only the monitor's: under the Vite dev server the page also holds a
+        // hot-reload socket, and every page holds the error tray's.
         const sockets: string[] = []
         page.on('websocket', (ws) => {
             const { pathname } = new URL(ws.url())
-            if (pathname.includes('/api/')) sockets.push(pathname)
+            if (pathname.includes('/api/') && !pathname.endsWith('/api/errors/ws')) sockets.push(pathname)
         })
         await page.goto('/')
         await expect(page.getByRole('region', { name: 'Status' }).getByRole('row', { name: /Measurement Store/ })).toBeVisible()
@@ -217,7 +217,8 @@ test.describe('Grid monitor', () => {
             await page.goto(path)
             await expect(page.getByText(title, { exact: true }).first()).toBeVisible()
             // Connected and past the waiting notice: the panel is showing data.
-            await expect(page.getByText('Waiting for state…')).toBeHidden()
+            // A page with two panels shows two notices, hence a count.
+            await expect(page.getByText('Waiting for state…')).toHaveCount(0)
             await expect(page.getByText(/Cannot reach the server|Lost connection/)).toBeHidden()
         })
     }

@@ -5,11 +5,12 @@
 
 Run once, by hand, to produce the artifact the server replays. It needs the
 simulator, which lives in p-SWAMP's ``[full]`` extra and is therefore *not* in
-this project's environment -- so run it with the sibling checkout's interpreter,
-pointed at this source tree:
+this project's environment -- so run it with the desktop package's own
+interpreter (``uv sync --extra full`` in desktop/, which also needs fastapi on
+the path, see AGENTS.md), pointed at this source tree:
 
     PYTHONPATH=app/server-python/src \
-      ../p-SWAMP/.venv/bin/python app/server-python/tools/record_n44_dataset.py
+      desktop/.venv/bin/python app/server-python/tools/record_n44_dataset.py
 
 Nothing that *consumes* a recording needs any of that: the server reads the
 resulting .npz with numpy alone.
@@ -20,7 +21,7 @@ produced by the real ``SimplePMU`` and decoded by the real ``PMUDecoder``, so
 the rows are identical to what the live path yields, but replaying them needs
 neither the C37.118 implementation nor the per-frame decoding cost.
 
-The scenario is the one from ``tests/monitoring/test_islanding.py``: four lines
+The scenario is the one from ``desktop/tests/monitoring/test_islanding.py``: four lines
 trip at t=20 s and reconnect at t=40 s, splitting the northern part of the grid
 into its own frequency island. That disturbance is the point of the recording,
 so :func:`verify` re-runs the real islanding detector over the finished data and
@@ -43,7 +44,7 @@ DEFAULT_PATH = (
     / "n44_line_trip_50hz.npz"
 )
 
-# Verbatim from tests/monitoring/test_islanding.py. Disconnecting these four
+# Verbatim from desktop/tests/monitoring/test_islanding.py. Disconnecting these four
 # lines is what severs the northern buses from the rest of the system.
 EVENTS = [
     (20.0, ("line", "L3244-6500", "disconnect")),

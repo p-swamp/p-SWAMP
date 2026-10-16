@@ -1,0 +1,5 @@
+"""What the __LABEL__ module (``__SLUG__``) publishes."""
+
+from .results import __NAME__Body, __NAME__Result
+
+__all__ = ["__NAME__Body", "__NAME__Result"]

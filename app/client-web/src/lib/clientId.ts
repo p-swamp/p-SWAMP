@@ -15,8 +15,8 @@
 // one client and watch the same replay. That is the intended reading of "come
 // back to their own stream" — a person, not a window.
 //
-// Deliberately a plain random integer rather than a UUID: the scaffold demo
-// (/api/pmu-test-streamer) parses this same parameter with int() and closes the
+// Deliberately a plain random integer rather than a UUID: every server endpoint
+// checks it against one pattern (CLIENT_ID_PATTERN, digits) and closes the
 // socket with 1008 on anything else. It is not a secret and not
 // authentication — the server says as much — so randomness only has to avoid
 // collisions between colleagues, not resist guessing.

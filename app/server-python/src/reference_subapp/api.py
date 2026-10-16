@@ -23,6 +23,7 @@ from shared import (
     SocketRegistry,
     get_logger,
     read_client_id,
+    refuse_socket,
     send_state,
     wait_for_disconnect,
 )
@@ -108,7 +109,7 @@ async def ws_endpoint(ws: WebSocket) -> None:
     # state.
     client_id = read_client_id(ws)
     if client_id is None:
-        await ws.close(code=1008)  # policy violation
+        await refuse_socket(ws)
         return
 
     async with sockets.connected(ws, client_id):
