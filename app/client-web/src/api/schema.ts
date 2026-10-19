@@ -1160,6 +1160,87 @@ export interface components {
              */
             window_length: number | null;
         };
+        /**
+         * LiveFeed
+         * @description One push: the layout when it is new, and every frame read since the last push.
+         *
+         *     Nothing is merged or skipped: a push carries as many frames as came while the last one was
+         *     being sent, so under load the pushes get fewer and larger, and no frame is lost.
+         */
+        LiveFeed: {
+            /**
+             * @description The stations, when they are new.
+             * @default null
+             */
+            layout: components["schemas"]["LiveLayout"] | null;
+            samples: components["schemas"]["LiveSamples"];
+            /**
+             * Type
+             * @default state
+             * @constant
+             */
+            type: "state";
+        };
+        /**
+         * LiveLayout
+         * @description The stations, in the order every sample lists them. Sent first, and again when it changes.
+         */
+        LiveLayout: {
+            /**
+             * Header Id
+             * @description The frames' layout this describes (PmuHeader.header_id).
+             */
+            header_id: string;
+            /** Stations */
+            stations: components["schemas"]["LiveStation"][];
+        };
+        /**
+         * LiveSamples
+         * @description Consecutive frames, oldest first: one entry per frame in ``t``, one value per station in each row.
+         */
+        LiveSamples: {
+            /**
+             * Angle Deg
+             * @description Per frame, each station's voltage angle, degrees.
+             */
+            angle_deg: (number | null)[][];
+            /**
+             * F Hz
+             * @description Per frame, each station's frequency, Hz.
+             */
+            f_hz: (number | null)[][];
+            /**
+             * T
+             * @description Each frame's time, seconds since the Unix epoch.
+             */
+            t: number[];
+            /**
+             * V Pu
+             * @description Per frame, each station's voltage magnitude, per unit.
+             */
+            v_pu: (number | null)[][];
+        };
+        /**
+         * LiveStation
+         * @description One PMU station of the stream: a voltage level of a substation.
+         */
+        LiveStation: {
+            /**
+             * Kv
+             * @description Its nominal voltage, kV: what v_pu is per unit of.
+             */
+            kv: number | null;
+            /**
+             * Name
+             * @description The station's label in the frames, '<substation>_<kV>'.
+             */
+            name: string;
+            /**
+             * Substation
+             * @description mRID of its substation in the CIM graph; null when unknown.
+             */
+            substation: string | null;
+        };
         /** Phasor */
         Phasor: {
             /** Ang */

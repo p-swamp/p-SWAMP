@@ -34,6 +34,7 @@ export const REFERENCE_SUBAPP_WS_PATH = '/api/reference-subapp/ws'
 // Not a page's: the layout opens this one, for the error tray.
 export const ERRORS_WS_PATH = '/api/errors/ws'
 export const CIM_GRAPH_WS_PATH = '/api/cim-graph/ws'
+export const CIM_LIVE_WS_PATH = '/api/cim-live/ws'
 
 // Each app's REST prefix — where its commands are POSTed. Same value as the app's
 // mount prefix in APPS (app/server-python/src/server.py); an endpoint path is
