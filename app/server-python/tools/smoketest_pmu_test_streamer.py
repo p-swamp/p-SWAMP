@@ -23,6 +23,10 @@ from websockets.asyncio.client import connect
 
 API = "/api/pmu-test-streamer"
 TIMEOUT = 10.0
+#: The first message waits for the first frame, which on a cold server waits for the CIM graph:
+#: staged, loaded and read, before the enricher ties the frames to it (~20 s on a laptop, more on
+#: a CI runner). Every later step gets TIMEOUT.
+FIRST_TIMEOUT = 120.0
 failures: list[str] = []
 
 
@@ -67,7 +71,7 @@ async def main(base: str) -> int:
     ws_base = base.replace("http", "ws", 1)
     print(f"\n  PMU test streamer (client_id={client_id})")
     async with connect(f"{ws_base}{API}/ws?client_id={client_id}") as ws:
-        state = json.loads(await asyncio.wait_for(ws.recv(), TIMEOUT))
+        state = json.loads(await asyncio.wait_for(ws.recv(), FIRST_TIMEOUT))
         player = state["player"]
         check("on connect: the recording, paused, showing its first frame",
               player["mode"] == "replay" and player["paused"]

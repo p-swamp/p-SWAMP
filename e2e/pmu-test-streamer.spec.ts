@@ -18,10 +18,15 @@ function sampleFrame(n: number): string {
   return `2026-01-01 00:00:${String(Math.floor(ms / 1000)).padStart(2, '0')}.${String(ms % 1000).padStart(3, '0')} UTC`
 }
 
+/** A cold server's first frame waits for the CIM graph (staged, loaded and read, then tied to
+ *  the frames): ~20 s on a laptop, more on a CI runner. Later steps keep the default timeout. */
+const COLD_START_MS = 120_000
+
 async function open(page: Page) {
+  test.info().setTimeout(test.info().timeout + COLD_START_MS)
   await page.goto('/pmu-test-streamer')
   await expect(page.getByRole('button', { name: 'Play', exact: true })).toBeEnabled()
-  await expect(frame(page)).toHaveText(sampleFrame(1))
+  await expect(frame(page)).toHaveText(sampleFrame(1), { timeout: COLD_START_MS })
 }
 
 async function switchTo(page: Page, name: string) {
