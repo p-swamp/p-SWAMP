@@ -61,14 +61,23 @@ class PmuHeader(BaseModel):
         default=None,
         description="The grid (CIM) data that applies to this layout. Set by the pipeline's enrichment, never by a source.",
     )
+    analog: list[str | None] | None = Field(
+        default=None,
+        description=(
+            "Per column: the mRID of the CIM Analog it measures, in the grid `cimReferenceId` names; "
+            "null where the column has none. The two columns of a phasor share one Analog."
+        ),
+    )
 
     @model_validator(mode="after")
     def _rows_align(self) -> PmuHeader:
         if len({len(self.station), len(self.channel), len(self.measurement), len(self.units)}) != 1:
             raise ValueError("station, channel, measurement and units must be the same length")
+        if self.analog is not None and len(self.analog) != len(self.station):
+            raise ValueError("analog must have one entry per column")
         return self
 
-    # Excludes cimReferenceId: the layout is the same with or without it.
+    # Excludes cimReferenceId and analog: the layout is the same with or without them.
     @computed_field(description="Content hash of the layout; equal layouts share it.")  # type: ignore[prop-decorator]
     @cached_property
     def header_id(self) -> str:

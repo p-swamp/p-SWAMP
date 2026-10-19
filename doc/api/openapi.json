@@ -1486,6 +1486,29 @@
       "PmuHeader": {
         "description": "The channel layout of a stream: one entry per column of a frame.\n\nThe label rows are the ones p-SWAMP's ``Indexer`` queries, so\n``columns(measurement=\"f\")`` selects inputs the same way here.",
         "properties": {
+          "analog": {
+            "anyOf": [
+              {
+                "items": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Per column: the mRID of the CIM Analog it measures, in the grid `cimReferenceId` names; null where the column has none. The two columns of a phasor share one Analog.",
+            "title": "Analog"
+          },
           "channel": {
             "description": "Per column: the phasor or signal name.",
             "items": {

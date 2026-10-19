@@ -1152,6 +1152,12 @@ export interface components {
          */
         PmuHeader: {
             /**
+             * Analog
+             * @description Per column: the mRID of the CIM Analog it measures, in the grid `cimReferenceId` names; null where the column has none. The two columns of a phasor share one Analog.
+             * @default null
+             */
+            analog: (string | null)[] | null;
+            /**
              * Channel
              * @description Per column: the phasor or signal name.
              */
