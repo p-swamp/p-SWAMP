@@ -1,0 +1,323 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rdf:RDF xmlns:cim="http://iec.ch/TC57/CIM100#" xmlns:md="http://iec.ch/TC57/61970-552/ModelDescription/1#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+  <md:FullModel rdf:about="urn:uuid:3f5e0000-0000-4000-8000-000000000001">
+    <md:Model.created>2026-10-07T12:00:00Z</md:Model.created>
+    <md:Model.description>Three-substation fixture, equipment (EQ). Hand-written, Apache-2.0.</md:Model.description>
+    <md:Model.profile>http://iec.ch/TC57/ns/CIM/CoreEquipment-EU/3.0</md:Model.profile>
+    <md:Model.version>1</md:Model.version>
+  </md:FullModel>
+  <cim:BaseVoltage rdf:ID="_3f5e0000-0000-4000-8000-000000000006">
+    <cim:BaseVoltage.nominalVoltage>400.0</cim:BaseVoltage.nominalVoltage>
+    <cim:IdentifiedObject.name>400 kV</cim:IdentifiedObject.name>
+    <cim:IdentifiedObject.mRID>3f5e0000-0000-4000-8000-000000000006</cim:IdentifiedObject.mRID>
+  </cim:BaseVoltage>
+  <cim:BaseVoltage rdf:ID="_3f5e0000-0000-4000-8000-000000000007">
+    <cim:BaseVoltage.nominalVoltage>132.0</cim:BaseVoltage.nominalVoltage>
+    <cim:IdentifiedObject.name>132 kV</cim:IdentifiedObject.name>
+    <cim:IdentifiedObject.mRID>3f5e0000-0000-4000-8000-000000000007</cim:IdentifiedObject.mRID>
+  </cim:BaseVoltage>
+  <cim:Substation rdf:ID="_3f5e0000-0000-4000-8000-000000000008">
+    <cim:IdentifiedObject.name>Alpha</cim:IdentifiedObject.name>
+    <cim:IdentifiedObject.mRID>3f5e0000-0000-4000-8000-000000000008</cim:IdentifiedObject.mRID>
+  </cim:Substation>
+  <cim:Substation rdf:ID="_3f5e0000-0000-4000-8000-000000000009">
+    <cim:IdentifiedObject.name>Beta</cim:IdentifiedObject.name>
+    <cim:IdentifiedObject.mRID>3f5e0000-0000-4000-8000-000000000009</cim:IdentifiedObject.mRID>
+  </cim:Substation>
+  <cim:Substation rdf:ID="_3f5e0000-0000-4000-8000-000000000010">
+    <cim:IdentifiedObject.name>Gamma</cim:IdentifiedObject.name>
+    <cim:IdentifiedObject.mRID>3f5e0000-0000-4000-8000-000000000010</cim:IdentifiedObject.mRID>
+  </cim:Substation>
+  <cim:VoltageLevel rdf:ID="_3f5e0000-0000-4000-8000-000000000011">
+    <cim:IdentifiedObject.name>Alpha 400</cim:IdentifiedObject.name>
+    <cim:VoltageLevel.Substation rdf:resource="#_3f5e0000-0000-4000-8000-000000000008"/>
+    <cim:VoltageLevel.BaseVoltage rdf:resource="#_3f5e0000-0000-4000-8000-000000000006"/>
+    <cim:IdentifiedObject.mRID>3f5e0000-0000-4000-8000-000000000011</cim:IdentifiedObject.mRID>
+  </cim:VoltageLevel>
+  <cim:VoltageLevel rdf:ID="_3f5e0000-0000-4000-8000-000000000012">
+    <cim:IdentifiedObject.name>Beta 400</cim:IdentifiedObject.name>
+    <cim:VoltageLevel.Substation rdf:resource="#_3f5e0000-0000-4000-8000-000000000009"/>
+    <cim:VoltageLevel.BaseVoltage rdf:resource="#_3f5e0000-0000-4000-8000-000000000006"/>
+    <cim:IdentifiedObject.mRID>3f5e0000-0000-4000-8000-000000000012</cim:IdentifiedObject.mRID>
+  </cim:VoltageLevel>
+  <cim:VoltageLevel rdf:ID="_3f5e0000-0000-4000-8000-000000000013">
+    <cim:IdentifiedObject.name>Gamma 400</cim:IdentifiedObject.name>
+    <cim:VoltageLevel.Substation rdf:resource="#_3f5e0000-0000-4000-8000-000000000010"/>
+    <cim:VoltageLevel.BaseVoltage rdf:resource="#_3f5e0000-0000-4000-8000-000000000006"/>
+    <cim:IdentifiedObject.mRID>3f5e0000-0000-4000-8000-000000000013</cim:IdentifiedObject.mRID>
+  </cim:VoltageLevel>
+  <cim:VoltageLevel rdf:ID="_3f5e0000-0000-4000-8000-000000000014">
+    <cim:IdentifiedObject.name>Gamma 132</cim:IdentifiedObject.name>
+    <cim:VoltageLevel.Substation rdf:resource="#_3f5e0000-0000-4000-8000-000000000010"/>
+    <cim:VoltageLevel.BaseVoltage rdf:resource="#_3f5e0000-0000-4000-8000-000000000007"/>
+    <cim:IdentifiedObject.mRID>3f5e0000-0000-4000-8000-000000000014</cim:IdentifiedObject.mRID>
+  </cim:VoltageLevel>
+  <cim:ConnectivityNode rdf:ID="_3f5e0000-0000-4000-8000-000000000015">
+    <cim:IdentifiedObject.name>Alpha CN A</cim:IdentifiedObject.name>
+    <cim:ConnectivityNode.ConnectivityNodeContainer rdf:resource="#_3f5e0000-0000-4000-8000-000000000011"/>
+    <cim:IdentifiedObject.mRID>3f5e0000-0000-4000-8000-000000000015</cim:IdentifiedObject.mRID>
+  </cim:ConnectivityNode>
+  <cim:ConnectivityNode rdf:ID="_3f5e0000-0000-4000-8000-000000000016">
+    <cim:IdentifiedObject.name>Beta CN B1</cim:IdentifiedObject.name>
+    <cim:ConnectivityNode.ConnectivityNodeContainer rdf:resource="#_3f5e0000-0000-4000-8000-000000000012"/>
+    <cim:IdentifiedObject.mRID>3f5e0000-0000-4000-8000-000000000016</cim:IdentifiedObject.mRID>
+  </cim:ConnectivityNode>
+  <cim:ConnectivityNode rdf:ID="_3f5e0000-0000-4000-8000-000000000017">
+    <cim:IdentifiedObject.name>Beta CN B2</cim:IdentifiedObject.name>
+    <cim:ConnectivityNode.ConnectivityNodeContainer rdf:resource="#_3f5e0000-0000-4000-8000-000000000012"/>
+    <cim:IdentifiedObject.mRID>3f5e0000-0000-4000-8000-000000000017</cim:IdentifiedObject.mRID>
+  </cim:ConnectivityNode>
+  <cim:ConnectivityNode rdf:ID="_3f5e0000-0000-4000-8000-000000000018">
+    <cim:IdentifiedObject.name>Gamma CN C</cim:IdentifiedObject.name>
+    <cim:ConnectivityNode.ConnectivityNodeContainer rdf:resource="#_3f5e0000-0000-4000-8000-000000000013"/>
+    <cim:IdentifiedObject.mRID>3f5e0000-0000-4000-8000-000000000018</cim:IdentifiedObject.mRID>
+  </cim:ConnectivityNode>
+  <cim:ConnectivityNode rdf:ID="_3f5e0000-0000-4000-8000-000000000019">
+    <cim:IdentifiedObject.name>Gamma CN C132</cim:IdentifiedObject.name>
+    <cim:ConnectivityNode.ConnectivityNodeContainer rdf:resource="#_3f5e0000-0000-4000-8000-000000000014"/>
+    <cim:IdentifiedObject.mRID>3f5e0000-0000-4000-8000-000000000019</cim:IdentifiedObject.mRID>
+  </cim:ConnectivityNode>
+  <cim:Line rdf:ID="_3f5e0000-0000-4000-8000-000000000027">
+    <cim:IdentifiedObject.name>Line AB</cim:IdentifiedObject.name>
+    <cim:IdentifiedObject.mRID>3f5e0000-0000-4000-8000-000000000027</cim:IdentifiedObject.mRID>
+  </cim:Line>
+  <cim:ACLineSegment rdf:ID="_3f5e0000-0000-4000-8000-000000000024">
+    <cim:ACLineSegment.bch>0.0002</cim:ACLineSegment.bch>
+    <cim:ACLineSegment.r>4.0</cim:ACLineSegment.r>
+    <cim:ACLineSegment.x>40.0</cim:ACLineSegment.x>
+    <cim:Conductor.length>100.0</cim:Conductor.length>
+    <cim:ConductingEquipment.BaseVoltage rdf:resource="#_3f5e0000-0000-4000-8000-000000000006"/>
+    <cim:Equipment.normallyInService>true</cim:Equipment.normallyInService>
+    <cim:IdentifiedObject.name>Alpha-Beta 400 kV line</cim:IdentifiedObject.name>
+    <cim:Equipment.EquipmentContainer rdf:resource="#_3f5e0000-0000-4000-8000-000000000027"/>
+    <cim:IdentifiedObject.mRID>3f5e0000-0000-4000-8000-000000000024</cim:IdentifiedObject.mRID>
+  </cim:ACLineSegment>
+  <cim:Terminal rdf:ID="_3f5e0000-0000-4000-8000-000000000038">
+    <cim:IdentifiedObject.name>AB-T1</cim:IdentifiedObject.name>
+    <cim:Terminal.ConductingEquipment rdf:resource="#_3f5e0000-0000-4000-8000-000000000024"/>
+    <cim:ACDCTerminal.sequenceNumber>1</cim:ACDCTerminal.sequenceNumber>
+    <cim:Terminal.ConnectivityNode rdf:resource="#_3f5e0000-0000-4000-8000-000000000015"/>
+    <cim:IdentifiedObject.mRID>3f5e0000-0000-4000-8000-000000000038</cim:IdentifiedObject.mRID>
+  </cim:Terminal>
+  <cim:Terminal rdf:ID="_3f5e0000-0000-4000-8000-000000000039">
+    <cim:IdentifiedObject.name>AB-T2</cim:IdentifiedObject.name>
+    <cim:Terminal.ConductingEquipment rdf:resource="#_3f5e0000-0000-4000-8000-000000000024"/>
+    <cim:ACDCTerminal.sequenceNumber>2</cim:ACDCTerminal.sequenceNumber>
+    <cim:Terminal.ConnectivityNode rdf:resource="#_3f5e0000-0000-4000-8000-000000000016"/>
+    <cim:IdentifiedObject.mRID>3f5e0000-0000-4000-8000-000000000039</cim:IdentifiedObject.mRID>
+  </cim:Terminal>
+  <cim:Line rdf:ID="_3f5e0000-0000-4000-8000-000000000028">
+    <cim:IdentifiedObject.name>Line BC</cim:IdentifiedObject.name>
+    <cim:IdentifiedObject.mRID>3f5e0000-0000-4000-8000-000000000028</cim:IdentifiedObject.mRID>
+  </cim:Line>
+  <cim:ACLineSegment rdf:ID="_3f5e0000-0000-4000-8000-000000000025">
+    <cim:ACLineSegment.bch>0.0003</cim:ACLineSegment.bch>
+    <cim:ACLineSegment.r>6.0</cim:ACLineSegment.r>
+    <cim:ACLineSegment.x>60.0</cim:ACLineSegment.x>
+    <cim:Conductor.length>100.0</cim:Conductor.length>
+    <cim:ConductingEquipment.BaseVoltage rdf:resource="#_3f5e0000-0000-4000-8000-000000000006"/>
+    <cim:Equipment.normallyInService>true</cim:Equipment.normallyInService>
+    <cim:IdentifiedObject.name>Beta-Gamma 400 kV line</cim:IdentifiedObject.name>
+    <cim:Equipment.EquipmentContainer rdf:resource="#_3f5e0000-0000-4000-8000-000000000028"/>
+    <cim:IdentifiedObject.mRID>3f5e0000-0000-4000-8000-000000000025</cim:IdentifiedObject.mRID>
+  </cim:ACLineSegment>
+  <cim:Terminal rdf:ID="_3f5e0000-0000-4000-8000-000000000040">
+    <cim:IdentifiedObject.name>BC-T1</cim:IdentifiedObject.name>
+    <cim:Terminal.ConductingEquipment rdf:resource="#_3f5e0000-0000-4000-8000-000000000025"/>
+    <cim:ACDCTerminal.sequenceNumber>1</cim:ACDCTerminal.sequenceNumber>
+    <cim:Terminal.ConnectivityNode rdf:resource="#_3f5e0000-0000-4000-8000-000000000017"/>
+    <cim:IdentifiedObject.mRID>3f5e0000-0000-4000-8000-000000000040</cim:IdentifiedObject.mRID>
+  </cim:Terminal>
+  <cim:Terminal rdf:ID="_3f5e0000-0000-4000-8000-000000000041">
+    <cim:IdentifiedObject.name>BC-T2</cim:IdentifiedObject.name>
+    <cim:Terminal.ConductingEquipment rdf:resource="#_3f5e0000-0000-4000-8000-000000000025"/>
+    <cim:ACDCTerminal.sequenceNumber>2</cim:ACDCTerminal.sequenceNumber>
+    <cim:Terminal.ConnectivityNode rdf:resource="#_3f5e0000-0000-4000-8000-000000000018"/>
+    <cim:IdentifiedObject.mRID>3f5e0000-0000-4000-8000-000000000041</cim:IdentifiedObject.mRID>
+  </cim:Terminal>
+  <cim:Line rdf:ID="_3f5e0000-0000-4000-8000-000000000029">
+    <cim:IdentifiedObject.name>Line AC</cim:IdentifiedObject.name>
+    <cim:IdentifiedObject.mRID>3f5e0000-0000-4000-8000-000000000029</cim:IdentifiedObject.mRID>
+  </cim:Line>
+  <cim:ACLineSegment rdf:ID="_3f5e0000-0000-4000-8000-000000000026">
+    <cim:ACLineSegment.bch>0.00025</cim:ACLineSegment.bch>
+    <cim:ACLineSegment.r>5.0</cim:ACLineSegment.r>
+    <cim:ACLineSegment.x>50.0</cim:ACLineSegment.x>
+    <cim:Conductor.length>100.0</cim:Conductor.length>
+    <cim:ConductingEquipment.BaseVoltage rdf:resource="#_3f5e0000-0000-4000-8000-000000000006"/>
+    <cim:Equipment.normallyInService>true</cim:Equipment.normallyInService>
+    <cim:IdentifiedObject.name>Alpha-Gamma 400 kV line</cim:IdentifiedObject.name>
+    <cim:Equipment.EquipmentContainer rdf:resource="#_3f5e0000-0000-4000-8000-000000000029"/>
+    <cim:IdentifiedObject.mRID>3f5e0000-0000-4000-8000-000000000026</cim:IdentifiedObject.mRID>
+  </cim:ACLineSegment>
+  <cim:Terminal rdf:ID="_3f5e0000-0000-4000-8000-000000000042">
+    <cim:IdentifiedObject.name>AC-T1</cim:IdentifiedObject.name>
+    <cim:Terminal.ConductingEquipment rdf:resource="#_3f5e0000-0000-4000-8000-000000000026"/>
+    <cim:ACDCTerminal.sequenceNumber>1</cim:ACDCTerminal.sequenceNumber>
+    <cim:Terminal.ConnectivityNode rdf:resource="#_3f5e0000-0000-4000-8000-0000000000a0"/>
+    <cim:IdentifiedObject.mRID>3f5e0000-0000-4000-8000-000000000042</cim:IdentifiedObject.mRID>
+  </cim:Terminal>
+  <cim:Terminal rdf:ID="_3f5e0000-0000-4000-8000-000000000043">
+    <cim:IdentifiedObject.name>AC-T2</cim:IdentifiedObject.name>
+    <cim:Terminal.ConductingEquipment rdf:resource="#_3f5e0000-0000-4000-8000-000000000026"/>
+    <cim:ACDCTerminal.sequenceNumber>2</cim:ACDCTerminal.sequenceNumber>
+    <cim:Terminal.ConnectivityNode rdf:resource="#_3f5e0000-0000-4000-8000-000000000018"/>
+    <cim:IdentifiedObject.mRID>3f5e0000-0000-4000-8000-000000000043</cim:IdentifiedObject.mRID>
+  </cim:Terminal>
+  <cim:Breaker rdf:ID="_3f5e0000-0000-4000-8000-000000000034">
+    <cim:Switch.normalOpen>false</cim:Switch.normalOpen>
+    <cim:Switch.retained>false</cim:Switch.retained>
+    <cim:IdentifiedObject.name>Beta bus coupler</cim:IdentifiedObject.name>
+    <cim:Equipment.EquipmentContainer rdf:resource="#_3f5e0000-0000-4000-8000-000000000012"/>
+    <cim:IdentifiedObject.mRID>3f5e0000-0000-4000-8000-000000000034</cim:IdentifiedObject.mRID>
+  </cim:Breaker>
+  <cim:Terminal rdf:ID="_3f5e0000-0000-4000-8000-000000000044">
+    <cim:IdentifiedObject.name>brk-T1</cim:IdentifiedObject.name>
+    <cim:Terminal.ConductingEquipment rdf:resource="#_3f5e0000-0000-4000-8000-000000000034"/>
+    <cim:ACDCTerminal.sequenceNumber>1</cim:ACDCTerminal.sequenceNumber>
+    <cim:Terminal.ConnectivityNode rdf:resource="#_3f5e0000-0000-4000-8000-000000000016"/>
+    <cim:IdentifiedObject.mRID>3f5e0000-0000-4000-8000-000000000044</cim:IdentifiedObject.mRID>
+  </cim:Terminal>
+  <cim:Terminal rdf:ID="_3f5e0000-0000-4000-8000-000000000045">
+    <cim:IdentifiedObject.name>brk-T2</cim:IdentifiedObject.name>
+    <cim:Terminal.ConductingEquipment rdf:resource="#_3f5e0000-0000-4000-8000-000000000034"/>
+    <cim:ACDCTerminal.sequenceNumber>2</cim:ACDCTerminal.sequenceNumber>
+    <cim:Terminal.ConnectivityNode rdf:resource="#_3f5e0000-0000-4000-8000-000000000017"/>
+    <cim:IdentifiedObject.mRID>3f5e0000-0000-4000-8000-000000000045</cim:IdentifiedObject.mRID>
+  </cim:Terminal>
+  <cim:SynchronousMachine rdf:ID="_3f5e0000-0000-4000-8000-000000000030">
+    <cim:RotatingMachine.ratedS>400.0</cim:RotatingMachine.ratedS>
+    <cim:SynchronousMachine.maxQ>200.0</cim:SynchronousMachine.maxQ>
+    <cim:SynchronousMachine.minQ>-200.0</cim:SynchronousMachine.minQ>
+    <cim:IdentifiedObject.name>Alpha GA</cim:IdentifiedObject.name>
+    <cim:Equipment.EquipmentContainer rdf:resource="#_3f5e0000-0000-4000-8000-000000000011"/>
+    <cim:RegulatingCondEq.RegulatingControl rdf:resource="#_3f5e0000-0000-4000-8000-000000000090"/>
+    <cim:IdentifiedObject.mRID>3f5e0000-0000-4000-8000-000000000030</cim:IdentifiedObject.mRID>
+  </cim:SynchronousMachine>
+  <cim:Terminal rdf:ID="_3f5e0000-0000-4000-8000-000000000046">
+    <cim:IdentifiedObject.name>GA-T1</cim:IdentifiedObject.name>
+    <cim:Terminal.ConductingEquipment rdf:resource="#_3f5e0000-0000-4000-8000-000000000030"/>
+    <cim:ACDCTerminal.sequenceNumber>1</cim:ACDCTerminal.sequenceNumber>
+    <cim:Terminal.ConnectivityNode rdf:resource="#_3f5e0000-0000-4000-8000-000000000015"/>
+    <cim:IdentifiedObject.mRID>3f5e0000-0000-4000-8000-000000000046</cim:IdentifiedObject.mRID>
+  </cim:Terminal>
+  <cim:SynchronousMachine rdf:ID="_3f5e0000-0000-4000-8000-000000000031">
+    <cim:RotatingMachine.ratedS>300.0</cim:RotatingMachine.ratedS>
+    <cim:SynchronousMachine.maxQ>150.0</cim:SynchronousMachine.maxQ>
+    <cim:SynchronousMachine.minQ>-150.0</cim:SynchronousMachine.minQ>
+    <cim:IdentifiedObject.name>Gamma GC</cim:IdentifiedObject.name>
+    <cim:Equipment.EquipmentContainer rdf:resource="#_3f5e0000-0000-4000-8000-000000000013"/>
+    <cim:RegulatingCondEq.RegulatingControl rdf:resource="#_3f5e0000-0000-4000-8000-000000000091"/>
+    <cim:IdentifiedObject.mRID>3f5e0000-0000-4000-8000-000000000031</cim:IdentifiedObject.mRID>
+  </cim:SynchronousMachine>
+  <cim:Terminal rdf:ID="_3f5e0000-0000-4000-8000-000000000047">
+    <cim:IdentifiedObject.name>GC-T1</cim:IdentifiedObject.name>
+    <cim:Terminal.ConductingEquipment rdf:resource="#_3f5e0000-0000-4000-8000-000000000031"/>
+    <cim:ACDCTerminal.sequenceNumber>1</cim:ACDCTerminal.sequenceNumber>
+    <cim:Terminal.ConnectivityNode rdf:resource="#_3f5e0000-0000-4000-8000-000000000018"/>
+    <cim:IdentifiedObject.mRID>3f5e0000-0000-4000-8000-000000000047</cim:IdentifiedObject.mRID>
+  </cim:Terminal>
+  <cim:ConformLoad rdf:ID="_3f5e0000-0000-4000-8000-000000000032">
+    <cim:IdentifiedObject.name>Beta load LB</cim:IdentifiedObject.name>
+    <cim:Equipment.EquipmentContainer rdf:resource="#_3f5e0000-0000-4000-8000-000000000012"/>
+    <cim:IdentifiedObject.mRID>3f5e0000-0000-4000-8000-000000000032</cim:IdentifiedObject.mRID>
+  </cim:ConformLoad>
+  <cim:Terminal rdf:ID="_3f5e0000-0000-4000-8000-000000000048">
+    <cim:IdentifiedObject.name>LB-T1</cim:IdentifiedObject.name>
+    <cim:Terminal.ConductingEquipment rdf:resource="#_3f5e0000-0000-4000-8000-000000000032"/>
+    <cim:ACDCTerminal.sequenceNumber>1</cim:ACDCTerminal.sequenceNumber>
+    <cim:Terminal.ConnectivityNode rdf:resource="#_3f5e0000-0000-4000-8000-000000000016"/>
+    <cim:IdentifiedObject.mRID>3f5e0000-0000-4000-8000-000000000048</cim:IdentifiedObject.mRID>
+  </cim:Terminal>
+  <cim:ConformLoad rdf:ID="_3f5e0000-0000-4000-8000-000000000033">
+    <cim:IdentifiedObject.name>Gamma load LC</cim:IdentifiedObject.name>
+    <cim:Equipment.EquipmentContainer rdf:resource="#_3f5e0000-0000-4000-8000-000000000014"/>
+    <cim:IdentifiedObject.mRID>3f5e0000-0000-4000-8000-000000000033</cim:IdentifiedObject.mRID>
+  </cim:ConformLoad>
+  <cim:Terminal rdf:ID="_3f5e0000-0000-4000-8000-000000000049">
+    <cim:IdentifiedObject.name>LC-T1</cim:IdentifiedObject.name>
+    <cim:Terminal.ConductingEquipment rdf:resource="#_3f5e0000-0000-4000-8000-000000000033"/>
+    <cim:ACDCTerminal.sequenceNumber>1</cim:ACDCTerminal.sequenceNumber>
+    <cim:Terminal.ConnectivityNode rdf:resource="#_3f5e0000-0000-4000-8000-000000000019"/>
+    <cim:IdentifiedObject.mRID>3f5e0000-0000-4000-8000-000000000049</cim:IdentifiedObject.mRID>
+  </cim:Terminal>
+  <cim:PowerTransformer rdf:ID="_3f5e0000-0000-4000-8000-000000000035">
+    <cim:IdentifiedObject.name>Gamma 400/132</cim:IdentifiedObject.name>
+    <cim:Equipment.EquipmentContainer rdf:resource="#_3f5e0000-0000-4000-8000-000000000010"/>
+    <cim:IdentifiedObject.mRID>3f5e0000-0000-4000-8000-000000000035</cim:IdentifiedObject.mRID>
+  </cim:PowerTransformer>
+  <cim:Terminal rdf:ID="_3f5e0000-0000-4000-8000-000000000050">
+    <cim:IdentifiedObject.name>trafo-T1</cim:IdentifiedObject.name>
+    <cim:Terminal.ConductingEquipment rdf:resource="#_3f5e0000-0000-4000-8000-000000000035"/>
+    <cim:ACDCTerminal.sequenceNumber>1</cim:ACDCTerminal.sequenceNumber>
+    <cim:Terminal.ConnectivityNode rdf:resource="#_3f5e0000-0000-4000-8000-000000000018"/>
+    <cim:IdentifiedObject.mRID>3f5e0000-0000-4000-8000-000000000050</cim:IdentifiedObject.mRID>
+  </cim:Terminal>
+  <cim:PowerTransformerEnd rdf:ID="_3f5e0000-0000-4000-8000-000000000036">
+    <cim:IdentifiedObject.name>Gamma 400/132 end 1</cim:IdentifiedObject.name>
+    <cim:PowerTransformerEnd.PowerTransformer rdf:resource="#_3f5e0000-0000-4000-8000-000000000035"/>
+    <cim:TransformerEnd.endNumber>1</cim:TransformerEnd.endNumber>
+    <cim:TransformerEnd.Terminal rdf:resource="#_3f5e0000-0000-4000-8000-000000000050"/>
+    <cim:PowerTransformerEnd.ratedS>300.0</cim:PowerTransformerEnd.ratedS>
+    <cim:PowerTransformerEnd.ratedU>400.0</cim:PowerTransformerEnd.ratedU>
+    <cim:PowerTransformerEnd.r>1.6</cim:PowerTransformerEnd.r>
+    <cim:PowerTransformerEnd.x>24.0</cim:PowerTransformerEnd.x>
+    <cim:TransformerEnd.BaseVoltage rdf:resource="#_3f5e0000-0000-4000-8000-000000000006"/>
+    <cim:IdentifiedObject.mRID>3f5e0000-0000-4000-8000-000000000036</cim:IdentifiedObject.mRID>
+  </cim:PowerTransformerEnd>
+  <cim:Terminal rdf:ID="_3f5e0000-0000-4000-8000-000000000052">
+    <cim:IdentifiedObject.name>trafo-T2</cim:IdentifiedObject.name>
+    <cim:Terminal.ConductingEquipment rdf:resource="#_3f5e0000-0000-4000-8000-000000000035"/>
+    <cim:ACDCTerminal.sequenceNumber>2</cim:ACDCTerminal.sequenceNumber>
+    <cim:Terminal.ConnectivityNode rdf:resource="#_3f5e0000-0000-4000-8000-000000000019"/>
+    <cim:IdentifiedObject.mRID>3f5e0000-0000-4000-8000-000000000052</cim:IdentifiedObject.mRID>
+  </cim:Terminal>
+  <cim:PowerTransformerEnd rdf:ID="_3f5e0000-0000-4000-8000-000000000037">
+    <cim:IdentifiedObject.name>Gamma 400/132 end 2</cim:IdentifiedObject.name>
+    <cim:PowerTransformerEnd.PowerTransformer rdf:resource="#_3f5e0000-0000-4000-8000-000000000035"/>
+    <cim:TransformerEnd.endNumber>2</cim:TransformerEnd.endNumber>
+    <cim:TransformerEnd.Terminal rdf:resource="#_3f5e0000-0000-4000-8000-000000000052"/>
+    <cim:PowerTransformerEnd.ratedS>300.0</cim:PowerTransformerEnd.ratedS>
+    <cim:PowerTransformerEnd.ratedU>132.0</cim:PowerTransformerEnd.ratedU>
+    <cim:PowerTransformerEnd.r>0.0</cim:PowerTransformerEnd.r>
+    <cim:PowerTransformerEnd.x>0.0</cim:PowerTransformerEnd.x>
+    <cim:TransformerEnd.BaseVoltage rdf:resource="#_3f5e0000-0000-4000-8000-000000000007"/>
+    <cim:IdentifiedObject.mRID>3f5e0000-0000-4000-8000-000000000037</cim:IdentifiedObject.mRID>
+  </cim:PowerTransformerEnd>
+  <cim:RegulatingControl rdf:ID="_3f5e0000-0000-4000-8000-000000000090">
+    <cim:IdentifiedObject.name>Alpha GA voltage control</cim:IdentifiedObject.name>
+    <cim:RegulatingControl.Terminal rdf:resource="#_3f5e0000-0000-4000-8000-000000000046"/>
+    <cim:IdentifiedObject.mRID>3f5e0000-0000-4000-8000-000000000090</cim:IdentifiedObject.mRID>
+  </cim:RegulatingControl>
+  <cim:RegulatingControl rdf:ID="_3f5e0000-0000-4000-8000-000000000091">
+    <cim:IdentifiedObject.name>Gamma GC voltage control</cim:IdentifiedObject.name>
+    <cim:RegulatingControl.Terminal rdf:resource="#_3f5e0000-0000-4000-8000-000000000047"/>
+    <cim:IdentifiedObject.mRID>3f5e0000-0000-4000-8000-000000000091</cim:IdentifiedObject.mRID>
+  </cim:RegulatingControl>
+  <cim:ConnectivityNode rdf:ID="_3f5e0000-0000-4000-8000-0000000000a0">
+    <cim:IdentifiedObject.name>Alpha CN A-AC</cim:IdentifiedObject.name>
+    <cim:ConnectivityNode.ConnectivityNodeContainer rdf:resource="#_3f5e0000-0000-4000-8000-000000000011"/>
+    <cim:IdentifiedObject.mRID>3f5e0000-0000-4000-8000-0000000000a0</cim:IdentifiedObject.mRID>
+  </cim:ConnectivityNode>
+  <cim:Breaker rdf:ID="_3f5e0000-0000-4000-8000-0000000000a1">
+    <cim:Switch.normalOpen>false</cim:Switch.normalOpen>
+    <cim:Switch.retained>false</cim:Switch.retained>
+    <cim:IdentifiedObject.name>Alpha-Gamma bay breaker</cim:IdentifiedObject.name>
+    <cim:Equipment.EquipmentContainer rdf:resource="#_3f5e0000-0000-4000-8000-000000000011"/>
+    <cim:IdentifiedObject.mRID>3f5e0000-0000-4000-8000-0000000000a1</cim:IdentifiedObject.mRID>
+  </cim:Breaker>
+  <cim:Terminal rdf:ID="_3f5e0000-0000-4000-8000-0000000000a2">
+    <cim:IdentifiedObject.name>bay-brk-T1</cim:IdentifiedObject.name>
+    <cim:Terminal.ConductingEquipment rdf:resource="#_3f5e0000-0000-4000-8000-0000000000a1"/>
+    <cim:ACDCTerminal.sequenceNumber>1</cim:ACDCTerminal.sequenceNumber>
+    <cim:Terminal.ConnectivityNode rdf:resource="#_3f5e0000-0000-4000-8000-000000000015"/>
+    <cim:IdentifiedObject.mRID>3f5e0000-0000-4000-8000-0000000000a2</cim:IdentifiedObject.mRID>
+  </cim:Terminal>
+  <cim:Terminal rdf:ID="_3f5e0000-0000-4000-8000-0000000000a3">
+    <cim:IdentifiedObject.name>bay-brk-T2</cim:IdentifiedObject.name>
+    <cim:Terminal.ConductingEquipment rdf:resource="#_3f5e0000-0000-4000-8000-0000000000a1"/>
+    <cim:ACDCTerminal.sequenceNumber>2</cim:ACDCTerminal.sequenceNumber>
+    <cim:Terminal.ConnectivityNode rdf:resource="#_3f5e0000-0000-4000-8000-0000000000a0"/>
+    <cim:IdentifiedObject.mRID>3f5e0000-0000-4000-8000-0000000000a3</cim:IdentifiedObject.mRID>
+  </cim:Terminal>
+</rdf:RDF>

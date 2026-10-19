@@ -12,3 +12,8 @@ modules = ["__SLUG__"]
 [[sources]]
 name = "live"
 module = "live-synthetic"
+
+# To tie every frame to the CIM graph (the grid's id, and the Analog each column
+# measures: pswamp_core.cim.CimEnricher):
+# [enrich]
+# cim = true

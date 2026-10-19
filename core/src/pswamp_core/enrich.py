@@ -8,6 +8,8 @@ a ``SourceSet`` stream yields passes through its enrichers, so every reader (a
 playable source, a module reading a range) sees the same enriched record. ``enrich``
 runs once per record on the event loop: no I/O there.
 
+``CimReferenceEnricher`` sets a configured CIM reference; ``pswamp_core.cim.CimEnricher``
+looks the reference and each column's Analog up in the CIM graph.
 ``CimReferenceEnricher`` is the stub for the CIM reference. It sets
 ``PmuHeader.cimReferenceId``, an id for the grid (CIM) data that applies to a
 frame; any module later in the pipeline reads it off the frame, in this process
@@ -31,6 +33,10 @@ __all__ = ["CimReferenceEnricher", "Enricher"]
 
 
 class Enricher(ABC):
+    async def start(self) -> None:
+        """Called by every stream before its first record. What an enricher needs from
+        elsewhere (a store) is fetched here, or started here, never in ``enrich``."""
+
     @abstractmethod
     def enrich(self, record: DataModel) -> DataModel:
         """The record, enriched or unchanged."""

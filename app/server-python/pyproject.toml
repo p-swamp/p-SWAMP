@@ -17,16 +17,19 @@ dependencies = [
     "uvicorn[standard]>=0.52.4,<0.53",
     "p-swamp",
     # The server data architecture (core/). The extra brings the Kafka transport.
-    "pswamp-core[kafka]",
+    "pswamp-core[kafka,cim]",
     # The modules, one project each (modules/<name>/).
     "pswamp-frame-stats",
     "pswamp-excursion",
     "pswamp-range-summary",
+    "pswamp-islanding-detection",
     # The sources (also modules/<name>/): the data a run replays or follows.
     "pswamp-sample-replay",
     "pswamp-live-synthetic",
     "pswamp-remote-history",
     "pswamp-synthetic-history",
+    # The live grid simulation, which follows the CIM graph (the CIM graph app edits that graph).
+    "pswamp-rtsim-from-cim",
     # The message models (models/): the server imports them directly.
     "pswamp-models",
 ]
@@ -68,8 +71,10 @@ pswamp-range-summary = { workspace = true }
 pswamp-sample-replay = { workspace = true }
 pswamp-live-synthetic = { workspace = true }
 pswamp-remote-history = { workspace = true }
+pswamp-rtsim-from-cim = { workspace = true }
 pswamp-tools = { workspace = true }
 pswamp-synthetic-history = { workspace = true }
+pswamp-islanding-detection = { workspace = true }
 
 # Tooling that must never ship in the image — the Dockerfile exports with
 # --no-dev. Declared here so the versions are locked (in the workspace uv.lock)

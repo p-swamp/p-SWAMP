@@ -4,6 +4,88 @@
  */
 
 export interface paths {
+    "/api/cim-graph/layout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Layout
+         * @description Where the substations, lines and breakers are, from the graph's GL profile.
+         */
+        get: operations["cim_graph_layout"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/cim-graph/lines/{mrid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Set Line
+         * @description Take a line (or a transformer) out of service (``open: true``) or bring it back: the breakers
+         *     that cut one of its ends off, or, for a line with none, a terminal. 404 for an unknown branch, 409
+         *     when it is already so.
+         */
+        post: operations["cim_graph_set_line"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/cim-graph/reset": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reset
+         * @description Put the grid back as it was loaded: every switch as the model has it, every branch in service.
+         */
+        post: operations["cim_graph_reset"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/cim-graph/switches/{mrid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Set Switch
+         * @description Open (``open: true``) or close a switch. 404 for an unknown switch, 409 when it is already so.
+         */
+        post: operations["cim_graph_set_switch"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/grid/model": {
         parameters: {
             query?: never;
@@ -390,7 +472,7 @@ export interface components {
             /** App Uuid */
             app_uuid: string;
             /** Events */
-            events: components["schemas"]["AlarmEvent"][];
+            events: components["schemas"]["pswamp_web__wire__AlarmEvent"][];
             /**
              * Status
              * @enum {string}
@@ -405,18 +487,6 @@ export interface components {
             t_start: number;
             /** Uuid */
             uuid: string;
-        };
-        /** AlarmEvent */
-        AlarmEvent: {
-            /** Message */
-            message: string;
-            /** T */
-            t: number;
-            /**
-             * Type
-             * @enum {string}
-             */
-            type: "init" | "not_critical" | "acknowledge" | "silence" | "user_message";
         };
         /** AlarmList */
         AlarmList: {
@@ -543,6 +613,50 @@ export interface components {
              *     ]
              */
             channels: number[];
+        };
+        /**
+         * CimGraphState
+         * @description What the graph says is switched off, pushed on connect and whenever it changes.
+         *
+         *     The whole state each time, not a delta: it is a few hundred booleans, and a client that missed
+         *     a message cannot end up wrong.
+         */
+        CimGraphState: {
+            /**
+             * Out Of Service
+             * @description The lines and transformers (mRIDs) out of service, which is what the simulation follows.
+             */
+            out_of_service: string[];
+            /**
+             * Switches
+             * @description Every switch (mRID) and whether it is open.
+             */
+            switches: {
+                [key: string]: boolean;
+            };
+            /**
+             * Type
+             * @default state
+             * @constant
+             */
+            type: "state";
+            /**
+             * Writable
+             * @description Whether the graph can be edited (the CGMES profiles are in it).
+             */
+            writable: boolean;
+        };
+        /**
+         * CimLayout
+         * @description Where the grid is, read once from the graph's GL profile. Static: state is on the socket.
+         */
+        CimLayout: {
+            /** Branches */
+            branches: components["schemas"]["LayoutBranch"][];
+            /** Breakers */
+            breakers: components["schemas"]["LayoutBreaker"][];
+            /** Substations */
+            substations: components["schemas"]["LayoutSubstation"][];
         };
         /**
          * CommandAck
@@ -865,6 +979,73 @@ export interface components {
             /** Stations */
             stations: string[];
         };
+        /** IslandingDetectionBody */
+        IslandingDetectionBody: {
+            /**
+             * Islands
+             * @description The groups of stations separated from the main system, largest first, by station name; empty when the grid is whole.
+             */
+            islands: string[][];
+            /**
+             * Status
+             * @description 'Emergency' when there is an island, 'OK' when there is none.
+             * @enum {string}
+             */
+            status: "OK" | "Alert" | "Emergency";
+        };
+        /** IslandingDetectionResult */
+        IslandingDetectionResult: {
+            app: components["schemas"]["AppIdentity"];
+            /**
+             * Mrid
+             * @default null
+             */
+            mRID: string | null;
+            /**
+             * Parameters
+             * @description The module's settings.
+             */
+            parameters?: {
+                [key: string]: unknown;
+            };
+            /**
+             * Request Id
+             * @description Set when this result answers a command.
+             * @default null
+             */
+            request_id: string | null;
+            result: components["schemas"]["IslandingDetectionBody"];
+            /**
+             * Timestamp
+             * Format: date-time
+             * @description The instant the result is about.
+             */
+            timestamp: string;
+            /**
+             * Version
+             * @default v1
+             * @constant
+             */
+            version: "v1";
+        };
+        /**
+         * IslandingDetectionState
+         * @description Pushed on connect and after every change.
+         */
+        IslandingDetectionState: {
+            /** @description The module's latest alarm event; null until the first. */
+            alarm: components["schemas"]["pswamp_models__common__alarms__AlarmEvent"] | null;
+            /** @description Which source is open, and where it is. */
+            player: components["schemas"]["PlayerStatus"];
+            /** @description The module's latest result; null until the first. */
+            result: components["schemas"]["IslandingDetectionResult"] | null;
+            /**
+             * Type
+             * @default state
+             * @constant
+             */
+            type: "state";
+        };
         /** IslandingParameters */
         IslandingParameters: {
             /** Eval Freq */
@@ -920,6 +1101,61 @@ export interface components {
              * @constant
              */
             type: "state";
+        };
+        /**
+         * LayoutBranch
+         * @description A line, or a transformer between two substations.
+         */
+        LayoutBranch: {
+            /**
+             * Breaker
+             * @description mRID of the one breaker that takes it out of service on its own (its bay's, at one end); null: it has none, and is operated as a line (POST /lines/{mrid}).
+             */
+            breaker: string | null;
+            /**
+             * From Substation
+             * @description mRID of the substation at its first end.
+             */
+            from_substation: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "line" | "transformer";
+            /** Mrid */
+            mrid: string;
+            /** Name */
+            name: string;
+            /**
+             * Path
+             * @description Its route; empty: a straight segment between the substations.
+             */
+            path: components["schemas"]["Point"][];
+            /**
+             * To Substation
+             * @description mRID of the substation at its second end.
+             */
+            to_substation: string;
+        };
+        /** LayoutBreaker */
+        LayoutBreaker: {
+            /** Mrid */
+            mrid: string;
+            /** Name */
+            name: string;
+            /**
+             * Substation
+             * @description mRID of the substation it stands in.
+             */
+            substation: string;
+        };
+        /** LayoutSubstation */
+        LayoutSubstation: {
+            /** Mrid */
+            mrid: string;
+            /** Name */
+            name: string;
+            position: components["schemas"]["Point"];
         };
         /**
          * LineOutageEvent
@@ -978,6 +1214,87 @@ export interface components {
              * @default null
              */
             window_length: number | null;
+        };
+        /**
+         * LiveFeed
+         * @description One push: the layout when it is new, and every frame read since the last push.
+         *
+         *     Nothing is merged or skipped: a push carries as many frames as came while the last one was
+         *     being sent, so under load the pushes get fewer and larger, and no frame is lost.
+         */
+        LiveFeed: {
+            /**
+             * @description The stations, when they are new.
+             * @default null
+             */
+            layout: components["schemas"]["LiveLayout"] | null;
+            samples: components["schemas"]["LiveSamples"];
+            /**
+             * Type
+             * @default state
+             * @constant
+             */
+            type: "state";
+        };
+        /**
+         * LiveLayout
+         * @description The stations, in the order every sample lists them. Sent first, and again when it changes.
+         */
+        LiveLayout: {
+            /**
+             * Header Id
+             * @description The frames' layout this describes (PmuHeader.header_id).
+             */
+            header_id: string;
+            /** Stations */
+            stations: components["schemas"]["LiveStation"][];
+        };
+        /**
+         * LiveSamples
+         * @description Consecutive frames, oldest first: one entry per frame in ``t``, one value per station in each row.
+         */
+        LiveSamples: {
+            /**
+             * Angle Deg
+             * @description Per frame, each station's voltage angle, degrees.
+             */
+            angle_deg: (number | null)[][];
+            /**
+             * F Hz
+             * @description Per frame, each station's frequency, Hz.
+             */
+            f_hz: (number | null)[][];
+            /**
+             * T
+             * @description Each frame's time, seconds since the Unix epoch.
+             */
+            t: number[];
+            /**
+             * V Pu
+             * @description Per frame, each station's voltage magnitude, per unit.
+             */
+            v_pu: (number | null)[][];
+        };
+        /**
+         * LiveStation
+         * @description One PMU station of the stream: a voltage level of a substation.
+         */
+        LiveStation: {
+            /**
+             * Kv
+             * @description Its nominal voltage, kV: what v_pu is per unit of.
+             */
+            kv: number | null;
+            /**
+             * Name
+             * @description The station's label in the frames, '<substation>_<kV>'.
+             */
+            name: string;
+            /**
+             * Substation
+             * @description mRID of its substation in the CIM graph; null when unknown.
+             */
+            substation: string | null;
         };
         /** Phasor */
         Phasor: {
@@ -1152,6 +1469,12 @@ export interface components {
          */
         PmuHeader: {
             /**
+             * Analog
+             * @description Per column: the mRID of the CIM Analog it measures, in the grid `cimReferenceId` names; null where the column has none. The two columns of a phasor share one Analog.
+             * @default null
+             */
+            analog: (string | null)[] | null;
+            /**
              * Channel
              * @description Per column: the phasor or signal name.
              */
@@ -1220,6 +1543,19 @@ export interface components {
              * @constant
              */
             type: "state";
+        };
+        /** Point */
+        Point: {
+            /**
+             * Lat
+             * @description Latitude, degrees north (WGS 84).
+             */
+            lat: number;
+            /**
+             * Lon
+             * @description Longitude, degrees east (WGS 84).
+             */
+            lon: number;
         };
         /** RangeSummary */
         RangeSummary: {
@@ -1390,6 +1726,14 @@ export interface components {
              */
             start: string;
         };
+        /** SwitchBody */
+        SwitchBody: {
+            /**
+             * Open
+             * @description True to open the switch (or take the line out of service), false to close it (or bring it back).
+             */
+            open: boolean;
+        };
         /**
          * TimeWindowSlice
          * @description A slice of the client's measurement window.
@@ -1452,6 +1796,65 @@ export interface components {
             /** Error Type */
             type: string;
         };
+        /**
+         * AlarmEvent
+         * @description One step in an alarm's life, as the module that raised it sees it.
+         */
+        pswamp_models__common__alarms__AlarmEvent: {
+            /**
+             * Alarm Uuid
+             * @description The alarm this event belongs to: every event of one alarm shares it.
+             */
+            alarm_uuid: string;
+            /** @description The module instance that raised the alarm. */
+            app: components["schemas"]["AppIdentity"];
+            /**
+             * Mrid
+             * @default null
+             */
+            mRID: string | null;
+            /**
+             * Message
+             * @description One line for a person.
+             */
+            message: string;
+            /**
+             * Status
+             * @description The module's status when the event was raised.
+             * @enum {string}
+             */
+            status: "OK" | "Alert" | "Emergency";
+            /**
+             * Timestamp
+             * Format: date-time
+             * @description The assessment the event comes from, in message time.
+             */
+            timestamp: string;
+            /**
+             * Type
+             * @description 'init' when the alarm is issued; 'not_critical' when its condition has cleared.
+             * @enum {string}
+             */
+            type: "init" | "not_critical";
+            /**
+             * Version
+             * @default v1
+             * @constant
+             */
+            version: "v1";
+        };
+        /** AlarmEvent */
+        pswamp_web__wire__AlarmEvent: {
+            /** Message */
+            message: string;
+            /** T */
+            t: number;
+            /**
+             * Type
+             * @enum {string}
+             */
+            type: "init" | "not_critical" | "acknowledge" | "silence" | "user_message";
+        };
     };
     responses: never;
     parameters: never;
@@ -1461,6 +1864,134 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    cim_graph_layout: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CimLayout"];
+                };
+            };
+        };
+    };
+    cim_graph_set_line: {
+        parameters: {
+            query: {
+                /** @description The browser's client id -- the same value its WebSockets send, which is what makes a command apply to the pipeline the page is watching. */
+                client_id: string;
+            };
+            header?: never;
+            path: {
+                mrid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SwitchBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandAck"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    cim_graph_reset: {
+        parameters: {
+            query: {
+                /** @description The browser's client id -- the same value its WebSockets send, which is what makes a command apply to the pipeline the page is watching. */
+                client_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandAck"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    cim_graph_set_switch: {
+        parameters: {
+            query: {
+                /** @description The browser's client id -- the same value its WebSockets send, which is what makes a command apply to the pipeline the page is watching. */
+                client_id: string;
+            };
+            header?: never;
+            path: {
+                mrid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SwitchBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandAck"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     grid_model: {
         parameters: {
             query?: never;
