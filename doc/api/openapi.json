@@ -1352,6 +1352,176 @@
         "title": "LineOutageLog",
         "type": "object"
       },
+      "LiveFeed": {
+        "description": "One push: the layout when it is new, and every frame read since the last push.\n\nNothing is merged or skipped: a push carries as many frames as came while the last one was\nbeing sent, so under load the pushes get fewer and larger, and no frame is lost.",
+        "properties": {
+          "layout": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LiveLayout"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "The stations, when they are new."
+          },
+          "samples": {
+            "$ref": "#/components/schemas/LiveSamples"
+          },
+          "type": {
+            "const": "state",
+            "default": "state",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "samples"
+        ],
+        "title": "LiveFeed",
+        "type": "object"
+      },
+      "LiveLayout": {
+        "description": "The stations, in the order every sample lists them. Sent first, and again when it changes.",
+        "properties": {
+          "header_id": {
+            "description": "The frames' layout this describes (PmuHeader.header_id).",
+            "title": "Header Id",
+            "type": "string"
+          },
+          "stations": {
+            "items": {
+              "$ref": "#/components/schemas/LiveStation"
+            },
+            "title": "Stations",
+            "type": "array"
+          }
+        },
+        "required": [
+          "header_id",
+          "stations"
+        ],
+        "title": "LiveLayout",
+        "type": "object"
+      },
+      "LiveSamples": {
+        "description": "Consecutive frames, oldest first: one entry per frame in ``t``, one value per station in each row.",
+        "properties": {
+          "angle_deg": {
+            "description": "Per frame, each station's voltage angle, degrees.",
+            "items": {
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "type": "array"
+            },
+            "title": "Angle Deg",
+            "type": "array"
+          },
+          "f_hz": {
+            "description": "Per frame, each station's frequency, Hz.",
+            "items": {
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "type": "array"
+            },
+            "title": "F Hz",
+            "type": "array"
+          },
+          "t": {
+            "description": "Each frame's time, seconds since the Unix epoch.",
+            "items": {
+              "type": "number"
+            },
+            "title": "T",
+            "type": "array"
+          },
+          "v_pu": {
+            "description": "Per frame, each station's voltage magnitude, per unit.",
+            "items": {
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "type": "array"
+            },
+            "title": "V Pu",
+            "type": "array"
+          }
+        },
+        "required": [
+          "t",
+          "v_pu",
+          "angle_deg",
+          "f_hz"
+        ],
+        "title": "LiveSamples",
+        "type": "object"
+      },
+      "LiveStation": {
+        "description": "One PMU station of the stream: a voltage level of a substation.",
+        "properties": {
+          "kv": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Its nominal voltage, kV: what v_pu is per unit of.",
+            "title": "Kv"
+          },
+          "name": {
+            "description": "The station's label in the frames, '<substation>_<kV>'.",
+            "title": "Name",
+            "type": "string"
+          },
+          "substation": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "mRID of its substation in the CIM graph; null when unknown.",
+            "title": "Substation"
+          }
+        },
+        "required": [
+          "name",
+          "substation",
+          "kv"
+        ],
+        "title": "LiveStation",
+        "type": "object"
+      },
       "Phasor": {
         "properties": {
           "ang": {
@@ -3464,6 +3634,10 @@
     {
       "description": "CIM graph.",
       "name": "cim-graph"
+    },
+    {
+      "description": "The live grid simulation's frames, as each station's voltage and frequency, every frame.",
+      "name": "cim-live"
     }
   ],
   "x-websocket-channels": [
@@ -3538,6 +3712,14 @@
         "$ref": "#/components/schemas/CimGraphState"
       },
       "path": "/api/cim-graph/ws"
+    },
+    {
+      "app": "cim-live",
+      "direction": "server-to-client",
+      "message": {
+        "$ref": "#/components/schemas/LiveFeed"
+      },
+      "path": "/api/cim-live/ws"
     }
   ]
 }
