@@ -191,3 +191,24 @@ def test_the_modules_folder_holds_only_module_projects():
 def test_the_core_imports_no_module(tmp_path):
     added = imported_by("pswamp_core", tmp_path)
     assert not any(name.partition(".")[0] == "pswamp_modules" for name in added)
+
+
+# The CIM graph has one writer, the web backend's CIM graph app. The core stages the grid in a
+# private copy before any store sees it, and its testing helper edits a test's own store; nothing
+# else commits.
+CIM_WRITERS = {
+    "app/server-python/src/cim_graph/grid.py",
+    "core/src/pswamp_core/cim/grid.py",
+    "core/src/pswamp_core/cim/testing.py",
+}
+
+
+def test_only_the_cim_graph_app_writes_the_cim_graph():
+    sources = [ROOT / "app/server-python/src", ROOT / "core/src", *(project / "src" for project in PROJECTS)]
+    writers = {
+        path.relative_to(ROOT).as_posix()
+        for folder in sources
+        for path in folder.rglob("*.py")
+        if re.search(r"\.commit\(\)", path.read_text(encoding="utf-8"))
+    }
+    assert writers <= CIM_WRITERS, f"commits outside the CIM graph's writer: {sorted(writers - CIM_WRITERS)}"

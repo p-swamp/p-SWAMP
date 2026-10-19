@@ -130,6 +130,10 @@ class Module(ABC):
             ``DROP_OLDEST`` by default: a module that falls behind a live
             stream analyses the newest frame.
         reads_sources: Its host sets ``self.sources`` before ``setup``.
+        cim: It reads the CIM graph: ``self.cim_repo`` is a repository of its
+            own over it, kept up to date before each call (``cim_changed``),
+            connected by its host before ``setup`` (needs the
+            ``[cim]`` extra; see ``pswamp_core.cim``).
         keep_up: When falling behind its input is reported; ``None`` never.
     """
 
@@ -142,6 +146,7 @@ class Module(ABC):
     overflow: ClassVar[Overflow] = Overflow.DROP_OLDEST
     maxsize: ClassVar[int] = 64
     reads_sources: ClassVar[bool] = False
+    cim: ClassVar[bool] = False
     keep_up: ClassVar[KeepUp | None] = KeepUp()
 
     #: Set per class: input class → handler method name (styles 1 and 2).
@@ -247,6 +252,38 @@ class Module(ABC):
         self._join = type(self).join.bound(self.inputs) if isinstance(self.inputs, Mapping) else None
         #: Held around each call into the instance: one call at a time.
         self._calling = asyncio.Lock()
+        self._cim_repo: Any = None
+        #: What ``_cim_repo`` has caught up with of the graph's changes (``pswamp_core.cim.Freshness``).
+        self._cim_fresh: Any = None
+
+    @property
+    def cim_repo(self) -> Any:
+        """This instance's repository over the CIM graph (a module that sets ``cim = True``):
+        it reads and never writes, and keeps what it read until the graph changes. The
+        core keeps it up to date: before each call into the instance, a repository whose
+        graph changed has what changes (SSH, SV) marked stale, so the call reads the edit
+        (``pswamp_core.cim.watch``; and see ``cim_changed``). Connected on first use when no
+        host did it first, as in a script."""
+        if not self.cim:
+            raise AttributeError(f"{self.name} does not read the CIM graph: set cim = True")
+        if self._cim_repo is None:
+            from .cim import connect_reader, open_store
+            from .cim.watch import GraphWatch
+
+            store = open_store()
+            self._cim_repo = connect_reader(store=store)  # waits for the grid, reads none of it
+            self._cim_fresh = GraphWatch.of(store).attach(self._cim_repo)  # watched from before the first read
+        return self._cim_repo
+
+    @cim_repo.setter
+    def cim_repo(self, repository: Any) -> None:
+        self._cim_repo = repository
+        self._cim_fresh = None  # a repository handed over is read as it is
+
+    def cim_changed(self) -> None:
+        """Called when the CIM graph changed, before the next input or command, once the
+        repository has what changes marked stale: rebuild here whatever the instance derived
+        from the graph. Under the instance's lock, and in a thread if ``blocking``."""
 
     async def setup(self) -> None:
         """Called once by a host, after ``sources`` is set and before any input."""
@@ -286,6 +323,7 @@ class Module(ABC):
         ``run(message)`` dispatches on its class (and, for named inputs, feeds
         the join as a host would). ``run(name=message, ...)`` calls a joined
         ``process`` directly, bypassing the join."""
+        self._catch_up_cim()
         call = self._prepare(message, named)
         if call is None:
             return []
@@ -303,6 +341,7 @@ class Module(ABC):
         """``run`` for one arriving message, as a host calls it: the module's
         code runs inline, or in a thread if ``blocking``."""
         async with self._calling:
+            await self._before_call()
             call = self._prepare(message, {})
             if call is None:
                 return []
@@ -313,6 +352,7 @@ class Module(ABC):
         """``reset``, as a host calls it: one call at a time, in a thread if
         ``blocking``."""
         async with self._calling:
+            await self._before_call()
             await self._call(self.reset)
 
     def _reset_join(self) -> None:
@@ -333,6 +373,7 @@ class Module(ABC):
         """Validate and answer ``command`` synchronously. A module that
         implements ``ahandle`` is run on a fresh event loop, so not from
         inside a running one: there, ``await arun_command(command)``."""
+        self._catch_up_cim()
         self.validate(command)
         if self._overrides("ahandle"):
             try:
@@ -348,8 +389,19 @@ class Module(ABC):
     async def arun_command(self, command: Command) -> list[DataModel]:
         """Validate and answer ``command``."""
         async with self._calling:
+            await self._before_call()
             self.validate(command)
             return self.answer_of(command, await self.ahandle(command))
+
+    async def _before_call(self) -> None:
+        """What precedes every call a host makes, under the instance's lock: the CIM
+        repository brought up to date, when the graph changed (a thread hop only then)."""
+        if self._cim_fresh is not None and self._cim_fresh.stale():
+            await self._call(self._catch_up_cim)
+
+    def _catch_up_cim(self) -> None:
+        if self._cim_fresh is not None and self._cim_fresh.catch_up():
+            self.cim_changed()
 
     # -- outputs -----------------------------------------------------------------------
 

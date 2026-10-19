@@ -1147,7 +1147,7 @@ source = { virtual = "app/server-python" }
 dependencies = [
     { name = "fastapi" },
     { name = "p-swamp" },
-    { name = "pswamp-core", extra = ["kafka"] },
+    { name = "pswamp-core", extra = ["cim", "kafka"] },
     { name = "pswamp-excursion" },
     { name = "pswamp-frame-stats" },
     { name = "pswamp-live-synthetic" },
@@ -1171,7 +1171,7 @@ dev = [
 requires-dist = [
     { name = "fastapi", specifier = ">=0.141.1,<0.142" },
     { name = "p-swamp", editable = "desktop" },
-    { name = "pswamp-core", extras = ["kafka"], editable = "core" },
+    { name = "pswamp-core", extras = ["kafka", "cim"], editable = "core" },
     { name = "pswamp-excursion", editable = "modules/excursion" },
     { name = "pswamp-frame-stats", editable = "modules/frame-stats" },
     { name = "pswamp-live-synthetic", editable = "modules/live-synthetic" },

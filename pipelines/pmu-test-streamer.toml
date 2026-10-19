@@ -27,8 +27,8 @@ module = "sample-replay"
 name = "live"
 module = "live-synthetic"
 
-# What is added to every frame from the sources. cim_reference: the CIM reference id
-# set on each frame's header ("none": no reference).
-# PMU_TEST_STREAMER_CIM_REFERENCE, when set, overrides it.
+# What is added to every frame from the sources. cim: the id of the grid in the CIM
+# graph, and the Analog each column measures (pswamp_core.cim.CimEnricher).
+# PMU_TEST_STREAMER_CIM_REFERENCE, when set, replaces it with that fixed id ("none": nothing).
 [enrich]
-cim_reference = "n44-cim-stub"
+cim = true

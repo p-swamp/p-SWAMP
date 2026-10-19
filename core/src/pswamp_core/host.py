@@ -161,6 +161,7 @@ class _Answering:
 
     async def handle(self, command: Command) -> object:
         async with self.module._calling:
+            await self.module._before_call()
             self.module.validate(command)
             return await self.module.ahandle(command)
 
@@ -375,6 +376,8 @@ class ModuleHost:
         slot.out.start()
         if module.reads_sources and self._sources is not None:
             module.sources = self._sources()
+        if module.cim:  # connecting, and watching the graph, ask the store: not on the event loop
+            await asyncio.to_thread(lambda: module.cim_repo)
         await module.setup()
         slot.set_up = True
         if module.commands:
