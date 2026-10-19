@@ -6,12 +6,14 @@ x-transport: &transport
   KAFKA_BOOTSTRAP_SERVERS: "kafka:9092"
 
 # The streamer's sources, name:entry-point: the in-image recording
-# (sample-replay), the synthetic live feed (live-synthetic), and a year of
+# (sample-replay), the synthetic live feed (live-synthetic), a year of
 # history with outages from the remote data service below (remote-history,
-# which reads REMOTE_URL). Whoever reads the sources (the server, and the
-# worker hosting the range summary) gets these.
+# which reads REMOTE_URL), and the live grid simulation (rtsim-from-cim: the
+# streamer's page follows it like any live feed; it simulates the CIM graph in
+# Oxigraph, which the CIM graph page edits). Whoever reads the sources (the
+# server, and the worker hosting the range summary) gets these.
 x-streamer-sources: &streamer-sources
-  PMU_TEST_STREAMER_SOURCES: "sample:sample-replay,live:live-synthetic,remote:remote-history"
+  PMU_TEST_STREAMER_SOURCES: "sample:sample-replay,live:live-synthetic,remote:remote-history,rtsim:rtsim-from-cim"
   REMOTE_URL: "http://remote-data-stub:8100"
 
 # The CIM graph: one store for the whole stack, the oxigraph service. The server's CIM
