@@ -129,7 +129,7 @@ def test_overlay_sets_every_p_swamp_image(rendered):
     for deployment, spec in _pod_specs(rendered).items():
         for container in spec["containers"]:
             assert container["image"] == IMAGE or container["image"].startswith(
-                "apache/kafka:"
+                ("apache/kafka:", "ghcr.io/oxigraph/oxigraph:")
             ), (
                 f"{deployment}/{container['name']}: {container['image']} (name the image p-swamp)"
             )

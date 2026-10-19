@@ -14,6 +14,20 @@ x-streamer-sources: &streamer-sources
   PMU_TEST_STREAMER_SOURCES: "sample:sample-replay,live:live-synthetic,remote:remote-history"
   REMOTE_URL: "http://remote-data-stub:8100"
 
+# The CIM graph: one store for the whole stack, the oxigraph service. The server's CIM
+# graph app is its only writer: it loads the grid into the empty store when it starts;
+# the server's sources, its modules and the workers only read it, each through a
+# repository of its own (pswamp_core.cim). Unset, each process keeps a graph of its own.
+# PSWAMP_CIM_PATH names a folder of CGMES files; unset or empty, the grid is Nordic44,
+# which LazyCIM downloads on first use (CC BY-NC-SA, never shipped in the image; it needs
+# network access) into LAZYCIM_DATA_DIR, derived data under /tmp, so the stack stays
+# stateless. A host with no network (CI) sets it to the small grid the image carries:
+#   PSWAMP_CIM_PATH=/workspace/p-SWAMP/core/src/pswamp_core/cim/sample_grid
+x-cim: &cim
+  PSWAMP_CIM_URL: "http://oxigraph:7878"
+  PSWAMP_CIM_PATH: "${PSWAMP_CIM_PATH:-}"
+  LAZYCIM_DATA_DIR: "/tmp/lazycim"
+
 services:
   # Just "server": Compose prefixes containers with the project name, which is
   # already the repo directory (p-SWAMP), so this comes up as p-swamp-server-1
@@ -24,7 +38,7 @@ services:
     ports:
       - "8000:8000"
     environment:
-      <<: [*transport, *streamer-sources]
+      <<: [*transport, *streamer-sources, *cim]
       HOST: "0.0.0.0"
       PORT: "8000"
       # Compose sync writes may not always emit inotify events in-container;
@@ -67,6 +81,8 @@ services:
         condition: service_healthy
       remote-data-stub:
         condition: service_healthy
+      oxigraph:
+        condition: service_started
     healthcheck:
       test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8000/healthz"]
       interval: 10s
@@ -157,7 +173,7 @@ services:
     command: ["python", "-m", "pswamp_core.worker"]
     working_dir: /workspace/p-SWAMP/pipelines
     environment:
-      <<: *transport
+      <<: [*transport, *cim]  # a module that reads the grid (cim = True) reads it here
       PSWAMP_WORKER_PIPELINES: "pmu-test-streamer.toml"
       PSWAMP_WORKER_MODULES: "frame-stats,excursion"
     depends_on:
@@ -195,7 +211,7 @@ services:
     command: ["python", "-m", "pswamp_core.worker"]
     working_dir: /workspace/p-SWAMP/pipelines
     environment:
-      <<: [*transport, *streamer-sources]
+      <<: [*transport, *streamer-sources, *cim]
       PSWAMP_WORKER_PIPELINES: "pmu-test-streamer.toml"
       PSWAMP_WORKER_MODULES: "range-summary"
     depends_on:
@@ -223,6 +239,21 @@ services:
       interval: 5s
       timeout: 3s
       retries: 5
+    restart: unless-stopped
+
+  # The CIM graph's store: Oxigraph, in memory. No volume: the server loads the grid
+  # into the empty store when it starts, so a restart puts every edit back, like the
+  # rest of the stack. Plain SPARQL 1.1: queries at /query, updates at /update.
+  # --union-default-graph makes the default graph every named graph merged (each CGMES
+  # profile is a graph of its own), which is what a reader without a graph layout
+  # sees, and is the faster read. Port 7878 is for the host: Oxigraph's own query page.
+  # Under podman on Windows, reach it from the host at the VM's IP rather than at
+  # localhost, which adds tens of milliseconds to every request.
+  oxigraph:
+    image: ghcr.io/oxigraph/oxigraph:0.5.2
+    command: ["serve", "--bind", "0.0.0.0:7878", "--union-default-graph"]
+    ports:
+      - "7878:7878"
     restart: unless-stopped
 
   # The broker for PSWAMP_TRANSPORT=kafka: Apache Kafka's own image (Apache

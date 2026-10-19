@@ -32,3 +32,12 @@ replacements:
           name: p-swamp-hosts
         fieldPaths:
           - data.PSWAMP_REMOTE_DATA_HOST
+  - source:
+      kind: Service
+      name: p-swamp-oxigraph
+    targets:
+      - select:
+          kind: ConfigMap
+          name: p-swamp-hosts
+        fieldPaths:
+          - data.PSWAMP_OXIGRAPH_HOST
