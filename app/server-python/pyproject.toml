@@ -22,6 +22,7 @@ dependencies = [
     "pswamp-frame-stats",
     "pswamp-excursion",
     "pswamp-range-summary",
+    "pswamp-islanding-detection",
     # The sources (also modules/<name>/): the data a run replays or follows.
     "pswamp-sample-replay",
     "pswamp-live-synthetic",
@@ -73,6 +74,7 @@ pswamp-remote-history = { workspace = true }
 pswamp-rtsim-from-cim = { workspace = true }
 pswamp-tools = { workspace = true }
 pswamp-synthetic-history = { workspace = true }
+pswamp-islanding-detection = { workspace = true }
 
 # Tooling that must never ship in the image — the Dockerfile exports with
 # --no-dev. Declared here so the versions are locked (in the workspace uv.lock)
