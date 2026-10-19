@@ -1058,14 +1058,22 @@ dependencies = [
 examples = [
     { name = "matplotlib" },
 ]
+rtsim = [
+    { name = "matplotlib" },
+    { name = "pswamp-core", extra = ["oxigraph"] },
+    { name = "pswamp-rtsim-from-cim" },
+]
 
 [package.metadata]
 requires-dist = [
     { name = "matplotlib", marker = "extra == 'examples'", specifier = ">=3.8" },
+    { name = "matplotlib", marker = "extra == 'rtsim'", specifier = ">=3.8" },
     { name = "pswamp-core", editable = "core" },
+    { name = "pswamp-core", extras = ["oxigraph"], marker = "extra == 'rtsim'", editable = "core" },
     { name = "pswamp-models", editable = "models" },
+    { name = "pswamp-rtsim-from-cim", marker = "extra == 'rtsim'", editable = "modules/rtsim-from-cim" },
 ]
-provides-extras = ["examples"]
+provides-extras = ["examples", "rtsim"]
 
 [[package]]
 name = "pswamp-live-synthetic"
