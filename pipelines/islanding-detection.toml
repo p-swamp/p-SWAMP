@@ -11,4 +11,4 @@ modules = ["islanding-detection"]
 
 [[sources]]
 name = "live"
-module = "live-synthetic"
+module = "rtsim-from-cim"
