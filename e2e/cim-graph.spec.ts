@@ -1,7 +1,8 @@
 import { test, expect, type Page } from '@playwright/test'
 
 /**
- * The CIM graph page: the grid on its geographic layout, with a breaker and a line to click. The
+ * The grid page: the grid of the CIM graph on its geographic layout (Leaflet), with a breaker and a
+ * line to click, and the live simulation's frequency and voltage, every frame, plotted. The
  * graph is shared (every visitor and the grid simulation see one), so the spec puts back what it
  * changes, and asks for no initial state: Nordic44 starts with open breakers and lines out. Edits need the CGMES profiles; where the server could not get them the graph is
  * read-only and the spec skips (the page says so).
@@ -45,8 +46,36 @@ test.describe('CIM graph', () => {
     await expect(page.getByText(/^\d+ open · \d+ out of service$/)).toBeVisible()
     await expect(page.getByTestId('cim-status')).toContainText('Graph: ready')
     // hover anything for its name, and what it is
-    await expect(breakers(page).first().locator('title')).toContainText('(breaker, ')
+    await expect(breakers(page).first()).toHaveAttribute('title', /\(breaker, /)
     await expect(lines(page).first().locator('title')).toContainText(/service/)
+  })
+
+  test('plots every frame of the live simulation, about 50 a second', async ({ page }) => {
+    // The first frames can take a while on a fresh stack (the simulation's controller is a process of
+    // its own, over Oxigraph): the waits below allow for it, and so must the test's own budget.
+    test.slow()
+    await page.goto('/cim-graph')
+    for (const quantity of ['f', 'v']) {
+      await expect(page.getByTestId(`chart-${quantity}`).locator('canvas')).toBeVisible({ timeout: 60_000 })
+    }
+    await expect(page.getByRole('group', { name: 'Stations' }).getByRole('button').first()).toBeVisible()
+    // the page's own count of what reached it over the last 2 s
+    await expect
+      .poll(
+        async () => Number((await page.getByTestId('samples-per-second').textContent())?.match(/(\d+) samples\/s/)?.[1] ?? 0),
+        { timeout: 60_000 },
+      )
+      .toBeGreaterThanOrEqual(40)
+  })
+
+  test('picking a station highlights it', async ({ page }) => {
+    await page.goto('/cim-graph')
+    const station = page.getByRole('group', { name: 'Stations' }).getByRole('button').first()
+    await expect(station).toBeVisible({ timeout: 60_000 })
+    await station.click()
+    await expect(station).toHaveAttribute('aria-pressed', 'true')
+    await station.click()
+    await expect(station).toHaveAttribute('aria-pressed', 'false')
   })
 
   test('clicking a breaker opens it, and again closes it', async ({ page }) => {
