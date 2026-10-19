@@ -68,9 +68,10 @@ which exist to keep the "adding a page" path honest:
   and keep it current: change a convention here
   first, don't grow features on it, and don't use it for p-SWAMP experiments —
   generate a new subapp for those.
-- **`/cim-graph` operates the grid by editing the CIM graph**: substations,
-  lines and breakers on their geographic layout; a click opens or closes a
-  breaker, or takes a line out. See "The CIM graph".
+- **`/cim-graph` ("Grid") is the live grid**: the CIM graph on OpenStreetMap
+  (Leaflet), clickable breakers and lines, and every station's frequency and
+  voltage plotted, every frame of the simulation (`/api/cim-live`). See "The live
+  grid simulation".
 - **`/pmu-test-streamer` is the worked example of the server data
   architecture** (`core/`, `doc/server-data-architecture.md`): PMU sources → the
   run's router (the active source) → modules over a transport → the page, with
@@ -269,8 +270,9 @@ Two deployables, one wire protocol:
   *simulated* PMU records extracted by hand from the Nordic 44 simulation in
   `examples/nordic44_rtsim/` (voltage phasor + measured frequency, five stations
   at 20 Hz, spanning a line trip). Nothing generates it; don't add tooling to
-  regenerate it unless asked. **`src/cim_graph/`** is the CIM graph's one writer (see "The CIM
-  graph"). **`src/errors/`** is the error tray's backend.
+  regenerate it unless asked. **`src/cim_graph/`** is the CIM graph's one writer and
+  **`src/cim_live/`** the live simulation's frames for the grid page (see "The live
+  grid simulation"). **`src/errors/`** is the error tray's backend.
   **`src/shared.py`** is what an app
   package imports its domain-free helpers from — `SocketRegistry`, plus
   `ClientId`, `CommandAck`, `read_client_id`, `get_logger` re-exported from
@@ -688,16 +690,26 @@ The rules to keep:
   a grid). Keep it that way; a deployment uses Oxigraph.
 
 The web side is the **CIM graph app** (`app/server-python/src/cim_graph/`, page
-`/cim-graph`), the graph's only writer: the grid on its geographic layout
-(`lib/geoProjection.ts`); click a breaker to open or close it, a line to take it out (the
-breakers of its bay at one end, or a terminal where it has none). It loads the grid **when
-the server starts**, in the background (503 "the grid is loading" until then, and the socket
-waits; 503 with the reason, and a 1013 close, when it cannot be had). There is no poller:
-the graph changes only when this app writes, so after each write it pushes the state read
-from its own repository (an edit is 0 queries and 1 update). The page shows a click as
-switching until the state has it, and a status bar with the last change and the last click's
-round trip. Edits need the CGMES vocabularies (LazyCIM downloads them; offline, the graph is
-read-only and the tests skip).
+`/cim-graph`), the graph's only writer: the grid on its geographic layout; click a breaker
+to open or close it, a line to take it out (the breakers of its bay at one end, or a
+terminal where it has none). It loads the grid **when the server starts**, in the background
+(503 "the grid is loading" until then, and the socket waits; 503 with the reason, and a 1013
+close, when it cannot be had). There is no poller: the graph changes only when this app
+writes, so after each write it pushes the state read from its own repository (an edit is 0
+queries and 1 update). The page shows a click as switching until the state has it, and a
+status bar with the last change and the last click's round trip. Edits need the CGMES
+vocabularies (LazyCIM downloads them; offline, the graph is read-only and the tests skip).
+
+The page (`app/client-web/src/pages/cim-graph/`, "Grid") draws that layout with **Leaflet,
+used directly** (react-leaflet's licence fails dependency review) over OpenStreetMap tiles, and
+below it two uPlot charts, every station's frequency and voltage over the last 30 s. Those come
+from **`cim_live`** (`app/server-python/src/cim_live/`, `/api/cim-live/ws`): each socket
+subscribes to the rtsim frames on the transport itself (`live.rtsim`, its own `DROP_OLDEST`
+backlog of 10 s), drains what queued at each wake and sends it as one `LiveFeed` (the layout
+when the header changes, then every frame's time, V p.u., V angle and f), so **no frame is
+merged away**: under load the batches grow. The page keeps the samples in a ref, redraws at
+most once per animation frame, and shows how many samples/s reach it (the Playwright spec
+wants at least 40).
 
 ### The live grid simulation
 

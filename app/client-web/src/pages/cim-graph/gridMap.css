@@ -1,0 +1,23 @@
+/* The breakers on the grid map: a small square, filled when closed, outlined when open, amber while switching. */
+.cim-breaker {
+  border: 2px solid #16a34a;
+  background: #16a34a;
+  cursor: pointer;
+}
+.cim-breaker-open {
+  border-color: #ef4444;
+  background: #ffffff;
+}
+.cim-breaker-pending {
+  border-color: #f59e0b;
+  background: #fde68a;
+  animation: cim-breaker-pulse 0.8s ease-in-out infinite alternate;
+}
+@keyframes cim-breaker-pulse {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0.45;
+  }
+}
