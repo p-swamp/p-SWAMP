@@ -11,6 +11,7 @@ architecture; `doc/module-cookbook.md` is the recipe for a new module.
 | [`live-synthetic/`](live-synthetic/) | `pswamp-live-synthetic` | source (live, not playable) | — | `PmuFrame` | — |
 | [`range-summary/`](range-summary/) | `pswamp-range-summary` | module | — | `RangeSummaryResult` | `SummarizeRangeCommand` |
 | [`remote-history/`](remote-history/) | `pswamp-remote-history` | source (history, playable) | — | `PmuFrame` | `PlayCommand`, `PauseCommand`, `StepCommand`, `SeekCommand`, `SpeedCommand` |
+| [`rtsim-from-cim/`](rtsim-from-cim/) | `pswamp-rtsim-from-cim` | source (live, not playable) | the CIM graph (outside the transport, `cim = True`) | `PmuFrame`, a column group per PMU Analog of the graph | — |
 | [`sample-replay/`](sample-replay/) | `pswamp-sample-replay` | source (history, playable) | — | `PmuFrame` | `PlayCommand`, `PauseCommand`, `StepCommand`, `SeekCommand`, `SpeedCommand` |
 | [`synthetic-history/`](synthetic-history/) | `pswamp-synthetic-history` | source (history, playable) | — | `PmuFrame` | `PlayCommand`, `PauseCommand`, `StepCommand`, `SeekCommand`, `SpeedCommand` |
 

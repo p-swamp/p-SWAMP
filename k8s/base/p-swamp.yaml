@@ -85,7 +85,7 @@ spec:
             - name: KAFKA_BOOTSTRAP_SERVERS
               value: $(PSWAMP_KAFKA_HOST):9092
             - name: PMU_TEST_STREAMER_SOURCES
-              value: sample:sample-replay,live:live-synthetic,remote:remote-history
+              value: sample:sample-replay,live:live-synthetic,remote:remote-history,rtsim:rtsim-from-cim
             - name: LIVE_PATH
               value: /etc/p-swamp/pmu/deployment_pmu_data_file_example.txt
             - name: REMOTE_URL
@@ -119,11 +119,12 @@ spec:
             periodSeconds: 10
             timeoutSeconds: 2
             failureThreshold: 3
-          # It holds the CIM graph while it loads it (the demo grid's is a few hundred MB), on
+          # The shared simulation steps a TOPS model in real time (about a third of a core)
+          # and holds the CIM graph while it loads it (the demo grid's is a few hundred MB), on
           # top of MAX_PIPELINES client runs.
           resources:
             requests:
-              cpu: "50m"
+              cpu: "500m"
               memory: "768Mi"
             limits:
               cpu: "2"
@@ -262,7 +263,7 @@ spec:
             - name: PSWAMP_WORKER_MODULES
               value: range-summary
             - name: PMU_TEST_STREAMER_SOURCES
-              value: sample:sample-replay,live:live-synthetic,remote:remote-history
+              value: sample:sample-replay,live:live-synthetic,remote:remote-history,rtsim:rtsim-from-cim
             - name: REMOTE_URL
               value: http://$(PSWAMP_REMOTE_DATA_HOST):8100
             # It reads the sources, and through them the CIM graph (it never writes it).

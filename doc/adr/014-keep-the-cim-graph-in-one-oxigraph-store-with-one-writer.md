@@ -74,16 +74,28 @@ test allows. Having no stamp, such a store is treated as changed every 2 s
 (`GraphVersion(unstamped_every=...)`), and a reader re-reads the profiles that change that often;
 once a stamp appears it follows that instead.
 
+**The simulation is LazyCIM's TOPS export, followed by `refresh()`.** The export has every switch as a
+branch, open switches tripped after the load flow, a PLL per bus, and the machines' controllers.
+Because the buses never change, a switch is a `Line.event` on its own row and keeps its transient,
+couplers included. A load's P and Q move its admittance. Rows that come or go mean starting over from
+the new model. The follower looks at the version stamp every `POLL` (0.2 s) and, only when it moved, expires SSH and SV
+and calls `refresh()`; idle, it reads nothing but the stamp. Over Oxigraph it does so in a process of
+its own, so a refresh (a second or so of Python) never holds up the frames to the pages. The model is
+stepped and paced in a process of its own too, at 50 frames a second.
+
 ## Consequences
 
 - An edit reads nothing and is one update (measured: 0 queries, 1 update). The page shows it as soon
-  as the update returns; a reader sees it at its next look at the stamp, with no re-reading on a
-  timer.
+  as the update returns. The simulation applies it after one refresh, before its next step: about
+  0.25 s after the edit, and with no polling of the graph.
 - A PMU value reaches the grid in one call: `self.cim_repo.from_mRID(frame.header.analog[i])`.
 - A module carries no refresh code, and cannot forget it. The store is asked for the stamp once per
   process every 0.2 s, however many modules read it and however fast their inputs come; an edit
   reaches a module at its first call after the next poll.
-- An edit made straight in the store, bypassing the app, reaches every reader that looks at the stamp
+- Couplers and transformers (through their bay breakers) are followed. Governors, exciters and
+  stabilisers are simulated where the graph has them; Nordic44's dynamics have none, so its frequency
+  is still not regulated after a disturbance.
+- An edit made straight in the store, bypassing the app, reaches the simulation (its reader expires)
   but not the page, which only shows what the app wrote. That is the single-writer rule: don't edit the
   store by hand.
 - Oxigraph is open source (MIT/Apache-2.0), and only SPARQL 1.1 is used, so another store can stand in.

@@ -227,7 +227,7 @@ jobs:
     - name: Install Playwright Browsers
       run: npx playwright install --with-deps chromium
     - name: Run Playwright tests
-      # The CIM graph page runs on the small grid the image carries
+      # The grid simulation and the CIM graph page run on the small grid the image carries
       # (these runners have no general internet, so no Nordic44 download).
       env:
         PSWAMP_CIM_PATH: /workspace/p-SWAMP/core/src/pswamp_core/cim/sample_grid

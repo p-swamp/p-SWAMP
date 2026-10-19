@@ -624,7 +624,8 @@ The rules to keep:
   `core/tests/transport_suite.py`.
 - **A script is a first-class caller.** `modules/sample-replay/examples/replay_stats.py`
   is the canonical one: `for frame in SampleReplay().read()` into
-  `FrameStatsModule().run_one(frame)`, then plot. Keep every module's
+  `FrameStatsModule().run_one(frame)`, then plot (`modules/rtsim-from-cim/examples/run_rtsim.py`
+  does the same with the live grid simulation: an edit of the graph, then plot). Keep every module's
   `examples/` that short and free of asyncio; if a module cannot be used that
   way, the module is wrong.
 - The grid monitor (`pswamp_web/`) still runs on its own thread-based Hub/Bus,
@@ -697,6 +698,41 @@ from its own repository (an edit is 0 queries and 1 update). The page shows a cl
 switching until the state has it, and a status bar with the last change and the last click's
 round trip. Edits need the CGMES vocabularies (LazyCIM downloads them; offline, the graph is
 read-only and the tests skip).
+
+### The live grid simulation
+
+`modules/rtsim-from-cim/` is a live `SourceModule` (`pswamp-rtsim-from-cim`, `cim = True`):
+one TOPS dynamic simulation of the grid in the CIM graph, run in real time and published as
+`PmuFrame`, one column group per PMU Analog of the graph (`pmu.py`; voltage and frequency
+per voltage level, current per line end), each column carrying its Analog. **The graph is
+how it is steered; the source has no commands.** The model is LazyCIM's TOPS export
+(`engine.EXPORT`): every switch a branch of its own (open ones tripped after the load flow),
+a PLL on every bus, the graph's controllers, and a negligible shunt to ground on every bus
+(floating bay nodes made Nordic44's network singular). `follow.py` looks at the graph's
+version stamp every `POLL` (0.2 s), and only when it moved expires SSH and SV and brings the
+export up to date with `exporter.refresh()`; idle, it reads nothing but the stamp, and an edit
+reaches the frames in about 0.25 s. Over Oxigraph the follower is **a process of its own**
+(`follow.FollowerProcess`) that pipes each change straight to the engine's process: a refresh is a
+second or so of Python, which in the server's process held up the frames to the pages for ~2.5 s
+at each edit. Keep it there; an in-process store, which no other process can read, is followed
+from a thread. A switch, or a line whose terminal is disconnected, is a `Line.event` on its own row (couplers included,
+transient kept); a transformer whose terminal is disconnected has its admittance taken off the
+network (`SimEngine._transformer`: TOPS has no transformer event), a load's P/Q moves its
+admittance, and only other rows that come or go rebuild the model (leaving out what the slack bus
+cannot reach: an island makes TOPS's load flow singular), which starts it over at steady state,
+seconds without a frame. **Taking any branch out must stay live**: a transformer between two
+substations is drawn on the grid page like a line (Nordic44's `MO T1`, Mo-Narvik), and used to be
+that rebuild. **The simulation runs in real time in a process of its own**
+(`process.EngineProcess`): built, stepped and paced there (`RATE` 50 frames/s, `DT` 0.01 s),
+each frame stamped with its place in the schedule, its values computed there and sent up in
+batches by a thread of that process. In the server, a step's many small numpy calls and the
+pacing would each wait for the interpreter lock behind every other thread (Nordic44: 4 ms
+alone, 834 ms next to one busy thread); there, the source only turns values into a
+`PmuFrame`, and a busy server delays frames without losing any (Nordic44 over 20 s: 51.0
+frames/s next to an always-busy thread). Keep it there. LazyCIM 0.2.1 exported each
+breaker twice (0.2.2 does not); the engine keeps one row per name. Not in the streamer's pipeline file,
+because a live source's shared run starts with the server: compose and k8s add
+`rtsim:rtsim-from-cim` to `PMU_TEST_STREAMER_SOURCES`, beside the streamer's other sources.
 
 ## The p-SWAMP web layer
 
