@@ -131,6 +131,18 @@ Against Oxigraph, run `core/tests/test_cim_oxigraph.py` (opt-in, `PSWAMP_TEST_CI
 It opens a breaker by editing its own in-process graph (`pswamp_core.cim.testing.edit`). A
 deployment never does that: there, the web backend is the only writer.
 
+**Over a store of the script's own.** `RtsimFromCimSource(repo=repo)` reads any LazyCIM
+repository instead of the one the settings name: a demo model in an embedded Oxigraph, a GraphDB
+repository. The source then owns that repository and follows it from a thread (a repository
+cannot cross into another process); the script edits the grid through a second repository over
+the same store. Such a store has no version stamp, so the source re-reads what changes every
+couple of seconds (`pswamp_core.cim.GraphVersion`). Ready the grid first with
+`pswamp_core.cim.prepare(repo)`, and read through a repository made after it, which sees the
+graphs `prepare` created. `CimSettings(backend=..., shared=True)` names a store that another
+process can open too, and is followed from a process of its own, as Oxigraph is.
+`modules/frame-stats/examples/rtsim_frame_stats.py` is the worked example, and names this source
+by its entry point rather than importing it.
+
 ## Tests
 
 `uv run pswamp test module rtsim-from-cim` (also part of `uv run pswamp test server`), over the

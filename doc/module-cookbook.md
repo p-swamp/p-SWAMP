@@ -221,6 +221,30 @@ the envelope the host would publish, so `.result` is the body. The generated
 `modules/peak-frequency/examples/run_peak_frequency.py` is the same shape for
 your module. If a module cannot be driven like this, it is doing too much.
 
+**Your example over another module's data: name it, don't import it.** A module
+imports no other module, and its examples are the place that habit is learnt. To
+feed yours from the live grid simulation (or any source, or another module), name
+it by its entry point with `pswamp_core.scripts`, and give your project an extra
+that installs it:
+
+```python
+from pswamp_core.scripts import source
+
+sim = source("rtsim-from-cim", repo=repo)   # kwargs go to the class's constructor
+for frame in sim.read(end=...):
+    peak.run_one(frame)
+```
+
+```toml
+[project.optional-dependencies]
+rtsim = ["matplotlib>=3.8", "pswamp-core[oxigraph]", "pswamp-rtsim-from-cim"]
+```
+
+A source that reads the CIM graph takes the script's own LazyCIM repository
+(`repo=`); `pswamp_core.cim.prepare(repo)` readies it (machine dynamics, PMU
+Analogs). `modules/frame-stats/examples/rtsim_frame_stats.py` does all of it
+over Nordic44 in an embedded Oxigraph store, and edits the graph mid-run.
+
 ### Its pipeline file, and its sources
 
 `pipelines/peak-frequency.toml` is the app's pipeline, as data. It names the

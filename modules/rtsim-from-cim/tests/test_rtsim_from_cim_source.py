@@ -166,3 +166,31 @@ async def test_a_grid_that_cannot_be_loaded_ends_the_stream_with_the_reason(tmp_
     with pytest.raises(RuntimeError, match="CGMES"):
         async for _ in RtsimFromCimSource(graph=CimSettings(cim_path=tmp_path)).aread():
             pass
+
+
+@needs_profiles
+async def test_a_repository_a_script_hands_over_is_simulated_and_its_edits_followed():
+    # A store of the script's own, filled by its owner: no version stamp, so edits are looked for
+    # every couple of seconds. The repository cannot leave the process: it is followed from a thread.
+    from lazycim import CIMRepository
+    from lazycim.demo import CIM100
+
+    from pswamp_core.cim import LocalStore, Store
+    from pswamp_core.cim.grid import NAMESPACE_ALIASES
+
+    theirs = Store(SETTINGS, LocalStore("theirs"))
+    theirs.fill()
+    theirs.backend.update("DROP SILENT GRAPH <urn:pswamp:meta>")
+
+    def repository(**layout) -> CIMRepository:
+        return CIMRepository(theirs.backend, default_namespace=CIM100, namespace_aliases=NAMESPACE_ALIASES, **layout)
+
+    async with Run(RtsimFromCimSource(repo=repository(graphs="discover"))) as run:
+        await run.until(lambda: len(run.frames) >= 25)
+        assert "rtsim-follow" not in {p.name for p in multiprocessing.active_children()}
+        before = angles(run.frames[-1])
+        script = repository(graphs=theirs.layout)  # the script's second repository; no stamp moves
+        script.from_mRID(BAY_BREAKER).open = True
+        script.commit()
+        assert theirs.version() == 0
+        await run.until(lambda: np.max(np.abs(angles(run.frames[-1]) - before)) > 0.1, timeout=15)

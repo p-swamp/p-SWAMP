@@ -31,7 +31,10 @@ simulated, or a run that diverges, ends the stream with the error; reading the s
 fresh simulation at t = 0 from the graph as it is then.
 
 From a script there is no server: the graph is the process's own (the sample grid, with
-``PSWAMP_CIM_PATH``), and a bounded window is read (``examples/run_rtsim.py``).
+``PSWAMP_CIM_PATH``), and a bounded window is read (``examples/run_rtsim.py``). A script that holds
+a grid in any LazyCIM store hands its repository over instead (``repo=``): the source then reads
+that, follows it from a thread, and, the store having no version stamp, looks for edits every
+couple of seconds (``pswamp_core.cim.GraphVersion``).
 """
 
 from __future__ import annotations
@@ -42,7 +45,7 @@ from collections.abc import AsyncIterator
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 
-from pswamp_core.cim import CimSettings, GraphVersion, connect_reader, open_store
+from pswamp_core.cim import CimSettings, GraphVersion, Store, connect_reader, open_store
 from pswamp_core.log import get_logger
 from pswamp_core.settings import EnvSetting
 from pswamp_core.sources import SourceModule
@@ -72,8 +75,12 @@ class RtsimFromCimSource(SourceModule):
         EnvSetting("POLL", "Seconds between two looks at the graph's version stamp", default="0.2", kind="float"),
     )
 
-    def __init__(self, source: str | None = None, *, graph: CimSettings | None = None, **settings) -> None:
-        """``graph`` says where the CIM graph is (the environment's when omitted)."""
+    def __init__(
+        self, source: str | None = None, *, graph: CimSettings | None = None, repo=None, **settings
+    ) -> None:
+        """``graph`` says where the CIM graph is (the environment's when omitted); ``repo``, a script's
+        own LazyCIM repository over any store, is read instead. The source then owns it: the script
+        edits the grid through a second repository over the same store, never through this one."""
         super().__init__(source, **settings)
         rate, dt = self.settings.rate, self.settings.dt
         if rate <= 0 or dt <= 0 or self.settings.poll <= 0:
@@ -83,9 +90,12 @@ class RtsimFromCimSource(SourceModule):
         if self.steps_per_frame < 1 or abs(self.steps_per_frame * rate * dt - 1.0) > 1e-6:
             raise ValueError(f"RATE ({rate}) and DT ({dt}) must make a whole number of steps per frame period")
         self._graph = graph
+        self._repo = repo
 
     def _connect(self):
-        if self._graph is not None and self._cim_repo is None:
+        if self._repo is not None:
+            self.cim_repo = self._repo
+        elif self._graph is not None and self._cim_repo is None:
             self.cim_repo = connect_reader(self._graph)
         return self.cim_repo
 
@@ -94,7 +104,7 @@ class RtsimFromCimSource(SourceModule):
         graph = ThreadPoolExecutor(1, thread_name_prefix="rtsim-graph")  # owns the repository
         loop = asyncio.get_running_loop()
         settings = self._graph or CimSettings.from_env()
-        apart = follows_apart(settings)
+        apart = self._repo is None and follows_apart(settings)  # a repository cannot leave the process
         follower: Follower | FollowerProcess | None = None
         watch: asyncio.Task | None = None
         engine: EngineProcess | None = None
@@ -153,8 +163,9 @@ class RtsimFromCimSource(SourceModule):
 
     def _start(self) -> tuple:
         """Connect, export the graph and read its PMU Analogs (in the graph's thread)."""
+        store = Store.of(self._repo) if self._repo is not None else open_store(self._graph)
+        version = GraphVersion(store)  # watched from before the export
         repo = self._connect()
-        version = GraphVersion(open_store(self._graph))  # watched from before the export
         self._follower = Follower(repo, version)
         sim = self._follower.sim
         return sim.model, self._follower.open_switches, sim.ids, read_analogs(repo)
@@ -185,8 +196,11 @@ class RtsimFromCimSource(SourceModule):
 
 
 def follows_apart(settings: CimSettings) -> bool:
-    """Whether the graph is followed from a process of its own: when the store is shared (Oxigraph),
-    which another process can read. An in-process store (tests, scripts) is followed from a thread."""
+    """Whether the graph is followed from a process of its own: when the store is shared (Oxigraph, or
+    a ``backend`` marked ``shared``), which another process can read. An in-process store (tests,
+    scripts) is followed from a thread."""
+    if settings.backend is not None:
+        return settings.shared
     return settings.url is not None
 
 

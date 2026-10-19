@@ -44,6 +44,33 @@ Without the extra, `uv run python modules/frame-stats/examples/plot_frame_stats.
 prints the statistics instead. To run it over the real sample recording instead of
 synthetic frames, see `modules/sample-replay/examples/replay_stats.py`.
 
+`examples/rtsim_frame_stats.py` runs the module over the **live grid simulation**
+(`rtsim-from-cim`) of Nordic44, held in an embedded Oxigraph store of the script's
+own: no server, no Docker, no p-SWAMP store. A few seconds in it edits the graph
+(the largest load steps up, or `--breaker <mRID>` opens a breaker) and plots the
+frequency and the mean voltage as the simulation follows. It shows three things
+a script can do with any module:
+
+- **bring its own LazyCIM store**: any `CIMRepository` will do; this one is
+  LazyCIM's Nordic44 demo model in pyoxigraph, and `pswamp_core.cim.prepare`
+  gives it what p-SWAMP needs (machine dynamics, PMU Analogs);
+- **use another module by name, never by import**:
+  `pswamp_core.scripts.source("rtsim-from-cim", repo=repo)`; the `rtsim` extra
+  installs it (with pyoxigraph and matplotlib), and the module's own
+  dependencies stay as they are;
+- **steer the simulation by editing the graph**, through a second repository
+  over the same store. That store has no version stamp, so the simulation looks
+  for edits every couple of seconds.
+
+```
+uv run --package pswamp-frame-stats --extra rtsim python modules/frame-stats/examples/rtsim_frame_stats.py --save fs.png
+```
+
+It takes about half a minute: a second to load the grid, a second to prepare
+it, a few to start the simulation, then the run itself. Nordic44 is downloaded
+by LazyCIM once (`python -m lazycim.demo` fills its cache ahead, for a machine
+that will be offline).
+
 ## Tests
 
 `uv run pswamp test module frame-stats` (also part of `uv run pswamp test server`).

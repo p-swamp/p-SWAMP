@@ -629,7 +629,12 @@ The rules to keep:
   `FrameStatsModule().run_one(frame)`, then plot (`modules/rtsim-from-cim/examples/run_rtsim.py`
   does the same with the live grid simulation: an edit of the graph, then plot). Keep every module's
   `examples/` that short and free of asyncio; if a module cannot be used that
-  way, the module is wrong.
+  way, the module is wrong. **An example that needs another module names it,
+  never imports it**: `pswamp_core.scripts.source("<entry point>", ...)` (or
+  `module(...)`), with the provider installed by an extra of the example's own
+  project, so the module's dependencies stay its own.
+  `modules/frame-stats/examples/rtsim_frame_stats.py` is the worked example: the
+  live simulation over a LazyCIM store the script brings (`repo=`, `prepare`).
 - The grid monitor (`pswamp_web/`) still runs on its own thread-based Hub/Bus,
   beside this, with its wire models in `pswamp_web/wire.py`. Don't mix the two
   in one app.
