@@ -24,6 +24,7 @@ const NAV_ITEMS = [
   { to: '/pmu-test-streamer', label: 'PMU Test Streamer', end: false },
   { to: '/reference-subapp', label: 'Reference example', end: false },
   { to: '/cim-graph', label: 'CIM graph', end: false },
+  { to: '/islanding-detection', label: 'Islanding detection', end: false },
 ]
 
 function isLocalhost(): boolean {

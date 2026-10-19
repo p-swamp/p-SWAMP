@@ -176,8 +176,8 @@ services:
     working_dir: /workspace/p-SWAMP/pipelines
     environment:
       <<: [*transport, *cim]  # a module that reads the grid (cim = True) reads it here
-      PSWAMP_WORKER_PIPELINES: "pmu-test-streamer.toml"
-      PSWAMP_WORKER_MODULES: "frame-stats,excursion"
+      PSWAMP_WORKER_PIPELINES: "pmu-test-streamer.toml,islanding-detection.toml"
+      PSWAMP_WORKER_MODULES: "frame-stats,excursion,islanding-detection"
     depends_on:
       kafka:
         condition: service_healthy

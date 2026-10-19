@@ -601,7 +601,7 @@ export interface components {
             /** App Uuid */
             app_uuid: string;
             /** Events */
-            events: components["schemas"]["AlarmEvent"][];
+            events: components["schemas"]["pswamp_web__wire__AlarmEvent"][];
             /**
              * Status
              * @enum {string}
@@ -616,18 +616,6 @@ export interface components {
             t_start: number;
             /** Uuid */
             uuid: string;
-        };
-        /** AlarmEvent */
-        AlarmEvent: {
-            /** Message */
-            message: string;
-            /** T */
-            t: number;
-            /**
-             * Type
-             * @enum {string}
-             */
-            type: "init" | "not_critical" | "acknowledge" | "silence" | "user_message";
         };
         /** AlarmList */
         AlarmList: {
@@ -1150,6 +1138,73 @@ export interface components {
             mean_freq: number | null;
             /** Stations */
             stations: string[];
+        };
+        /** IslandingDetectionBody */
+        IslandingDetectionBody: {
+            /**
+             * Islands
+             * @description The groups of stations separated from the main system, largest first, by station name; empty when the grid is whole.
+             */
+            islands: string[][];
+            /**
+             * Status
+             * @description 'Emergency' when there is an island, 'OK' when there is none.
+             * @enum {string}
+             */
+            status: "OK" | "Alert" | "Emergency";
+        };
+        /** IslandingDetectionResult */
+        IslandingDetectionResult: {
+            app: components["schemas"]["AppIdentity"];
+            /**
+             * Mrid
+             * @default null
+             */
+            mRID: string | null;
+            /**
+             * Parameters
+             * @description The module's settings.
+             */
+            parameters?: {
+                [key: string]: unknown;
+            };
+            /**
+             * Request Id
+             * @description Set when this result answers a command.
+             * @default null
+             */
+            request_id: string | null;
+            result: components["schemas"]["IslandingDetectionBody"];
+            /**
+             * Timestamp
+             * Format: date-time
+             * @description The instant the result is about.
+             */
+            timestamp: string;
+            /**
+             * Version
+             * @default v1
+             * @constant
+             */
+            version: "v1";
+        };
+        /**
+         * IslandingDetectionState
+         * @description Pushed on connect and after every change.
+         */
+        IslandingDetectionState: {
+            /** @description The module's latest alarm event; null until the first. */
+            alarm: components["schemas"]["pswamp_models__common__alarms__AlarmEvent"] | null;
+            /** @description Which source is open, and where it is. */
+            player: components["schemas"]["PlayerStatus"];
+            /** @description The module's latest result; null until the first. */
+            result: components["schemas"]["IslandingDetectionResult"] | null;
+            /**
+             * Type
+             * @default state
+             * @constant
+             */
+            type: "state";
         };
         /** IslandingParameters */
         IslandingParameters: {
@@ -2226,6 +2281,65 @@ export interface components {
             msg: string;
             /** Error Type */
             type: string;
+        };
+        /**
+         * AlarmEvent
+         * @description One step in an alarm's life, as the module that raised it sees it.
+         */
+        pswamp_models__common__alarms__AlarmEvent: {
+            /**
+             * Alarm Uuid
+             * @description The alarm this event belongs to: every event of one alarm shares it.
+             */
+            alarm_uuid: string;
+            /** @description The module instance that raised the alarm. */
+            app: components["schemas"]["AppIdentity"];
+            /**
+             * Mrid
+             * @default null
+             */
+            mRID: string | null;
+            /**
+             * Message
+             * @description One line for a person.
+             */
+            message: string;
+            /**
+             * Status
+             * @description The module's status when the event was raised.
+             * @enum {string}
+             */
+            status: "OK" | "Alert" | "Emergency";
+            /**
+             * Timestamp
+             * Format: date-time
+             * @description The assessment the event comes from, in message time.
+             */
+            timestamp: string;
+            /**
+             * Type
+             * @description 'init' when the alarm is issued; 'not_critical' when its condition has cleared.
+             * @enum {string}
+             */
+            type: "init" | "not_critical";
+            /**
+             * Version
+             * @default v1
+             * @constant
+             */
+            version: "v1";
+        };
+        /** AlarmEvent */
+        pswamp_web__wire__AlarmEvent: {
+            /** Message */
+            message: string;
+            /** T */
+            t: number;
+            /**
+             * Type
+             * @enum {string}
+             */
+            type: "init" | "not_critical" | "acknowledge" | "silence" | "user_message";
         };
     };
     responses: never;

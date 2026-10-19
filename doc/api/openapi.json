@@ -13,7 +13,7 @@
           },
           "events": {
             "items": {
-              "$ref": "#/components/schemas/AlarmEvent"
+              "$ref": "#/components/schemas/pswamp_web__wire__AlarmEvent"
             },
             "title": "Events",
             "type": "array"
@@ -58,36 +58,6 @@
           "events"
         ],
         "title": "Alarm",
-        "type": "object"
-      },
-      "AlarmEvent": {
-        "properties": {
-          "message": {
-            "title": "Message",
-            "type": "string"
-          },
-          "t": {
-            "title": "T",
-            "type": "number"
-          },
-          "type": {
-            "enum": [
-              "init",
-              "not_critical",
-              "acknowledge",
-              "silence",
-              "user_message"
-            ],
-            "title": "Type",
-            "type": "string"
-          }
-        },
-        "required": [
-          "t",
-          "type",
-          "message"
-        ],
-        "title": "AlarmEvent",
         "type": "object"
       },
       "AlarmList": {
@@ -1083,6 +1053,141 @@
           "mean_freq"
         ],
         "title": "Island",
+        "type": "object"
+      },
+      "IslandingDetectionBody": {
+        "properties": {
+          "islands": {
+            "description": "The groups of stations separated from the main system, largest first, by station name; empty when the grid is whole.",
+            "items": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "title": "Islands",
+            "type": "array"
+          },
+          "status": {
+            "description": "'Emergency' when there is an island, 'OK' when there is none.",
+            "enum": [
+              "OK",
+              "Alert",
+              "Emergency"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "islands",
+          "status"
+        ],
+        "title": "IslandingDetectionBody",
+        "type": "object"
+      },
+      "IslandingDetectionResult": {
+        "properties": {
+          "app": {
+            "$ref": "#/components/schemas/AppIdentity"
+          },
+          "mRID": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Mrid"
+          },
+          "parameters": {
+            "additionalProperties": true,
+            "description": "The module's settings.",
+            "title": "Parameters",
+            "type": "object"
+          },
+          "request_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Set when this result answers a command.",
+            "title": "Request Id"
+          },
+          "result": {
+            "$ref": "#/components/schemas/IslandingDetectionBody"
+          },
+          "timestamp": {
+            "description": "The instant the result is about.",
+            "format": "date-time",
+            "title": "Timestamp",
+            "type": "string"
+          },
+          "version": {
+            "const": "v1",
+            "default": "v1",
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "timestamp",
+          "app",
+          "result"
+        ],
+        "title": "IslandingDetectionResult",
+        "type": "object"
+      },
+      "IslandingDetectionState": {
+        "description": "Pushed on connect and after every change.",
+        "properties": {
+          "alarm": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/pswamp_models__common__alarms__AlarmEvent"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The module's latest alarm event; null until the first."
+          },
+          "player": {
+            "$ref": "#/components/schemas/PlayerStatus",
+            "description": "Which source is open, and where it is."
+          },
+          "result": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/IslandingDetectionResult"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The module's latest result; null until the first."
+          },
+          "type": {
+            "const": "state",
+            "default": "state",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "player",
+          "result",
+          "alarm"
+        ],
+        "title": "IslandingDetectionState",
         "type": "object"
       },
       "IslandingParameters": {
@@ -3177,6 +3282,108 @@
         ],
         "title": "ValidationError",
         "type": "object"
+      },
+      "pswamp_models__common__alarms__AlarmEvent": {
+        "description": "One step in an alarm's life, as the module that raised it sees it.",
+        "properties": {
+          "alarm_uuid": {
+            "description": "The alarm this event belongs to: every event of one alarm shares it.",
+            "title": "Alarm Uuid",
+            "type": "string"
+          },
+          "app": {
+            "$ref": "#/components/schemas/AppIdentity",
+            "description": "The module instance that raised the alarm."
+          },
+          "mRID": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Mrid"
+          },
+          "message": {
+            "description": "One line for a person.",
+            "title": "Message",
+            "type": "string"
+          },
+          "status": {
+            "description": "The module's status when the event was raised.",
+            "enum": [
+              "OK",
+              "Alert",
+              "Emergency"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "timestamp": {
+            "description": "The assessment the event comes from, in message time.",
+            "format": "date-time",
+            "title": "Timestamp",
+            "type": "string"
+          },
+          "type": {
+            "description": "'init' when the alarm is issued; 'not_critical' when its condition has cleared.",
+            "enum": [
+              "init",
+              "not_critical"
+            ],
+            "title": "Type",
+            "type": "string"
+          },
+          "version": {
+            "const": "v1",
+            "default": "v1",
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "timestamp",
+          "alarm_uuid",
+          "app",
+          "type",
+          "status",
+          "message"
+        ],
+        "title": "AlarmEvent",
+        "type": "object"
+      },
+      "pswamp_web__wire__AlarmEvent": {
+        "properties": {
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "t": {
+            "title": "T",
+            "type": "number"
+          },
+          "type": {
+            "enum": [
+              "init",
+              "not_critical",
+              "acknowledge",
+              "silence",
+              "user_message"
+            ],
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "t",
+          "type",
+          "message"
+        ],
+        "title": "AlarmEvent",
+        "type": "object"
       }
     }
   },
@@ -4722,6 +4929,10 @@
     {
       "description": "The live grid simulation's frames, as each station's voltage and frequency, every frame.",
       "name": "cim-live"
+    },
+    {
+      "description": "Islanding detection over a time window of the stations' frequencies.",
+      "name": "islanding-detection"
     }
   ],
   "x-websocket-channels": [
@@ -4804,6 +5015,14 @@
         "$ref": "#/components/schemas/LiveFeed"
       },
       "path": "/api/cim-live/ws"
+    },
+    {
+      "app": "islanding-detection",
+      "direction": "server-to-client",
+      "message": {
+        "$ref": "#/components/schemas/IslandingDetectionState"
+      },
+      "path": "/api/islanding-detection/ws"
     }
   ]
 }
