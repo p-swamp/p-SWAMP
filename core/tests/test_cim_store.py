@@ -22,6 +22,8 @@ from pswamp_core.cim import (  # noqa: E402
     analog_table,
     connect_reader,
     model_id,
+    open_store,
+    prepare,
     refresh_expired,
     stage,
 )
@@ -199,3 +201,87 @@ def test_a_switch_s_state_reads_through_the_layout(store):
     reader = connect_reader(store=store)
     table = reader.query(L.Breakers).to_dataframe(mRID=F.mRID, open=F.open)
     assert len(table) > 0 and set(table.open) <= {True, False}
+
+
+# A store p-SWAMP did not load: any LazyCIM backend, filled by its owner.
+
+
+def _their_store() -> LocalStore:
+    """A backend factory, as a script would give one (top level, so it pickles): a store filled
+    with the sample grid by someone else, whose writer does not stamp."""
+    backend = LocalStore("theirs")
+    Store(SETTINGS, backend).fill()
+    backend.update("DROP SILENT GRAPH <urn:pswamp:meta>")
+    return backend
+
+
+THEIRS = CimSettings(backend=_their_store)
+
+
+def test_a_backend_s_store_is_read_and_never_loaded_reset_or_written(grid):
+    store = open_store(THEIRS)
+    assert not store.owned and store.version() == 0
+    reader = connect_reader(THEIRS, timeout=5)
+    assert len(analog_table(reader)) > 0
+    for doing in (store.fill, store.reset, store.writer_backend):
+        with pytest.raises(PermissionError, match="did not load"):
+            doing()
+
+
+def test_a_store_without_a_stamp_is_said_to_change_every_so_often(grid):
+    version = GraphVersion(open_store(THEIRS), unstamped_every=0.05)
+    assert not version.changed()
+    time.sleep(0.06)
+    assert version.changed() and not version.changed()
+
+
+def test_a_stamp_that_appears_is_followed_instead(store):
+    store.backend.update("DROP SILENT GRAPH <urn:pswamp:meta>")
+    version = GraphVersion(store, unstamped_every=3600)
+    assert not version.changed()
+    edit = writer(store)
+    edit.from_mRID(COUPLER).open = True
+    edit.commit()
+    assert version.changed() and not version.changed()
+
+
+def test_a_module_reads_the_repository_a_script_hands_it(store):
+    from pswamp_core.modules import Module
+
+    class ReadsTheGrid(Module):
+        name = "reads-the-grid"
+        cim = True
+
+    module = ReadsTheGrid()
+    repo = CIMRepository(store.backend, graphs="discover", namespace_aliases=NAMESPACE_ALIASES)
+    module.cim_repo = repo
+    assert module.cim_repo is repo
+    watched = module._cim_fresh.watch.store  # kept up to date from that store, which is only read
+    assert watched.backend is store.backend and not watched.owned
+
+
+def test_prepare_leaves_a_grid_that_has_its_analogs_alone(store):
+    repo = CIMRepository(store.backend, graphs="discover", namespace_aliases=NAMESPACE_ALIASES)
+    before = store.version()
+    assert prepare(repo) == 0 and store.version() == before
+
+
+def test_prepare_gives_a_grid_its_dynamics_and_analogs_in_graphs_it_lacks(store):
+    """As a LazyCIM demo model in a store of a script's own: no Dynamics or Operation data graph."""
+    for keyword in ("DY", "OP"):
+        store.backend.dataset.remove_graph(_iri(f"cgmes:model:{keyword}"))
+    repo = CIMRepository(store.backend, graphs="discover", namespace_aliases=NAMESPACE_ALIASES)
+    assert prepare(repo) == len(analog_table(connect_reader(store=store))) > 0
+    machines = connect_reader(store=store).query(L.SynchronousMachineTimeConstantReactances).count()
+    assert machines > 0 and prepare(repo) == 0
+
+
+def _model_of(settings: CimSettings) -> str | None:
+    return model_id(open_store(settings))
+
+
+def test_a_backend_factory_opens_its_store_in_a_child_process(grid):
+    import multiprocessing
+
+    with multiprocessing.get_context("spawn").Pool(1) as pool:
+        assert pool.apply(_model_of, (THEIRS,)) == EQ_MODEL

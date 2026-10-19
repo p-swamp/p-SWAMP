@@ -194,11 +194,12 @@ def test_the_core_imports_no_module(tmp_path):
 
 
 # The CIM graph has one writer, the web backend's CIM graph app. The core stages the grid in a
-# private copy before any store sees it, and its testing helper edits a test's own store; nothing
-# else commits.
+# private copy before any store sees it, its testing helper edits a test's own store, and prepare a
+# script's own repository; nothing else commits.
 CIM_WRITERS = {
     "app/server-python/src/cim_graph/grid.py",
     "core/src/pswamp_core/cim/grid.py",
+    "core/src/pswamp_core/cim/prepare.py",
     "core/src/pswamp_core/cim/testing.py",
 }
 

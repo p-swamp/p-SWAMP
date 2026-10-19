@@ -15,6 +15,8 @@
 # this repo can depend on the core alone. The extra is imported lazily:
 #   [kafka]        aiokafka, for pswamp_core.transport.kafka
 #   [cim]          lazycim, for pswamp_core.cim (the CIM graph a module reads)
+#   [oxigraph]     lazycim with pyoxigraph: an embedded Oxigraph store, for a script that
+#                  holds a grid of its own (never the image: a deployment uses the server)
 
 [project]
 name = "pswamp-core"
@@ -28,6 +30,7 @@ dependencies = ["pydantic>=2.12", "pswamp-models"]
 [project.optional-dependencies]
 kafka = ["aiokafka>=0.14,<1"]
 cim = ["lazycim[graphdb]==0.2.2"]
+oxigraph = ["lazycim[graphdb,oxigraph]==0.2.2"]
 
 [tool.uv.sources]
 pswamp-models = { workspace = true }

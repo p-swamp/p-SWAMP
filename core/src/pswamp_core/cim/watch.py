@@ -56,8 +56,8 @@ class GraphWatch:
 
     @classmethod
     def of(cls, store: Store) -> GraphWatch:
-        """The process's watch on ``store`` (on its backend), started on first use. It asks the
-        store for the stamp: not on an event loop."""
+        """The process's watch on ``store`` (on its backend: a script's ``Store.of(repo)`` gets one of
+        its own), started on first use. It asks the store for the stamp: not on an event loop."""
         with _watches_lock:
             watch = _watches.get(id(store.backend))  # the watch keeps its backend, so the id stays its own
             if watch is None:

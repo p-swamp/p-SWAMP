@@ -141,11 +141,25 @@ class ReadOnlyRepository(CIMRepository):
 
 
 class Store:
-    """The graph's store, as one process sees it: ``backend``, and what is loaded into it."""
+    """The graph's store, as one process sees it: ``backend``, and what is loaded into it.
 
-    def __init__(self, settings: CimSettings, backend: SparqlProtocolBackend) -> None:
+    ``owned`` says whether p-SWAMP loads it (an in-process store, the deployment's Oxigraph): only
+    such a store is filled, reset and stamped. Any other (``CimSettings.backend``, or a script's
+    repository, ``Store.of``) was filled by its owner, and is only read."""
+
+    def __init__(self, settings: CimSettings, backend: SparqlProtocolBackend, *, owned: bool = True) -> None:
         self.settings = settings
         self.backend = backend
+        self.owned = owned
+
+    @classmethod
+    def of(cls, repo: CIMRepository) -> Store:
+        """The store under a repository a script made itself, from any LazyCIM backend: read only."""
+        return cls(CimSettings(), repo.db, owned=False)
+
+    def _check_owned(self, doing: str) -> None:
+        if not self.owned:
+            raise PermissionError(f"cannot {doing} {self.backend.name}: p-SWAMP reads a store it did not load")
 
     @property
     def grid(self) -> Grid:
@@ -163,6 +177,7 @@ class Store:
 
     def writer_backend(self) -> SparqlProtocolBackend:
         """A backend over this store whose every update also moves the version stamp: the writer's."""
+        self._check_owned("write to")
         if isinstance(self.backend, LocalStore):
             return _StampingLocal("writer", over=self.backend)
         return _remote(self.settings.url, _StampingRemote)
@@ -174,8 +189,10 @@ class Store:
         return int(bindings[0]["v"]["value"]) if bindings else 0
 
     def loaded(self) -> bool:
-        """Whether the store holds a grid (its EQ graph has anything in it)."""
-        found = self.backend.execute(f"SELECT ?s WHERE {{ GRAPH <{model_graph('EQ')}> {{ ?s ?p ?o }} }} LIMIT 1")
+        """Whether the store holds a grid (its EQ graph has anything in it; for a store p-SWAMP did
+        not load, which may keep everything in one graph, anything at all)."""
+        where = f"GRAPH <{model_graph('EQ')}> {{ ?s ?p ?o }}" if self.owned else "?s ?p ?o"
+        found = self.backend.execute(f"SELECT ?s WHERE {{ {where} }} LIMIT 1")
         return bool(found["results"]["bindings"])
 
     def reachable(self) -> bool:
@@ -189,6 +206,7 @@ class Store:
     def fill(self, timeout: float = 120.0) -> bool:
         """Write the grid into an empty store; leave a filled one alone. Whether it wrote. Waits up to
         ``timeout`` seconds for a store that does not answer yet."""
+        self._check_owned("fill")
         deadline, pause = time.monotonic() + timeout, 0.1
         while not self.reachable():
             if time.monotonic() > deadline:
@@ -210,6 +228,7 @@ class Store:
     def reset(self) -> None:
         """Put the steady-state hypothesis back as it was loaded (every switch, terminal and set
         point the grid has been operated through), in one update."""
+        self._check_owned("reset")
         name = model_graph("SSH")
         self._put(name, self.grid.graphs.get(name, Graph()), replace=True)
 
@@ -251,12 +270,15 @@ _stores_lock = threading.Lock()
 
 def open_store(settings: CimSettings | None = None) -> Store:
     """This process's handle on the store ``settings`` names. An in-process store is filled
-    with the grid when it is first opened: nobody else could."""
+    with the grid when it is first opened: nobody else could. A ``backend``'s store is opened
+    as it is."""
     settings = settings or CimSettings.from_env()
     with _stores_lock:
         store = _stores.get(settings)
         if store is None:
-            if settings.url is None:
+            if settings.backend is not None:
+                store = Store(settings, settings.backend(), owned=False)
+            elif settings.url is None:
                 store = Store(settings, LocalStore())
                 store.fill()
             else:
@@ -305,17 +327,34 @@ def refresh_expired(repo: CIMRepository) -> None:
         repo.expire(profile=profile)
 
 
+#: How often a store with no version stamp is said to have changed (``GraphVersion``), seconds.
+UNSTAMPED_EVERY = 2.0
+
+
 class GraphVersion:
     """Whether the graph changed since the last look, from the version stamp: one tiny query.
 
     Made before reading what it guards, so a write in between is seen at the next look: the
-    first ``changed()`` compares with the stamp as it was when the watch was made."""
+    first ``changed()`` compares with the stamp as it was when the watch was made.
 
-    def __init__(self, store: Store) -> None:
+    A store whose writer does not stamp (one p-SWAMP did not load, edited by its owner) cannot say
+    when it changed, so it is said to have changed every ``unstamped_every`` seconds: the reader
+    re-reads what changes (SSH, SV) that often, and an edit is seen within that time. Once a stamp
+    appears, it is followed instead."""
+
+    def __init__(self, store: Store, *, unstamped_every: float = UNSTAMPED_EVERY) -> None:
         self.store = store
+        self.unstamped_every = unstamped_every
         self.seen = store.version()
+        self._due = time.monotonic() + unstamped_every
 
     def changed(self) -> bool:
         now = self.store.version()
-        moved, self.seen = now != self.seen, now
-        return moved
+        if now or self.seen:
+            moved, self.seen = now != self.seen, now
+            return moved
+        at = time.monotonic()
+        if at < self._due:
+            return False
+        self._due = at + self.unstamped_every
+        return True

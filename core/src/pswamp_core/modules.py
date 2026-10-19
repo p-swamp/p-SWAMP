@@ -263,7 +263,8 @@ class Module(ABC):
         core keeps it up to date: before each call into the instance, a repository whose
         graph changed has what changes (SSH, SV) marked stale, so the call reads the edit
         (``pswamp_core.cim.watch``; and see ``cim_changed``). Connected on first use when no
-        host did it first, as in a script."""
+        host did it first, as in a script. A script may set it instead, to a repository of
+        its own over any LazyCIM store: the module then reads that, kept up to date the same way."""
         if not self.cim:
             raise AttributeError(f"{self.name} does not read the CIM graph: set cim = True")
         if self._cim_repo is None:
@@ -273,17 +274,23 @@ class Module(ABC):
             store = open_store()
             self._cim_repo = connect_reader(store=store)  # waits for the grid, reads none of it
             self._cim_fresh = GraphWatch.of(store).attach(self._cim_repo)  # watched from before the first read
+        elif self._cim_fresh is None and getattr(self._cim_repo, "db", None) is not None:
+            from .cim import Store
+            from .cim.watch import GraphWatch
+
+            self._cim_fresh = GraphWatch.of(Store.of(self._cim_repo)).attach(self._cim_repo)
         return self._cim_repo
 
     @cim_repo.setter
     def cim_repo(self, repository: Any) -> None:
         self._cim_repo = repository
-        self._cim_fresh = None  # a repository handed over is read as it is
+        self._cim_fresh = None  # attached to its own store on first use
 
     def cim_changed(self) -> None:
         """Called when the CIM graph changed, before the next input or command, once the
         repository has what changes marked stale: rebuild here whatever the instance derived
-        from the graph. Under the instance's lock, and in a thread if ``blocking``."""
+        from the graph. Under the instance's lock, and in a thread if ``blocking``. A store
+        with no version stamp (one p-SWAMP did not load) is said to change every 2 s."""
 
     async def setup(self) -> None:
         """Called once by a host, after ``sources`` is set and before any input."""
