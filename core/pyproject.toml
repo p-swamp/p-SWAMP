@@ -14,6 +14,7 @@
 # are the only required dependencies, so a module or source written outside
 # this repo can depend on the core alone. The extra is imported lazily:
 #   [kafka]        aiokafka, for pswamp_core.transport.kafka
+#   [cim]          lazycim, for pswamp_core.cim (the CIM graph a module reads)
 
 [project]
 name = "pswamp-core"
@@ -26,6 +27,7 @@ dependencies = ["pydantic>=2.12", "pswamp-models"]
 
 [project.optional-dependencies]
 kafka = ["aiokafka>=0.14,<1"]
+cim = ["lazycim[graphdb]==0.2.2"]
 
 [tool.uv.sources]
 pswamp-models = { workspace = true }
