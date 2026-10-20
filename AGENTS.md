@@ -68,6 +68,9 @@ which exist to keep the "adding a page" path honest:
   and keep it current: change a convention here
   first, don't grow features on it, and don't use it for p-SWAMP experiments —
   generate a new subapp for those.
+- **`/cim-graph` operates the grid by editing the CIM graph**: substations,
+  lines and breakers on their geographic layout; a click opens or closes a
+  breaker, or takes a line out. See "The CIM graph".
 - **`/pmu-test-streamer` is the worked example of the server data
   architecture** (`core/`, `doc/server-data-architecture.md`): PMU sources → the
   run's router (the active source) → modules over a transport → the page, with
@@ -77,13 +80,23 @@ which exist to keep the "adding a page" path honest:
   `uv run pswamp new module` (`doc/module-cookbook.md`), not
   an extension of the streamer.
 
-**The client-server stack is stateless on purpose.** There is no database and no
-persistent volume anywhere under `app/` or `k8s/`. Don't reintroduce one without
-an explicit ask. (The Nordic 44 grid model *is* a sqlite file, and the replayed
-PMU stream *is* a committed `.npz` — but both are read-only sample data the
-server opens, not storage it writes to.) Kafka, in compose and k8s, is a
-transport between processes, not a store: its topics keep about a minute and
-have no volume.
+**The client-server stack persists nothing on purpose.** There is no persistent
+volume anywhere under `app/` or `k8s/`. Don't reintroduce one without an explicit
+ask. (The Nordic 44 grid model *is* a sqlite file, and the replayed PMU stream
+*is* a committed `.npz` — but both are read-only sample data the server opens,
+not storage it writes to.) Kafka, in compose and k8s, is a transport between
+processes, not a store: its topics keep about a minute and have no volume.
+
+**The one database is the CIM graph's.** Every module can read the grid, held in
+one **Oxigraph** store (`oxigraph` in compose, `p-swamp-oxigraph` in k8s,
+`PSWAMP_CIM_URL`; ADR-014), one named graph per CGMES profile. It has no volume
+either: the server loads the grid into the empty store when it starts, so a
+restart puts every edit back. It is *shared state*, unlike everything else here,
+with **one writer**: the server's CIM graph app. Everything else reads it, each
+through a repository of its own that refuses to commit — see "The CIM graph".
+Only SPARQL 1.1 is used (queries at `/query`, updates at `/update`), so another
+store can stand in; with `PSWAMP_CIM_URL` unset each process has an in-process
+store of its own (`LocalStore`), which is what tests and scripts use.
 
 ## The Python projects in one repo
 
@@ -107,7 +120,7 @@ desktop/ ← app/server-python/src/pswamp_web/               (web → desktop, n
 | Member | Distribution | Holds | Depends on |
 |---|---|---|---|
 | `models/` | `pswamp-models` | every message, one package per producer | pydantic only |
-| `core/` | `pswamp-core` | transport, `Module`, `SourceModule`, `ActiveSource`, pipelines | pydantic, `pswamp-models` |
+| `core/` | `pswamp-core` | transport, `Module`, `SourceModule`, `ActiveSource`, pipelines, the CIM graph (`[cim]`) | pydantic, `pswamp-models`; LazyCIM with `[cim]` |
 | `modules/<name>/` | `pswamp-<name>` | one analysis module, or one source | `pswamp-core`, `pswamp-models`, and what it declares |
 | `tools/` | `pswamp-tools` | the `pswamp` CLI | Typer, rich |
 | `app/server-python/` | `pswamp-server` | the web backend (non-packaged) | everything above, and `p-swamp` |
@@ -256,7 +269,8 @@ Two deployables, one wire protocol:
   *simulated* PMU records extracted by hand from the Nordic 44 simulation in
   `examples/nordic44_rtsim/` (voltage phasor + measured frequency, five stations
   at 20 Hz, spanning a line trip). Nothing generates it; don't add tooling to
-  regenerate it unless asked. **`src/errors/`** is the error tray's backend.
+  regenerate it unless asked. **`src/cim_graph/`** is the CIM graph's one writer (see "The CIM
+  graph"). **`src/errors/`** is the error tray's backend.
   **`src/shared.py`** is what an app
   package imports its domain-free helpers from — `SocketRegistry`, plus
   `ClientId`, `CommandAck`, `read_client_id`, `get_logger` re-exported from
@@ -354,7 +368,9 @@ Key invariants to preserve:
   the tail wagging the dog. Those threads cross into the loop at **two** places
   and nowhere else — `Bus.publish_threadsafe()` (via `loop.call_soon_threadsafe`)
   and the time window's own already-locked snapshot read. Don't add a third seam,
-  and don't introduce threads outside that package. Note the bus is **per
+  and don't introduce threads outside that package. (The core's CIM `GraphWatch` thread is
+  not one: it only asks the store and moves an integer on, which a module compares before
+  its next call; it touches no loop and no repository.) Note the bus is **per
   pipeline**, so a listener only ever hears its own client's results.
 - **All of a browser's sockets must resolve to one pipeline.** The client id is
   generated once per browser profile and persisted in `localStorage`
@@ -442,7 +458,11 @@ Key invariants to preserve:
   recording, no auth, no secrets, nothing persisted, and a reload undoes any of
   it. Narrow it to the dev origins the moment anything real sits behind an
   endpoint — live PMU data, a store that outlives the process, or any notion of a
-  user.
+  user. **The CIM graph app is the exception to "touches only that client's
+  replay":** its graph is shared, so any page on any origin that can reach the
+  server can open a breaker for every visitor (ADR-014). Accepted for now (the
+  grid is sample data and `POST /api/cim-graph/reset` puts it back); narrow CORS
+  and add authentication before this serves anyone who should not drive the grid.
 - **One cheap probe.** `GET /healthz` is both the liveness and readiness probe (and
   the compose healthcheck): "is the process serving?". There is no `/readyz`. It
   stays at the root, not under `/api`: it is the process's health, not any one
@@ -581,7 +601,8 @@ The rules to keep:
   `pipelines/`, in a checkout and in the image), or from `PSWAMP_PIPELINES_DIR`.
 - **Sources are configured, not coded**: the file's `[[sources]] name + module`,
   which `<APP>_SOURCES` (`name:entry-point,...`) replaces when set
-  (`<APP>_CIM_REFERENCE` overrides `[enrich] cim_reference`), plus each source's
+  (`[enrich] cim = true` ties every frame to the CIM graph; `<APP>_CIM_REFERENCE`
+  replaces that with a fixed id, `none` with nothing), plus each source's
   `{NAME}_{SETTING}` block (`LIVE_PATH`, `REMOTE_URL`). The old
   `<APP>_DATA_CLIENTS` is an error naming its replacement. A new source is
   `uv run pswamp new module <slug> <label> --source [--playable]`.
@@ -609,6 +630,73 @@ The rules to keep:
 - The grid monitor (`pswamp_web/`) still runs on its own thread-based Hub/Bus,
   beside this, with its wire models in `pswamp_web/wire.py`. Don't mix the two
   in one app.
+
+### The CIM graph
+
+`core/src/pswamp_core/cim/` (the core's `[cim]` extra, LazyCIM `0.2.2`) is the grid every module can read (ADR-014). The rules:
+
+- **One store, many readers, one writer.** `open_store()` is the process's handle on
+  Oxigraph (`PSWAMP_CIM_URL`, through LazyCIM's `OxigraphServerBackend`, imported from
+  `lazycim.backends.oxigraph_server` so that it needs `requests` alone, not `pyoxigraph`;
+  a fill goes through its graph store, one request per graph) or, unset, on an in-process `LocalStore` (the same named
+  graphs and SPARQL over rdflib). **Only `app/server-python/src/cim_graph/grid.py`
+  (`Writer`) commits**, beside the core's staging of the grid and its test helper
+  (`pswamp_core.cim.testing`, for a test's or a script's own store);
+  `tools/tests/test_tools_layering.py` holds that. Don't add a writer.
+- **What is loaded** (`grid.stage`): each CGMES profile into `cgmes:model:<KW>` and each
+  vocabulary into `cgmes:schema:<KW>`, completed in a private copy first, with Nordic44
+  dynamics for every machine without any (`cgmes:model:DY`) and a **PMU Analog** for every
+  place a PMU can observe (`cgmes:model:OP`): a V and an F per voltage level, an I per line
+  end, named `PMU_<substation>_<kV>_<V|F|I>[_<line>]` (`analogs.analog_name`). The grid is
+  `PSWAMP_CIM_PATH` (a folder of `*_<PROFILE>.xml` files; the core ships
+  `cim/sample_grid/`), or Nordic44, which LazyCIM downloads on first use (CC BY-NC-SA,
+  never committed or shipped). A reset puts the SSH profile back, in one update.
+- **A change is signalled by a version stamp, never by a timer.** The writer's backend
+  (`Store.writer_backend()`) appends a bump of `<urn:pswamp:cim> <urn:pswamp:version>` (graph
+  `urn:pswamp:meta`) to the same SPARQL update as every edit, so no reader sees the one
+  without the other; `fill` and `reset` bump it too. A reader keeps what it read for ever,
+  and looks at the stamp when it wants to know (`GraphVersion(store).changed()`: one tiny
+  query); when it moved, `refresh_expired(repo)` expires SSH and SV and the next read sees the
+  edit. `connect_reader()` gives a reader; it refuses to commit, and is for one thread. The
+  old `PSWAMP_CIM_SSH_TTL`/`PSWAMP_CIM_SV_TTL` are errors naming this.
+- **A module reads the graph through its host, and the core keeps it fresh**: `cim = True`,
+  then `self.cim_repo` (one repository per instance, connected before `setup`, or on first
+  use in a script). A module never looks at the stamp: one `GraphWatch` per store and process
+  (`cim/watch.py`) polls it every `PSWAMP_CIM_POLL` (0.2 s) in a daemon thread and counts the
+  changes, and before each input or command `Module` expires a repository that is behind and
+  calls `cim_changed()`, the hook for whatever the instance derived from the graph. Don't add
+  refresh code to a module; `GraphVersion` and `refresh_expired` are for readers that are not
+  modules.
+- **PMU frames point into the graph.** `PmuHeader.analog` is each column's Analog mRID
+  (a phasor's two columns share one), `cimReferenceId` the grid's model id. A pipeline
+  file's `[enrich] cim = true` sets both (`cim.enrich.CimEnricher`, matching columns to
+  Analogs by name, once per layout, off the event loop); a station named otherwise gets an
+  alias (`PSWAMP_CIM_STATIONS`). The recordings name their stations by TOPS bus numbers,
+  which have no alias table yet, so their columns carry no Analog.
+- **A script may bring its own store.** `module.cim_repo = repo` hands a module a
+  repository over any LazyCIM backend; `CimSettings(backend=<picklable callable>,
+  shared=...)` names one for whoever opens the store. First match wins: a repository
+  handed over, then `backend`, then `PSWAMP_CIM_URL`, then the in-process store. A store
+  p-SWAMP did not load is only read (`Store.owned`: never filled, reset or stamped);
+  `pswamp_core.cim.prepare(repo)` gives such a grid its PMU Analogs, once. With no stamp
+  to look at, `GraphVersion` says such a store changed every 2 s, so a reader re-reads SSH
+  and SV that often (ADR-014). The core's `[oxigraph]` extra brings LazyCIM's
+  embedded pyoxigraph store, for scripts; the image does not take it.
+- `LocalStore` drops `FROM` clauses (rdflib copies each named graph into a new default
+  graph on every query) and is filled by adding graphs, not by parsing updates (minutes for
+  a grid). Keep it that way; a deployment uses Oxigraph.
+
+The web side is the **CIM graph app** (`app/server-python/src/cim_graph/`, page
+`/cim-graph`), the graph's only writer: the grid on its geographic layout
+(`lib/geoProjection.ts`); click a breaker to open or close it, a line to take it out (the
+breakers of its bay at one end, or a terminal where it has none). It loads the grid **when
+the server starts**, in the background (503 "the grid is loading" until then, and the socket
+waits; 503 with the reason, and a 1013 close, when it cannot be had). There is no poller:
+the graph changes only when this app writes, so after each write it pushes the state read
+from its own repository (an edit is 0 queries and 1 update). The page shows a click as
+switching until the state has it, and a status bar with the last change and the last click's
+round trip. Edits need the CGMES vocabularies (LazyCIM downloads them; offline, the graph is
+read-only and the tests skip).
 
 ## The p-SWAMP web layer
 

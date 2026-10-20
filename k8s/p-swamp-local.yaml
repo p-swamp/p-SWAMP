@@ -62,6 +62,15 @@ spec:
               value: /etc/p-swamp/pmu/deployment_pmu_data_file_example.txt
             - name: REMOTE_URL
               value: http://p-swamp-remote-data-stub:8100
+            # The CIM graph, in the Oxigraph below, of which this server is the only writer: it
+            # loads the grid into the empty store when it starts. The grid is Nordic44, downloaded by
+            # LazyCIM on first use (it needs egress; CC BY-NC-SA, never in the image) into /tmp,
+            # derived data, so the pod stays stateless. PSWAMP_CIM_PATH names a folder of CGMES files
+            # instead (the image carries a small one: /workspace/p-SWAMP/core/src/pswamp_core/cim/sample_grid).
+            - name: PSWAMP_CIM_URL
+              value: http://p-swamp-oxigraph:7878
+            - name: LAZYCIM_DATA_DIR
+              value: /tmp/lazycim
           volumeMounts:
             - name: pmu-data
               mountPath: /etc/p-swamp/pmu
@@ -82,13 +91,15 @@ spec:
             periodSeconds: 10
             timeoutSeconds: 2
             failureThreshold: 3
+          # It holds the CIM graph while it loads it (the demo grid's is a few hundred MB), on
+          # top of MAX_PIPELINES client runs.
           resources:
             requests:
               cpu: "50m"
-              memory: "256Mi"
+              memory: "768Mi"
             limits:
               cpu: "2"
-              memory: "768Mi"
+              memory: "2Gi"
       volumes:
         - name: pmu-data
           configMap:
@@ -150,6 +161,9 @@ spec:
               value: pmu-test-streamer.toml
             - name: PSWAMP_WORKER_MODULES
               value: frame-stats,excursion
+            # A module that reads the grid (cim = True) reads it here.
+            - name: PSWAMP_CIM_URL
+              value: http://p-swamp-oxigraph:7878
           resources:
             requests:
               cpu: "100m"
@@ -200,6 +214,11 @@ spec:
               value: sample:sample-replay,live:live-synthetic,remote:remote-history
             - name: REMOTE_URL
               value: http://p-swamp-remote-data-stub:8100
+            # It reads the sources, and through them the CIM graph (it never writes it).
+            - name: PSWAMP_CIM_URL
+              value: http://p-swamp-oxigraph:7878
+            - name: LAZYCIM_DATA_DIR
+              value: /tmp/lazycim
           resources:
             requests:
               cpu: "100m"
@@ -374,3 +393,60 @@ spec:
       protocol: TCP
       port: 9092
       targetPort: 9092
+---
+# Oxigraph, in memory: the store of the CIM graph. No volume: the server loads the grid into
+# the empty store when it starts, so a restart puts every edit back, like the rest of the
+# stack. Plain SPARQL 1.1 (queries at /query, updates at /update); --union-default-graph
+# merges the named graphs (one per CGMES profile) into the default one.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: p-swamp-oxigraph
+  labels:
+    app: p-swamp-oxigraph
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: p-swamp-oxigraph
+  template:
+    metadata:
+      labels:
+        app: p-swamp-oxigraph
+    spec:
+      containers:
+        - name: oxigraph
+          image: ghcr.io/oxigraph/oxigraph:0.5.2
+          args: ["serve", "--bind", "0.0.0.0:7878", "--union-default-graph"]
+          ports:
+            - name: http
+              containerPort: 7878
+          readinessProbe:
+            tcpSocket:
+              port: 7878
+            periodSeconds: 5
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "256Mi"
+            limits:
+              cpu: "2"
+              memory: "1Gi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: p-swamp-oxigraph
+  labels:
+    app: p-swamp-oxigraph
+spec:
+  type: ClusterIP
+  selector:
+    app: p-swamp-oxigraph
+  ports:
+    - name: http
+      protocol: TCP
+      port: 7878
+      targetPort: 7878

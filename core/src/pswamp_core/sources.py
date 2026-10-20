@@ -386,6 +386,8 @@ class SourceStream:
             await iterator.aclose()  # type: ignore[attr-defined]
 
     async def _iterate(self) -> AsyncIterator[DataModel]:
+        for enricher in self.enrichers:
+            await enricher.start()
         records = self.source.aread(self.time_range.start, self.time_range.end)
         end = self.time_range.end
         try:

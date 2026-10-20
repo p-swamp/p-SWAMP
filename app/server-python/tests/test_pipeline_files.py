@@ -21,6 +21,7 @@ from pswamp_models.pmu import PmuFrame
 from pswamp_modules.sample_replay.sample import DEFAULT_PATH, EPOCH
 
 PIPELINES = Path(__file__).resolve().parents[3] / "pipelines"
+SAMPLE_GRID_MODEL = "3f5e0000-0000-4000-8000-000000000001"
 STREAMER = PIPELINES / "pmu-test-streamer.toml"
 
 
@@ -56,7 +57,7 @@ def test_the_environment_still_names_the_streamer_s_sources(monkeypatch, tmp_pat
 async def test_the_streamer_s_frames_carry_the_cim_reference(monkeypatch):
     pipeline = Pipeline.load(STREAMER)
     first = await anext(await pipeline.sources().consume())
-    assert first.header.cimReferenceId == "n44-cim-stub"
+    assert first.header.cimReferenceId == SAMPLE_GRID_MODEL  # the grid in the CIM graph (conftest)
     monkeypatch.setenv("PMU_TEST_STREAMER_CIM_REFERENCE", "none")
     assert (await anext(await pipeline.sources().consume())).header.cimReferenceId is None
 

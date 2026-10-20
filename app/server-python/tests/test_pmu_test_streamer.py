@@ -56,7 +56,7 @@ def test_the_socket_opens_on_the_paused_recording(server):
     assert index(state) == 0 and datetime.fromisoformat(state["frame"]["timestamp"]) == SAMPLE_START
     assert datetime.fromisoformat(player["coverage_end"]) == SAMPLE_START + timedelta(seconds=3)
     assert "frame_index" not in state and "frame_count" not in state
-    assert state["frame"]["header"]["cimReferenceId"] == "n44-cim-stub"
+    assert state["frame"]["header"]["cimReferenceId"] == "3f5e0000-0000-4000-8000-000000000001"  # the sample grid
 
 
 def test_play_brings_frames_and_their_stats(server):

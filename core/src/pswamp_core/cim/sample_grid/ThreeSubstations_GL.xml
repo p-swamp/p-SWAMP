@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rdf:RDF xmlns:cim="http://iec.ch/TC57/CIM100#" xmlns:md="http://iec.ch/TC57/61970-552/ModelDescription/1#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+  <md:FullModel rdf:about="urn:uuid:3f5e0000-0000-4000-8000-000000000005">
+    <md:Model.created>2026-10-07T12:00:00Z</md:Model.created>
+    <md:Model.description>Three-substation fixture, geographical location (GL).</md:Model.description>
+    <md:Model.profile>http://iec.ch/TC57/ns/CIM/GeographicalLocation-EU/3.0</md:Model.profile>
+    <md:Model.DependentOn rdf:resource="urn:uuid:3f5e0000-0000-4000-8000-000000000001"/>
+    <md:Model.version>1</md:Model.version>
+  </md:FullModel>
+  <cim:CoordinateSystem rdf:ID="_3f5e0000-0000-4000-8000-000000000058">
+    <cim:CoordinateSystem.crsUrn>urn:ogc:def:crs:EPSG::4326</cim:CoordinateSystem.crsUrn>
+    <cim:IdentifiedObject.mRID>3f5e0000-0000-4000-8000-000000000058</cim:IdentifiedObject.mRID>
+  </cim:CoordinateSystem>
+  <cim:Location rdf:ID="_3f5e0000-0000-4000-8000-000000000059">
+    <cim:Location.CoordinateSystem rdf:resource="#_3f5e0000-0000-4000-8000-000000000058"/>
+    <cim:Location.PowerSystemResources rdf:resource="#_3f5e0000-0000-4000-8000-000000000008"/>
+    <cim:IdentifiedObject.mRID>3f5e0000-0000-4000-8000-000000000059</cim:IdentifiedObject.mRID>
+  </cim:Location>
+  <cim:PositionPoint rdf:ID="_3f5e0000-0000-4000-8000-000000000060">
+    <cim:PositionPoint.Location rdf:resource="#_3f5e0000-0000-4000-8000-000000000059"/>
+    <cim:PositionPoint.sequenceNumber>1</cim:PositionPoint.sequenceNumber>
+    <cim:PositionPoint.xPosition>10.0</cim:PositionPoint.xPosition>
+    <cim:PositionPoint.yPosition>60.0</cim:PositionPoint.yPosition>
+  </cim:PositionPoint>
+  <cim:Location rdf:ID="_3f5e0000-0000-4000-8000-000000000061">
+    <cim:Location.CoordinateSystem rdf:resource="#_3f5e0000-0000-4000-8000-000000000058"/>
+    <cim:Location.PowerSystemResources rdf:resource="#_3f5e0000-0000-4000-8000-000000000009"/>
+    <cim:IdentifiedObject.mRID>3f5e0000-0000-4000-8000-000000000061</cim:IdentifiedObject.mRID>
+  </cim:Location>
+  <cim:PositionPoint rdf:ID="_3f5e0000-0000-4000-8000-000000000062">
+    <cim:PositionPoint.Location rdf:resource="#_3f5e0000-0000-4000-8000-000000000061"/>
+    <cim:PositionPoint.sequenceNumber>1</cim:PositionPoint.sequenceNumber>
+    <cim:PositionPoint.xPosition>11.0</cim:PositionPoint.xPosition>
+    <cim:PositionPoint.yPosition>59.0</cim:PositionPoint.yPosition>
+  </cim:PositionPoint>
+  <cim:Location rdf:ID="_3f5e0000-0000-4000-8000-000000000063">
+    <cim:Location.CoordinateSystem rdf:resource="#_3f5e0000-0000-4000-8000-000000000058"/>
+    <cim:Location.PowerSystemResources rdf:resource="#_3f5e0000-0000-4000-8000-000000000010"/>
+    <cim:IdentifiedObject.mRID>3f5e0000-0000-4000-8000-000000000063</cim:IdentifiedObject.mRID>
+  </cim:Location>
+  <cim:PositionPoint rdf:ID="_3f5e0000-0000-4000-8000-000000000064">
+    <cim:PositionPoint.Location rdf:resource="#_3f5e0000-0000-4000-8000-000000000063"/>
+    <cim:PositionPoint.sequenceNumber>1</cim:PositionPoint.sequenceNumber>
+    <cim:PositionPoint.xPosition>9.0</cim:PositionPoint.xPosition>
+    <cim:PositionPoint.yPosition>59.2</cim:PositionPoint.yPosition>
+  </cim:PositionPoint>
+  <cim:Location rdf:ID="_3f5e0000-0000-4000-8000-000000000065">
+    <cim:Location.CoordinateSystem rdf:resource="#_3f5e0000-0000-4000-8000-000000000058"/>
+    <cim:Location.PowerSystemResources rdf:resource="#_3f5e0000-0000-4000-8000-000000000024"/>
+    <cim:IdentifiedObject.mRID>3f5e0000-0000-4000-8000-000000000065</cim:IdentifiedObject.mRID>
+  </cim:Location>
+  <cim:PositionPoint rdf:ID="_3f5e0000-0000-4000-8000-000000000066">
+    <cim:PositionPoint.Location rdf:resource="#_3f5e0000-0000-4000-8000-000000000065"/>
+    <cim:PositionPoint.sequenceNumber>1</cim:PositionPoint.sequenceNumber>
+    <cim:PositionPoint.xPosition>10.0</cim:PositionPoint.xPosition>
+    <cim:PositionPoint.yPosition>60.0</cim:PositionPoint.yPosition>
+  </cim:PositionPoint>
+  <cim:PositionPoint rdf:ID="_3f5e0000-0000-4000-8000-000000000067">
+    <cim:PositionPoint.Location rdf:resource="#_3f5e0000-0000-4000-8000-000000000065"/>
+    <cim:PositionPoint.sequenceNumber>2</cim:PositionPoint.sequenceNumber>
+    <cim:PositionPoint.xPosition>10.7</cim:PositionPoint.xPosition>
+    <cim:PositionPoint.yPosition>59.6</cim:PositionPoint.yPosition>
+  </cim:PositionPoint>
+  <cim:PositionPoint rdf:ID="_3f5e0000-0000-4000-8000-000000000068">
+    <cim:PositionPoint.Location rdf:resource="#_3f5e0000-0000-4000-8000-000000000065"/>
+    <cim:PositionPoint.sequenceNumber>3</cim:PositionPoint.sequenceNumber>
+    <cim:PositionPoint.xPosition>11.0</cim:PositionPoint.xPosition>
+    <cim:PositionPoint.yPosition>59.0</cim:PositionPoint.yPosition>
+  </cim:PositionPoint>
+  <cim:Location rdf:ID="_3f5e0000-0000-4000-8000-000000000069">
+    <cim:Location.CoordinateSystem rdf:resource="#_3f5e0000-0000-4000-8000-000000000058"/>
+    <cim:Location.PowerSystemResources rdf:resource="#_3f5e0000-0000-4000-8000-000000000025"/>
+    <cim:IdentifiedObject.mRID>3f5e0000-0000-4000-8000-000000000069</cim:IdentifiedObject.mRID>
+  </cim:Location>
+  <cim:PositionPoint rdf:ID="_3f5e0000-0000-4000-8000-000000000070">
+    <cim:PositionPoint.Location rdf:resource="#_3f5e0000-0000-4000-8000-000000000069"/>
+    <cim:PositionPoint.sequenceNumber>1</cim:PositionPoint.sequenceNumber>
+    <cim:PositionPoint.xPosition>11.0</cim:PositionPoint.xPosition>
+    <cim:PositionPoint.yPosition>59.0</cim:PositionPoint.yPosition>
+  </cim:PositionPoint>
+  <cim:PositionPoint rdf:ID="_3f5e0000-0000-4000-8000-000000000071">
+    <cim:PositionPoint.Location rdf:resource="#_3f5e0000-0000-4000-8000-000000000069"/>
+    <cim:PositionPoint.sequenceNumber>2</cim:PositionPoint.sequenceNumber>
+    <cim:PositionPoint.xPosition>10.0</cim:PositionPoint.xPosition>
+    <cim:PositionPoint.yPosition>58.9</cim:PositionPoint.yPosition>
+  </cim:PositionPoint>
+  <cim:PositionPoint rdf:ID="_3f5e0000-0000-4000-8000-000000000072">
+    <cim:PositionPoint.Location rdf:resource="#_3f5e0000-0000-4000-8000-000000000069"/>
+    <cim:PositionPoint.sequenceNumber>3</cim:PositionPoint.sequenceNumber>
+    <cim:PositionPoint.xPosition>9.0</cim:PositionPoint.xPosition>
+    <cim:PositionPoint.yPosition>59.2</cim:PositionPoint.yPosition>
+  </cim:PositionPoint>
+  <cim:Location rdf:ID="_3f5e0000-0000-4000-8000-000000000073">
+    <cim:Location.CoordinateSystem rdf:resource="#_3f5e0000-0000-4000-8000-000000000058"/>
+    <cim:Location.PowerSystemResources rdf:resource="#_3f5e0000-0000-4000-8000-000000000026"/>
+    <cim:IdentifiedObject.mRID>3f5e0000-0000-4000-8000-000000000073</cim:IdentifiedObject.mRID>
+  </cim:Location>
+  <cim:PositionPoint rdf:ID="_3f5e0000-0000-4000-8000-000000000074">
+    <cim:PositionPoint.Location rdf:resource="#_3f5e0000-0000-4000-8000-000000000073"/>
+    <cim:PositionPoint.sequenceNumber>1</cim:PositionPoint.sequenceNumber>
+    <cim:PositionPoint.xPosition>10.0</cim:PositionPoint.xPosition>
+    <cim:PositionPoint.yPosition>60.0</cim:PositionPoint.yPosition>
+  </cim:PositionPoint>
+  <cim:PositionPoint rdf:ID="_3f5e0000-0000-4000-8000-000000000075">
+    <cim:PositionPoint.Location rdf:resource="#_3f5e0000-0000-4000-8000-000000000073"/>
+    <cim:PositionPoint.sequenceNumber>2</cim:PositionPoint.sequenceNumber>
+    <cim:PositionPoint.xPosition>9.0</cim:PositionPoint.xPosition>
+    <cim:PositionPoint.yPosition>59.2</cim:PositionPoint.yPosition>
+  </cim:PositionPoint>
+</rdf:RDF>
