@@ -295,6 +295,8 @@ class PipelineRun:
         self.transport = transport
         self._on_error = on_error
         self.sources = pipeline.sources()
+        for source in self.sources.instances.values():
+            source.bind(transport)
         self.shared = live_source is not None
         if live_source is not None:
             self.sources.switch(live_source)
