@@ -13,7 +13,7 @@
     module = "sample-replay"                                  # a source module's entry point
 
     [enrich]
-    cim_reference = "n44-cim-stub"                            # "none": no reference
+    cim = true                                                # the CIM graph's id and each column's Analog
 
 ``load_pipeline(path)`` (also ``Pipeline.load``) reads one into a ``Pipeline``:
 
@@ -27,7 +27,8 @@
 - **Sources stay configurable from the environment.** The set of sources is
   built on every call: ``<APP>_SOURCES`` (``name:entry-point,...``), when set,
   replaces the file's sources; ``<APP>_CIM_REFERENCE`` overrides
-  ``enrich.cim_reference``; and each source reads its own ``{NAME}_{SETTING}``
+  ``enrich.cim_reference`` (``none`` turns enrichment off, ``enrich.cim`` included);
+  and each source reads its own ``{NAME}_{SETTING}``
   block (``LIVE_PATH`` for the source named ``live``). ``<APP>`` is the app's
   name upper-cased, dashes as underscores (``PMU_TEST_STREAMER``). (The
   ``<APP>_DATA_CLIENTS`` variable of the old data clients is gone, and an
@@ -104,7 +105,13 @@ class EnrichConfig(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    cim_reference: str | None = Field(default=None, description='The CIM reference id; "none" or absent: no reference.')
+    cim: bool = Field(
+        default=False,
+        description="Tie every PMU frame to the CIM graph: its model id, and each column's Analog (pswamp_core.cim).",
+    )
+    cim_reference: str | None = Field(
+        default=None, description='A fixed CIM reference id, when not cim; "none" or absent: no reference.'
+    )
 
 
 class PipelineConfig(BaseModel):
@@ -135,6 +142,7 @@ class PipelineConfig(BaseModel):
             app=self.app,
             default_sources=",".join(f"{s.name}:{s.module}" for s in self.sources),
             cim_reference=self.enrich.cim_reference,
+            cim=self.enrich.cim,
         )
         return Pipeline(self.app, sources, modules=modules, source_models=sources.source_models())
 
@@ -148,6 +156,7 @@ class ConfiguredSources:
     #: The file's sources, as an ``<APP>_SOURCES`` value.
     default_sources: str
     cim_reference: str | None = None
+    cim: bool = False
 
     @property
     def sources_variable(self) -> str:
@@ -199,8 +208,16 @@ class ConfiguredSources:
         return tuple(dict.fromkeys(cls.model for _, cls in self.source_classes()))
 
     def __call__(self) -> SourceSet:
-        reference = os.environ.get(self.cim_variable, "").strip() or self.cim_reference
-        enrichers = [] if reference in (None, "none") else [CimReferenceEnricher(reference)]
+        override = os.environ.get(self.cim_variable, "").strip()
+        reference = override or self.cim_reference
+        if override == "none" or reference is None and not self.cim:
+            enrichers = []
+        elif self.cim and not override:
+            from .cim.enrich import CimEnricher  # the [cim] extra
+
+            enrichers = [CimEnricher()]
+        else:
+            enrichers = [] if reference == "none" else [CimReferenceEnricher(reference)]
         return SourceSet([cls.from_env(name) for name, cls in self.source_classes()], enrichers=enrichers)
 
 

@@ -39,6 +39,8 @@ import pmu_test_streamer
 import pswamp_web
 import reference_subapp
 import shared
+import cim_graph
+import cim_live
 import pswamp_web.app_status
 import pswamp_web.grid
 import pswamp_web.islanding
@@ -131,6 +133,16 @@ APPS = [
         "errors",
         errors,
         "Operational errors from any of a client's pipeline runs, for the layout's error tray.",
+    ),
+    AppEntry(
+        "cim-graph",
+        cim_graph,
+        "CIM graph.",
+    ),
+    AppEntry(
+        "cim-live",
+        cim_live,
+        "The live grid simulation's frames, as each station's voltage and frequency, every frame.",
     ),
 ]
 

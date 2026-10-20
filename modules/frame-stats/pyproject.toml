@@ -22,8 +22,12 @@ dependencies = ["pswamp-core", "pswamp-models"]
 
 # Only for examples/, never the module itself (the image does not install it):
 #   uv run --package pswamp-frame-stats --extra examples python modules/frame-stats/examples/plot_frame_stats.py
+#   uv run --package pswamp-frame-stats --extra rtsim python modules/frame-stats/examples/rtsim_frame_stats.py
+# rtsim: the live grid simulation, which the example names by its entry point and never imports
+# (a module imports no other module), over an embedded Oxigraph store (pyoxigraph).
 [project.optional-dependencies]
 examples = ["matplotlib>=3.8"]
+rtsim = ["matplotlib>=3.8", "pswamp-core[oxigraph]", "pswamp-rtsim-from-cim"]
 
 # How a pipeline finds the module by name: the entry point's name is the
 # module's `name` (its app identity, and what PSWAMP_WORKER_MODULES lists).
@@ -33,6 +37,7 @@ frame-stats = "pswamp_modules.frame_stats:FrameStatsModule"
 [tool.uv.sources]
 pswamp-core = { workspace = true }
 pswamp-models = { workspace = true }
+pswamp-rtsim-from-cim = { workspace = true }
 
 [build-system]
 requires = ["uv_build"]

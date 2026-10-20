@@ -12,6 +12,7 @@ import { PhasorsPanel } from '@/pages/grid-monitor/phasors/PhasorsPanel'
 import { MeasurementsPanel } from '@/pages/grid-monitor/time-window/MeasurementsPanel'
 import { PmuTestStreamerPage } from '@/pages/pmu-test-streamer/PmuTestStreamerPage'
 import { ReferenceSubappPage } from '@/pages/reference-subapp/ReferenceSubappPage'
+import { CimGraphPage } from '@/pages/cim-graph/CimGraphPage'
 
 /**
  * The route table — the one place that knows which apps this client hosts.
@@ -78,6 +79,7 @@ function App() {
           <Route path="pmu-test-streamer" element={<PmuTestStreamerPage />} />
 
           <Route path="reference-subapp" element={<ReferenceSubappPage />} />
+          <Route path="cim-graph" element={<CimGraphPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>

@@ -1,0 +1,55 @@
+# pswamp-rtsim-from-cim: the RT sim (CIM) source. One module, one project: its code
+# (src/), its tests (tests/), a README and runnable examples (examples/), and
+# nothing else. See modules/README.md.
+#
+# A member of the uv workspace rooted at the repo root (one uv.lock there). It
+# depends on pswamp-core and pswamp-models and nothing else in this repo.
+# lazycim (Apache-2.0) holds the CIM graph (in an Oxigraph store, or in memory)
+# and exports it as a TOPS model; tops is the dynamic simulator (MIT, from PyPI;
+# headless, unlike tops-rt, which needs Qt); numpy is its array type.
+#
+# The package is a portion of the pswamp_modules namespace (PEP 420): there is
+# no src/pswamp_modules/__init__.py.
+
+[project]
+name = "pswamp-rtsim-from-cim"
+version = "0.1.0"
+description = "The RT sim (CIM) source (rtsim-from-cim)."
+readme = "README.md"
+license = "Apache-2.0"
+requires-python = ">=3.12"
+dependencies = [
+    "pswamp-core[cim]",
+    "pswamp-models",
+    "lazycim[graphdb]==0.2.2",
+    "tops>=0.3,<0.4",
+    "numpy>=2.0",
+    "scipy>=1.11",
+]
+
+# Only for examples/, never the source itself (the image does not install it):
+#   uv run --package pswamp-rtsim-from-cim --extra examples python modules/rtsim-from-cim/examples/run_rtsim.py
+[project.optional-dependencies]
+examples = ["matplotlib>=3.8"]
+
+# How a pipeline finds the source by name: the entry point's name is the
+# source's `name` (what a pipeline file's [[sources]] `module` says).
+[project.entry-points."pswamp.modules"]
+rtsim-from-cim = "pswamp_modules.rtsim_from_cim:RtsimFromCimSource"
+
+[tool.uv.sources]
+pswamp-core = { workspace = true }
+pswamp-models = { workspace = true }
+
+[build-system]
+requires = ["uv_build"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-name = "pswamp_modules.rtsim_from_cim"
+
+# Used by `uv run pswamp test module rtsim-from-cim`; `uv run pswamp test server`
+# runs these tests too, with the server's config.
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
