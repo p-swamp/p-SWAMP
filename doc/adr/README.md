@@ -33,3 +33,4 @@ team's own code do not need one.
 | [011](011-report-operational-errors-in-a-tray.md) | Report operational failures on an error topic, shown in a tray on every page |
 | [012](012-read-history-through-a-remote-data-contract.md) | Read a deployment's history through a small HTTP contract; p-SWAMP stores nothing |
 | [013](013-put-a-cim-reference-id-on-each-frame.md) | Put a CIM reference id on each frame, never grid data |
+| [015](015-relay-another-pipelines-live-run.md) | Let a pipeline relay another pipeline's live run instead of starting the feed again |

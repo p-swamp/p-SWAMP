@@ -579,6 +579,12 @@ The rules to keep:
   command has a receiver — and adds one: every class a module reads has a
   producer. The server finds the files from `shared.py` (the repo root's
   `pipelines/`, in a checkout and in the image), or from `PSWAMP_PIPELINES_DIR`.
+- **A source can be another pipeline's live run** (ADR-015): `[[sources]] name, from
+  = "<app>", get = ["<live source>", "<module>", ...]` (`<APP>_SOURCES`:
+  `name:@<app>/<live source>+<module>`), a `RelaySource`
+  (`core/src/pswamp_core/relay.py`) that takes those classes off the owner's
+  `live.<source>` topics, so the feed and its analysis run once. Live only, one hop,
+  and the owner's file sits beside it.
 - **Sources are configured, not coded**: the file's `[[sources]] name + module`,
   which `<APP>_SOURCES` (`name:entry-point,...`) replaces when set
   (`<APP>_CIM_REFERENCE` overrides `[enrich] cim_reference`), plus each source's
