@@ -39,7 +39,7 @@ or not, untracked files included):
      tests/ folder, which run SourceConformance), and the layering tests over the
      result, then both example scripts (examples/), run as plain scripts;
   4. load the module-worker's pipeline files and modules as patched into
-     docker-compose.yml and k8s/p-swamp-local.yaml, from the pipelines/
+     docker-compose.yml and k8s/base/p-swamp.yaml, from the pipelines/
      folder, as a worker does (its pipeline files are relative to it).
 
 Slow: the worktree gets its own uv environment. app/client-web/node_modules is

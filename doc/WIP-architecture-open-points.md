@@ -378,7 +378,7 @@ Dockerfile's comment says why). Compose, k8s and a downstream build inherit
 it from the image. What is open:
 - AGENTS.md does not mention it, though its "peak RSS follows
   `MAX_PIPELINES`" holds only with it. It also says "both manifests size
-  `limits.memory` from the cap"; there is one, `k8s/p-swamp-local.yaml`,
+  `limits.memory` from the cap"; there is one, `k8s/base/p-swamp.yaml`,
   and compose sets no limit.
 - A server run outside the image (`uv run src/server.py`) does not get it,
   and no test checks that it is set.
@@ -386,7 +386,7 @@ it from the image. What is open:
 ### The Kafka transport and probes
 
 **21. The workers have no probe.** The module and batch workers have none in
-`k8s/p-swamp-local.yaml` or compose, so a wedged worker stays Running and
+`k8s/base/p-swamp.yaml` or compose, so a wedged worker stays Running and
 Ready. `/healthz` leaves the broker out on purpose (AGENTS.md, "One cheap
 probe": a failing broker would take the grid monitor, which needs none, off
 the Service). Its docstring (`server.py`) and the comment on the compose

@@ -368,7 +368,7 @@ Key invariants to preserve:
   scaling would require an external live store — a real design change, not a
   manifest tweak. This got sharper with per-client pipelines: a client's five
   sockets landing on different pods would be five unrelated replays, so one screen
-  would show five different instants. `p-swamp-local.yaml` sets `strategy: Recreate`, so that the
+  would show five different instants. `k8s/base/p-swamp.yaml` sets `strategy: Recreate`, so that the
   old pod is gone before the new one serves. The same holds for each module
   worker: topics have one partition and workers no consumer group, so a second
   replica of a worker would answer every frame twice.
@@ -1278,7 +1278,7 @@ network.
 Deploy / test the real artifact:
 
 ```
-uv run pswamp deploy minikube   # build into minikube + apply k8s/p-swamp-local.yaml
+uv run pswamp deploy minikube   # build into minikube + apply -k k8s/overlays/minikube
 uv run pswamp deploy logs     # follow server logs (kubectl logs -f, bound to one pod)
 ```
 
@@ -1407,7 +1407,7 @@ mind when editing that command (`tools/src/pswamp_tools/commands/deploy.py`):
   an arm64 laptop build it locally. What **CI builds is amd64 only**; see "CI".
 - **The deployable is named `p-swamp` everywhere** — local image tag, k8s
   Deployment/Service/Ingress, `app:` labels and selectors, and container name.
-- **The minikube NodePort is 30080**, set in `k8s/p-swamp-local.yaml` and
+- **The minikube NodePort is 30080**, set in `k8s/overlays/minikube/kustomization.yaml` and
   repeated as `NODE_PORT` in `pswamp deploy minikube`; keep
   the two in sync. It assumes p-swamp is the only thing claiming that port in the
   local cluster. If another Deployment ever shares this cluster, note that
@@ -1626,8 +1626,13 @@ What has to hold in the `static-errorcheck` job:
   `docker push`es it** — one build, and the image pushed is the one whose
   `/healthz` answered. That job is the only one with `packages: write`;
   `quality-checks.yml` has no registry login and pushes nothing.
-- **k8s manifest:** `p-swamp-local.yaml` is local-only (`imagePullPolicy: Never`, image
-  built into minikube)
+- **k8s manifests are kustomize** (`k8s/README.md`): `k8s/base` is the stack for
+  any cluster, `k8s/overlays/minikube` adds the NodePort, and other deployments
+  keep overlays of their own over `k8s/base`. Those overlays are outside this
+  repo, so `k8s/base` is an interface: follow the "Overlays:" comments in
+  `k8s/base/p-swamp.yaml` (Service names only in `p-swamp-hosts`, stable `app:`
+  selectors, image name `p-swamp`, restricted securityContext).
+  `tools/tests/test_tools_k8s.py` renders the base the way such an overlay does.
 
 ## Workflow rules
 

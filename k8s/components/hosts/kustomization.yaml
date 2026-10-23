@@ -1,0 +1,34 @@
+# For an overlay that renames the stack (nameSuffix, namePrefix): writes each
+# Service's new name into p-swamp-hosts, where the pods read their addresses.
+# Kustomize renames objects and the references between them, but not a name
+# inside a value such as "p-swamp-kafka:9092"; see p-swamp-hosts in
+# k8s/base/p-swamp.yaml.
+#
+# Include it ONE LAYER ABOVE the rename. A kustomization runs its components
+# before its own nameSuffix, so in the same layer it would copy the old names:
+#
+#   renamed/kustomization.yaml   resources: [../../base]   nameSuffix: -a
+#   final/kustomization.yaml     resources: [../renamed]   components: [../../components/hosts]
+#
+# Sources are selected by their names in the base; kustomize remembers them.
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+replacements:
+  - source:
+      kind: Service
+      name: p-swamp-kafka
+    targets:
+      - select:
+          kind: ConfigMap
+          name: p-swamp-hosts
+        fieldPaths:
+          - data.PSWAMP_KAFKA_HOST
+  - source:
+      kind: Service
+      name: p-swamp-remote-data-stub
+    targets:
+      - select:
+          kind: ConfigMap
+          name: p-swamp-hosts
+        fieldPaths:
+          - data.PSWAMP_REMOTE_DATA_HOST

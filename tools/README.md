@@ -20,7 +20,7 @@ of which embedded Python in heredocs and none of which ran on Windows.
 | `pswamp new module <slug> <label> [--source [--playable]]` | A module project and its page, or a data source project. |
 | `pswamp check-generators` | Prove both generators still produce working apps, in a throwaway worktree. |
 | `pswamp dev server\|client` | The hot-reloaded local dev loop. |
-| `pswamp deploy minikube\|logs` | Build into a local minikube cluster and deploy `k8s/p-swamp-local.yaml`; follow its logs. |
+| `pswamp deploy minikube\|logs` | Build into a local minikube cluster and deploy `k8s/overlays/minikube`; follow its logs. |
 | `pswamp deps update` | Pull every dependency forward and report what moved. |
 
 Behaviour worth knowing:

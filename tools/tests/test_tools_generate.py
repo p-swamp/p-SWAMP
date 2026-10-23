@@ -19,7 +19,7 @@ REGISTRIES = [
     Path("app/client-web/src/App.tsx"),
     Path("app/client-web/src/components/AppLayout.tsx"),
     Path("docker-compose.yml"),
-    Path("k8s/p-swamp-local.yaml"),
+    Path("k8s/base/p-swamp.yaml"),
     Path("app/server-python/pyproject.toml"),
 ]
 

@@ -1,24 +1,39 @@
-# The p-swamp stack on local minikube, applied by
-# uv run pswamp deploy minikube (which also builds the
-# image into minikube and creates the ConfigMap below).
+# The p-swamp stack, for any cluster. It is not applied on its own: an overlay
+# applies it, k8s/overlays/minikube locally (uv run pswamp deploy minikube).
 #
-#   p-swamp                   the server, with the web client baked in (NodePort 30080)
+# Overlays outside this repo may build on this file and therefore a few things
+# should stay unchanged, see comments marked "Overlays:".
+#
+#   p-swamp                   the server, with the web client baked in (Service port "http")
 #   p-swamp-module-worker     the streamer's frame-rate modules: frame-stats, excursion
 #   p-swamp-batch-worker      the range summary, with its own CPU limit
 #   p-swamp-remote-data-stub  a year of synthetic history behind the remote data contract
 #   p-swamp-kafka             the broker between the server and the workers
+#   p-swamp-hosts             the ConfigMap naming the Services above that pods connect to
 #
 # All the same image except Kafka. The workers and the stub run from modules/,
 # not the server's src/. Every Deployment has one replica and the
 # Recreate strategy: the server holds its runs in memory, and a worker has no
 # consumer group, so a second replica would split clients or answer every
-# frame twice. Nothing is persisted: the ConfigMap is configuration, Kafka's
+# frame twice. Nothing is persisted: the ConfigMaps are configuration, Kafka's
 # emptyDir is scratch, and a rollout resets every client.
 #
-# The streamer's live feed reads k8s/deployment_pmu_data_file_example.txt, a
-# file NOT in the image, mounted from the p-swamp-pmu-data ConfigMap. Its
-# values count up by one per frame from 100 kV / 0 deg / 60 Hz, so a page
-# switched to live shows that k8s configuration is what feeds it.
+# Overlays: keep the image name p-swamp. Overlays find the image by this name
+# (kustomize's `images:`) to replace it with their own.
+#
+# Overlays: env values never contain a Service's name. They take it from the
+# p-swamp-hosts ConfigMap at the end, e.g. $(PSWAMP_KAFKA_HOST):9092. See
+# "Environment variables" in k8s/README.md.
+#
+# Every pod meets the "restricted" Pod Security Standard (non-root, no privilege
+# escalation, no capabilities, RuntimeDefault seccomp), which clusters may
+# enforce.
+#
+# The streamer's live feed reads k8s/base/deployment_pmu_data_file_example.txt,
+# a file NOT in the image, mounted from the p-swamp-pmu-data ConfigMap
+# (generated in kustomization.yaml). Its values count up by one per frame from
+# 100 kV / 0 deg / 60 Hz, so a page switched to live shows that k8s
+# configuration is what feeds it.
 #
 # What a cloud cluster changes: "Deployment" in doc/server-data-architecture.md.
 apiVersion: apps/v1
@@ -31,6 +46,8 @@ spec:
   replicas: 1
   strategy:
     type: Recreate
+  # Overlays: keep the app labels. A selector is immutable, so changing one
+  # means deleting and recreating the Deployment in every cluster.
   selector:
     matchLabels:
       app: p-swamp
@@ -42,26 +59,37 @@ spec:
       securityContext:
         runAsNonRoot: true
         runAsUser: 10001
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: p-swamp
           image: p-swamp:latest
           imagePullPolicy: Never
+          securityContext:
+            allowPrivilegeEscalation: false
+            privileged: false
+            capabilities:
+              drop: [ALL]
           ports:
             - name: http
               containerPort: 8000
+          # PSWAMP_KAFKA_HOST, PSWAMP_REMOTE_DATA_HOST: see p-swamp-hosts at the end.
+          envFrom:
+            - configMapRef:
+                name: p-swamp-hosts
           env:
             - name: HOST
               value: "0.0.0.0"
             - name: PSWAMP_TRANSPORT
               value: kafka:pswamp_core.transport.kafka:KafkaTransport
             - name: KAFKA_BOOTSTRAP_SERVERS
-              value: p-swamp-kafka:9092
+              value: $(PSWAMP_KAFKA_HOST):9092
             - name: PMU_TEST_STREAMER_SOURCES
               value: sample:sample-replay,live:live-synthetic,remote:remote-history
             - name: LIVE_PATH
               value: /etc/p-swamp/pmu/deployment_pmu_data_file_example.txt
             - name: REMOTE_URL
-              value: http://p-swamp-remote-data-stub:8100
+              value: http://$(PSWAMP_REMOTE_DATA_HOST):8100
           volumeMounts:
             - name: pmu-data
               mountPath: /etc/p-swamp/pmu
@@ -100,8 +128,10 @@ metadata:
   name: p-swamp
   labels:
     app: p-swamp
+# Overlays: exposing the server (NodePort, Ingress) is up to each overlay, and
+# they route to this Service by its name and port name: keep p-swamp and http.
 spec:
-  type: NodePort
+  type: ClusterIP
   selector:
     app: p-swamp
   ports:
@@ -109,7 +139,6 @@ spec:
       protocol: TCP
       port: 8000        # cluster-internal Service port
       targetPort: 8000  # container port
-      nodePort: 30080   # fixed external port (valid range 30000-32767)
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -132,20 +161,31 @@ spec:
       securityContext:
         runAsNonRoot: true
         runAsUser: 10001
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: module-worker
           image: p-swamp:latest
           imagePullPolicy: Never
+          securityContext:
+            allowPrivilegeEscalation: false
+            privileged: false
+            capabilities:
+              drop: [ALL]
           command: ["python", "-m", "pswamp_core.worker"]
           # Outside the server's src/: a worker needs core and modules only. From
           # pipelines/ (copied into the image at the repo path), so
           # PSWAMP_WORKER_PIPELINES names the files there.
           workingDir: /workspace/p-SWAMP/pipelines
+          # PSWAMP_KAFKA_HOST, PSWAMP_REMOTE_DATA_HOST: see p-swamp-hosts at the end.
+          envFrom:
+            - configMapRef:
+                name: p-swamp-hosts
           env:
             - name: PSWAMP_TRANSPORT
               value: kafka:pswamp_core.transport.kafka:KafkaTransport
             - name: KAFKA_BOOTSTRAP_SERVERS
-              value: p-swamp-kafka:9092
+              value: $(PSWAMP_KAFKA_HOST):9092
             - name: PSWAMP_WORKER_PIPELINES
               value: pmu-test-streamer.toml
             - name: PSWAMP_WORKER_MODULES
@@ -181,17 +221,28 @@ spec:
       securityContext:
         runAsNonRoot: true
         runAsUser: 10001
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: batch-worker
           image: p-swamp:latest
           imagePullPolicy: Never
+          securityContext:
+            allowPrivilegeEscalation: false
+            privileged: false
+            capabilities:
+              drop: [ALL]
           command: ["python", "-m", "pswamp_core.worker"]
           workingDir: /workspace/p-SWAMP/pipelines
+          # PSWAMP_KAFKA_HOST, PSWAMP_REMOTE_DATA_HOST: see p-swamp-hosts at the end.
+          envFrom:
+            - configMapRef:
+                name: p-swamp-hosts
           env:
             - name: PSWAMP_TRANSPORT
               value: kafka:pswamp_core.transport.kafka:KafkaTransport
             - name: KAFKA_BOOTSTRAP_SERVERS
-              value: p-swamp-kafka:9092
+              value: $(PSWAMP_KAFKA_HOST):9092
             - name: PSWAMP_WORKER_PIPELINES
               value: pmu-test-streamer.toml
             - name: PSWAMP_WORKER_MODULES
@@ -199,7 +250,7 @@ spec:
             - name: PMU_TEST_STREAMER_SOURCES
               value: sample:sample-replay,live:live-synthetic,remote:remote-history
             - name: REMOTE_URL
-              value: http://p-swamp-remote-data-stub:8100
+              value: http://$(PSWAMP_REMOTE_DATA_HOST):8100
           resources:
             requests:
               cpu: "100m"
@@ -229,10 +280,17 @@ spec:
       securityContext:
         runAsNonRoot: true
         runAsUser: 10001
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: remote-data-stub
           image: p-swamp:latest
           imagePullPolicy: Never
+          securityContext:
+            allowPrivilegeEscalation: false
+            privileged: false
+            capabilities:
+              drop: [ALL]
           command: ["python", "-m", "remote_data_stub"]
           workingDir: /workspace/p-SWAMP/modules
           env:
@@ -297,10 +355,21 @@ spec:
         runAsNonRoot: true
         runAsUser: 1000
         fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: kafka
           image: apache/kafka:4.3.1
           imagePullPolicy: IfNotPresent
+          securityContext:
+            allowPrivilegeEscalation: false
+            privileged: false
+            capabilities:
+              drop: [ALL]
+          # PSWAMP_KAFKA_HOST, PSWAMP_REMOTE_DATA_HOST: see p-swamp-hosts at the end.
+          envFrom:
+            - configMapRef:
+                name: p-swamp-hosts
           env:
             - name: KAFKA_NODE_ID
               value: "1"
@@ -311,7 +380,7 @@ spec:
             - name: KAFKA_LISTENERS
               value: PLAINTEXT://:9092,CONTROLLER://:9093
             - name: KAFKA_ADVERTISED_LISTENERS
-              value: PLAINTEXT://p-swamp-kafka:9092
+              value: PLAINTEXT://$(PSWAMP_KAFKA_HOST):9092
             - name: KAFKA_LISTENER_SECURITY_PROTOCOL_MAP
               value: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
             - name: KAFKA_CONTROLLER_LISTENER_NAMES
@@ -374,3 +443,14 @@ spec:
       protocol: TCP
       port: 9092
       targetPort: 9092
+---
+# Overlays: the only place a Service's name is written as a value. A new entry
+# also needs a replacement in k8s/components/hosts. See "Environment variables"
+# in k8s/README.md.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: p-swamp-hosts
+data:
+  PSWAMP_KAFKA_HOST: p-swamp-kafka
+  PSWAMP_REMOTE_DATA_HOST: p-swamp-remote-data-stub

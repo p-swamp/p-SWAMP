@@ -1,0 +1,20 @@
+# The stack on a local minikube, applied by `uv run pswamp deploy minikube`
+# (which first builds p-swamp:latest into minikube). The base as it is, plus a
+# fixed NodePort for the server, so the browser has a stable address.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../../base
+patches:
+  - target:
+      kind: Service
+      name: p-swamp
+    patch: |
+      - op: replace
+        path: /spec/type
+        value: NodePort
+      # Fixed external port (valid range 30000-32767). Must stay in sync with
+      # NODE_PORT in tools/src/pswamp_tools/commands/deploy.py.
+      - op: add
+        path: /spec/ports/0/nodePort
+        value: 30080

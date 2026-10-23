@@ -204,7 +204,7 @@ deployed origin. Tag the image with the commit it was built from rather than a
 moving tag, so a deployment can be pinned and a rollout is triggered by a change
 of image. `uv run pswamp deploy minikube` is the local
 rehearsal of that path: it builds the same Dockerfile into minikube and applies
-`k8s/p-swamp-local.yaml`.
+`k8s/overlays/minikube` (`k8s/README.md`).
 
 Client-server architecture: many pages, one app
 ==

@@ -63,7 +63,7 @@ Part 2 comes back to them.
 
 The registrations: entries in `server.py`, the route table, the nav,
 `lib/servers.ts`, and the module-worker's lists in `docker-compose.yml` and
-`k8s/p-swamp-local.yaml`.
+`k8s/base/p-swamp.yaml`.
 
 ## Part 1: The module
 
@@ -638,16 +638,20 @@ own:
     develop: *worker-watch       # defined on module-worker, so place this after it
 ```
 
-In `k8s/p-swamp-local.yaml`, copy the `p-swamp-module-worker` Deployment,
+In `k8s/base/p-swamp.yaml`, copy the `p-swamp-module-worker` Deployment,
 rename it (`metadata.name`, every `app:` label, the container), and set the
-same two variables:
+same two variables. Keep its `envFrom` (the Kafka address comes from it, see
+the comment on `p-swamp-hosts` in that file):
 
 ```yaml
+          envFrom:
+            - configMapRef:
+                name: p-swamp-hosts
           env:
             - name: PSWAMP_TRANSPORT
               value: kafka:pswamp_core.transport.kafka:KafkaTransport
             - name: KAFKA_BOOTSTRAP_SERVERS
-              value: p-swamp-kafka:9092
+              value: $(PSWAMP_KAFKA_HOST):9092
             - name: PSWAMP_WORKER_PIPELINES
               value: peak-frequency.toml
             - name: PSWAMP_WORKER_MODULES
@@ -670,8 +674,8 @@ whole Deployment to copy.
 workers is run by both: every result arrives twice.
 
 **3. Apply it.** `docker compose up -d` (or restart
-`uv run pswamp dev server`), or `kubectl apply -f
-k8s/p-swamp-local.yaml`. The image, the module, its web API and its page are
+`uv run pswamp dev server`), or `kubectl apply -k
+k8s/overlays/minikube`. The image, the module, its web API and its page are
 unchanged. The new worker logs `hosting peak-frequency for peak-frequency: …`.
 
 A module that reads the sources also needs them there: the app's

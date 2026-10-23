@@ -11,7 +11,7 @@ explains them):
   showing its latest result, and the api's test; the module joins the
   workspace (``modules/*``), becomes a dependency of the server (which finds
   it through its entry point), and its pipeline file and name are added to the
-  module-worker in docker-compose.yml and k8s/p-swamp-local.yaml. The caller
+  module-worker in docker-compose.yml and k8s/base/p-swamp.yaml. The caller
   re-locks (``uv lock``) afterwards;
 * ``source``: a data source, a ``SourceModule`` project over the core
   (``modules/<slug>/``: its code, tests, README and a runnable example) and a
@@ -62,7 +62,7 @@ TAKEN_DISTRIBUTIONS = {"pswamp-models", "pswamp-core", "pswamp-tools", "pswamp-s
 # The worker lists a module joins, as patterns whose group 1 is the list's value.
 # check-generators reads the patched lists back with the same patterns.
 COMPOSE = Path("docker-compose.yml")
-K8S = Path("k8s/p-swamp-local.yaml")
+K8S = Path("k8s/base/p-swamp.yaml")
 WORKER_LIST_PATTERNS = {
     COMPOSE: r'^  module-worker:\n(?:.*\n)*?\s*{var}: "?([^"\n]*)',
     K8S: r'name: p-swamp-module-worker\n(?:.*\n)*?\s*- name: {var}\n\s*value: "?([^"\n]*)',

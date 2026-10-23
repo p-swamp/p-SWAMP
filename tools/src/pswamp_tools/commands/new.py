@@ -123,7 +123,7 @@ def module(
     app/server-python/src/<pkg>/ and the page to app/client-web/src/pages/<slug>/.
     The project becomes a dependency of the server, the
     workspace is re-locked (`uv lock`), and the module is added to the
-    module-worker in docker-compose.yml and k8s/p-swamp-local.yaml.
+    module-worker in docker-compose.yml and k8s/base/p-swamp.yaml.
     doc/module-cookbook.md walks through every file; `pswamp check-generators`
     proves the output works.
 

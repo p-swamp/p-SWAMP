@@ -1,0 +1,11 @@
+# The p-swamp stack (p-swamp.yaml), for an overlay to build on: see k8s/README.md.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - p-swamp.yaml
+# The live feed's file, as the ConfigMap the server mounts. Generated, so its
+# name carries a hash of the content: an edit to the file rolls the server.
+configMapGenerator:
+  - name: p-swamp-pmu-data
+    files:
+      - deployment_pmu_data_file_example.txt

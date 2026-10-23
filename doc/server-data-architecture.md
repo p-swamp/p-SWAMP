@@ -772,21 +772,23 @@ Kafka is the only broker transport in the repo today.
 - **Compose** (`docker-compose.yml`): `server`, `module-worker`
   (frame-stats, excursion), `batch-worker` (range-summary, one CPU),
   `remote-data-stub`, `kafka`.
-- **Minikube** (`k8s/p-swamp-local.yaml`, via
+- **Minikube** (`k8s/overlays/minikube` over `k8s/base`, via
   `uv run pswamp deploy minikube`): the same five, and the
   live feed reads a file from a ConfigMap.
 
-**A cloud cluster** starts from `k8s/p-swamp-local.yaml` and changes:
+**A cloud cluster** has an overlay of its own over `k8s/base` (kustomize; see
+`k8s/README.md`), kept with the deployment rather than in this repo. It changes:
 - **Image**: pushed to the deployment's registry at an immutable tag
   (`imagePullPolicy: IfNotPresent`), built from this repo's Dockerfile; this
   repo publishes no image.
-- **Ingress**: an Ingress or LoadBalancer in place of the NodePort. The web
-  client works under a path prefix (`/p-swamp/`) as it is.
-- **Broker**: the organisation's own Kafka, not one run for p-SWAMP. The
-  local manifest holds a one-node Kafka (the `p-swamp-kafka` Deployment and
-  its Service) only because a laptop cluster has no broker: delete those two
-  objects from the manifest. Point `KAFKA_BOOTSTRAP_SERVERS` at the real
-  broker in the server and every worker, set `KAFKA_REPLICATION_FACTOR`, and
+- **Ingress**: an Ingress or LoadBalancer to the `p-swamp` Service's `http`
+  port, where minikube's overlay has a NodePort. The web client works under a
+  path prefix (`/p-swamp/`) as it is.
+- **Broker**: the organisation's own Kafka, or the base's one-node Kafka (the
+  `p-swamp-kafka` Deployment and its Service), one per copy of the stack. For
+  an external broker, the overlay deletes those two objects (a `$patch: delete`
+  patch), sets `PSWAMP_KAFKA_HOST` in the `p-swamp-hosts` ConfigMap to the
+  broker, sets `KAFKA_REPLICATION_FACTOR` in the server and every worker, and
   apply the retention settings the transport asks for (`LIVE_TOPIC_CONFIGS`)
   or an equivalent broker policy.
 - **Data**: the deployment's remote data service in `REMOTE_URL`, its live
@@ -832,7 +834,7 @@ In compose (`docker-compose.yml`):
       PSWAMP_WORKER_MODULES: "frame-stats"   # 2. was "frame-stats,excursion"
 ```
 
-In k8s (`k8s/p-swamp-local.yaml`), a Deployment beside the other workers:
+In k8s (`k8s/base/p-swamp.yaml`), a Deployment beside the other workers:
 
 ```yaml
 apiVersion: apps/v1
@@ -853,20 +855,30 @@ spec:
       labels:
         app: p-swamp-excursion-worker
     spec:
-      securityContext:
+      securityContext:                     # the "restricted" profile, as every pod
         runAsNonRoot: true
         runAsUser: 10001
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: excursion-worker
-          image: p-swamp:latest            # the same image as the server
-          imagePullPolicy: Never           # IfNotPresent with an image from a registry
+          image: p-swamp:latest            # the same image as the server; overlays replace it
+          imagePullPolicy: Never           # built into minikube; overlays that pull patch this
+          securityContext:
+            allowPrivilegeEscalation: false
+            privileged: false
+            capabilities:
+              drop: [ALL]
           command: ["python", "-m", "pswamp_core.worker"]
           workingDir: /workspace/p-SWAMP/pipelines   # outside the server's src/; the pipeline files
+          envFrom:                         # PSWAMP_KAFKA_HOST, never the Service's name itself
+            - configMapRef:
+                name: p-swamp-hosts
           env:
             - name: PSWAMP_TRANSPORT
               value: kafka:pswamp_core.transport.kafka:KafkaTransport
             - name: KAFKA_BOOTSTRAP_SERVERS
-              value: p-swamp-kafka:9092
+              value: $(PSWAMP_KAFKA_HOST):9092
             - name: PSWAMP_WORKER_PIPELINES
               value: pmu-test-streamer.toml
             - name: PSWAMP_WORKER_MODULES

@@ -6,7 +6,6 @@ from __future__ import annotations
 import contextlib
 import subprocess
 import sys
-import tempfile
 from collections.abc import Iterator
 from pathlib import Path
 
@@ -19,16 +18,16 @@ from .._proc import background, capture, require_tools, run, run_filtered
 app = typer.Typer(
     help=(
         "Test the real artifact: build the image into a local minikube cluster and deploy "
-        "k8s/p-swamp-local.yaml (`deploy minikube`), and follow its server logs (`deploy logs`). "
+        "k8s/overlays/minikube (`deploy minikube`), and follow its server logs (`deploy logs`). "
         "For day-to-day work with hot reload, use `uv run pswamp dev server` instead."
     ),
     no_args_is_help=True,
 )
 
 IMAGE = "p-swamp:latest"
-MANIFEST = "k8s/p-swamp-local.yaml"
-PMU_DATA = "k8s/deployment_pmu_data_file_example.txt"
-# Must stay in sync with the Service's nodePort in k8s/p-swamp-local.yaml.
+# A kustomize overlay over k8s/base (see k8s/README.md), applied with `kubectl apply -k`.
+OVERLAY = "k8s/overlays/minikube"
+# Must stay in sync with the Service's nodePort in k8s/overlays/minikube.
 NODE_PORT = 30080
 # Rebuilt here and so restarted; Kafka is not, and a restart would empty its topics.
 BUILT = ("p-swamp-remote-data-stub", "p-swamp-module-worker", "p-swamp-batch-worker", "p-swamp")
@@ -85,20 +84,8 @@ def _build_image(root: Path) -> None:
 
 def _apply(root: Path) -> None:
     _ui.section("Applying manifests")
-    # The live feed's data file, as the ConfigMap the server mounts: rendered with
-    # --dry-run and applied, so it is idempotent.
-    rendered = capture(
-        ["kubectl", "create", "configmap", "p-swamp-pmu-data", f"--from-file={PMU_DATA}",
-         "--dry-run=client", "-o", "yaml"],
-        cwd=root,
-    )
-    if rendered.returncode != 0:
-        raise DeployFailed(f"kubectl create configmap failed: {rendered.stderr.strip()}")
-    with tempfile.TemporaryDirectory() as tmp:
-        configmap = Path(tmp) / "configmap.yaml"
-        configmap.write_text(rendered.stdout, encoding="utf-8")
-        _must(run(["kubectl", "apply", "-f", str(configmap)], cwd=root), "kubectl apply (configmap)")
-    _must(run(["kubectl", "apply", "-f", MANIFEST], cwd=root), f"kubectl apply -f {MANIFEST}")
+    # The overlay also generates the ConfigMap holding the live feed's data file.
+    _must(run(["kubectl", "apply", "-k", OVERLAY], cwd=root), f"kubectl apply -k {OVERLAY}")
 
     _ui.section("Rolling out")
     # `kubectl apply` won't restart pods for an unchanged manifest, even though
@@ -161,7 +148,7 @@ def minikube(
         False, "--no-logs", envvar="NO_LOGS", help="Return to the prompt instead of following the server logs."
     ),
 ) -> None:
-    """Build the image into minikube, deploy k8s/p-swamp-local.yaml, open the client, follow the logs.
+    """Build the image into minikube, deploy k8s/overlays/minikube, open the client, follow the logs.
 
     1. Checks the committed api contract matches the code: the one staleness this
        path can't otherwise catch (a stale schema.ts type-checks against the client
