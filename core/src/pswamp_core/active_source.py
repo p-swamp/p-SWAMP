@@ -241,8 +241,9 @@ class ActiveSource:
                         self.error, self.ended, self.paused = None, False, False
                         logger.info("the live feed from %s is back", self._sources.source)
                         self._publish_status()
-                    self.cursor = frame.timestamp
-                    self._last_frame = frame
+                    if isinstance(frame, stream.source.model):  # past the first output (a relay's) is no frame
+                        self.cursor = frame.timestamp
+                        self._last_frame = frame
                     self._sink.publish(frame)
             except Exception as error:
                 self._fail(error, report=not down)

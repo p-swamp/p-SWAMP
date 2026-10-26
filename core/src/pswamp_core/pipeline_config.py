@@ -32,6 +32,10 @@
   name upper-cased, dashes as underscores (``PMU_TEST_STREAMER``). (The
   ``<APP>_DATA_CLIENTS`` variable of the old data clients is gone, and an
   error says so if it is still set.)
+- **A source can be another pipeline's live run**: ``from = "<app>"`` and
+  ``get = ["<live source>", "<module>", ...]`` instead of ``module``, found in
+  ``pipelines/<app>.toml`` beside this file (``pswamp_core.relay``). In
+  ``<APP>_SOURCES`` it is ``name:@<app>/<live source>+<module>``.
 - **Everything ``Pipeline`` checks, plus one thing**: every class a module
   reads has a producer in the pipeline: a source's ``model`` (its primary
   output), a module's output, or the run itself (``PlayerStatus``,
@@ -91,12 +95,35 @@ class PipelineConfigError(ValueError):
 
 
 class SourceConfig(BaseModel):
-    """One source: a name, and the source module that serves it."""
+    """One source: a name, and what serves it: a source module, or another
+    pipeline's live run (``from`` + ``get``, see ``pswamp_core.relay``)."""
 
     model_config = ConfigDict(extra="forbid")
 
     name: str = Field(pattern=r"^[A-Za-z0-9][A-Za-z0-9_.-]*$", description="The source's name: what a run switches to.")
-    module: str = Field(pattern=_SLUG, description="The source module, by its pswamp.modules entry-point name.")
+    module: str | None = Field(
+        default=None, pattern=_SLUG, description="The source module, by its pswamp.modules entry-point name."
+    )
+    from_app: str | None = Field(
+        default=None, alias="from", pattern=_SLUG, description="Another pipeline (its app name) whose live run to relay."
+    )
+    get: list[str] = Field(
+        default_factory=list,
+        description="With `from`: that pipeline's live source, and the modules running on it, whose output to take.",
+    )
+
+    @model_validator(mode="after")
+    def _one_way_to_be_served(self) -> SourceConfig:
+        if (self.module is None) == (self.from_app is None):
+            raise ValueError("set `module` (a source module) or `from` (another pipeline), one of them")
+        if (self.from_app is None) == bool(self.get):
+            raise ValueError("`get` goes with `from`, and `from` needs it")
+        return self
+
+    @property
+    def spec(self) -> str:
+        """The entry point, as ``<APP>_SOURCES`` writes it: ``@pipeline/get1+get2`` for a relay."""
+        return self.module or f"@{self.from_app}/{'+'.join(self.get)}"
 
 
 class EnrichConfig(BaseModel):
@@ -125,15 +152,17 @@ class PipelineConfig(BaseModel):
                 raise ValueError(f"{what} {', '.join(twice)} listed twice")
         return self
 
-    def build(self) -> Pipeline:
-        """The ``Pipeline`` this declares: modules resolved, every check run."""
+    def build(self, folder: Path | None = None) -> Pipeline:
+        """The ``Pipeline`` this declares: modules resolved, every check run.
+        ``folder`` is where the other pipelines' files are, for a relay."""
         from .pipeline import Pipeline
 
         installed = available_modules()
         modules = tuple(resolve_module(name, installed) for name in self.modules)
         sources = ConfiguredSources(
             app=self.app,
-            default_sources=",".join(f"{s.name}:{s.module}" for s in self.sources),
+            default_sources=",".join(f"{s.name}:{s.spec}" for s in self.sources),
+            folder=folder,
             cim_reference=self.enrich.cim_reference,
         )
         return Pipeline(self.app, sources, modules=modules, source_models=sources.source_models())
@@ -147,6 +176,8 @@ class ConfiguredSources:
     app: str
     #: The file's sources, as an ``<APP>_SOURCES`` value.
     default_sources: str
+    #: Where the other pipelines' files are, for a source that relays one.
+    folder: Path | None = None
     cim_reference: str | None = None
 
     @property
@@ -188,6 +219,12 @@ class ConfiguredSources:
         installed = available_modules()
         classes = []
         for name, module in self.source_specs():
+            if module.startswith("@"):  # another pipeline's live run: @pipeline/get1+get2
+                from .relay import relay_for
+
+                owner, _, get = module[1:].partition("/")
+                classes.append((name, relay_for(self.folder, owner, [item for item in get.split("+") if item])))
+                continue
             cls = resolve_entry(module, installed)
             if not issubclass(cls, SourceModule):
                 raise PipelineConfigError(f"{self.sources_variable}: {module!r} is an analysis module, not a source")
@@ -195,8 +232,8 @@ class ConfiguredSources:
         return classes
 
     def source_models(self) -> tuple[type[DataModel], ...]:
-        """What the sources serve (each class's ``model``), without building one."""
-        return tuple(dict.fromkeys(cls.model for _, cls in self.source_classes()))
+        """What the sources serve (every class of their ``outputs``), without building one."""
+        return tuple(dict.fromkeys(model for _, cls in self.source_classes() for model in cls.outputs))
 
     def __call__(self) -> SourceSet:
         reference = os.environ.get(self.cim_variable, "").strip() or self.cim_reference
@@ -251,7 +288,7 @@ def load_pipeline(path: str | os.PathLike[str]) -> Pipeline:
     except (OSError, UnicodeDecodeError, tomllib.TOMLDecodeError) as error:
         raise PipelineConfigError(f"{path}: {error}") from error
     try:
-        return PipelineConfig.model_validate(data).build()
+        return PipelineConfig.model_validate(data).build(path.parent)
     except ValidationError as error:
         problems = "; ".join(
             f"{'.'.join(str(part) for part in e['loc']) or '(file)'}: {e['msg']}" for e in error.errors()

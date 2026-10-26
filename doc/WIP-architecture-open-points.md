@@ -275,11 +275,11 @@ class with inputs and no `process` is refused.
 
 **8. A source's outputs past the first are half supported.**
 - The class check and `SourceConformance` allow them.
-- `PipelineConfig.source_models` (`pipeline_config.py`) counts only
-  `cls.model` as produced, so a module reading a second output fails to
-  load.
-- `Playable` and `PipelineRun` treat every record as the frame at the
-  cursor, and a follower of a live run subscribes to the primary output only
+- ~~`ConfiguredSources.source_models` counted only `cls.model` as produced~~:
+  it counts every output now (ADR-015), and the live pump (`ActiveSource._run_pump`)
+  takes only the primary class as the frame at the cursor.
+- `Playable` still treats every record as the frame at the cursor, and a
+  follower of a live run subscribes to the primary output only
   (`PipelineRun._follow`).
 - With one active source per run, the join's own example (pmu + scada + se)
   cannot be fed by sources.
