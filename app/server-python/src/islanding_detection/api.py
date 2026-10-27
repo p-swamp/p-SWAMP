@@ -1,5 +1,10 @@
-"""The Islanding detection app's web API: a run of its pipeline per client, and a socket
-pushing the module's latest result. server.py mounts ``router`` under /api/islanding-detection."""
+"""The Islanding detection app's web API: a run of the live grid's pipeline per client, and a socket
+pushing the module's latest result. server.py mounts ``router`` under /api/islanding-detection.
+
+The pipeline is ``grid-monitor``: the one simulation of the grid (``rtsim-from-cim``) and every module
+that analyses it. This app serves it, so its lifespan starts the simulation's shared run, which
+every client's run follows, and which ``cim_live`` reads too. Nothing else may serve that pipeline:
+a second ``serve_pipeline`` of it would start a second simulation."""
 
 import contextlib
 from typing import Literal
@@ -13,7 +18,7 @@ from pswamp_models.common import AlarmEvent
 from pswamp_models.islanding_detection import IslandingDetectionResult
 from pswamp_models.player import PlayerStatus
 
-PIPELINE = app_pipeline("islanding-detection")
+PIPELINE = app_pipeline("grid-monitor")
 
 REGISTRY = run_registry(PIPELINE)
 

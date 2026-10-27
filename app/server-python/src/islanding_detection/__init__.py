@@ -1,9 +1,9 @@
 """The Islanding detection app's web API, and the page that shows its module's results.
-The module is ``pswamp_modules.islanding_detection``; its pipeline is
-``pipelines/islanding-detection.toml`` at the repo root.
+The module is ``pswamp_modules.islanding_detection``; its pipeline is the live grid's,
+``pipelines/grid-monitor.toml`` at the repo root, whose shared run this app starts.
 
   router      the endpoints, mounted under /api/islanding-detection
-  lifespan    the shared live run, the module hosted here when there is no broker
+  lifespan    the grid's one simulation (its shared live run), the module hosted here when there is no broker
   WS_MESSAGE  the model pushed down the socket
 """
 

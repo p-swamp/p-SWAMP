@@ -12,10 +12,9 @@ import { useTimeWindowSocket } from './useTimeWindowSocket'
  * Live measurements — a moving window of the PMU stream, as the monitoring
  * applications see it. The web counterpart of p-SWAMP's Qt time window plot.
  *
- * With the default frequency channels selected, the recorded line trip is
- * visible directly: three northern stations separate onto their own frequency
- * about twenty seconds into each pass of the recording, and rejoin twenty
- * seconds later.
+ * With the default frequency channels selected, a disturbance is visible
+ * directly: take lines out on the CIM graph page until part of the grid is
+ * separated, and its stations move onto a frequency of their own.
  *
  * The chart height is a constant per variant on purpose — it is a dependency of
  * the effect that builds the plot, so a measured value would destroy and rebuild
@@ -36,7 +35,7 @@ export function MeasurementsPanel({
   return (
     <Panel
       title="Live Measurements"
-      subtitle="A moving window of the Nordic 44 PMU stream, as the monitoring applications see it"
+      subtitle="A moving window of the live grid's PMU stream, as the modules see it"
       status={status}
       ready={ready}
       focusedClassName="w-full max-w-5xl"

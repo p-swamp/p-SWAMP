@@ -13,10 +13,10 @@ import { usePhasorsData } from './phasorsContext'
 /**
  * Voltage phasors — the web counterpart of p-SWAMP's Qt voltage phasor plot.
  *
- * Reads the same measurement window the frequency dock does — this client's
- * own, one per pipeline. When the recorded line trip separates the northern
- * stations, their phasors drift away from the rest of the dial, coloured by the
- * island the detector assigned them.
+ * Reads the same measurement window the frequency dock does: the live grid's,
+ * one for every viewer. When a part of the grid separates, its stations' phasors
+ * drift away from the rest of the dial, coloured by the island the detector
+ * assigned them.
  */
 export function PhasorsPanel({
   variant = 'dashboard',
@@ -36,7 +36,7 @@ export function PhasorsPanel({
   return (
     <Panel
       title="Voltage phasors"
-      subtitle="Bus voltage phasors across the Nordic 44 grid, coloured by island"
+      subtitle="Bus voltage phasors across the grid, coloured by island"
       status={status}
       ready={ready}
       focusedClassName="w-full max-w-2xl"

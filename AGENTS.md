@@ -21,7 +21,7 @@ Where things are:
 | Path | What it is |
 |---|---|
 | `desktop/` | The desktop `p-swamp` package (PySide6, pyqtgraph, Kafka). Own manifest and lock, outside the uv workspace. |
-| `app/server-python/` | The web backend, `pswamp-server`. `src/server.py` is the one entrypoint; `src/pswamp_web/` is the grid monitor's layer over `desktop/`. |
+| `app/server-python/` | The web backend, `pswamp-server`. `src/server.py` is the one entrypoint; `src/grid_monitor/` is the grid monitor's backend, over the live grid. |
 | `app/client-web/` | The React/TS/Vite web client. |
 | `models/` | `pswamp-models`: every message of the server data architecture, one package per producer. |
 | `core/` | `pswamp-core`: transport, the `Module` contract, sources, the run's router, pipelines. |
@@ -39,11 +39,14 @@ the Qt implementation rather than replacing it. `doc/client-server-rig.md` holds
 the driving goals and constraints behind it; `desktop/README.md` is the desktop
 package's, and the root `README.md` is a short map of the repository.
 
-The two are not disconnected. The web stack's **grid monitor** is a front
-end over the desktop package's analysis core: `app/server-python/src/pswamp_web/`
-imports `pswamp.*` and the web backend declares the desktop package as an
-editable path dependency. See "The Python projects in one repo" for what that does and
-does not change, and "The p-SWAMP web layer" for the code itself.
+The two are related by their analysis: the web stack's **grid monitor** runs
+ports of the desktop package's monitoring algorithms (islanding, line outage) as
+modules (`modules/islanding-detection/`, `modules/line-outage/`) over a live
+simulation of the grid, rather than the desktop applications themselves. The web
+backend still declares the desktop package as an editable path dependency, but
+since the grid monitor moved onto the live grid nothing in the server imports
+`pswamp.*`; see "The Python projects in one repo". "The grid monitor's backend"
+describes the code.
 
 **Everything below is about the client-server stack**, except where it says
 otherwise. The desktop package in `desktop/` has its own manifest and is
@@ -51,8 +54,9 @@ covered by neither these conventions nor `pswamp check` — see the next section
 
 The web stack ships two things. The **grid monitor** at `/` is the real one: a
 main window laid out as the Qt one is — the grid view in the middle, docks for
-frequency, status, alarms, phasors and line outages beside it — over a recorded
-Nordic 44 PMU stream replayed through p-SWAMP's own monitoring applications. Beside it sit the deliberately trivial scaffold demos,
+frequency, status, alarms, phasors and line outages beside it — over the **live
+grid**: one real-time simulation of the grid in the CIM graph, and the modules
+analysing it, shared by every viewer. Beside it sit the deliberately trivial scaffold demos,
 which exist to keep the "adding a page" path honest:
 
 - **`/reference-subapp` is the reference example** — a per-client counter, itself
@@ -83,9 +87,8 @@ which exist to keep the "adding a page" path honest:
 
 **The client-server stack persists nothing on purpose.** There is no persistent
 volume anywhere under `app/` or `k8s/`. Don't reintroduce one without an explicit
-ask. (The Nordic 44 grid model *is* a sqlite file, and the replayed PMU stream
-*is* a committed `.npz` — but both are read-only sample data the server opens,
-not storage it writes to.) Kafka, in compose and k8s, is a transport between
+ask. (The sample recordings are committed files, but read-only sample data the
+server opens, not storage it writes to.) Kafka, in compose and k8s, is a transport between
 processes, not a store: its topics keep about a minute and have no volume.
 
 **The one database is the CIM graph's.** Every module can read the grid, held in
@@ -116,7 +119,7 @@ package a member.
 ```
 models/ ← core/ ← modules/<name>/ ← app/server-python/    (each depends only on those to its left)
 tools/                                                     (imports none of them; runs them as subprocesses)
-desktop/ ← app/server-python/src/pswamp_web/               (web → desktop, never the reverse; outside the workspace)
+desktop/ ← app/server-python/                              (declared, not imported: see below; outside the workspace)
 ```
 
 | Member | Distribution | Holds | Depends on |
@@ -127,9 +130,13 @@ desktop/ ← app/server-python/src/pswamp_web/               (web → desktop, n
 | `tools/` | `pswamp-tools` | the `pswamp` CLI | Typer, rich |
 | `app/server-python/` | `pswamp-server` | the web backend (non-packaged) | everything above, and `p-swamp` |
 
-**The web → desktop seam is one stanza.** `pswamp_web/` imports `pswamp.*`;
-nothing under `desktop/src/pswamp/` imports anything from `app/`, and nothing
-may start:
+**The web → desktop seam is one stanza, and nothing uses it now.** The grid
+monitor used to run the desktop package's applications in the server
+(`pswamp_web/` imported `pswamp.*`); it now runs their ports as modules over the
+live grid, and nothing in `app/` imports `pswamp.*`. The dependency, the image's
+install of `desktop/src/` and its compose watch are kept until it is decided
+whether to drop them. Nothing under `desktop/src/pswamp/` imports anything from
+`app/`, and nothing may start:
 
 ```toml
 # app/server-python/pyproject.toml
@@ -149,7 +156,7 @@ under "The server data architecture"):
 
 - **`models/` holds every message, one package per producer**
   (`pswamp_models.common`, `.player`, `.pmu`, `.remote_data`, and one per module:
-  `.frame_stats`, `.excursion`, `.range_summary`). A message's class lives with
+  `.frame_stats`, `.excursion`, `.range_summary`, `.islanding_detection`, `.line_outage`). A message's class lives with
   whoever publishes it, and **never in a module**: the core, other modules, the
   web backend and the api contract all import it from here, so nobody imports a
   module to get at its data. `models/tests/test_models_layering.py` checks that
@@ -250,9 +257,10 @@ Two deployables, one wire protocol:
   serves `/healthz`, and serves the web client from `static/`. Each backend api
   is a package under `src/<app>/` exposing `router` + optional `lifespan`
   (the FastAPI mirror of the client's `src/pages/`). The real one is
-  **`src/pswamp_web/`** — see "The p-SWAMP web layer" below; it is a package of
-  packages, contributing six entries to `APPS` plus the pipeline registry
-  service.
+  **`src/grid_monitor/`** — see "The grid monitor's backend" below; it is a package of
+  packages, contributing six entries to `APPS` plus the follower of the live grid
+  (a service). **`src/pswamp_web/`** beside it is the wire and the socket plumbing
+  every app uses (see the same section).
   Beside it sit the two scaffold demos. **`src/reference_subapp/`** is the
   reference example — `api.py` (WS endpoint, per-client state, the two POST
   commands, logging) and `model.py` (the pure domain model), which `api.py`
@@ -277,7 +285,7 @@ Two deployables, one wire protocol:
   **`src/shared.py`** is what an app
   package imports its domain-free helpers from — `SocketRegistry`, plus
   `ClientId`, `CommandAck`, `read_client_id`, `get_logger` re-exported from
-  `pswamp_web/` (see "The p-SWAMP web layer" for why the definitions live down
+  `pswamp_web/` (see "The grid monitor's backend" for why the definitions live down
   there and the import runs inward), and the web API side of the server data
   architecture (`transport()`, `run_registry`, `serve_pipeline`,
   `connected_pipeline`, `push_changes`, `dispatch_command`); it is *not* an app package and never
@@ -317,7 +325,7 @@ Two deployables, one wire protocol:
   copies of them. Its
   subfolders are named after those routes, so the client↔server mirror holds one
   level down: `grid-monitor/time-window/` ↔ `/api/time-window` ↔
-  `pswamp_web/time_window/`. `grid-view/` is the one that is not a route: the
+  `grid_monitor/time_window/`. `grid-view/` is the one that is not a route: the
   canvas the grid is drawn on, which has no socket of its own (see "The grid
   view"). `/reference-subapp` (`ReferenceSubappPage`) is the
   standalone scaffold demo to copy — a counter over a WebSocket plus two POST
@@ -342,52 +350,39 @@ Key invariants to preserve:
   became stable per browser rather than per page mount when the grid monitor
   needed it to be, so the demo now resumes across a reload too — not only across
   a socket-level reconnect.
-- **…and so is the grid data: one PMU pipeline per client.** The `pswamp_web/`
-  pages give each client its own replay, its own measurement window, its own
-  islanding detector and its own alarms, starting at 0 s when it first connects.
-  `HubRegistry` (in `pswamp_web/hub.py`) is the only thing that builds one, and
-  `connected_hub(ws)` is how every endpoint gets it — never a module-level
-  singleton. The rule is now simply: **everything is per client.** (It used to be
-  the opposite — one `HUB` for the process, on the grounds that there is one grid.
-  True of a control room, false of a rig for exploring recorded data, where a
-  visitor wants the event from the start rather than someone else's replay half
-  way through.) A page package's `ClientState` still holds only *view* state
-  (selected channels, last sequence sent); the Hub beside it holds that client's
-  data.
-- **A pipeline is expensive, so its lifecycle is managed.** Four OS threads and
-  ~30 MB apiece, and freed memory is not returned to the OS — so peak RSS follows
-  `MAX_PIPELINES` (8), not the typical load, and both manifests size
-  `limits.memory` from the cap. Pipelines outlive their sockets by
-  `IDLE_EVICT_SECONDS` so a reload rejoins the same stream; at the cap the
-  least-recently-used idle one is reclaimed, and a client is refused with close
-  code 1013 if none is. **The recording is the one thing still shared** —
-  `load_recording()` is `lru_cache`d, and safe to share only because `Recording`
-  is frozen and the decoder copies each row before touching it.
-- **One event loop for all I/O, and exactly two thread seams.** The WS handlers
-  and ticker tasks are cooperatively scheduled — never truly parallel — so nothing
-  they touch needs a lock. The one exception is `pswamp_web/`: the p-SWAMP
-  monitoring applications run in daemon threads exactly as they do in the desktop
-  package, because rewriting their execution model to suit a web server would be
-  the tail wagging the dog. Those threads cross into the loop at **two** places
-  and nowhere else — `Bus.publish_threadsafe()` (via `loop.call_soon_threadsafe`)
-  and the time window's own already-locked snapshot read. Don't add a third seam,
-  and don't introduce threads outside that package. (The core's CIM `GraphWatch` thread is
-  not one: it only asks the store and moves an integer on, which a module compares before
-  its next call; it touches no loop and no repository.) Note the bus is **per
-  pipeline**, so a listener only ever hears its own client's results.
-- **All of a browser's sockets must resolve to one pipeline.** The client id is
-  generated once per browser profile and persisted in `localStorage`
-  (`src/lib/clientId.ts`), *not* rolled per hook — the grid monitor opens five
-  sockets at once, and five ids would mean five replays and twenty threads for one
-  viewer. `HubRegistry.acquire` holds a per-client lock so those five simultaneous
-  first-connects build one pipeline rather than racing to build five.
+- **…but the live grid is everyone's.** The grid monitor shows one simulation of
+  the grid, one measurement window, one islanding assessment and **one alarm
+  list** for every client (`grid_monitor.live.LIVE`): there is one grid, so two
+  operators seeing different frequencies would be a bug. An operator who
+  acknowledges, silences or annotates an alarm does it for everyone. What is per
+  client there is only *view* state: which channels a time-window view plots and
+  how far it has been sent (`ClientState`, registered in a `SessionRegistry`).
+  (It was the opposite for a while: each client had its own replay of a recording,
+  its own detector threads and its own alarms, built by a `HubRegistry` with a cap
+  of eight. That fit a rig for exploring recorded data; it went with the
+  recording.) Recordings are still per client in the PMU test streamer, whose runs
+  `run_registry` keeps one per client id.
+- **One event loop for all I/O; blocking work in a thread of its own.** The WS
+  handlers and ticker tasks are cooperatively scheduled — never truly parallel — so
+  nothing they touch needs a lock: the live grid's follower writes its state and
+  the panels read it, all on the loop. What blocks (a read of the CIM graph:
+  HTTP to Oxigraph, or rdflib) runs on an executor thread owned by the app that
+  reads (`cim_graph`, `cim_live`, `grid_monitor`), and the simulation runs in
+  processes of its own. Don't do blocking I/O on the loop. (The core's CIM
+  `GraphWatch` thread is no exception: it only asks the store and moves an integer
+  on, which a module compares before its next call; it touches no loop and no
+  repository.)
+- **All of a browser's sockets share one client id.** It is generated once per
+  browser profile and persisted in `localStorage` (`src/lib/clientId.ts`), *not*
+  rolled per hook, so a page whose several sockets read one per-client run (the
+  streamer's) reads one, and a command's `client_id` addresses the views it came
+  from.
 - **This currently does not scale past one replica.** Because state is in-process,
   the k8s manifest is `replicas: 1`. A second pod would keep its own
   independent state and the Service would split clients across them. Horizontal
   scaling would require an external live store — a real design change, not a
-  manifest tweak. This got sharper with per-client pipelines: a client's five
-  sockets landing on different pods would be five unrelated replays, so one screen
-  would show five different instants. `k8s/base/p-swamp.yaml` sets `strategy: Recreate`, so that the
+  manifest tweak: a second pod would also run a second simulation of the grid
+  and keep a second alarm list. `k8s/base/p-swamp.yaml` sets `strategy: Recreate`, so that the
   old pod is gone before the new one serves. The same holds for each module
   worker: topics have one partition and workers no consumer group, so a second
   replica of a worker would answer every frame twice.
@@ -417,7 +412,7 @@ Key invariants to preserve:
     (`CLIENT_ID_PATTERN`, which both the query parameter and `read_client_id`
     apply). These used to be deliberate twins, one pair per side, kept equal by
     hand and reunified in the contract by ~90 lines of `api_contract.py`; see the
-    import-direction note under "The p-SWAMP web layer" for why that was never
+    import-direction note under "The grid monitor's backend" for why that was never
     necessary.
   - **`send_state` is the only serialiser, and a message is always a model.**
     Every push in the backend ends at `pswamp_web/wire.py:send_state` — a page's
@@ -437,11 +432,11 @@ Key invariants to preserve:
     backend ends in it, page packages directly and scaffold apps through
     `shared.py`. It is not vestigial: without a pending receive, a closed socket
     is only noticed on the next send, so an idle client lingers for ever.
-  - **A page endpoint is three lines of plumbing and its own logic, nothing
-    else.** `connected_hub(ws)` identifies the client and gets its pipeline;
+  - **A page endpoint is two lines of plumbing and its own logic, nothing
+    else.** `accept(ws)` (`grid_monitor/live.py`) checks the client id and accepts;
     `serve_ticks` or `serve_updates` (`pswamp_web/pump.py`) runs the socket. What
     is left in the package is what to send, which is the only part that differs.
-    Those five endpoints each carried their own copy of the pusher-task /
+    Five endpoints each carried their own copy of the pusher-task /
     receive-loop / cancel-and-suppress tail until it was extracted; don't write a
     sixth.
 - **One message shape, downstream.** The server pushes `state_message()` on
@@ -461,10 +456,12 @@ Key invariants to preserve:
   recording, no auth, no secrets, nothing persisted, and a reload undoes any of
   it. Narrow it to the dev origins the moment anything real sits behind an
   endpoint — live PMU data, a store that outlives the process, or any notion of a
-  user. **The CIM graph app is the exception to "touches only that client's
-  replay":** its graph is shared, so any page on any origin that can reach the
-  server can open a breaker for every visitor (ADR-014). Accepted for now (the
-  grid is sample data and `POST /api/cim-graph/reset` puts it back); narrow CORS
+  user. **Two apps are the exception to "touches only that client's
+  replay":** the CIM graph app's graph is shared, so any page on any origin that
+  can reach the server can open a breaker for every visitor (ADR-014), and the
+  grid monitor's alarm list is shared, so it can acknowledge or annotate an alarm
+  for every viewer. Accepted for now (the grid is sample data, `POST
+  /api/cim-graph/reset` puts it back, and a restart clears the alarms); narrow CORS
   and add authentication before this serves anyone who should not drive the grid.
 - **One cheap probe.** `GET /healthz` is both the liveness and readiness probe (and
   the compose healthcheck): "is the process serving?". There is no `/readyz`. It
@@ -642,9 +639,10 @@ The rules to keep:
   project, so the module's dependencies stay its own.
   `modules/frame-stats/examples/rtsim_frame_stats.py` is the worked example: the
   live simulation over a LazyCIM store the script brings (`repo=`, `prepare`).
-- The grid monitor (`pswamp_web/`) still runs on its own thread-based Hub/Bus,
-  beside this, with its wire models in `pswamp_web/wire.py`. Don't mix the two
-  in one app.
+- The grid monitor (`grid_monitor/`) is a page over this architecture too: it
+  follows the `grid-monitor` pipeline's shared run off the transport, as
+  `cim_live` does, and sends its panels the wire models in `pswamp_web/wire.py`
+  (see "The grid monitor's backend").
 
 ### The CIM graph
 
@@ -766,8 +764,8 @@ grid's PMUs need not measure power: Nordic44's do not), and lists the simulation
 the view is set before any layer is added: otherwise a layer has no element to label.
 
 The values come from **`cim_live`** (`app/server-python/src/cim_live/`, `/api/cim-live/ws`): each
-socket subscribes to the rtsim frames on the transport itself (`live.rtsim`, its own `DROP_OLDEST`
-backlog of 10 s), drains what queued at each wake and sends it as one `LiveFeed` (the layout when
+socket subscribes to the rtsim frames on the transport itself (the `grid-monitor` pipeline's
+`live.rtsim`, both read from `pipelines/grid-monitor.toml`, its own `DROP_OLDEST` backlog of 10 s), drains what queued at each wake and sends it as one `LiveFeed` (the layout when
 the header changes: stations, line ends with their limits, generators and loads; then every
 frame's time, V p.u., V angle, f, each line end's current and loading, each injection's P and Q),
 so **no frame is merged away**: under load the batches grow. What each column is comes from the
@@ -839,118 +837,102 @@ up the frames to the pages for ~2.5 s at each edit. So:
   controller is busy). The stand-in relies on private details of `LiveTops` (listed in
   `runner.py`), until LazyCIM takes a runner of its own. Keep both processes.
 
-Not in the streamer's pipeline file,
-because a live source's shared run starts with the server: compose and k8s add
-`rtsim:rtsim-from-cim` to `PMU_TEST_STREAMER_SOURCES`, beside the streamer's other sources.
+**There is one simulation, and every client sees it.** It is the one source of
+`pipelines/grid-monitor.toml`, named `rtsim` (settings `RTSIM_RATE`, `RTSIM_DT`, `RTSIM_POLL`),
+beside every module that analyses the live grid (`islanding-detection` and `line-outage`), which the grid monitor's panels show. A live source gets
+one shared run **per pipeline that lists it** (`start_live_runs`), and each is a TOPS engine
+process of its own, so **no other pipeline names `rtsim-from-cim`**, in its file or in an
+`<APP>_SOURCES` of compose or k8s: that would be a second simulation, unsynchronised with the
+first (it was, when the streamer listed it too). A module over the live grid joins that file;
+a page reads that pipeline's runs, or its frames off the transport as `cim_live` does.
+`app/server-python/tests/test_pipeline_files.py` holds both. The islanding detection app
+(`src/islanding_detection/`) serves that pipeline, so its lifespan starts the simulation;
+nothing else may `serve_pipeline` it.
 
-## The p-SWAMP web layer
+## The grid monitor's backend
 
-`app/server-python/src/pswamp_web/` is the web front end over the analysis core of
-the **desktop `p-swamp` package** (`desktop/`). It is the only code in `app/`
-that imports `pswamp.*`.
+`app/server-python/src/grid_monitor/` is the grid monitor's backend: the panels of
+the main window, over the live grid. Every panel is a view of one thing, the
+shared run of the `grid-monitor` pipeline (`pipelines/grid-monitor.toml`: the
+simulation of the grid in the CIM graph, `rtsim`, and the modules analysing it,
+`islanding-detection` and `line-outage`; see "The live grid simulation").
 
-**It is kept self-contained, because it has to be movable.** Two things are
-settled: the client-server stack is the direction this project is going, and the
-analysis core in `desktop/` stays whatever happens to the front ends. The open
-question is **how long the Qt desktop path lives alongside them** — and that is
-what decides where the shared Python ends up, which is why this package must be
-cheap to move. §7 of `doc/WIP-context-port-from-qt-to-web-frontend.md` lays out
-the two mutually exclusive moves: while Qt stays, this package moves in under
-`pswamp/` as a third presentation adapter beside `gui/` and `visualization/`; once
-Qt is gone, "the core" and "the web backend's only Python dependency" are the same
-thing, so the desktop package moves in *here* instead and `desktop/` disappears. Don't write either destination down as decided. What both rely on is
-the same, so the package obeys two rules that are otherwise unusual here:
-*nothing inside it imports from the rest of the web backend* (not `shared.py`, not `server.py`), and
-*every import between its own modules is relative*. That is what makes moving it a
-`git mv` plus the handful of import lines in `server.py` that name it. Don't add a
-dependency that breaks it.
+- **`live.py`** — `LIVE`, one `LiveGrid` for the process: the follower of that
+  run. `server.py` enters its `lifespan` as a service, before the apps, so it hears
+  the run from its first frame; the run itself is started by the islanding
+  detection app, which serves the pipeline. It reads the run off the transport as
+  a module would (and as `cim_live` does): the frames on a subscription that drops
+  the oldest when the loop is busy (a 10 s backlog), the results on one that drops
+  nothing. From them it keeps the measurement window, the latest islanding
+  assessment, the alarm list (`pswamp_web.stores.AlarmStore`), the outage log,
+  each module's status (from its results) and the feed's. The panels read that
+  state on the loop; an event-driven view wakes on `LIVE.updates(*topics)`, and an
+  operator action on an alarm wakes every view (`LIVE.nudge()`). `accept(ws)` is
+  how every panel's socket opens: it checks `?client_id=` (1008 without one) and
+  accepts.
+- **`window.py`** — `MeasurementWindow`: the last 30 s of every column of the
+  frames, one ring buffer for every view. A frame with a new layout (the
+  simulation rebuilt its model) starts it over and moves its `generation`, which
+  is how a view knows its chosen columns are no longer the same columns.
+- **`topology.py`** — the grid the view draws, `GET /api/grid/model`, read once
+  from the CIM graph (through a reader of its own, on a thread: a few dozen
+  queries, which wait for the CIM graph app to load the grid). **A bus is a
+  station of the live stream**: one per voltage level of each substation, named
+  as the simulation names its PMUs (`<substation>_<kV>`, `Beta_400`), so the
+  islanding detector's stations, the phasors and the frequencies are the buses'
+  own names. It stands where the GL profile places its substation, a
+  substation's lower voltage levels drawn a little beside it. A branch is a line
+  (along its GL route) or a transformer between two stations, named by its CIM
+  name with whitespace as `_`; a current's Analog maps to its branch
+  (`branch_of_analog`), which is how the outage log names what is out. The
+  country outlines are a fixture (`data/nordic_outlines.json`, the Nordic
+  coastlines and borders the Qt view draws), drawn when every bus lies inside
+  them (Nordic44, and the sample grid, which is in southern Norway).
+- Page packages, at the slugs the web client has always used: **`app_status/`**,
+  **`grid/`** (HTTP only), **`time_window/`**, **`phasors/`**, **`islanding/`**,
+  **`line_outage/`**.
 
-**The rule is one-way, and that matters.** It forbids importing *outward*; the
-rest of the backend importing *inward* is fine, and stays fine either way — if
-this package ends up under `pswamp/`, `from pswamp_web.wire import …` simply
-becomes `from pswamp.web.wire import …`; if the core moves here instead, nothing
-changes at all. So anything both sides need is
-**defined here and re-exported by `shared.py`**, never declared twice:
-`ClientId`, `CommandAck`, `CLIENT_ID_PATTERN`/`read_client_id`, `send_state` and
-`get_logger`. Reading the rule as "duplicate it, then keep the copies equal" is
-what produced four duplicates and schema-rewriting machinery in
-`api_contract.py` to hide them from the published contract. Don't reintroduce
-that: add to `wire.py` (or `log.py`) and re-export.
+`app/server-python/src/pswamp_web/` is what is left of the layer the grid monitor
+used to run on (the desktop package's applications in threads, over a recording):
+the wire and the socket plumbing every app uses.
 
-Two things it compensates for rather than fixing in the core, both marked in the
-code and both listed in §11 of
-`doc/WIP-context-port-from-qt-to-web-frontend.md` as changes worth making on their
-own merits: `CountingTimeWindowLabeled` in `replay.py` (an append counter, for the
-delta protocol) and the disjoint-group loop in `stores.island_groups`
-(`detect_islands` returns overlapping groups). Don't "simplify" either away
-without fixing the underlying gap first.
+- **`wire.py`** — every grid-monitor message shape, as pydantic models, plus
+  `send_state()`, and the names every command declares itself with (`ClientId`,
+  `CommandAck`, `read_client_id`, `refuse_socket`). **Always send via
+  `send_state()`**, never `ws.send_json`: `json.dumps` emits bare `NaN` tokens
+  that `JSON.parse` rejects, and NaN is the normal case here (a window is all-NaN
+  until it fills, a de-energised bus has no frequency), so this breaks on the
+  first message of a page rather than in some edge case.
+- **`pump.py`** (`serve_ticks`, `serve_updates`, `offer`, `wait_for_disconnect`),
+  **`sessions.py`** (`SessionRegistry`), **`log.py`**, and **`stores.py`** (the alarm
+  list's state machine).
 
-What is in there:
-
-- **`wire.py`** — every message shape, as pydantic models, plus `send_state()`.
-  This is the schema the desktop side never needed: its Qt widgets read the very
-  `TimeWindow` object the application thread writes into, so nothing was ever
-  serialised. **Always send via `send_state()`**, never `ws.send_json`:
-  `json.dumps` emits bare `NaN` tokens that `JSON.parse` rejects, and NaN is the
-  normal case here (a `TimeWindow` is all-NaN until it fills), so this breaks on
-  the first message of a page rather than in some edge case.
-- **`bus.py`** — the thread→loop fan-out. See the concurrency invariant above.
-- **`hub.py`** — `Hub`, one client's pipeline (the player, the application
-  threads, the alarm and status stores), plus `HubRegistry`/`REGISTRY`, which
-  builds them on first connect, keeps them alive across reconnects, evicts them
-  when idle or at the cap, and refuses over it. Endpoints reach a hub only through
-  `connected_hub(ws)`; `read_client_id` is the one place `?client_id=` is parsed
-  for this package. This package's `lifespan` — entered via `SERVICES` *before*
-  anything in `APPS` — no longer starts a pipeline, only binds the registry to the
-  loop and drains it on shutdown, so an idle server runs no threads at all.
-- **`replay.py`** + **`recorded_io.py`** — the PMU source: a recorded Nordic 44
-  stream replayed at real time through p-SWAMP's own `io` seam, no broker and no
-  second process. The recording is
-  `pswamp_web/data/n44_line_trip_50hz.npz` (~4.9 MB, 3501 samples × 700 channels,
-  70 s at 50 Hz), read once at import. It contains a **line trip and a
-  reconnection**, so every panel has a real disturbance to show. It is a committed
-  fixture; `tools/record_n44_dataset.py` regenerates it, but not from the server's
-  own environment — it needs `tops-rt` and `synchrophasor`, neither of which is in
-  the server's dependency set. A venv with the desktop package (`desktop/`) plus those two is
-  enough (the full `[full]` extra, Qt included, is not required), and the tool
-  additionally needs `fastapi` on the path purely because it imports
-  `pswamp_web.recorded_io`, whose package `__init__` pulls in the whole web stack
-  — a wart in the tool, not a real dependency. Regenerating takes ~8 s and the
-  script refuses to write a file whose scenario does not reproduce.
-
-  **It carries current channels (`i_Magnitude`/`i_Angle`, 524 of the 700).** That
-  is what `line_outage/` reads, and it is why the file is ~4.9 MB rather than the
-  ~1 MB a voltage-and-frequency-only recording takes. Regenerate with
-  `--channels all`; the default drops them and would leave the outage detector
-  running forever without ever finding anything.
-- **`channels.py`**, **`grid_model.py`**, **`stores.py`** — channel catalogue,
-  static topology, alarm/status state machines.
-
-  `grid_model.py` also serves the **diagram** the grid view draws
-  (`GridModel.diagram`): country outlines, where the single-line diagram places
-  each bus, and the polyline it routes each branch along. It is
-  `pswamp_web/data/n44_grid_geometry.json` (~65 kB), a committed fixture like the
-  recording. `tools/build_n44_grid_geometry.py` regenerates it with p-SWAMP's own
-  DXF and shapefile readers, which need `ezdxf` and `pyshp` — in the desktop
-  package's `[full]` extra, not in the server's environment — so run it in the
-  desktop package's env:
-  `uv run --project desktop --extra full python app/server-python/tools/build_n44_grid_geometry.py`.
-  `tests/test_grid_model.py` fails if the fixture no longer matches the
-  database's topology.
-- Page packages: **`app_status/`**, **`grid/`** (HTTP only), **`time_window/`**,
-  **`phasors/`**, **`islanding/`**, **`line_outage/`**.
+**It imports nothing from the rest of the web backend; the rest imports it.**
+Anything both sides need is **defined here and re-exported by `shared.py`**, never
+declared twice: `ClientId`, `CommandAck`, `CLIENT_ID_PATTERN`/`read_client_id`,
+`send_state` and `get_logger`. Reading that rule as "duplicate it, then keep the
+copies equal" is what once produced four duplicates and schema-rewriting
+machinery in `api_contract.py` to hide them from the published contract. Don't
+reintroduce that: add to `wire.py` (or `log.py`) and re-export. (The rule came from
+the package having to be movable into the desktop package, while it held the
+desktop-facing code; with that code gone the question is open again, and
+`doc/WIP-context-port-from-qt-to-web-frontend.md` §7 is its history.)
 
 Three things worth knowing before touching it:
 
-- **Never hand a p-SWAMP result dict straight to pydantic.** They carry numpy
-  arrays, `uuid.UUID` and `datetime` — that is exactly why the desktop streaming
-  layer pickles. Each app gets an adapter; `islanding/adapt.py` is the worked
-  example, and it also has to *reconstruct the main system*, because
-  `detect_islands` returns only the separated groups.
+- **The wire is the panels', not the modules'.** A module's message
+  (`IslandingDetectionResult`, `LineOutageResult`) is turned into the panel's
+  (`IslandingResult`, `LineOutageLog`) in `live.py`, which adds what the panel needs
+  and the module does not report: the main system (every station with a frequency
+  in the module's window and in no island, since the detector reports only the
+  separated groups), each group's mean frequency (from the measurement window),
+  and each outage's branch (through its current's Analog). The simulation's units
+  are converted on the way out: the phasors are sent in volts and radians.
 - **Send deltas, not windows.** `time_window/api.py` sends the window once
-  (`mode: "full"`) and then only new samples (`mode: "append"`). Measured: ~5.9
-  KB/s, against ~1.4 MB/s for re-sending the window at the same rate. That is the
-  difference between a page that works and one that does not.
+  (`mode: "full"`) and then only new samples (`mode: "append"`), counted by the
+  window's `appended`. Re-sending a 30 s window ten times a second would be
+  megabytes a second per view. That is the difference between a page that works
+  and one that does not.
 - **Keep the sample path out of React.** The chart's data lives in a `useRef` and
   redraws come through the hook's own `subscribe`, never a `setState` — see
   `useServerSocket`'s `onMessage` option, which exists for exactly this. Putting a
@@ -961,21 +943,23 @@ Three things worth knowing before touching it:
   page owning all five. The grid view follows the same rule for its camera: a
   drag never touches React state.
 
-Sanity values, for checking a change did not quietly break the pipeline: median
-frequency **50.0009 Hz**, median voltage **418.6 kV**, islanded stations **6500,
-6700, 6701**, island groups summing to exactly **44** stations with no overlap,
-and the main window opening exactly **5** WebSockets of its own — for **one**
-pipeline, however many views read them — plus the error tray's, which every
-page holds. The grid view draws **44** buses and **77** of the
-model's 79 branches (the diagram does not route `L5102-6001` and `T5500-5501`);
-during the trip it paints **7** branches red — the 4 tripped lines plus 3
-transformers left with nothing to carry.
+Sanity values, over the sample grid (`PSWAMP_CIM_PATH` = `core/src/pswamp_core/cim/sample_grid`,
+what CI and the tests use): the grid view draws **4** buses (`Alpha_400`,
+`Beta_400`, `Gamma_400`, `Gamma_132`) and **4** branches (three lines and the Gamma
+transformer); the time window lists **28** channels; the main window opens exactly
+**5** WebSockets of its own — however many views read them — plus the error
+tray's, which every page holds. Healthy, the islanding assessment is one group of
+all four stations at about **50 Hz**. Taking `Alpha-Gamma 400 kV line` and
+`Beta-Gamma 400 kV line` out on the CIM graph page splits Gamma (which has its own
+generator) off: about **10 s** later (the detector's window) the assessment is
+**two** groups, `Alpha_400`+`Beta_400` and `Gamma_400`+`Gamma_132`, an alarm is
+raised, and the line-outage log names the two lines. The sample grid has no
+governors, so the two halves' frequencies then drift apart for as long as they are
+split.
 
-**The disturbance now arrives on the client's own clock.** Each client's replay
-starts at 0 s when it connects, so the trip is roughly half a minute in, every
-time, rather than whenever a long-running shared replay happened to reach it.
-Checking the islanding values means connecting and waiting, not connecting and
-looking.
+**Nothing happens on its own.** The live grid is steady until someone operates
+it on the CIM graph page (or `POST /api/cim-graph/lines/{mrid}`); a test that wants
+a disturbance makes one and puts the grid back (`POST /api/cim-graph/reset`).
 
 ## Adding a p-SWAMP view
 
@@ -1029,7 +1013,7 @@ and its hook live in a separate `.ts` file, because
 
 ### The grid view
 
-**What.** `grid-monitor/grid-view/` draws the Nordic 44 grid the way the Qt grid
+**What.** `grid-monitor/grid-view/` draws the grid in the CIM graph the way the Qt grid
 view does: country outlines on the map plane, the network above it on bus stems,
 branches coloured by island, each island raised by
 `(mean frequency − 50) × 5`, a branch carrying no current in red. 3D with an
@@ -1081,35 +1065,37 @@ no grid never fetches it. Without WebGL the view says so instead of drawing.
   (`desktop/src/pswamp/styles/colors.py`). Every plot keeps that background in light and
   dark mode, since the palette is chosen against it.
 
-Server side, the backend package under `src/pswamp_web/<app>/` exporting `router`
-(and registered in `APPS`) is unchanged — see "Adding a backend api". Copy
+Server side, the backend package under `src/grid_monitor/<app>/` exporting
+`router` (and registered in `APPS`) — see "Adding a backend api". Copy
 `app_status/` for a ticker-driven api or `line_outage/` for an event-driven one.
+**What the panel shows comes from the live grid**: a module's result reaches it
+through `LIVE` (`grid_monitor/live.py`), so a new analysis is a module in
+`pipelines/grid-monitor.toml` plus what `LiveGrid.handle` keeps of its results.
 Decide which of the two delivery patterns fits; `pswamp_web/pump.py` has one
 function per pattern, so the choice is which one you call:
 
-- **Poll the client's window** (`time_window`, and any measurement plot) —
-  `await serve_ticks(ws, PUSH_HZ, lambda: build(hub))`, reading the snapshot on
-  the ticker. This is the direct translation of what the Qt widgets do, and it is
-  what keeps the 50 Hz sample stream off the event loop. Return `None` from the
-  builder when nothing has advanced, and an idle client costs nothing.
-- **Subscribe to the client's bus** (`islanding`, alarms, status) — `with
-  event_queue(hub.bus, TOPIC) as updates:` then `await serve_updates(ws, updates,
-  build)`, for results and events, which arrive about once a second. The builder
-  is handed the `Event` that woke it, so a page listening on several topics can
-  tell them apart; build the message from the client's stores rather than from
-  the payload wherever you can, since that is what makes a dropped notification
-  cost latency and never content.
+- **Poll the window** (`time_window`, `phasors`, and any measurement plot) —
+  `await serve_ticks(ws, PUSH_HZ, build)`, reading `LIVE.window` on the ticker.
+  This is the direct translation of what the Qt widgets do, and it is what keeps
+  the 50 Hz sample stream from becoming 50 sends a second. Return `None` from the
+  builder when nothing has advanced, and an idle view costs nothing.
+- **Wake on results** (`islanding`, `line_outage`) — `with LIVE.updates(TOPIC) as
+  updates:` then `await serve_updates(ws, updates, build)`, for results and
+  events, which arrive about once a second. The builder is handed the `Event` that
+  woke it, so a page listening on several topics can tell them apart; build the
+  message from `LIVE`'s state rather than from the notification, since that is
+  what makes a dropped notification cost latency and never content.
 
-Either way the endpoint opens with `async with connected_hub(ws) as hub:` and
-reads everything off that `hub`, never a module-level singleton.
+Either way the endpoint opens with `if await accept(ws):` and reads everything
+off `LIVE`.
 
 **A panel with controls adds a third piece: the commands.** They are POSTs, and
 they arrive on no connection, which is what makes them different from the socket
 handler beside them:
 
-- **Reach the client's pipeline with `live_hub(client_id)`, never `acquire`.** A
-  command must not *build* a pipeline — four threads and ~30 MB against
-  `MAX_PIPELINES`, for a replay nobody is watching. No pipeline is a 404.
+- **A command on the grid's state is everyone's.** The alarm list is one, so
+  `islanding/`'s commands change it for every viewer, and wake every view
+  (`LIVE.nudge()`). The command still takes `client_id`, as every command does.
 - **If the command changes per-connection view state, publish that state.** The
   handler's local `ClientState` is unreachable from a request, so register it in a
   `SessionRegistry` (`pswamp_web/sessions.py`) for the life of the socket and let
@@ -1119,8 +1105,7 @@ handler beside them:
   delivery pattern above: a ticker-driven page needs *nothing* — the next tick
   sees the changed state (`time_window` sets `needs_full` and stops there). An
   event-driven page must wake its push task explicitly, because an operator
-  action is not an application event; `islanding/`'s `_nudge` is that, and it is
-  why its sessions carry the queue.
+  action is not an application event; `LIVE.nudge()` is that.
 
 ## Adding a page
 
@@ -1233,7 +1218,7 @@ Dockerfile/compose change (both copy `src/` wholesale and watch the directory):
    `lifespan` (an `asynccontextmanager`), only if it needs startup/shutdown work.
    Copy `src/reference_subapp/__init__.py`. Use **relative** imports inside the
    package (`from .model import ...`); for a `lifespan`, see
-   `src/pswamp_web/__init__.py`.
+   `src/grid_monitor/live.py`.
 2. Add one `AppEntry("<app>", <app>, "One line on what it is.")` to `APPS` in
    `src/server.py`, with the matching `import <app>`. The slug is the url
    segment, the web client's route and the tag in the published document, all
@@ -1254,12 +1239,12 @@ server whose app serves a WebSocket and publishes no message for it, so that hal
 of the mistake is a startup error naming the package.
 `SocketRegistry.send_to_client` takes a `BaseModel` for that reason (and because
 `json.dumps` emits bare `NaN`, which `JSON.parse` rejects). An app with no
-socket — `pswamp_web/grid/` — just omits the name.
+socket — `grid_monitor/grid/` — just omits the name.
 
 `src/reference_subapp/` is the one to copy: the smallest complete api, and
 nothing in it is there for a reason peculiar to itself. If the app ships a **data
 file** beside its code, that needs no Dockerfile change either — read it once at
-import off `Path(__file__).parent`, as `pswamp_web/data/` does (and
+import off `Path(__file__).parent`, as `grid_monitor/data/` does (and
 `pswamp_modules/sample_replay/sample.py`, in `modules/sample-replay/`), since `COPY src/ ./src/`
 takes the whole tree. Put
 anything a second app would otherwise duplicate in `src/shared.py`; the per-app
@@ -1326,9 +1311,9 @@ before touching the api:
   *silently*: a field added server-side and regenerated into `schema.ts` simply
   never reached the screen, because a `useMemo` that omits a key is valid
   TypeScript. That is the exact failure the generated contract exists to abolish.
-  A hook may still **derive** — `useLineOutageSocket` parses branch names out of
-  channel labels, `useTimeWindowSocket` accumulates a ring buffer — and those
-  keep their own vocabulary, because they are not the message.
+  A hook may still **derive** — `useTimeWindowSocket` accumulates a ring buffer — and that
+  keeps its own vocabulary, because it is not the message. (`useLineOutageSocket` used to
+  parse branch names out of channel labels; the server now sends them.)
 - **`postCommand` is typed against the document**, so a typo'd path, a missing
   path parameter or a wrong body is a `tsc` error. Path-parameterised commands
   take the contract's templated path plus a `path` object:
@@ -1408,11 +1393,11 @@ separate envs and are hermetic to very different degrees:
 
 - **`uv run pswamp test server`** — the server tests under
   `app/server-python/tests/` (and every other Python test folder of the
-  workspace). Fast and hermetic: `HubRegistry` is driven with a
-  **stubbed Hub**, so nothing binds a port. The first suite,
-  `test_hub_registry.py`, pins the registry's resource bounds — the per-client
-  pipeline cap holds under a concurrent-connect burst, and the per-client lock is
-  reclaimed on eviction rather than leaked . New files under that `tests/` are picked up
+  workspace). Hermetic: the whole server runs in-process (FastAPI's `TestClient`,
+  the in-memory transport, the sample grid in an in-process store), so nothing
+  binds a port; a test that needs the live grid waits for it in real time
+  (`test_grid_monitor.py` waits for the detector's 10 s window, and splits the
+  grid on the CIM graph to see an island). New files under that `tests/` are picked up
   automatically (`test_*.py`; `testpaths=["tests"]`), and arguments pass straight
   through to pytest. `pytest` + `pytest-asyncio` are pinned in the server's locked
   dev group and kept out of the image by the Dockerfile's `--no-dev` (`tests/` is
@@ -1459,8 +1444,9 @@ things worth knowing before extending it:
 
   The specs are in `e2e/`: `reference-subapp.spec.ts`, and
   `grid-monitor.spec.ts` for the main window — its docks, the five sockets, the
-  grid drawn in 3D and 2D, a layer toggled, an alarm opened, acknowledged and
-  annotated, and each focused route. Run them with `uv run pswamp test
+  grid drawn in 3D and 2D, a layer toggled, an island made on the sample grid
+  (its two lines into Gamma out, through the CIM graph app, and put back after),
+  its alarm opened, acknowledged and annotated, and each focused route. Run them with `uv run pswamp test
   playwright`. **Unless given `--url` or `E2E_KEEP_STACK=1`, that run ends with
   `docker compose down`** (`global-teardown.ts`), so it stops a compose stack you
   already had up.
@@ -1468,8 +1454,8 @@ things worth knowing before extending it:
 Note the api-contract check is the one step that needs the **full server
 environment** rather than just the pinned linter, because it imports the FastAPI
 app to ask for its own description — so a *cold* run pays for uv to sync
-numpy/scipy/pandas. Warm it is ~0.6 s: importing the app touches neither the
-recorded dataset nor the grid model, both of which are lazy. It starts no server
+numpy/scipy/pandas. Warm it is ~0.6 s: importing the app reads neither the CIM
+graph nor any recording, which happen when the server starts. It starts no server
 and binds no port. Everything else stays offline.
 
 A **pre-push hook** (`.githooks/pre-push`) runs `pswamp check`, after first

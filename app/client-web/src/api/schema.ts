@@ -224,8 +224,9 @@ export interface paths {
         };
         /**
          * Grid Model
-         * @description The static Nordic 44 topology: buses, branches, PMU sites and a bounding
-         *     box. Fetched once per page mount and cacheable, as above.
+         * @description The grid in the CIM graph: a bus per voltage level of each substation (the live stream's
+         *     stations), the lines and transformers between them, and where to draw them. 503 when the grid
+         *     cannot be read.
          */
         get: operations["grid_model"];
         put?: never;
@@ -269,9 +270,8 @@ export interface paths {
          * Annotate
          * @description Attach a free-text operator note to an alarm.
          *
-         *     The Qt dialogue's "Annotate" button. Upstream records this as a
-         *     ``user_message`` event on the alarm rather than as a state change, so the
-         *     same event type is used here and the two agree on the wire.
+         *     The Qt dialogue's "Annotate" button. The desktop records this as a ``user_message`` event on the
+         *     alarm rather than as a state change, so the same event type is used here.
          */
         post: operations["islanding_annotate"];
         delete?: never;
@@ -511,8 +511,8 @@ export interface paths {
         };
         /**
          * List Channels
-         * @description Every selectable channel, for the picker. Static for the process, so it is
-         *     a plain GET rather than part of the socket protocol.
+         * @description Every selectable channel: every column of the live stream. Waits for the first frame; 503 when
+         *     none comes.
          */
         get: operations["time_window_channels"];
         put?: never;
@@ -534,10 +534,8 @@ export interface paths {
         put?: never;
         /**
          * Resync
-         * @description Ask for the whole window again rather than the next delta.
-         *
-         *     The escape hatch for a client whose buffer no longer matches what the server
-         *     thinks it has -- a dropped append, a chart remounted mid-stream.
+         * @description Ask for the whole window again rather than the next delta: for a view whose buffer no longer
+         *     matches what the server thinks it has.
          */
         post: operations["time_window_resync"];
         delete?: never;
@@ -677,7 +675,7 @@ export interface components {
         AppStatusTable: {
             /** Apps */
             apps: components["schemas"]["AppStatus"][];
-            replay: components["schemas"]["ReplayStatus"];
+            feed: components["schemas"]["FeedStatus"];
             /** Server Time */
             server_time: number;
             /**
@@ -961,6 +959,43 @@ export interface components {
              * @default 1000000
              */
             y: number;
+        };
+        /**
+         * FeedStatus
+         * @description The PMU stream feeding every application: the live grid simulation.
+         */
+        FeedStatus: {
+            /**
+             * Data Rate
+             * @description Frames per second, as the stream declares it; 0 before the first.
+             */
+            data_rate: number;
+            /**
+             * Error
+             * @description Why the feed is down, while it is.
+             * @default null
+             */
+            error: string | null;
+            /**
+             * Frames
+             * @description Frames received since the server started.
+             */
+            frames: number;
+            /**
+             * N Channels
+             * @description Columns per frame; 0 before the first.
+             */
+            n_channels: number;
+            /**
+             * Source
+             * @description The source's name in its pipeline file.
+             */
+            source: string;
+            /**
+             * Streaming
+             * @description A frame arrived in the last couple of seconds.
+             */
+            streaming: boolean;
         };
         /**
          * FrameStats
@@ -1397,12 +1432,19 @@ export interface components {
          * LineOutageEvent
          * @description One branch changing connection state, as the detector reports it.
          *
-         *     ``stations`` and ``measurements`` come straight from the time window's
-         *     header for the channels that flipped, so a single physical line trip
-         *     normally appears with the station at each end -- the current on that branch
-         *     goes to zero as seen from both.
+         *     ``stations`` and ``measurements`` are the stream's own, for the current
+         *     channels that flipped, so a single physical line trip normally appears with
+         *     the station at each end -- the current on that branch goes to zero as seen
+         *     from both. ``branches`` is what that adds up to: each branch once, by its
+         *     ``GridBranch.name``.
          */
         LineOutageEvent: {
+            /**
+             * Branches
+             * @description The branches concerned, each once, by GridBranch.name.
+             * @default []
+             */
+            branches: string[];
             /**
              * Kind
              * @enum {string}
@@ -2064,28 +2106,6 @@ export interface components {
              * @constant
              */
             type: "state";
-        };
-        /**
-         * ReplayStatus
-         * @description State of the PMU source feeding every application.
-         */
-        ReplayStatus: {
-            /** Cursor */
-            cursor: number;
-            /** Data Rate */
-            data_rate: number;
-            /** Duration */
-            duration: number;
-            /** N Channels */
-            n_channels: number;
-            /** N Samples */
-            n_samples: number;
-            /** Playing */
-            playing: boolean;
-            /** Position */
-            position: number;
-            /** Source */
-            source: string;
         };
         /** SeekBody */
         SeekBody: {

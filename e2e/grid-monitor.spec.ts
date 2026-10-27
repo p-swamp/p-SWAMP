@@ -1,9 +1,45 @@
 import { test, expect, type Page } from '@playwright/test'
 
-// Every test here is a new browser profile, so a new client id, so a new PMU
-// pipeline on the server — which runs at most eight at once and reclaims only
-// idle ones. One at a time keeps this file from being refused by its own load.
+// The grid monitor shows the live grid: one simulation of the grid in the CIM
+// graph, and one alarm list, for every client. Some tests split the grid on the
+// CIM graph (which every visitor shares) and put it back afterwards, so they run
+// one after the other.
 test.describe.configure({ mode: 'serial' })
+
+/** A client id for the commands this spec sends itself (digits, as every id is). */
+const SPEC_CLIENT = '990001'
+
+/** The sample grid's two lines into Gamma: out, they split Gamma (with its own
+ *  generator) off from Alpha and Beta, which the detector calls an island. */
+const GAMMA_LINES = ['Alpha-Gamma 400 kV line', 'Beta-Gamma 400 kV line']
+
+/**
+ * Split the grid through the CIM graph app, the graph's one writer, as a visitor
+ * on the grid page would. Runs against the three-substation sample grid (CI sets
+ * PSWAMP_CIM_PATH to it); on any other grid, or a read-only graph, the test is
+ * skipped, since which lines island what is the grid's own business.
+ */
+async function islandGamma(page: Page) {
+    await expect
+        .poll(async () => (await page.request.get('/api/cim-graph/layout')).status(), { timeout: 60_000 })
+        .toBe(200)
+    const layout = await (await page.request.get('/api/cim-graph/layout')).json()
+    const lines = GAMMA_LINES.map((name) =>
+        layout.branches.find((branch: { name: string }) => branch.name === name),
+    )
+    test.skip(lines.some((line) => !line), 'needs the sample grid (PSWAMP_CIM_PATH)')
+    for (const line of lines) {
+        const answer = await page.request.post(`/api/cim-graph/lines/${line.mrid}?client_id=${SPEC_CLIENT}`, {
+            data: { open: true },
+        })
+        test.skip(!answer.ok(), `the graph cannot be edited: ${answer.status()}`)
+    }
+}
+
+/** Put the grid back as it was loaded. */
+async function resetGrid(page: Page) {
+    await page.request.post(`/api/cim-graph/reset?client_id=${SPEC_CLIENT}`)
+}
 
 const DOCKS = [
     'Grid view',
@@ -16,7 +52,7 @@ const DOCKS = [
 ]
 
 const gridCanvas = (page: Page) =>
-    page.getByRole('img', { name: /Nordic 44 grid/ })
+    page.getByRole('img', { name: /grid, coloured by detected island/ })
 
 /**
  * What the grid view is showing, as counts of its pixels. What a canvas shows
@@ -24,9 +60,10 @@ const gridCanvas = (page: Page) =>
  *
  * - `lit` is anything that is not background. The plot background is a dark
  *   teal whose red channel is 30; everything drawn over it is far brighter.
- * - `red` and `blue` are what a heat map tints the map: red where its quantity
- *   is low, blue where it is high. Nothing else on the view is a red or a blue
- *   this pure, apart from the few pixels of a dead branch.
+ * - `red` and `blue` are what a heat map tints the map, once its quantity is well
+ *   off the middle of its scale: red where it is low, blue where it is high.
+ *   Nothing else on the view is a red or a blue this pure, apart from the few
+ *   pixels of a dead branch.
  *
  * The view is a WebGL canvas, which has no `getImageData` of its own, so it is
  * copied onto a 2D one and read there.
@@ -55,6 +92,7 @@ const tintedPixels = async (page: Page, tint: 'red' | 'blue') =>
     (await countPixels(page))[tint]
 
 test.describe('Grid monitor', () => {
+    test.afterEach(async ({ page }) => resetGrid(page))
 
     test('opens as a main window: the grid view and its docks', async ({ page }) => {
         await page.goto('/')
@@ -77,7 +115,7 @@ test.describe('Grid monitor', () => {
             if (pathname.includes('/api/') && !pathname.endsWith('/api/errors/ws')) sockets.push(pathname)
         })
         await page.goto('/')
-        await expect(page.getByRole('region', { name: 'Status' }).getByRole('row', { name: /Measurement Store/ })).toBeVisible()
+        await expect(page.getByRole('region', { name: 'Status' }).getByRole('row', { name: /islanding-detection/ })).toBeVisible({ timeout: 60_000 })
         await expect.poll(() => [...sockets].sort()).toEqual([
             '/api/app-status/ws',
             '/api/islanding/ws',
@@ -92,17 +130,17 @@ test.describe('Grid monitor', () => {
         const view = page.getByRole('region', { name: 'Grid view' })
 
         await expect(view.getByRole('button', { name: '3d', exact: true })).toHaveAttribute('aria-pressed', 'true')
-        await expect.poll(() => litPixels(page)).toBeGreaterThan(5000)
+        await expect.poll(() => litPixels(page)).toBeGreaterThan(1000)
 
         await view.getByRole('button', { name: '2d', exact: true }).click()
         await expect(view.getByRole('button', { name: '2d', exact: true })).toHaveAttribute('aria-pressed', 'true')
-        await expect.poll(() => litPixels(page)).toBeGreaterThan(5000)
+        await expect.poll(() => litPixels(page)).toBeGreaterThan(1000)
     })
 
     test('a layer can be switched off and on', async ({ page }) => {
         await page.goto('/')
         const view = page.getByRole('region', { name: 'Grid view' })
-        await expect.poll(() => litPixels(page)).toBeGreaterThan(5000)
+        await expect.poll(() => litPixels(page)).toBeGreaterThan(1000)
         const everything = await litPixels(page)
 
         await view.getByRole('button', { name: 'Layers' }).click()
@@ -113,28 +151,26 @@ test.describe('Grid monitor', () => {
         await expect.poll(() => litPixels(page)).toBeGreaterThan(everything * 0.8)
     })
 
-    test('the voltage heat map shows where voltage sags, flat and as a surface', async ({ page }) => {
-        // No disturbance needed: the south-west of the recorded grid sits a few
-        // percent under nominal all the time, which is a red patch on the map.
+    test('the voltage heat map can be spread over the grid, flat and as a surface', async ({ page }) => {
+        // A healthy grid sits within a few percent of nominal, the middle of the
+        // scale, so there is no tint to count: this checks the layer and its scale.
         await page.goto('/')
         const view = page.getByRole('region', { name: 'Grid view' })
-        await expect.poll(() => litPixels(page)).toBeGreaterThan(5000)
-        expect(await tintedPixels(page, 'red')).toBeLessThan(50)
+        await expect.poll(() => litPixels(page)).toBeGreaterThan(1000)
 
         await view.getByRole('button', { name: 'Layers' }).click()
         await view.getByRole('radio', { name: 'Voltage heat map' }).check()
         await expect(view.getByLabel(/Colour scale: voltage/)).toBeVisible()
-        await expect.poll(() => tintedPixels(page, 'red')).toBeGreaterThan(100)
-
         await view.getByRole('button', { name: '2d', exact: true }).click()
-        await expect.poll(() => tintedPixels(page, 'red')).toBeGreaterThan(100)
+        await expect(view.getByLabel(/Colour scale: voltage/)).toBeVisible()
+        await expect.poll(() => litPixels(page)).toBeGreaterThan(1000)
 
         await view.getByRole('radio', { name: 'No heat map' }).check()
-        await expect.poll(() => tintedPixels(page, 'red')).toBeLessThan(50)
+        await expect(view.getByLabel(/Colour scale: voltage/)).toBeHidden()
     })
 
     test('the frequency heat map colours an island as it splits off', async ({ page }) => {
-        // Waits for the recorded trip, as the alarm test below does.
+        // The detector needs its 10 s window after the split, so this waits for real time to pass.
         test.setTimeout(120_000)
         await page.goto('/')
         const view = page.getByRole('region', { name: 'Grid view' })
@@ -143,36 +179,39 @@ test.describe('Grid monitor', () => {
         await view.getByRole('radio', { name: 'Frequency heat map' }).check()
         await expect(view.getByLabel(/Colour scale: frequency/)).toBeVisible()
 
-        // The island runs fast, so it is the blue end of the scale: as a
-        // surface in 3D, and as the flat map in 2D.
+        // Split apart, the two halves run at frequencies far more than the
+        // scale's 35 mHz apart, so one is its blue end and the other its red:
+        // as a surface in 3D, and as the flat map in 2D.
+        await islandGamma(page)
         await expect(view.getByText(/\d+ islands?/)).toBeVisible({ timeout: 90_000 })
-        await expect.poll(() => tintedPixels(page, 'blue')).toBeGreaterThan(2000)
+        await expect.poll(() => tintedPixels(page, 'blue')).toBeGreaterThan(200)
+        await expect.poll(() => tintedPixels(page, 'red')).toBeGreaterThan(200)
 
         await view.getByRole('button', { name: '2d', exact: true }).click()
-        await expect.poll(() => tintedPixels(page, 'blue')).toBeGreaterThan(2000)
+        await expect.poll(() => tintedPixels(page, 'blue')).toBeGreaterThan(200)
 
         await view.getByRole('radio', { name: 'No heat map' }).check()
         await expect.poll(() => tintedPixels(page, 'blue')).toBeLessThan(200)
     })
 
-    test('lists the monitoring applications in the status dock', async ({ page }) => {
+    test('lists the modules analysing the live grid in the status dock', async ({ page }) => {
         await page.goto('/')
         const status = page.getByRole('region', { name: 'Status' })
-        for (const app of ['IslandingApp', 'LineOutageDetectionApp', 'Measurement Store']) {
-            await expect(status.getByRole('row', { name: new RegExp(app) })).toBeVisible()
+        for (const module of ['islanding-detection', 'line-outage']) {
+            await expect(status.getByRole('row', { name: new RegExp(module) })).toBeVisible({ timeout: 60_000 })
         }
-        await expect(status.getByText(/PMU replay/)).toBeVisible()
+        await expect(status.getByText(/Live simulation \(rtsim\)/)).toBeVisible()
     })
 
     test('an islanding alarm opens its details beneath the grid', async ({ page }) => {
-        // The recorded lines trip twenty seconds into the replay and the detector
-        // needs a few more to call it, so this waits for real time to pass.
+        // The detector needs its 10 s window after the split, so this waits for real time to pass.
         test.setTimeout(120_000)
         await page.goto('/')
+        await islandGamma(page)
 
         const alarm = page
             .getByRole('region', { name: 'Alarms' })
-            .getByRole('row', { name: /IslandingApp/ })
+            .getByRole('row', { name: /islanding-detection/ })
             .first()
         await expect(alarm).toBeVisible({ timeout: 90_000 })
         // The same event, seen by the grid view: it reports the split.

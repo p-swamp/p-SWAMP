@@ -16,6 +16,7 @@ members = [
     "pswamp-excursion",
     "pswamp-frame-stats",
     "pswamp-islanding-detection",
+    "pswamp-line-outage",
     "pswamp-live-synthetic",
     "pswamp-models",
     "pswamp-range-summary",
@@ -1106,6 +1107,23 @@ requires-dist = [
 ]
 
 [[package]]
+name = "pswamp-line-outage"
+version = "0.1.0"
+source = { editable = "modules/line-outage" }
+dependencies = [
+    { name = "numpy" },
+    { name = "pswamp-core" },
+    { name = "pswamp-models" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "numpy", specifier = ">=2.2.5" },
+    { name = "pswamp-core", editable = "core" },
+    { name = "pswamp-models", editable = "models" },
+]
+
+[[package]]
 name = "pswamp-live-synthetic"
 version = "0.1.0"
 source = { editable = "modules/live-synthetic" }
@@ -1228,6 +1246,7 @@ dependencies = [
     { name = "pswamp-excursion" },
     { name = "pswamp-frame-stats" },
     { name = "pswamp-islanding-detection" },
+    { name = "pswamp-line-outage" },
     { name = "pswamp-live-synthetic" },
     { name = "pswamp-models" },
     { name = "pswamp-range-summary" },
@@ -1254,6 +1273,7 @@ requires-dist = [
     { name = "pswamp-excursion", editable = "modules/excursion" },
     { name = "pswamp-frame-stats", editable = "modules/frame-stats" },
     { name = "pswamp-islanding-detection", editable = "modules/islanding-detection" },
+    { name = "pswamp-line-outage", editable = "modules/line-outage" },
     { name = "pswamp-live-synthetic", editable = "modules/live-synthetic" },
     { name = "pswamp-models", editable = "models" },
     { name = "pswamp-range-summary", editable = "modules/range-summary" },
