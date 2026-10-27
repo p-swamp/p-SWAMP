@@ -7,8 +7,8 @@ import { useTimeWindowSocket } from './useTimeWindowSocket'
 /**
  * Opens the time-window socket once and asks it for one whole measurement.
  *
- * The server's opening selection is eight channels picked to show the recorded
- * disturbance, which suits a chart with a legend. The main window wants what the
+ * The server's opening selection is the first eight stations' frequencies,
+ * which suits a chart with a legend. The main window wants what the
  * Qt frequency dock plots — **every** station's frequency — so this selects
  * all channels of `measurement` once the socket is up.
  *

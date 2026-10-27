@@ -8,6 +8,8 @@ architecture; `doc/module-cookbook.md` is the recipe for a new module.
 |---|---|---|---|---|---|
 | [`excursion/`](excursion/) | `pswamp-excursion` | module | `FrameStatsResult` | `ExcursionResult`, `PauseCommand` | `AutoPauseCommand` |
 | [`frame-stats/`](frame-stats/) | `pswamp-frame-stats` | module | `PmuFrame` | `FrameStatsResult` | — |
+| [`islanding-detection/`](islanding-detection/) | `pswamp-islanding-detection` | module | `PmuFrame` | `IslandingDetectionResult`, `AlarmEvent` | — |
+| [`line-outage/`](line-outage/) | `pswamp-line-outage` | module | `PmuFrame` | `LineOutageResult` | — |
 | [`live-synthetic/`](live-synthetic/) | `pswamp-live-synthetic` | source (live, not playable) | — | `PmuFrame` | — |
 | [`range-summary/`](range-summary/) | `pswamp-range-summary` | module | — | `RangeSummaryResult` | `SummarizeRangeCommand` |
 | [`remote-history/`](remote-history/) | `pswamp-remote-history` | source (history, playable) | — | `PmuFrame` | `PlayCommand`, `PauseCommand`, `StepCommand`, `SeekCommand`, `SpeedCommand` |

@@ -8,12 +8,12 @@ x-transport: &transport
 # The streamer's sources, name:entry-point: the in-image recording
 # (sample-replay), the synthetic live feed (live-synthetic), a year of
 # history with outages from the remote data service below (remote-history,
-# which reads REMOTE_URL), and the live grid simulation (rtsim-from-cim: the
-# streamer's page follows it like any live feed; it simulates the CIM graph in
-# Oxigraph, which the CIM graph page edits). Whoever reads the sources (the
-# server, and the worker hosting the range summary) gets these.
+# which reads REMOTE_URL). Whoever reads the sources (the server, and the worker
+# hosting the range summary) gets these. Not the live grid simulation
+# (rtsim-from-cim): that is the grid-monitor pipeline's one source
+# (pipelines/grid-monitor.toml), and naming it here too would start a second one.
 x-streamer-sources: &streamer-sources
-  PMU_TEST_STREAMER_SOURCES: "sample:sample-replay,live:live-synthetic,remote:remote-history,rtsim:rtsim-from-cim"
+  PMU_TEST_STREAMER_SOURCES: "sample:sample-replay,live:live-synthetic,remote:remote-history"
   REMOTE_URL: "http://remote-data-stub:8100"
 
 # The CIM graph: one store for the whole stack, the oxigraph service. The server's CIM
@@ -176,8 +176,8 @@ services:
     working_dir: /workspace/p-SWAMP/pipelines
     environment:
       <<: [*transport, *cim]  # a module that reads the grid (cim = True) reads it here
-      PSWAMP_WORKER_PIPELINES: "pmu-test-streamer.toml,islanding-detection.toml"
-      PSWAMP_WORKER_MODULES: "frame-stats,excursion,islanding-detection"
+      PSWAMP_WORKER_PIPELINES: "pmu-test-streamer.toml,grid-monitor.toml"
+      PSWAMP_WORKER_MODULES: "frame-stats,excursion,islanding-detection,line-outage"
     depends_on:
       kafka:
         condition: service_healthy

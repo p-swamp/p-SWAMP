@@ -106,7 +106,7 @@ API_TITLE = "p-SWAMP api"
 # Not read from pyproject.toml on purpose: this project is `package = false`, so
 # there is no installed distribution to read a version from, and the api's
 # compatibility is not the same fact as the server's release number anyway.
-API_VERSION = "3.0.0"
+API_VERSION = "4.0.0"
 
 API_DESCRIPTION = """\
 The api between the p-SWAMP web client and its state server.
@@ -257,7 +257,7 @@ def inject_ws_channels(schema: dict, apps) -> dict:
         return schema
 
     # One call for ALL the models rather than one per model: they share nested
-    # definitions (`Channel`, `Alarm`, `ReplayStatus`), and generating them
+    # definitions (`Channel`, `Alarm`, `FeedStatus`), and generating them
     # separately would emit each shared definition several times under
     # generator-chosen names instead of one `$ref` they all point at.
     #

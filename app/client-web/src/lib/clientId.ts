@@ -3,13 +3,14 @@
 // One id per browser profile, persisted in localStorage and resolved once at
 // module load. Two properties follow from that, and the app depends on both:
 //
-//   1. **Every socket in the page shares it.** The server keeps one PMU pipeline
-//      per client id, and the grid monitor opens five sockets at once — so an id
-//      rolled per hook (which is what this replaced) would ask for five separate
-//      pipelines per browser, each with its own replay and its own four threads.
+//   1. **Every socket in the page shares it.** The server keeps a run per client
+//      id for a recording (the PMU test streamer's), and a page may open several
+//      sockets to it — so an id rolled per hook (which is what this replaced)
+//      would ask for a separate replay per socket. (The grid monitor's live grid
+//      is one for every client; its sockets still say whose they are.)
 //   2. **It survives a reload.** A remount, a navigation, a hard refresh and a
 //      crashed tab all come back to the same id, and therefore rejoin the same
-//      stream rather than starting a new one at 0 s.
+//      replay rather than starting a new one at 0 s.
 //
 // Note the scope is the *origin*, not the tab: two tabs on the same profile are
 // one client and watch the same replay. That is the intended reading of "come

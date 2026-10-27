@@ -305,16 +305,18 @@ class IslandingResult(BaseModel):
 class LineOutageEvent(BaseModel):
     """One branch changing connection state, as the detector reports it.
 
-    ``stations`` and ``measurements`` come straight from the time window's
-    header for the channels that flipped, so a single physical line trip
-    normally appears with the station at each end -- the current on that branch
-    goes to zero as seen from both.
+    ``stations`` and ``measurements`` are the stream's own, for the current
+    channels that flipped, so a single physical line trip normally appears with
+    the station at each end -- the current on that branch goes to zero as seen
+    from both. ``branches`` is what that adds up to: each branch once, by its
+    ``GridBranch.name``.
     """
 
     t: float
     kind: Literal["disconnect", "connect"]
     stations: list[str]
     measurements: list[str]
+    branches: list[str] = Field(default=[], description="The branches concerned, each once, by GridBranch.name.")
 
 
 class LineOutageLog(BaseModel):
@@ -327,9 +329,8 @@ class LineOutageLog(BaseModel):
     app_name: str | None = None
     window_length: float | None = None
     events: list[LineOutageEvent]
-    # What is open *now*: every element whose current is zero, named as its
-    # channel names it ("L3244-6500"). Lines, transformers, loads and generators
-    # alike -- a reader after branches matches these against ``GridBranch.name``.
+    # What is open *now*: every branch whose current is zero, by its
+    # ``GridBranch.name``.
     disconnected: list[str] = []
 
 
@@ -403,20 +404,18 @@ class AppStatusTable(BaseModel):
     type: Literal["state"] = "state"
     apps: list[AppStatus]
     server_time: float
-    replay: "ReplayStatus"
+    feed: "FeedStatus"
 
 
-class ReplayStatus(BaseModel):
-    """State of the PMU source feeding every application."""
+class FeedStatus(BaseModel):
+    """The PMU stream feeding every application: the live grid simulation."""
 
-    source: str
-    playing: bool
-    data_rate: float
-    n_samples: int
-    n_channels: int
-    cursor: int  # absolute row index, so it keeps counting across loops
-    position: float  # seconds into the current pass
-    duration: float
+    source: str = Field(description="The source's name in its pipeline file.")
+    streaming: bool = Field(description="A frame arrived in the last couple of seconds.")
+    data_rate: float = Field(description="Frames per second, as the stream declares it; 0 before the first.")
+    n_channels: int = Field(description="Columns per frame; 0 before the first.")
+    frames: int = Field(description="Frames received since the server started.")
+    error: str | None = Field(default=None, description="Why the feed is down, while it is.")
 
 
 # --- grid model -------------------------------------------------------------
