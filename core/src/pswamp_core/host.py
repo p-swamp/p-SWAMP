@@ -375,6 +375,8 @@ class ModuleHost:
         slot.out.start()
         if module.reads_sources and self._sources is not None:
             module.sources = self._sources()
+        if module.cim:  # connecting reads the store: not on the event loop
+            await asyncio.to_thread(lambda: module.cim_repo)
         await module.setup()
         slot.set_up = True
         if module.commands:

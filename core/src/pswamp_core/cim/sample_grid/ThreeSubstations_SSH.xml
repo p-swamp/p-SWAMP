@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rdf:RDF xmlns:cim="http://iec.ch/TC57/CIM100#" xmlns:md="http://iec.ch/TC57/61970-552/ModelDescription/1#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+  <md:FullModel rdf:about="urn:uuid:3f5e0000-0000-4000-8000-000000000003">
+    <md:Model.created>2026-10-07T12:00:00Z</md:Model.created>
+    <md:Model.description>Three-substation fixture, steady state hypothesis (SSH).</md:Model.description>
+    <md:Model.profile>http://iec.ch/TC57/ns/CIM/SteadyStateHypothesis-EU/3.0</md:Model.profile>
+    <md:Model.DependentOn rdf:resource="urn:uuid:3f5e0000-0000-4000-8000-000000000001"/>
+    <md:Model.version>1</md:Model.version>
+  </md:FullModel>
+  <cim:Equipment rdf:about="#_3f5e0000-0000-4000-8000-000000000024">
+    <cim:Equipment.inService>true</cim:Equipment.inService>
+  </cim:Equipment>
+  <cim:Equipment rdf:about="#_3f5e0000-0000-4000-8000-000000000025">
+    <cim:Equipment.inService>true</cim:Equipment.inService>
+  </cim:Equipment>
+  <cim:Equipment rdf:about="#_3f5e0000-0000-4000-8000-000000000026">
+    <cim:Equipment.inService>true</cim:Equipment.inService>
+  </cim:Equipment>
+  <cim:Equipment rdf:about="#_3f5e0000-0000-4000-8000-000000000034">
+    <cim:Equipment.inService>true</cim:Equipment.inService>
+  </cim:Equipment>
+  <cim:Equipment rdf:about="#_3f5e0000-0000-4000-8000-000000000035">
+    <cim:Equipment.inService>true</cim:Equipment.inService>
+  </cim:Equipment>
+  <cim:Equipment rdf:about="#_3f5e0000-0000-4000-8000-000000000030">
+    <cim:Equipment.inService>true</cim:Equipment.inService>
+  </cim:Equipment>
+  <cim:Equipment rdf:about="#_3f5e0000-0000-4000-8000-000000000031">
+    <cim:Equipment.inService>true</cim:Equipment.inService>
+  </cim:Equipment>
+  <cim:Equipment rdf:about="#_3f5e0000-0000-4000-8000-000000000032">
+    <cim:Equipment.inService>true</cim:Equipment.inService>
+  </cim:Equipment>
+  <cim:Equipment rdf:about="#_3f5e0000-0000-4000-8000-000000000033">
+    <cim:Equipment.inService>true</cim:Equipment.inService>
+  </cim:Equipment>
+  <cim:Switch rdf:about="#_3f5e0000-0000-4000-8000-000000000034">
+    <cim:Switch.open>false</cim:Switch.open>
+  </cim:Switch>
+  <cim:Terminal rdf:about="#_3f5e0000-0000-4000-8000-000000000038">
+    <cim:ACDCTerminal.connected>true</cim:ACDCTerminal.connected>
+  </cim:Terminal>
+  <cim:Terminal rdf:about="#_3f5e0000-0000-4000-8000-000000000039">
+    <cim:ACDCTerminal.connected>true</cim:ACDCTerminal.connected>
+  </cim:Terminal>
+  <cim:Terminal rdf:about="#_3f5e0000-0000-4000-8000-000000000040">
+    <cim:ACDCTerminal.connected>true</cim:ACDCTerminal.connected>
+  </cim:Terminal>
+  <cim:Terminal rdf:about="#_3f5e0000-0000-4000-8000-000000000041">
+    <cim:ACDCTerminal.connected>true</cim:ACDCTerminal.connected>
+  </cim:Terminal>
+  <cim:Terminal rdf:about="#_3f5e0000-0000-4000-8000-000000000042">
+    <cim:ACDCTerminal.connected>true</cim:ACDCTerminal.connected>
+  </cim:Terminal>
+  <cim:Terminal rdf:about="#_3f5e0000-0000-4000-8000-000000000043">
+    <cim:ACDCTerminal.connected>true</cim:ACDCTerminal.connected>
+  </cim:Terminal>
+  <cim:Terminal rdf:about="#_3f5e0000-0000-4000-8000-000000000044">
+    <cim:ACDCTerminal.connected>true</cim:ACDCTerminal.connected>
+  </cim:Terminal>
+  <cim:Terminal rdf:about="#_3f5e0000-0000-4000-8000-000000000045">
+    <cim:ACDCTerminal.connected>true</cim:ACDCTerminal.connected>
+  </cim:Terminal>
+  <cim:Terminal rdf:about="#_3f5e0000-0000-4000-8000-000000000046">
+    <cim:ACDCTerminal.connected>true</cim:ACDCTerminal.connected>
+  </cim:Terminal>
+  <cim:Terminal rdf:about="#_3f5e0000-0000-4000-8000-000000000047">
+    <cim:ACDCTerminal.connected>true</cim:ACDCTerminal.connected>
+  </cim:Terminal>
+  <cim:Terminal rdf:about="#_3f5e0000-0000-4000-8000-000000000048">
+    <cim:ACDCTerminal.connected>true</cim:ACDCTerminal.connected>
+  </cim:Terminal>
+  <cim:Terminal rdf:about="#_3f5e0000-0000-4000-8000-000000000049">
+    <cim:ACDCTerminal.connected>true</cim:ACDCTerminal.connected>
+  </cim:Terminal>
+  <cim:Terminal rdf:about="#_3f5e0000-0000-4000-8000-000000000050">
+    <cim:ACDCTerminal.connected>true</cim:ACDCTerminal.connected>
+  </cim:Terminal>
+  <cim:Terminal rdf:about="#_3f5e0000-0000-4000-8000-000000000052">
+    <cim:ACDCTerminal.connected>true</cim:ACDCTerminal.connected>
+  </cim:Terminal>
+  <cim:SynchronousMachine rdf:about="#_3f5e0000-0000-4000-8000-000000000030">
+    <cim:RotatingMachine.p>-300.0</cim:RotatingMachine.p>
+    <cim:RotatingMachine.q>0.0</cim:RotatingMachine.q>
+  </cim:SynchronousMachine>
+  <cim:SynchronousMachine rdf:about="#_3f5e0000-0000-4000-8000-000000000031">
+    <cim:RotatingMachine.p>-200.0</cim:RotatingMachine.p>
+    <cim:RotatingMachine.q>0.0</cim:RotatingMachine.q>
+  </cim:SynchronousMachine>
+  <cim:ConformLoad rdf:about="#_3f5e0000-0000-4000-8000-000000000032">
+    <cim:EnergyConsumer.p>400.0</cim:EnergyConsumer.p>
+    <cim:EnergyConsumer.q>100.0</cim:EnergyConsumer.q>
+  </cim:ConformLoad>
+  <cim:ConformLoad rdf:about="#_3f5e0000-0000-4000-8000-000000000033">
+    <cim:EnergyConsumer.p>90.0</cim:EnergyConsumer.p>
+    <cim:EnergyConsumer.q>30.0</cim:EnergyConsumer.q>
+  </cim:ConformLoad>
+  <cim:RegulatingControl rdf:about="#_3f5e0000-0000-4000-8000-000000000090">
+    <cim:RegulatingControl.targetValue>404.0</cim:RegulatingControl.targetValue>
+  </cim:RegulatingControl>
+  <cim:RegulatingControl rdf:about="#_3f5e0000-0000-4000-8000-000000000091">
+    <cim:RegulatingControl.targetValue>400.0</cim:RegulatingControl.targetValue>
+  </cim:RegulatingControl>
+  <cim:Equipment rdf:about="#_3f5e0000-0000-4000-8000-0000000000a1">
+    <cim:Equipment.inService>true</cim:Equipment.inService>
+  </cim:Equipment>
+  <cim:Switch rdf:about="#_3f5e0000-0000-4000-8000-0000000000a1">
+    <cim:Switch.open>false</cim:Switch.open>
+  </cim:Switch>
+  <cim:Terminal rdf:about="#_3f5e0000-0000-4000-8000-0000000000a2">
+    <cim:ACDCTerminal.connected>true</cim:ACDCTerminal.connected>
+  </cim:Terminal>
+  <cim:Terminal rdf:about="#_3f5e0000-0000-4000-8000-0000000000a3">
+    <cim:ACDCTerminal.connected>true</cim:ACDCTerminal.connected>
+  </cim:Terminal>
+</rdf:RDF>

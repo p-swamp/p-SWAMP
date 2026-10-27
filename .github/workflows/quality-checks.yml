@@ -184,6 +184,7 @@ jobs:
         run: |
           docker run -d --name p-swamp-smoketest \
             -p 8000:8000 -e HOST=0.0.0.0 -e PORT=8000 \
+            -e PSWAMP_CIM_PATH=/workspace/p-SWAMP/core/src/pswamp_core/cim/sample_grid \
             p-swamp:smoketest
 
       # --url = test this server, don't manage its lifecycle. It waits for
@@ -226,6 +227,10 @@ jobs:
     - name: Install Playwright Browsers
       run: npx playwright install --with-deps chromium
     - name: Run Playwright tests
+      # The grid simulation and the CIM graph page run on the small grid the image carries
+      # (these runners have no general internet, so no Nordic44 download).
+      env:
+        PSWAMP_CIM_PATH: /workspace/p-SWAMP/core/src/pswamp_core/cim/sample_grid
       run: npx playwright test
     - uses: actions/upload-artifact@v5
       if: ${{ !cancelled() }}

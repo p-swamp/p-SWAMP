@@ -130,6 +130,9 @@ class Module(ABC):
             ``DROP_OLDEST`` by default: a module that falls behind a live
             stream analyses the newest frame.
         reads_sources: Its host sets ``self.sources`` before ``setup``.
+        cim: It reads the CIM graph: ``self.cim_repo`` is a repository of its
+            own over it, connected by its host before ``setup`` (needs the
+            ``[cim]`` extra; see ``pswamp_core.cim``).
         keep_up: When falling behind its input is reported; ``None`` never.
     """
 
@@ -142,6 +145,7 @@ class Module(ABC):
     overflow: ClassVar[Overflow] = Overflow.DROP_OLDEST
     maxsize: ClassVar[int] = 64
     reads_sources: ClassVar[bool] = False
+    cim: ClassVar[bool] = False
     keep_up: ClassVar[KeepUp | None] = KeepUp()
 
     #: Set per class: input class → handler method name (styles 1 and 2).
@@ -247,6 +251,46 @@ class Module(ABC):
         self._join = type(self).join.bound(self.inputs) if isinstance(self.inputs, Mapping) else None
         #: Held around each call into the instance: one call at a time.
         self._calling = asyncio.Lock()
+        self._cim_repo: Any = None
+        #: Whether ``_cim_repo`` is the deployment's (connected here), not one a caller handed over.
+        self._cim_connected = False
+
+    @property
+    def cim_repo(self) -> Any:
+        """This instance's repository over the CIM graph (a module that sets ``cim = True``):
+        it reads and never writes, and keeps what it read for as long as the
+        deployment's cache policy says (``pswamp_core.cim.store``). Connected on first
+        use when no host did it first, as in a script. A script may set it instead, to a
+        repository of its own over any LazyCIM store: the module then reads that, and
+        ``cim_version`` watches that store."""
+        if not self.cim:
+            raise AttributeError(f"{self.name} does not read the CIM graph: set cim = True")
+        if self._cim_repo is None:
+            from .cim import connect_reader
+
+            self._cim_repo = connect_reader()
+            self._cim_connected = True
+        return self._cim_repo
+
+    @cim_repo.setter
+    def cim_repo(self, repository: Any) -> None:
+        self._cim_repo = repository
+        self._cim_connected = False
+
+    @property
+    def cim_version(self) -> Any:
+        """A watch on the CIM graph's version stamp (``pswamp_core.cim.GraphVersion``):
+        ``self.cim_version.changed()`` says whether the graph was written since the last look,
+        in one tiny query; then ``pswamp_core.cim.refresh_expired(self.cim_repo)`` and read again."""
+        if not self.cim:
+            raise AttributeError(f"{self.name} does not read the CIM graph: set cim = True")
+        if getattr(self, "_cim_version", None) is None:
+            from .cim import GraphVersion, Store, open_store
+
+            given = self._cim_repo is not None and getattr(self._cim_repo, "db", None) is not None
+            store = Store.of(self._cim_repo) if given and not self._cim_connected else open_store()
+            self._cim_version = GraphVersion(store)
+        return self._cim_version
 
     async def setup(self) -> None:
         """Called once by a host, after ``sources`` is set and before any input."""

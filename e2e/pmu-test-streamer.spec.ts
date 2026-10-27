@@ -34,7 +34,7 @@ test.describe('PMU test streamer', () => {
     await open(page)
     await expect(page.getByText(/^Recorded · Paused$/)).toBeVisible()
     await expect(page.getByRole('row')).toHaveCount(6) // five stations
-    await expect(page.getByText('CIM reference: n44-cim-stub')).toBeVisible()
+    await expect(page.getByText(/^CIM reference: (?!none$)\S+$/)).toBeVisible() // the grid in the CIM graph
     await expect(page.getByTestId('stats-readout')).toHaveText(/^mean f \d+\.\d{4} Hz · .* · 5 stations$/)
     await expect(page.getByTestId('excursion-readout')).toContainText('in band')
   })

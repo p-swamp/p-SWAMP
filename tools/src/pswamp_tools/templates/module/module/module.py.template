@@ -14,6 +14,13 @@ it in ``__NAME__Result``. The same module runs hosted, or from a script::
 This one keeps no state between frames. One that does (a window, a count)
 clears it in ``reset``, which its host calls when the stream starts over (a
 seek, a loop), and releases what ``setup`` took in ``teardown``.
+
+To read the grid, set ``cim = True`` (and depend on ``pswamp-core[cim]``):
+``self.cim_repo`` is then a LazyCIM repository of this instance's own over the
+CIM graph, and ``frame.header.analog[i]`` the Analog column ``i`` measures::
+
+    analog = self.cim_repo.from_mRID(frame.header.analog[i])
+    analog.Terminal.ConnectivityNode.name
 """
 
 from pswamp_core.modules import Module
@@ -37,6 +44,7 @@ class __NAME__Module(Module):
     name = "__SLUG__"
     inputs = (PmuFrame,)
     outputs = (__NAME__Result,)
+    # cim = True  # read the CIM graph through self.cim_repo
 
     def process(self, frame: PmuFrame) -> __NAME__Body | None:
         columns = frame.header.columns(measurement="f")
