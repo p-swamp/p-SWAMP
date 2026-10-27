@@ -34,10 +34,11 @@ def start(monkeypatch, *, simulated: bool):
     monkeypatch.delenv("PSWAMP_TRANSPORT", raising=False)
     monkeypatch.delenv("PSWAMP_CIM_URL", raising=False)
     monkeypatch.setenv("PSWAMP_CIM_PATH", str(SAMPLE_GRID))
-    if simulated:  # the grid simulation is a source of the streamer's pipeline, named rtsim
-        monkeypatch.setenv("PMU_TEST_STREAMER_SOURCES", "rtsim:rtsim-from-cim")
-    else:
-        monkeypatch.setenv("PMU_TEST_STREAMER_SOURCES", "sample:sample-replay")
+    monkeypatch.delenv("PMU_TEST_STREAMER_SOURCES", raising=False)
+    if simulated:  # the grid simulation is the grid-monitor pipeline's source, named rtsim
+        monkeypatch.delenv("GRID_MONITOR_SOURCES", raising=False)
+    else:  # a live feed in its place, so the live grid's pipeline still has its one live source
+        monkeypatch.setenv("GRID_MONITOR_SOURCES", "live:live-synthetic")
     from fastapi.testclient import TestClient
 
     import server as server_module

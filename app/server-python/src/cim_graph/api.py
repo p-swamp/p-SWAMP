@@ -72,7 +72,7 @@ router = APIRouter()
 sockets = SocketRegistry()
 
 #: The live simulation of the graph: the app whose pipeline runs it, and the source's name there.
-SIMULATION = ("pmu-test-streamer", "rtsim")
+SIMULATION = ("grid-monitor", "rtsim")
 #: How many of the simulation's announcements the state carries.
 EVENTS = 50
 

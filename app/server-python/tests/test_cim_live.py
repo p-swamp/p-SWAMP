@@ -14,8 +14,8 @@ WINDOW = 20.0
 @pytest.fixture
 def server(monkeypatch):
     monkeypatch.delenv("PSWAMP_TRANSPORT", raising=False)
-    # The streamer's sources are the recording and the synthetic feed; the grid simulation joins by name.
-    monkeypatch.setenv("PMU_TEST_STREAMER_SOURCES", "rtsim:rtsim-from-cim")
+    # The simulation is the grid-monitor pipeline's own source (pipelines/grid-monitor.toml).
+    monkeypatch.delenv("GRID_MONITOR_SOURCES", raising=False)
     monkeypatch.setenv("RTSIM_RATE", "50")
     from fastapi.testclient import TestClient
 
