@@ -124,6 +124,16 @@ def test_header_id_is_a_content_hash_that_ignores_the_cim_reference():
     assert '"header_id":"' in HEADER.model_dump_json()
 
 
+def test_a_header_links_each_column_to_its_analog_or_to_nothing():
+    assert HEADER.analog is None
+    linked = HEADER.model_copy(update={"analog": ["a-v", "a-f", None, "b-f"]})
+    assert linked.header_id == HEADER.header_id  # the layout is the same with or without the links
+    back = PmuHeader.model_validate_json(linked.model_dump_json())
+    assert back.analog == ["a-v", "a-f", None, "b-f"]
+    with pytest.raises(ValidationError):
+        PmuHeader.model_validate({**HEADER.model_dump(exclude={"header_id"}), "analog": ["a-v"]})
+
+
 def test_header_column_lookup():
     assert HEADER.columns(measurement="f") == [1, 3]
     assert HEADER.columns(station="B", measurement="V_Magnitude") == [2]

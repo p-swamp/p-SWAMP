@@ -17,7 +17,7 @@ dependencies = [
     "uvicorn[standard]>=0.52.4,<0.53",
     "p-swamp",
     # The server data architecture (core/). The extra brings the Kafka transport.
-    "pswamp-core[kafka]",
+    "pswamp-core[kafka,cim]",
     # The modules, one project each (modules/<name>/).
     "pswamp-frame-stats",
     "pswamp-excursion",

@@ -72,3 +72,14 @@ uv.lock             @thomanil
 # either half is worth a look.
 /app/client-web/src/pages/reference-subapp/  @thomanil
 /app/server-python/src/reference_subapp/     @thomanil
+
+# The CIM graph: the core's store, readers and PMU Analogs (pswamp_core.cim), the
+# web backend's CIM graph app (the graph's only writer) and its page, and the
+# decision behind them (ADR-014).
+/core/src/pswamp_core/cim/                         @louispauchet
+/core/tests/test_cim_*.py                          @louispauchet
+/app/server-python/src/cim_graph/                  @louispauchet
+/app/server-python/tests/test_cim_graph.py         @louispauchet
+/app/client-web/src/pages/cim-graph/               @louispauchet
+/e2e/cim-graph.spec.ts                             @louispauchet
+/doc/adr/014-keep-the-cim-graph-in-one-oxigraph-store-with-one-writer.md  @louispauchet

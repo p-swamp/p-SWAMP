@@ -70,8 +70,15 @@ def requirement_name(requirement: str) -> str:
     return re.split(r"[\s\[<>=!~;(]", requirement.strip(), maxsplit=1)[0].lower().replace("_", "-")
 
 
-def dependency_closure(names: set[str]) -> set[str]:
-    """The distributions ``names`` need, transitively (extras-only requirements left out)."""
+def requirement_extras(requirement: str) -> set[str]:
+    """The extras a requirement asks for: ``lazycim[graphdb]`` asks for ``graphdb``."""
+    found = re.match(r"[^\[\s<>=!~;(]+\[([^\]]*)\]", requirement.strip())
+    return {extra.strip().lower() for extra in found.group(1).split(",")} if found else set()
+
+
+def dependency_closure(names: set[str], extras: dict[str, set[str]] | None = None) -> set[str]:
+    """The distributions ``names`` need, transitively. A requirement that belongs to an extra is
+    left out unless ``extras`` says that extra was asked for, for that distribution."""
     from importlib import metadata
 
     seen: set[str] = set()
@@ -85,7 +92,11 @@ def dependency_closure(names: set[str]) -> set[str]:
             requires = metadata.requires(name) or []
         except metadata.PackageNotFoundError:
             continue
-        todo += [requirement_name(r) for r in requires if "extra ==" not in r.partition(";")[2]]
+        asked = (extras or {}).get(name, set())
+        for requirement in requires:
+            condition = requirement.partition(";")[2]
+            if "extra ==" not in condition or any(f'"{extra}"' in condition or f"'{extra}'" in condition for extra in asked):
+                todo.append(requirement_name(requirement))
     return seen
 
 
@@ -124,8 +135,9 @@ def test_there_are_module_projects():
 def test_a_module_imports_only_its_declared_dependencies(project, tmp_path):
     package = package_of(project)
     assert package.startswith("pswamp_modules.") and package.count(".") == 1, package
-    declared = {requirement_name(r) for r in manifest(project)["project"].get("dependencies", [])}
-    closure = dependency_closure(declared)
+    requirements = manifest(project)["project"].get("dependencies", [])
+    declared = {requirement_name(r) for r in requirements}
+    closure = dependency_closure(declared, {requirement_name(r): requirement_extras(r) for r in requirements})
     optional = set().union(*(OPTIONAL_IMPORTS.get(name, set()) for name in closure))
     allowed = BASE | top_level_names(closure) | optional | set(sys.stdlib_module_names)
 
@@ -133,7 +145,8 @@ def test_a_module_imports_only_its_declared_dependencies(project, tmp_path):
     tops = {name.partition(".")[0] for name in added}
     assert not tops & FORBIDDEN, f"{package} imports {sorted(tops & FORBIDDEN)}"
     # Private stdlib helpers (_decimal, _strptime, ...) are not in stdlib_module_names.
-    strangers = sorted(t for t in tops - allowed - {"pswamp_modules"} if not t.startswith("_"))
+    # cython_runtime is not a package: compiled libraries (pandas) register it in sys.modules.
+    strangers = sorted(t for t in tops - allowed - {"pswamp_modules", "cython_runtime"} if not t.startswith("_"))
     assert not strangers, f"{package} imports {strangers}, which it does not declare"
     others = sorted(
         name for name in added
@@ -178,3 +191,25 @@ def test_the_modules_folder_holds_only_module_projects():
 def test_the_core_imports_no_module(tmp_path):
     added = imported_by("pswamp_core", tmp_path)
     assert not any(name.partition(".")[0] == "pswamp_modules" for name in added)
+
+
+# The CIM graph has one writer, the web backend's CIM graph app. The core stages the grid in a
+# private copy before any store sees it, its testing helper edits a test's own store, and prepare a
+# script's own repository; nothing else commits.
+CIM_WRITERS = {
+    "app/server-python/src/cim_graph/grid.py",
+    "core/src/pswamp_core/cim/grid.py",
+    "core/src/pswamp_core/cim/prepare.py",
+    "core/src/pswamp_core/cim/testing.py",
+}
+
+
+def test_only_the_cim_graph_app_writes_the_cim_graph():
+    sources = [ROOT / "app/server-python/src", ROOT / "core/src", *(project / "src" for project in PROJECTS)]
+    writers = {
+        path.relative_to(ROOT).as_posix()
+        for folder in sources
+        for path in folder.rglob("*.py")
+        if re.search(r"\.commit\(\)", path.read_text(encoding="utf-8"))
+    }
+    assert writers <= CIM_WRITERS, f"commits outside the CIM graph's writer: {sorted(writers - CIM_WRITERS)}"

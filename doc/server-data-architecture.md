@@ -85,7 +85,7 @@ flowchart TB
     sources["Sources<br/>recording · live feed · remote data service"]:::data
     subgraph run["Run: one per client for a recording, one per live source"]
         direction TB
-        gw["Source set<br/>named sources, one active · CIM reference"]:::data
+        gw["Source set<br/>named sources, one active · CIM links"]:::data
         player["Router<br/>switch · playback commands"]:::data
         latest["latest<br/>newest message of each class"]:::data
     end
@@ -510,21 +510,25 @@ setting it is an error that says so.)
 `modules/live-synthetic/` (live: the sample re-stamped on the wall clock).
 
 ### CIM reference
-*What.* The source set sets an optional `PmuHeader.cimReferenceId` on every
-frame: an id for the grid (CIM) data that applies to it. Enrichers passed to a
-`SourceSet` run on every record its streams yield. `CimReferenceEnricher`
-decides the reference once per layout. **It is a stub**: it returns one
-configured id (`PMU_TEST_STREAMER_CIM_REFERENCE`, default `n44-cim-stub`,
-`none` for none). A lookup against a CIM model overrides `reference_for` and
-nothing else changes.
+*What.* The source set ties every frame to the CIM graph (`pswamp_core.cim`, ADR-014):
+`PmuHeader.cimReferenceId` is the grid's model id, and `PmuHeader.analog` the mRID of
+the `Analog` each column measures (a phasor's two columns share one; `null` where none
+matches). Enrichers passed to a `SourceSet` run on every record its streams yield;
+`CimEnricher`, set by a pipeline file's `[enrich] cim = true`, reads the grid's Analogs
+once per process, in a thread (its `start`, which a stream awaits before its first
+record), and matches each layout's columns to them by the Analog naming rule
+(`PMU_<substation>_<kV>_<V|F|I>[_<line>]`) once per layout. A source that knows the
+graph sets the links itself. `CimReferenceEnricher` stays for a fixed id
+(`<APP>_CIM_REFERENCE`, `none` for nothing).
 
-*Why.* Every reader's frames pass through the source set, so every module sees
-the same reference, decided once, early. It travels with the frame, so a module
-in a worker gets it with no configuration of its own. It is a reference, not
-the grid data itself, which would cost kilobytes per frame.
+*Why.* Every reader's frames pass through the source set, so every module sees the
+same links, decided once, early. They travel with the frame, so a module in a worker
+gets them with no configuration of its own; and they are references, not the grid
+data, which a module reads when it needs it through its own repository
+(`cim = True`, `self.cim_repo.from_mRID(frame.header.analog[i])`).
 
-*Where.* `core/src/pswamp_core/enrich.py`; wired in
-`pipelines/pmu-test-streamer.toml` (`[enrich] cim_reference`).
+*Where.* `core/src/pswamp_core/enrich.py`, `core/src/pswamp_core/cim/enrich.py`; wired
+in `pipelines/pmu-test-streamer.toml` (`[enrich] cim = true`).
 
 ### The router and playable sources
 *What.* A run's `ActiveSource` router receives `SwitchSourceCommand` and the

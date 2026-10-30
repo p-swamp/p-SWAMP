@@ -33,3 +33,4 @@ team's own code do not need one.
 | [011](011-report-operational-errors-in-a-tray.md) | Report operational failures on an error topic, shown in a tray on every page |
 | [012](012-read-history-through-a-remote-data-contract.md) | Read a deployment's history through a small HTTP contract; p-SWAMP stores nothing |
 | [013](013-put-a-cim-reference-id-on-each-frame.md) | Put a CIM reference id on each frame, never grid data |
+| [014](014-keep-the-cim-graph-in-one-oxigraph-store-with-one-writer.md) | Keep the CIM graph in one Oxigraph store, with one writer, readable by every module |

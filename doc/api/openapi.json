@@ -315,6 +315,78 @@
         "title": "ChannelSelection",
         "type": "object"
       },
+      "CimGraphState": {
+        "description": "What the graph says is switched off, pushed on connect and whenever it changes.\n\nThe whole state each time, not a delta: it is a few hundred booleans, and a client that missed\na message cannot end up wrong.",
+        "properties": {
+          "out_of_service": {
+            "description": "The lines and transformers (mRIDs) out of service, which is what the simulation follows.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Out Of Service",
+            "type": "array"
+          },
+          "switches": {
+            "additionalProperties": {
+              "type": "boolean"
+            },
+            "description": "Every switch (mRID) and whether it is open.",
+            "title": "Switches",
+            "type": "object"
+          },
+          "type": {
+            "const": "state",
+            "default": "state",
+            "title": "Type",
+            "type": "string"
+          },
+          "writable": {
+            "description": "Whether the graph can be edited (the CGMES profiles are in it).",
+            "title": "Writable",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "switches",
+          "out_of_service",
+          "writable"
+        ],
+        "title": "CimGraphState",
+        "type": "object"
+      },
+      "CimLayout": {
+        "description": "Where the grid is, read once from the graph's GL profile. Static: state is on the socket.",
+        "properties": {
+          "branches": {
+            "items": {
+              "$ref": "#/components/schemas/LayoutBranch"
+            },
+            "title": "Branches",
+            "type": "array"
+          },
+          "breakers": {
+            "items": {
+              "$ref": "#/components/schemas/LayoutBreaker"
+            },
+            "title": "Breakers",
+            "type": "array"
+          },
+          "substations": {
+            "items": {
+              "$ref": "#/components/schemas/LayoutSubstation"
+            },
+            "title": "Substations",
+            "type": "array"
+          }
+        },
+        "required": [
+          "substations",
+          "branches",
+          "breakers"
+        ],
+        "title": "CimLayout",
+        "type": "object"
+      },
       "CommandAck": {
         "description": "The reply to every command POST.\n\nDeliberately NOT the resulting state. That arrives on whichever socket the\npage has open, on the server's own schedule, so state has exactly one path\nand there is no ordering for a client to reconcile between two of them. What\nthis carries is only \"the command was accepted, and here is what it was\" --\nenough to log and to assert on, and nothing a page renders.\n\n*Accepted* is all it promises. A handler that applies the command itself\nhas applied it by now. A handler that hands it on (to a pipeline's player\nor module) has checked what it can and queued it for its receiver: the\noutcome arrives on the socket, or as an error notice carrying this\n``request_id``.",
         "properties": {
@@ -1066,6 +1138,114 @@
         "title": "IslandingState",
         "type": "object"
       },
+      "LayoutBranch": {
+        "description": "A line, or a transformer between two substations.",
+        "properties": {
+          "breaker": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "mRID of the one breaker that takes it out of service on its own (its bay's, at one end); null: it has none, and is operated as a line (POST /lines/{mrid}).",
+            "title": "Breaker"
+          },
+          "from_substation": {
+            "description": "mRID of the substation at its first end.",
+            "title": "From Substation",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "line",
+              "transformer"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "mrid": {
+            "title": "Mrid",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "path": {
+            "description": "Its route; empty: a straight segment between the substations.",
+            "items": {
+              "$ref": "#/components/schemas/Point"
+            },
+            "title": "Path",
+            "type": "array"
+          },
+          "to_substation": {
+            "description": "mRID of the substation at its second end.",
+            "title": "To Substation",
+            "type": "string"
+          }
+        },
+        "required": [
+          "mrid",
+          "name",
+          "kind",
+          "from_substation",
+          "to_substation",
+          "path",
+          "breaker"
+        ],
+        "title": "LayoutBranch",
+        "type": "object"
+      },
+      "LayoutBreaker": {
+        "properties": {
+          "mrid": {
+            "title": "Mrid",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "substation": {
+            "description": "mRID of the substation it stands in.",
+            "title": "Substation",
+            "type": "string"
+          }
+        },
+        "required": [
+          "mrid",
+          "name",
+          "substation"
+        ],
+        "title": "LayoutBreaker",
+        "type": "object"
+      },
+      "LayoutSubstation": {
+        "properties": {
+          "mrid": {
+            "title": "Mrid",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "position": {
+            "$ref": "#/components/schemas/Point"
+          }
+        },
+        "required": [
+          "mrid",
+          "name",
+          "position"
+        ],
+        "title": "LayoutSubstation",
+        "type": "object"
+      },
       "LineOutageEvent": {
         "description": "One branch changing connection state, as the detector reports it.\n\n``stations`` and ``measurements`` come straight from the time window's\nheader for the channels that flipped, so a single physical line trip\nnormally appears with the station at each end -- the current on that branch\ngoes to zero as seen from both.",
         "properties": {
@@ -1486,6 +1666,29 @@
       "PmuHeader": {
         "description": "The channel layout of a stream: one entry per column of a frame.\n\nThe label rows are the ones p-SWAMP's ``Indexer`` queries, so\n``columns(measurement=\"f\")`` selects inputs the same way here.",
         "properties": {
+          "analog": {
+            "anyOf": [
+              {
+                "items": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Per column: the mRID of the CIM Analog it measures, in the grid `cimReferenceId` names; null where the column has none. The two columns of a phasor share one Analog.",
+            "title": "Analog"
+          },
           "channel": {
             "description": "Per column: the phasor or signal name.",
             "items": {
@@ -1644,6 +1847,26 @@
           "summary"
         ],
         "title": "PmuStreamState",
+        "type": "object"
+      },
+      "Point": {
+        "properties": {
+          "lat": {
+            "description": "Latitude, degrees north (WGS 84).",
+            "title": "Lat",
+            "type": "number"
+          },
+          "lon": {
+            "description": "Longitude, degrees east (WGS 84).",
+            "title": "Lon",
+            "type": "number"
+          }
+        },
+        "required": [
+          "lon",
+          "lat"
+        ],
+        "title": "Point",
         "type": "object"
       },
       "RangeSummary": {
@@ -1930,6 +2153,20 @@
         "title": "SummaryBody",
         "type": "object"
       },
+      "SwitchBody": {
+        "properties": {
+          "open": {
+            "description": "True to open the switch (or take the line out of service), false to close it (or bring it back).",
+            "title": "Open",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "open"
+        ],
+        "title": "SwitchBody",
+        "type": "object"
+      },
       "TimeWindowSlice": {
         "description": "A slice of the client's measurement window.\n\n``series`` is column-major -- one list per channel, parallel to ``channels``.\nThat is the layout a streaming chart wants; row-major would force the client\nto transpose a matrix of a few hundred thousand numbers on every update.\n\n``mode`` is what keeps this affordable. A full window is tens of thousands of\nnumbers and re-sending it several times a second is megabytes per second per\nclient; an \"append\" carries only the samples added since the last message.\nThe server sends \"full\" on connect and whenever the selection changes, and\n\"append\" the rest of the time. ``seq`` counts messages so a client can tell\nit missed one and ask for a fresh \"full\".",
         "properties": {
@@ -2080,6 +2317,204 @@
   },
   "openapi": "3.1.0",
   "paths": {
+    "/api/cim-graph/layout": {
+      "get": {
+        "description": "Where the substations, lines and breakers are, from the graph's GL profile.",
+        "operationId": "cim_graph_layout",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CimLayout"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Layout",
+        "tags": [
+          "cim-graph"
+        ]
+      }
+    },
+    "/api/cim-graph/lines/{mrid}": {
+      "post": {
+        "description": "Take a line (or a transformer) out of service (``open: true``) or bring it back: the breakers\nthat cut one of its ends off, or, for a line with none, a terminal. 404 for an unknown branch, 409\nwhen it is already so.",
+        "operationId": "cim_graph_set_line",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "mrid",
+            "required": true,
+            "schema": {
+              "title": "Mrid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "The browser's client id -- the same value its WebSockets send, which is what makes a command apply to the pipeline the page is watching.",
+            "in": "query",
+            "name": "client_id",
+            "required": true,
+            "schema": {
+              "description": "The browser's client id -- the same value its WebSockets send, which is what makes a command apply to the pipeline the page is watching.",
+              "pattern": "^\\d{1,20}$",
+              "title": "Client Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SwitchBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandAck"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Set Line",
+        "tags": [
+          "cim-graph"
+        ]
+      }
+    },
+    "/api/cim-graph/reset": {
+      "post": {
+        "description": "Put the grid back as it was loaded: every switch as the model has it, every branch in service.",
+        "operationId": "cim_graph_reset",
+        "parameters": [
+          {
+            "description": "The browser's client id -- the same value its WebSockets send, which is what makes a command apply to the pipeline the page is watching.",
+            "in": "query",
+            "name": "client_id",
+            "required": true,
+            "schema": {
+              "description": "The browser's client id -- the same value its WebSockets send, which is what makes a command apply to the pipeline the page is watching.",
+              "pattern": "^\\d{1,20}$",
+              "title": "Client Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandAck"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Reset",
+        "tags": [
+          "cim-graph"
+        ]
+      }
+    },
+    "/api/cim-graph/switches/{mrid}": {
+      "post": {
+        "description": "Open (``open: true``) or close a switch. 404 for an unknown switch, 409 when it is already so.",
+        "operationId": "cim_graph_set_switch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "mrid",
+            "required": true,
+            "schema": {
+              "title": "Mrid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "The browser's client id -- the same value its WebSockets send, which is what makes a command apply to the pipeline the page is watching.",
+            "in": "query",
+            "name": "client_id",
+            "required": true,
+            "schema": {
+              "description": "The browser's client id -- the same value its WebSockets send, which is what makes a command apply to the pipeline the page is watching.",
+              "pattern": "^\\d{1,20}$",
+              "title": "Client Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SwitchBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandAck"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Set Switch",
+        "tags": [
+          "cim-graph"
+        ]
+      }
+    },
     "/api/grid/model": {
       "get": {
         "description": "The static Nordic 44 topology: buses, branches, PMU sites and a bounding\nbox. Fetched once per page mount and cacheable, as above.",
@@ -3025,6 +3460,10 @@
     {
       "description": "Operational errors from any of a client's pipeline runs, for the layout's error tray.",
       "name": "errors"
+    },
+    {
+      "description": "CIM graph.",
+      "name": "cim-graph"
     }
   ],
   "x-websocket-channels": [
@@ -3091,6 +3530,14 @@
         "$ref": "#/components/schemas/ErrorNotice"
       },
       "path": "/api/errors/ws"
+    },
+    {
+      "app": "cim-graph",
+      "direction": "server-to-client",
+      "message": {
+        "$ref": "#/components/schemas/CimGraphState"
+      },
+      "path": "/api/cim-graph/ws"
     }
   ]
 }
