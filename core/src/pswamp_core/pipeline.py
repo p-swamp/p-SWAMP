@@ -29,6 +29,7 @@ the run and the hosts meet only on the transport::
     DATA DOWN    active source → run.publish → topic <app>.pmu.frame, key → module (hosted)
                  run.latest ← topic <app>.<result>, key ← module
     COMMANDS UP  run.dispatch(cmd) → topic <app>.<command>, key → router → active source | module
+                 a live source's own command → key live.<source> → its shared run's router → the source
 
 The run keeps the newest message of each class (``latest``) and wakes readers
 on every change (``changes()``). That is what the web API builds its socket
@@ -315,6 +316,9 @@ class PipelineRun:
         self.shared = live_source is not None
         if live_source is not None:
             self.sources.switch(live_source)
+        #: A shared run's source's own commands, which it takes even when the pipeline was read
+        #: before that source was configured (``<APP>_SOURCES`` adds it from the environment).
+        self._own: tuple[type[Command], ...] = tuple(self.sources.active.commands) if self.shared else ()
         self.latest = NewestByClass()
         self.outbox = Outbox(
             transport,
@@ -448,7 +452,22 @@ class PipelineRun:
         follows a shared live run, a command for a module that reads the
         stream raises ``CommandRefused``: its instance for this view is the
         live run's. A command nothing takes raises ``NoReceiver``.
+
+        A live source's own command goes to that source's shared run: on the
+        shared run itself it is validated first, as a player command is; from a
+        client's run it is published under the shared run's key, and refused
+        there, as an ``ErrorEvent`` under that key, if it does not apply.
         """
+        source = self.pipeline.source_commands.get(type(command))
+        if source is None and type(command) in self._own:
+            source = self.sources.source
+        if source is not None:
+            if self.shared and self.sources.source == source:
+                self.router.validate(command)
+                self.outbox.publish(command)
+            else:
+                self.outbox.publish(command, key=live_key(source))
+            return
         if type(command) in ROUTER_COMMANDS:
             self.router.validate(command)
         else:
@@ -474,7 +493,8 @@ class PipelineRun:
         await self.transport.open()
         # The router takes its commands off their topics, so a module can
         # command it exactly as the web API does.
-        commands = subscribe(*ROUTER_COMMANDS, app=app, key=key, overflow=Overflow.GROW)
+        own = (*self.pipeline.source_commands, *(c for c in self._own if c not in self.pipeline.source_commands))
+        commands = subscribe(*ROUTER_COMMANDS, *own, app=app, key=key, overflow=Overflow.GROW)
         self._subscriptions.append(commands)
         if self.pipeline.results:
             results = subscribe(*self.pipeline.results, app=app, key=key)
