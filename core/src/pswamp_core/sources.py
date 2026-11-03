@@ -90,6 +90,7 @@ from types import SimpleNamespace
 from typing import TYPE_CHECKING, Any, ClassVar, Literal
 
 from pswamp_models.common import Command, DataModel
+from pswamp_models.player import PlayerCommand
 from pswamp_models.pmu import PmuFrame
 
 from .enrich import Enricher
@@ -169,8 +170,10 @@ class SourceModule(Module, Configurable):
         blocking: ``read`` / ``coverage`` / ``open`` / ``close`` wait on
             something: the host runs them in a thread, off the event loop.
         env_settings: The ``{SOURCE}_{SETTING}`` variables it reads.
-        commands: The commands it answers; ``()`` unless a mixin
-            (``Playable``) adds some.
+        commands: The commands it answers. A history takes only the
+            player's, which ``Playable`` adds; a live source may take commands
+            of its own, which its shared run hands it (``validate`` and
+            ``ahandle``) while it streams.
         abstract: Set in a class's own body: it is a base for sources, not one.
 
     Args:
@@ -218,6 +221,19 @@ class SourceModule(Module, Configurable):
                 f"{label} is a live feed written as `read`, which would hold the event loop while it waits "
                 f"for records: set `blocking = True` (it then runs in a thread), or write `aread`"
             )
+        for command in cls.commands:
+            # A history takes the player's commands (through Playable), a live feed commands of its own.
+            players = issubclass(command, PlayerCommand)
+            if cls.kind == "live" and players:
+                raise TypeError(
+                    f"{label} is live, so it has no transport controls (only a history is playable): "
+                    f"{command.__name__} is the player's"
+                )
+            if cls.kind == "history" and not players:
+                raise TypeError(
+                    f"{label} takes {command.__name__}: only a live source takes commands of its own "
+                    f"(a history takes the player's, through Playable)"
+                )
         cls.model = outputs[0]
 
     def __init__(self, source: str | None = None, **settings: Any) -> None:

@@ -56,7 +56,7 @@ import contextlib
 import os
 import time
 from collections.abc import AsyncIterator, Callable, Collection
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Generic, TypeVar
 
 from pswamp_models.common import Command, ErrorEvent, ModuleStarted, PipelineClosed
@@ -126,6 +126,10 @@ class Pipeline:
     #: What the sources serve. When given (``Pipeline.load`` always gives it),
     #: every class a module reads must have a producer in the pipeline.
     source_models: tuple[type[DataModel], ...] | None = None
+    #: The commands the live sources take, each with the source that takes it.
+    source_commands: dict[type[Command], str] = field(init=False, default_factory=dict, compare=False)
+    #: What the live sources publish beside their frames (``outputs[1:]``).
+    source_outputs: tuple[type[DataModel], ...] = field(init=False, default=(), compare=False)
 
     @classmethod
     def load(cls, path: str | os.PathLike[str]) -> Pipeline:
@@ -140,6 +144,14 @@ class Pipeline:
             if issubclass(module, SourceModule):
                 raise ValueError(f"{self.app}: {module.__name__} is a source: list it under [[sources]], not modules")
         taken: dict[type[Command], str] = {command: "the player" for command in ROUTER_COMMANDS}
+        live = _live_source_classes(self.sources)
+        for name, source in live:
+            for command in concrete_commands(source.__name__, source.commands):
+                if command in taken:
+                    raise ValueError(f"{self.app}: source {name} and {taken[command]} both take {command.__name__}")
+                taken[command] = f"source {name}"
+                self.source_commands[command] = name
+        object.__setattr__(self, "source_outputs", tuple(dict.fromkeys(o for _, s in live for o in s.outputs[1:])))
         for module in self.modules:
             for command in concrete_commands(module.__name__, module.commands):
                 if command in taken:
@@ -150,7 +162,7 @@ class Pipeline:
                 if issubclass(model, Command) and model not in taken:
                     raise ValueError(f"{self.app}: {module.__name__} sends {model.__name__}, which nothing in the pipeline takes")
         on_topic: dict[str, type[DataModel]] = {}
-        for model in (ErrorEvent, PipelineClosed, ModuleStarted, *taken, *self.inputs, *self.outputs):
+        for model in (ErrorEvent, PipelineClosed, ModuleStarted, *taken, *self.source_outputs, *self.inputs, *self.outputs):
             other = on_topic.setdefault(model.topic, model)
             if other is not model:
                 raise ValueError(
@@ -161,7 +173,7 @@ class Pipeline:
             twice = [model.__name__ for model in self.source_models if model in self.outputs]
             if twice:
                 raise ValueError(f"{self.app}: {', '.join(twice)} is produced by a source and by a module: one producer per class")
-            produced = {*self.source_models, *self.outputs, PlayerStatus, ErrorEvent, PipelineClosed}
+            produced = {*self.source_models, *self.source_outputs, *self.outputs, PlayerStatus, ErrorEvent, PipelineClosed}
             for module in self.modules:
                 for model in module.input_models():
                     if model not in produced:
@@ -207,6 +219,14 @@ class Pipeline:
 
 def _names(models: Collection[type]) -> str:
     return ", ".join(model.__name__ for model in models) or "nothing"
+
+
+def _live_source_classes(sources: Callable[[], SourceSet]) -> list[tuple[str, type[SourceModule]]]:
+    """``(name, class)`` of each live source: from a pipeline file's sources without
+    building one (``source_classes``), else from a set built for the purpose."""
+    classes = getattr(sources, "source_classes", None)
+    named = classes() if callable(classes) else [(name, type(s)) for name, s in sources().instances.items()]
+    return [(name, cls) for name, cls in named if cls.kind == "live"]
 
 
 def live_key(source: str) -> str:
