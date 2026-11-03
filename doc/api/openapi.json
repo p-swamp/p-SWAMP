@@ -2936,6 +2936,9 @@
               }
             },
             "description": "Validation Error"
+          },
+          "503": {
+            "description": "Nothing in this deployment's pipeline takes the command (its receiver is not configured)."
           }
         },
         "summary": "Auto Pause",
@@ -2988,6 +2991,9 @@
               }
             },
             "description": "Validation Error"
+          },
+          "503": {
+            "description": "Nothing in this deployment's pipeline takes the command (its receiver is not configured)."
           }
         },
         "summary": "Pause",
@@ -3040,6 +3046,9 @@
               }
             },
             "description": "Validation Error"
+          },
+          "503": {
+            "description": "Nothing in this deployment's pipeline takes the command (its receiver is not configured)."
           }
         },
         "summary": "Play",
@@ -3102,6 +3111,9 @@
               }
             },
             "description": "Validation Error"
+          },
+          "503": {
+            "description": "Nothing in this deployment's pipeline takes the command (its receiver is not configured)."
           }
         },
         "summary": "Seek",
@@ -3164,6 +3176,9 @@
               }
             },
             "description": "Validation Error"
+          },
+          "503": {
+            "description": "Nothing in this deployment's pipeline takes the command (its receiver is not configured)."
           }
         },
         "summary": "Source",
@@ -3226,6 +3241,9 @@
               }
             },
             "description": "Validation Error"
+          },
+          "503": {
+            "description": "Nothing in this deployment's pipeline takes the command (its receiver is not configured)."
           }
         },
         "summary": "Speed",
@@ -3288,6 +3306,9 @@
               }
             },
             "description": "Validation Error"
+          },
+          "503": {
+            "description": "Nothing in this deployment's pipeline takes the command (its receiver is not configured)."
           }
         },
         "summary": "Step",
@@ -3350,6 +3371,9 @@
               }
             },
             "description": "Validation Error"
+          },
+          "503": {
+            "description": "Nothing in this deployment's pipeline takes the command (its receiver is not configured)."
           }
         },
         "summary": "Summary",

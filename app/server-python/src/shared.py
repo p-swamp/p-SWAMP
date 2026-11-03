@@ -55,7 +55,7 @@ from errors import HUB
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel
 
-from pswamp_core.command_routing import CommandRefused
+from pswamp_core.command_routing import CommandRefused, NoReceiver
 from pswamp_core.host import serve_hosts
 from pswamp_core.pipeline import CapacityError, Pipeline, PipelineRegistry, PipelineRun, start_live_runs
 from pswamp_core.subscription import Overflow
@@ -317,6 +317,7 @@ async def push_changes(ws: WebSocket, run: PipelineRun, build: Callable[[], Base
 COMMAND_RESPONSES: dict[int | str, dict] = {
     404: {"description": "The client has no running pipeline: its page is not open."},
     409: {"description": "The command does not apply in the pipeline's current state."},
+    503: {"description": "Nothing in this deployment's pipeline takes the command (its receiver is not configured)."},
 }
 
 
@@ -325,7 +326,8 @@ def dispatch_command(registry: PipelineRegistry, command: Command, log: logging.
 
     404 when the client has no run (a command never builds one); 409 when the
     player refuses it now, or when it is for a module that reads the shared
-    live run the client follows, with the reason as the detail. The ack means
+    live run the client follows, with the reason as the detail; 503 when nothing
+    in the deployment's pipeline takes it (a source that is not configured). The ack means
     *accepted*: the command is queued for its receiver, and its effect arrives
     on the socket, or a refusal or failure on the error tray, carrying the
     ack's ``request_id``. A command the transport does not take within the
@@ -342,5 +344,8 @@ def dispatch_command(registry: PipelineRegistry, command: Command, log: logging.
     except CommandRefused as refused:
         log.info("client %s: %s refused: %s", client_id, command.name, refused)
         raise HTTPException(409, str(refused)) from refused
+    except NoReceiver as missing:
+        log.warning("client %s: %s has no receiver: %s", client_id, command.name, missing)
+        raise HTTPException(503, str(missing)) from missing
     log.info("client %s: %s (request %s)", client_id, command.name, command.request_id)
     return CommandAck(applied=command.name, request_id=command.request_id)
