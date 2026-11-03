@@ -6,14 +6,15 @@ import asyncio
 from typing import Literal
 
 import pytest
-from support import ListSource, TickingSource, utcnow
-from test_pipeline import Halver
+from support import ListSource, TickingSource, take, utcnow
+from test_pipeline import Halver, until
 
 from pswamp_core.command_routing import CommandRefused
-from pswamp_core.pipeline import Pipeline
+from pswamp_core.pipeline import Pipeline, PipelineRun, live_key, start_live_runs
 from pswamp_core.sources import SourceModule, SourceSet
-from pswamp_models.common import Command, DataModel
-from pswamp_models.player import SeekCommand
+from pswamp_core.transport import InMemoryTransport
+from pswamp_models.common import Command, DataModel, ErrorEvent
+from pswamp_models.player import SeekCommand, SwitchSourceCommand
 from pswamp_models.pmu import PmuFrame
 
 
@@ -112,3 +113,90 @@ def test_a_source_s_outputs_beside_its_frames_are_topics_of_the_pipeline():
 
     with pytest.raises(ValueError, match="both on topic note"):
         Pipeline("app", commanded_sources, modules=(AlsoNote,))
+
+
+# -- routing -----------------------------------------------------------------------------
+
+
+@pytest.fixture
+async def live():
+    """The shared live run of ``commanded``, and its transport."""
+    transport = InMemoryTransport()
+    pipeline = Pipeline("app", commanded_sources)
+    runs = await start_live_runs(pipeline, transport)
+    (run,) = runs
+    yield run, transport
+    await run.stop()
+
+
+async def test_the_shared_run_hands_its_live_source_its_commands_while_it_streams(live):
+    run, _ = live
+    source = run.sources.instances["live"]
+    await until(lambda: run.frame is not None)
+    run.dispatch(Nudge(amount=2))
+    run.dispatch(Nudge(amount=3))
+    await until(lambda: source.nudged == [2, 3])
+    seen = run.frame.timestamp
+    await until(lambda: run.frame.timestamp > seen)  # the stream never stopped for them
+
+
+async def test_a_command_the_live_source_refuses_is_refused_before_it_is_published(live):
+    run, _ = live
+    with pytest.raises(CommandRefused, match="never negative"):
+        run.dispatch(Nudge(amount=-1))
+    assert run.sources.instances["live"].nudged == []
+
+
+async def test_a_client_run_sends_a_live_source_command_to_the_shared_run(live):
+    shared, transport = live
+    client = PipelineRun("a", shared.pipeline, transport)
+    await client.start()  # on its recording, following nothing
+    client.dispatch(Nudge(amount=5))
+    await until(lambda: shared.sources.instances["live"].nudged == [5])
+    assert client.sources.instances["live"].nudged == []  # its own instance never opened
+    await client.stop()
+
+
+async def test_a_refusal_when_the_command_is_applied_reaches_the_error_topic(live):
+    run, transport = live
+    errors = transport.subscribe(ErrorEvent, app="app", key=live_key("live"))
+    await errors.ready(5)
+    # Published by hand, as a client run does: validated only where it is applied.
+    run.outbox.publish(Nudge(amount=-7), key=live_key("live"))
+    ((_, error),) = await take(errors, 1)
+    assert "refused nudge" in error.message and error.detail == "a nudge is never negative"
+    errors.close()
+
+
+async def test_the_shared_run_takes_its_source_s_commands_even_if_the_pipeline_was_read_before_it_was_configured():
+    # A pipeline file's sources come from the environment (<APP>_SOURCES), which a deployment may add
+    # a live source to after the pipeline was read: its shared run still takes that source's commands.
+    calls = {"n": 0}
+
+    def later_sources() -> SourceSet:
+        calls["n"] += 1
+        return SourceSet([ListSource("rec")] if calls["n"] == 1 else [ListSource("rec"), CommandedSource("live")])
+
+    transport = InMemoryTransport()
+    pipeline = Pipeline("app", later_sources)
+    assert pipeline.source_commands == {}  # read before the live source was there
+    (run,) = await start_live_runs(pipeline, transport)
+    await until(lambda: run.frame is not None)
+    run.dispatch(Nudge(amount=6))
+    await until(lambda: run.sources.instances["live"].nudged == [6])
+    with pytest.raises(CommandRefused, match="never negative"):
+        run.dispatch(Nudge(amount=-1))
+    await run.stop()
+
+
+async def test_a_router_not_on_the_live_source_refuses_its_commands():
+    transport = InMemoryTransport()
+    run = PipelineRun("a", Pipeline("app", commanded_sources), transport)
+    await run.start()  # on its recording
+    with pytest.raises(CommandRefused, match="is not running here"):
+        run.router.validate(Nudge())
+    run.dispatch(SwitchSourceCommand(source="live"))  # following the shared run: still not here
+    await until(lambda: run.router.status().mode == "live")
+    with pytest.raises(CommandRefused, match="is not running here"):
+        run.router.validate(Nudge())
+    await run.stop()
