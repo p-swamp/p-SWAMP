@@ -12,6 +12,7 @@ from test_pipeline import Halver, until
 from pswamp_core.command_routing import CommandRefused
 from pswamp_core.pipeline import Pipeline, PipelineRun, live_key, start_live_runs
 from pswamp_core.sources import SourceModule, SourceSet
+from pswamp_core.subscription import Overflow
 from pswamp_core.transport import InMemoryTransport
 from pswamp_models.common import Command, DataModel, ErrorEvent
 from pswamp_models.player import SeekCommand, SwitchSourceCommand
@@ -157,6 +158,28 @@ async def test_a_client_run_sends_a_live_source_command_to_the_shared_run(live):
     await client.stop()
 
 
+async def test_what_a_live_source_says_beside_its_frames_goes_out_under_its_key(live):
+    run, transport = live
+    notes = transport.subscribe(Note, app="app", key=live_key("live"))
+    await notes.ready(5)
+    client = PipelineRun("a", run.pipeline, transport)
+    await client.start()
+    client.dispatch(SwitchSourceCommand(source="live"))
+    await until(lambda: client.following == live_key("live"))
+    await asyncio.sleep(0.1)  # its subscription to the live run is being received
+    run.dispatch(Nudge(amount=4))
+    ((key, note),) = await take(notes, 1)
+    assert note.text == "nudged by 4" and key.startswith("live.live")
+    await until(lambda: run.latest.get(Note) is not None)
+    await until(lambda: client.latest.get(Note) is not None)  # a viewer of the live run hears it too
+    # A note is not a frame: the cursor and the frame at it are the frames'.
+    await until(lambda: run.frame is not None)
+    assert isinstance(run.frame, PmuFrame) and isinstance(run.router.last_frame, PmuFrame)
+    assert isinstance(client.frame, PmuFrame)
+    notes.close()
+    await client.stop()
+
+
 async def test_a_refusal_when_the_command_is_applied_reaches_the_error_topic(live):
     run, transport = live
     errors = transport.subscribe(ErrorEvent, app="app", key=live_key("live"))
@@ -187,6 +210,50 @@ async def test_the_shared_run_takes_its_source_s_commands_even_if_the_pipeline_w
     with pytest.raises(CommandRefused, match="never negative"):
         run.dispatch(Nudge(amount=-1))
     await run.stop()
+
+
+async def test_what_a_late_configured_source_says_beside_its_frames_still_goes_out():
+    # As for its commands: a live source the environment added after the pipeline was read still has
+    # what it says beside its frames published under its key, and heard by a run that follows it.
+    calls = {"n": 0}
+
+    def later_sources() -> SourceSet:
+        calls["n"] += 1
+        return SourceSet([ListSource("rec")] if calls["n"] == 1 else [ListSource("rec"), CommandedSource("live")])
+
+    transport = InMemoryTransport()
+    pipeline = Pipeline("app", later_sources)
+    assert pipeline.source_outputs == ()  # read before the live source was there
+    notes = transport.subscribe(Note, app="app", key=live_key("live"))
+    await notes.ready(5)
+    (run,) = await start_live_runs(pipeline, transport)
+    await until(lambda: run.frame is not None)
+    client = PipelineRun("a", pipeline, transport)
+    await client.start()
+    client.dispatch(SwitchSourceCommand(source="live"))
+    await until(lambda: client.following == live_key("live"))
+    await asyncio.sleep(0.1)  # its subscription to the live run is being received
+    run.dispatch(Nudge(amount=3))
+    ((_, note),) = await take(notes, 1)
+    assert note.text == "nudged by 3"
+    await until(lambda: client.latest.get(Note) is not None)
+    notes.close()
+    await client.stop()
+    await run.stop()
+
+
+async def test_what_a_live_source_says_is_never_dropped_for_its_frames(live):
+    # A shared run whose outbox is full of frames still publishes every note: a report the graph's
+    # writer would miss for good, where a frame is soon followed by the next.
+    run, transport = live
+    run.outbox.maxsize = 1
+    notes = transport.subscribe(Note, app="app", key=live_key("live"), overflow=Overflow.GROW)
+    await notes.ready(5)
+    for amount in range(5):
+        run.dispatch(Nudge(amount=amount))
+    got = await take(notes, 5)
+    assert sorted(note.text for _, note in got) == [f"nudged by {i}" for i in range(5)]
+    notes.close()
 
 
 async def test_a_router_not_on_the_live_source_refuses_its_commands():

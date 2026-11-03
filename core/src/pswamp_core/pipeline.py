@@ -324,6 +324,8 @@ class PipelineRun:
         #: A shared run's source's own commands, which it takes even when the pipeline was read
         #: before that source was configured (``<APP>_SOURCES`` adds it from the environment).
         self._own: tuple[type[Command], ...] = tuple(self.sources.active.commands) if self.shared else ()
+        #: Likewise what it says beside its frames, which it publishes.
+        self._said: frozenset[type[DataModel]] = frozenset(self.sources.active.outputs[1:]) if self.shared else frozenset()
         self.latest = NewestByClass()
         self.outbox = Outbox(
             transport,
@@ -353,8 +355,8 @@ class PipelineRun:
 
     def publish(self, message: DataModel) -> None:
         """What the active source publishes: remembered here, and put on the transport
-        when a module reads it, it is an error, or it is a shared run's frame or
-        status."""
+        when a module reads it, it is an error, or it is a shared run's frame,
+        status, or what its live source says beside its frames."""
         mark = self.router.stream_mark
         if mark != self._mark:
             self._mark = mark
@@ -365,9 +367,16 @@ class PipelineRun:
         elif message is self.router.last_frame:
             self.frame = message
         self._remember(message)
-        shared = self.shared and (message is self.router.last_frame or isinstance(message, PlayerStatus))
+        shared = self.shared and (
+            message is self.router.last_frame
+            or isinstance(message, PlayerStatus)
+            or type(message) in self.pipeline.source_outputs
+            or type(message) in self._said
+        )
         if shared or type(message) in self.pipeline.inputs or isinstance(message, ErrorEvent):
-            self.outbox.publish(message)
+            # What a live source says beside its frames is a report: never dropped for a frame's room.
+            said = type(message) in self.pipeline.source_outputs or type(message) in self._said
+            self.outbox.publish(message, keep=self.shared and said)
 
     def status(self) -> PlayerStatus:
         """The player's status as this run's viewer sees it: its router's,
@@ -411,9 +420,12 @@ class PipelineRun:
         if key is None:
             return
         model = self.sources.active.model
+        # What the followed source says beside its frames, even if it was configured after the
+        # pipeline was read.
+        said = dict.fromkeys((*self.pipeline.source_outputs, *self.sources.active.outputs[1:]))
         self.frame = None
         self._following = self.transport.subscribe(
-            model, PlayerStatus, *self.pipeline.results, app=self.pipeline.app, key=key
+            model, PlayerStatus, *self.pipeline.results, *said, app=self.pipeline.app, key=key
         )
         self._tasks.append(asyncio.create_task(self._receive_followed(self._following, model), name=f"{self.key}.follow"))
 
