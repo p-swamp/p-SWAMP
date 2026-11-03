@@ -34,3 +34,4 @@ team's own code do not need one.
 | [012](012-read-history-through-a-remote-data-contract.md) | Read a deployment's history through a small HTTP contract; p-SWAMP stores nothing |
 | [013](013-put-a-cim-reference-id-on-each-frame.md) | Put a CIM reference id on each frame, never grid data |
 | [014](014-keep-the-cim-graph-in-one-oxigraph-store-with-one-writer.md) | Keep the CIM graph in one Oxigraph store, with one writer, readable by every module |
+| [015](015-command-the-live-simulation-and-let-it-report-cim-edits.md) | Command the live simulation, and let it report what it did to the CIM graph |

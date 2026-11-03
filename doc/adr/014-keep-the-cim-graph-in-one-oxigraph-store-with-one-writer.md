@@ -1,6 +1,6 @@
 # ADR-014: Keep the CIM graph in one Oxigraph store, with one writer, readable by every module
 
-- Status: Proposed
+- Status: Proposed; how the simulation is steered is superseded by [ADR-015](015-command-the-live-simulation-and-let-it-report-cim-edits.md)
 - Date: 2026-10-15
 
 ## Context
