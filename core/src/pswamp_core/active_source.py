@@ -38,8 +38,9 @@ this is the receiver of the commands that steer it, like any command receiver
 recording carries to the next one switched to, as the single player of old did.
 
 The router publishes into its sink (the run): the frames and ``PlayerStatus``
-of a pumped source, an ``ErrorEvent`` when its stream fails, and, through the
-playable source, the same for a recording. It is named ``player`` in error
+of a pumped source, what a live source says beside its frames
+(``outputs[1:]``) and answers its commands with, an ``ErrorEvent`` when its
+stream fails, and, through the playable source, the same for a recording. It is named ``player`` in error
 reports, which is what a page and the error tray know it by.
 """
 
@@ -252,10 +253,15 @@ class ActiveSource:
         backoff, until the source is switched away from. An outage is
         reported once, when it starts; the feed is back at its next frame."""
         delay, down = _REOPEN_S, False
+        model = self._sources.active.model
         while True:
             opened = time.monotonic()
             try:
                 async for frame in stream:
+                    if type(frame) is not model:
+                        # What the source says beside its frames: published, but no frame.
+                        self._sink.publish(frame)
+                        continue
                     if down:
                         down = False
                         self.error, self.ended, self.paused = None, False, False
