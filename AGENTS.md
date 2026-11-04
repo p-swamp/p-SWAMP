@@ -721,8 +721,11 @@ wants at least 40).
 `modules/rtsim-from-cim/` is a live `SourceModule` (`pswamp-rtsim-from-cim`, `cim = True`):
 one TOPS dynamic simulation of the grid in the CIM graph, run in real time and published as
 `PmuFrame`, one column group per PMU Analog of the graph (`pmu.py`; voltage and frequency
-per voltage level, current per line end), each column carrying its Analog. **The graph is
-how it is steered; the source has no commands** (yet: `doc/WIP-rtsim-commands-plan.md`, ADR-015).
+per voltage level, current per line end), each column carrying its Analog. **It is steered by commands, and follows the graph**
+(ADR-015, `doc/WIP-rtsim-commands-plan.md`): an operation (a switch; the terminal of a line with no
+breaker) is applied, then said as `CimEdits` for the graph's one writer; a disturbance (a trip, a
+fault, a load step) stays in the simulation, announced as a `SimEvent` and seen only in the frames.
+A live source's commands go to its shared run (`pswamp_core`: `Pipeline.source_commands`).
 The simulation is LazyCIM's **`LiveTops`** (TOPS 0.6) over the export `engine.EXPORT`: every node a
 bus and every switch a TOPS `Switch`, the parts the slack bus cannot reach left out, a PLL on every
 bus, the graph's controllers. `LiveTops` decides what a change of the graph means for a running

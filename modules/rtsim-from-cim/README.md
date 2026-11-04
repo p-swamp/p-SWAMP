@@ -4,15 +4,35 @@
 `RtsimFromCimSource`, entry point `rtsim-from-cim` (group `pswamp.modules`).
 
 A **live source**: a TOPS dynamic simulation of the grid in the **CIM graph**, run in real time.
-The graph is the one copy of the grid (`pswamp_core.cim`, ADR-014), and it is how the simulation is
-steered: whoever edits the graph (the web backend's CIM graph app, its only writer) steers it. There
-are no commands. Not playable: a run follows the source as it goes.
+The graph is the one copy of what is *known* of the grid (`pswamp_core.cim`, ADR-014); the
+simulation is what *is* (ADR-015). It is steered by **commands**, and it also follows the graph:
+whoever edits the graph (the web backend's CIM graph app, its only writer) steers it too. Not
+playable: a run follows the source as it goes.
 
 | | Message | Topic | Defined in |
 |---|---|---|---|
 | Reads | nothing on the transport (the CIM graph, through its own repository: `cim = True`) | | |
 | Emits | `PmuFrame` (mRID `rtsim-from-cim`): one column group per PMU Analog of the graph, each column carrying its Analog (`header.analog`) | `pmu.frame` | `pswamp_models.pmu` |
-| Accepts | nothing | | |
+| Emits | `SimEvent`: every command applied, announced at once | `sim.event` | `pswamp_models.rtsim` |
+| Emits | `CimEdits` (producer `rtsim`): an operation, once the engine applied it, for the graph's one writer | `cim.edits` | `pswamp_models.cim` |
+| Accepts | `OperateSwitchCommand`, `OperateLineCommand` (operations); `TripBranchCommand`, `ReconnectBranchCommand`, `ShortCircuitCommand`, `ClearShortCircuitCommand`, `LoadStepCommand` (disturbances); `ResetSimulationCommand` | `<app>.<command>`, under its shared run's key | `pswamp_models.rtsim` |
+
+## Commands
+
+A command reaches the source through its shared run (`live.<source>`), and the controller applies it
+through `LiveTops`:
+
+| Command | In the simulation | Reported to the graph |
+|---|---|---|
+| `OperateSwitchCommand(mRID, open)` | the TOPS `Switch` opened or closed | `Switch.open`, once a frame has run |
+| `OperateLineCommand(mRID, in_service)` (a line with no breaker) | the line disconnected or connected | `ACDCTerminal.connected`: its first terminal out, all of them back |
+| `TripBranchCommand`, `ReconnectBranchCommand` (a line or a transformer) | the branch disconnected or connected | never: a disturbance |
+| `ShortCircuitCommand(mRID, y)`, `ClearShortCircuitCommand` (a connectivity node) | a fault at the node's bus, through `y` | never |
+| `LoadStepCommand(mRID, p_mw, q_mvar)` | the load's power set | never |
+| `ResetSimulationCommand` | the model built again from the graph: every disturbance gone | nothing changes in the graph |
+
+A command for an object the running model does not have, or a switch already in that state, is
+refused; so is any command while the simulation does not run.
 
 ## What it measures
 

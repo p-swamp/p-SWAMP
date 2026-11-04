@@ -14,6 +14,12 @@ and, only when it moved, marks the profiles that change stale (SSH and SV) and h
 follow the graph (LazyCIM's ``refresh``, which reads those again and nothing else). When the stamp
 has not moved it reads nothing else.
 
+``command()`` applies one of the source's commands (ADR-015). An operation (a switch; the terminal
+of a line that has no breaker) goes to the engine, and once a frame has run since, ``reports()``
+gives it as ``CimEdits``: what the graph's one writer should now write. A disturbance (a branch
+tripped or reconnected, a short circuit, a load step) goes to the engine only. Both are announced,
+at once, as a ``SimEvent``. A reset starts the simulation over from the graph.
+
 ``ControllerProcess`` runs one in a process of its own, over a shared store: a refresh is a second
 or so of Python, which would hold up everything else in the server's process.
 """
@@ -23,15 +29,47 @@ from __future__ import annotations
 import multiprocessing
 import time
 from collections.abc import Callable
+from typing import Any
 
 from lazycim.sim.tops_live import LiveTops
 from pswamp_core.cim import CimSettings, GraphVersion, connect_reader, open_store, refresh_expired
+from pswamp_core.command_routing import CommandRefused
+from pswamp_core.util.time import utcnow
+from pswamp_models.cim import CimEdit, CimEdits
+from pswamp_models.common import Command, DataModel
+from pswamp_models.rtsim import (
+    ClearShortCircuitCommand,
+    LoadStepCommand,
+    OperateLineCommand,
+    OperateSwitchCommand,
+    ReconnectBranchCommand,
+    ResetSimulationCommand,
+    ShortCircuitCommand,
+    SimEvent,
+    TripBranchCommand,
+)
 
 from .engine import EXPORT
 from .pmu import read_analogs
-from .runner import RemoteRunner, follow
+from .runner import RemoteRunner, follow, restart
 
-__all__ = ["Controller", "ControllerProcess"]
+__all__ = ["COMMANDS", "PRODUCER", "Controller", "ControllerProcess"]
+
+#: What the simulation says it is, as the producer of its ``CimEdits``.
+PRODUCER = "rtsim"
+#: The commands the controller applies.
+COMMANDS: tuple[type[Command], ...] = (
+    OperateSwitchCommand,
+    OperateLineCommand,
+    TripBranchCommand,
+    ReconnectBranchCommand,
+    ShortCircuitCommand,
+    ClearShortCircuitCommand,
+    LoadStepCommand,
+    ResetSimulationCommand,
+)
+#: What a ``SimEvent`` of the simulation as a whole (a reset) is about.
+STREAM_ID = "rtsim-from-cim"
 
 
 class Controller:
@@ -43,6 +81,11 @@ class Controller:
         self.version = version
         self.live = LiveTops.from_repo(repo, dt=dt, **EXPORT)
         self.runner: RemoteRunner | None = None
+        #: Why each switch the simulation operated was operated, until it is reported: by mRID.
+        self._causes: dict[str, tuple[str, str | None]] = {}
+        #: Operations of a line's terminal not yet reported: the frame they were handed over at, the
+        #: event, and the edits to report once the engine has applied it.
+        self._pending: list[tuple[int, tuple, CimEdits]] = []
 
     @property
     def sim(self):
@@ -64,10 +107,116 @@ class Controller:
         refresh_expired(self.live.exporter.repo)
         return follow(self.live, self.runner)
 
+    # -- commands -----------------------------------------------------------------------------
+
+    def command(self, command: Command) -> list[DataModel]:
+        """Apply ``command``; return what to announce now (a ``SimEvent``). ``CommandRefused`` when it
+        does not apply: an object of another kind, or a switch already in that state."""
+        try:
+            return [self._apply(command)]
+        except (KeyError, ValueError) as error:
+            raise CommandRefused(str(error).strip("'\"")) from error
+
+    def reports(self) -> list[CimEdits]:
+        """What the simulation did that the graph should know, once the engine has applied it: the
+        switches it operated, and the terminals of the lines it operated."""
+        out = []
+        for mrid, attribute, value, t in self.live.cim_changes():
+            cause, request = self._causes.pop(mrid, ("command", None))
+            out.append(self._edits(cause, request, t, [CimEdit(mRID=mrid, attribute=attribute, value=value)]))
+        runner, waiting = self.runner, []
+        rejected = [event for event, _ in runner.rejected]
+        for sent, event, edits in self._pending:
+            if runner.frame <= sent:
+                waiting.append((sent, event, edits))
+            elif event not in rejected:
+                out.append(edits)
+        self._pending = waiting
+        return out
+
+    def _apply(self, command: Command) -> SimEvent:
+        live, ids, runner = self.live, self.sim.ids, self.runner
+        mrid = getattr(command, "mRID", None)
+        if isinstance(command, OperateSwitchCommand):
+            changed = live.open(mrid) if command.open else live.close(mrid)
+            if not changed:
+                raise ValueError(f"{mrid} is already {'open' if command.open else 'closed'}")
+            self._causes[mrid] = ("command", command.request_id)
+            return self._event("open" if command.open else "close", command, "command")
+        if isinstance(command, OperateLineCommand):  # a line or a transformer, by its terminal
+            category, model, name = _branch(ids, mrid)
+            action = "connect" if command.in_service else "disconnect"
+            event = (category, model, name, action, {})
+            runner.submit(*event[:4])
+            edits = self._edits("command", command.request_id, live.time, self._terminals(mrid, command.in_service))
+            self._pending.append((runner.frame, event, edits))
+            return self._event("reconnect" if command.in_service else "trip", command, "command")
+        if isinstance(command, TripBranchCommand | ReconnectBranchCommand):
+            category, model, name = _branch(ids, mrid)
+            runner.submit(category, model, name, "connect" if isinstance(command, ReconnectBranchCommand) else "disconnect")
+            return self._event("reconnect" if isinstance(command, ReconnectBranchCommand) else "trip", command, "disturbance")
+        if isinstance(command, ShortCircuitCommand | ClearShortCircuitCommand):
+            bus = ids["node_to_bus"].get(mrid)
+            if bus is None or bus in ids.get("de_energised", {}):
+                raise ValueError(f"{mrid} is no energised node of the simulation")
+            if isinstance(command, ShortCircuitCommand):
+                runner.submit("buses", "", bus, "short_circuit", y=command.y)
+                return self._event("short_circuit", command, "disturbance")
+            runner.submit("buses", "", bus, "clear_short_circuit")
+            return self._event("clear_short_circuit", command, "disturbance")
+        if isinstance(command, LoadStepCommand):
+            power = {key: value for key, value in (("P", command.p_mw), ("Q", command.q_mvar)) if value is not None}
+            runner.submit("loads", "Load", _row(ids, "loads", mrid), "set_power", **power)
+            return self._event("load_step", command, "disturbance", detail=", ".join(f"{k} {v:g}" for k, v in power.items()))
+        if isinstance(command, ResetSimulationCommand):
+            said = restart(live, runner, "a reset")
+            return self._event("reset", command, "command", detail="; ".join(said))
+        raise ValueError(f"{command.name} is not a command of the simulation")
+
+    def _terminals(self, line: str, connected: bool) -> list[CimEdit]:
+        """The edits that take a line out by its first terminal, or bring it back by all of them: as
+        the graph's writer does it for a line with no breaker."""
+        terminals = sorted(self.live.exporter.repo.from_mRID(line).Terminals, key=lambda t: t.sequenceNumber or 0)
+        chosen = terminals if connected else terminals[:1]
+        return [CimEdit(mRID=t.mRID, attribute="ACDCTerminal.connected", value=connected) for t in chosen]
+
+    def _event(self, kind: str, command: Command, cause: str, *, detail: str | None = None) -> SimEvent:
+        return SimEvent(
+            timestamp=utcnow(),
+            mRID=getattr(command, "mRID", None) or STREAM_ID,
+            kind=kind,
+            cause=cause,
+            sim_time=self.live.time,
+            detail=detail,
+            request_id=command.request_id,
+        )
+
+    @staticmethod
+    def _edits(cause: str, request: str | None, sim_time: float, edits: list[CimEdit]) -> CimEdits:
+        return CimEdits(timestamp=utcnow(), producer=PRODUCER, cause=cause, sim_time=sim_time, request_id=request, edits=edits)
+
+
+def _row(ids: dict[str, Any], component: str, mrid: str) -> str:
+    """The model's row of ``mrid`` in ``component``; ``KeyError`` naming it when there is none."""
+    for name, found in ids.get(component, {}).items():
+        if found == mrid:
+            return name
+    raise KeyError(f"{mrid} is no {component[:-1]} of the simulation")
+
+
+def _branch(ids: dict[str, Any], mrid: str) -> tuple[str, str, str]:
+    """The TOPS category, model and row of a line or a transformer."""
+    for component, category, model in (("lines", "lines", "Line"), ("transformers", "trafos", "Trafo")):
+        for name, found in ids.get(component, {}).items():
+            if found == mrid:
+                return category, model, name
+    raise KeyError(f"{mrid} is no line or transformer of the simulation")
+
 
 def _watch(control, link, up, settings: CimSettings, poll: float, dt: float) -> None:
-    """The controller's process: export, say so, then take the engine's state as it comes and look at
-    the stamp every ``poll`` seconds, until told to stop (anything on ``control``, or its end closing)."""
+    """The controller's process: export, say so, then take the engine's state as it comes, look at the
+    stamp every ``poll`` seconds, say what it reports, and apply each command that comes down
+    ``control`` at once, until told to stop (``None`` on ``control``, or its end closing)."""
     try:
         version = GraphVersion(open_store(settings))  # watched from before the export
         repo = connect_reader(settings)
@@ -83,16 +232,39 @@ def _watch(control, link, up, settings: CimSettings, poll: float, dt: float) -> 
             while link.poll():
                 controller.receive(link.recv())
             try:
-                for said in controller.changes():
-                    up.send(("log", said))
+                said = controller.changes()
+                for line in said:
+                    up.send(("log", line))
+                if any("built again" in line for line in said):
+                    up.send(("ids", controller.sim.ids))
             except (BrokenPipeError, EOFError, OSError):
                 raise
             except Exception as error:  # noqa: BLE001 -- a store down for a moment must not end the stream
                 up.send(("warning", f"the graph could not be followed, the simulation keeps its last state: {error}"))
-            if control.poll(max(0.0, poll - (time.monotonic() - started))):
-                return
+            if reports := controller.reports():
+                up.send(("said", reports))
+            while (wait := poll - (time.monotonic() - started)) > 0 and control.poll(wait):
+                message = control.recv()
+                if message is None:
+                    return
+                _answer(controller, message[1], up)
     except (BrokenPipeError, EOFError, OSError, KeyboardInterrupt):
         return
+
+
+def _answer(controller: Controller, command: Command, up) -> None:
+    """Apply ``command``, and say what came of it: ``("answer", request_id, messages, refusal)``."""
+    try:
+        messages = controller.command(command)
+    except CommandRefused as refused:
+        up.send(("answer", command.request_id, None, str(refused)))
+        return
+    except Exception as error:  # noqa: BLE001 -- said back, and the controller goes on
+        up.send(("answer", command.request_id, None, f"{type(error).__name__}: {error}"))
+        return
+    up.send(("answer", command.request_id, messages, None))
+    if isinstance(command, ResetSimulationCommand):
+        up.send(("ids", controller.sim.ids))
 
 
 class ControllerProcess:
@@ -125,11 +297,16 @@ class ControllerProcess:
             raise message[1] if message[0] == "error" else RuntimeError(f"the controller said {message!r}")
         return message[1:]
 
-    def receive(self) -> tuple[str, str] | None:
-        """The controller's next ``("log" | "warning", text)`` (blocking: from a thread); ``None`` once it
-        has ended."""
-        kind, *rest = self._receive()
-        return None if kind == "gone" else (kind, f"{rest[0]}")
+    def command(self, command: Command) -> None:
+        """Hand ``command`` over; its answer comes back through ``receive``."""
+        self._control.send(("command", command))
+
+    def receive(self) -> tuple | None:
+        """What the controller says next (blocking: from a thread): ``("log" | "warning", text)``,
+        ``("said", reports)``, ``("answer", request_id, messages, refusal)`` or ``("ids", ids)``;
+        ``None`` once it has ended."""
+        message = self._receive()
+        return None if message[0] == "gone" else message
 
     def _receive(self) -> tuple:
         try:
