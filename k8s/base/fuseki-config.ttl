@@ -1,0 +1,23 @@
+## Fuseki assembler config for the Nordic44 TDB2 dataset.
+## tdb2:unionDefaultGraph true is required because all Nordic44 data lives
+## in named graphs (CIM profile separation: EQ/SSH/TP/SV/etc) — without
+## this, default-graph queries (used by Graph Explorer and most simple
+## SPARQL clients) would see nothing. See plan.md for background.
+@prefix :      <#> .
+@prefix fuseki: <http://jena.apache.org/fuseki#> .
+@prefix tdb2:  <http://jena.apache.org/2016/tdb#> .
+@prefix ja:    <http://jena.hpl.hp.com/2005/11/Assembler#> .
+@prefix rdf:   <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:  <http://www.w3.org/2000/01/rdf-schema#> .
+
+:service a fuseki:Service ;
+    fuseki:name "ds" ;
+    fuseki:endpoint [ fuseki:operation fuseki:query ; fuseki:name "query" ] ;
+    fuseki:endpoint [ fuseki:operation fuseki:update ; fuseki:name "update" ] ;
+    fuseki:endpoint [ fuseki:operation fuseki:gsp-r ; fuseki:name "get" ] ;
+    fuseki:endpoint [ fuseki:operation fuseki:gsp-rw ; fuseki:name "store" ] ;
+    fuseki:dataset :dataset .
+
+:dataset a tdb2:DatasetTDB2 ;
+    tdb2:location "/fuseki/databases/nordic44" ;
+    tdb2:unionDefaultGraph true .

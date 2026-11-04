@@ -96,7 +96,7 @@ spec:
             # derived data, so the pod stays stateless. PSWAMP_CIM_PATH names a folder of CGMES files
             # instead (the image carries a small one: /workspace/p-SWAMP/core/src/pswamp_core/cim/sample_grid).
             - name: PSWAMP_CIM_URL
-              value: http://$(PSWAMP_OXIGRAPH_HOST):7878
+              value: http://$(PSWAMP_OXIGRAPH_HOST):3030/ds
             - name: LAZYCIM_DATA_DIR
               value: /tmp/lazycim
           volumeMounts:
@@ -203,7 +203,7 @@ spec:
               value: frame-stats,excursion
             # A module that reads the grid (cim = True) reads it here.
             - name: PSWAMP_CIM_URL
-              value: http://$(PSWAMP_OXIGRAPH_HOST):7878
+              value: http://$(PSWAMP_OXIGRAPH_HOST):3030/ds
           resources:
             requests:
               cpu: "100m"
@@ -267,7 +267,7 @@ spec:
               value: http://$(PSWAMP_REMOTE_DATA_HOST):8100
             # It reads the sources, and through them the CIM graph (it never writes it).
             - name: PSWAMP_CIM_URL
-              value: http://$(PSWAMP_OXIGRAPH_HOST):7878
+              value: http://$(PSWAMP_OXIGRAPH_HOST):3030/ds
             - name: LAZYCIM_DATA_DIR
               value: /tmp/lazycim
           resources:
@@ -473,51 +473,70 @@ metadata:
 data:
   PSWAMP_KAFKA_HOST: p-swamp-kafka
   PSWAMP_REMOTE_DATA_HOST: p-swamp-remote-data-stub
-  PSWAMP_OXIGRAPH_HOST: p-swamp-oxigraph
+  PSWAMP_OXIGRAPH_HOST: p-swamp-jena
 ---
-# Oxigraph, in memory: the store of the CIM graph. No volume: the server loads the grid into
-# the empty store when it starts, so a restart puts every edit back, like the rest of the
-# stack. Plain SPARQL 1.1 (queries at /query, updates at /update); --union-default-graph
-# merges the named graphs (one per CGMES profile) into the default one.
+# Jena/Fuseki, TDB2 in an emptyDir (no PVC): the store of the CIM graph. No
+# volume that survives a restart: the server loads the grid into the empty
+# store when it starts, so a restart puts every edit back, like the rest of
+# the stack. Plain SPARQL 1.1 at /ds/query and /ds/update; the assembler
+# config (jena-config below) sets tdb2:unionDefaultGraph true, merging the
+# named graphs (one per CGMES profile) into the default one, and names the
+# Graph Store Protocol endpoint "store" to match what LazyCIM's
+# OxigraphServerBackend expects.
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: p-swamp-oxigraph
+  name: p-swamp-jena
   labels:
-    app: p-swamp-oxigraph
+    app: p-swamp-jena
 spec:
   replicas: 1
   strategy:
     type: Recreate
   selector:
     matchLabels:
-      app: p-swamp-oxigraph
+      app: p-swamp-jena
   template:
     metadata:
       labels:
-        app: p-swamp-oxigraph
+        app: p-swamp-jena
     spec:
       securityContext:
         runAsNonRoot: true
-        runAsUser: 10001
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
         seccompProfile:
           type: RuntimeDefault
       containers:
-        - name: oxigraph
-          image: ghcr.io/oxigraph/oxigraph:0.5.2
+        - name: fuseki
+          image: jena-fuseki:6.2.0
+          imagePullPolicy: Never
           securityContext:
             allowPrivilegeEscalation: false
             privileged: false
             capabilities:
               drop: [ALL]
-          args: ["serve", "--bind", "0.0.0.0:7878", "--union-default-graph"]
+          args:
+            - --conf=/fuseki/config.ttl
+          env:
+            - name: JAVA_OPTIONS
+              value: "-Xmx512m -Xms256m"
           ports:
             - name: http
-              containerPort: 7878
+              containerPort: 3030
           readinessProbe:
-            tcpSocket:
-              port: 7878
-            periodSeconds: 5
+            httpGet:
+              path: /$/ping
+              port: http
+            initialDelaySeconds: 3
+            periodSeconds: 2
+          livenessProbe:
+            httpGet:
+              path: /$/ping
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 10
           resources:
             requests:
               cpu: "100m"
@@ -525,19 +544,31 @@ spec:
             limits:
               cpu: "2"
               memory: "1Gi"
+          volumeMounts:
+            - name: tdb-data
+              mountPath: /fuseki/databases
+            - name: jena-config
+              mountPath: /fuseki/config.ttl
+              subPath: fuseki-config.ttl
+      volumes:
+        - name: tdb-data
+          emptyDir: {}
+        - name: jena-config
+          configMap:
+            name: p-swamp-jena-config
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: p-swamp-oxigraph
+  name: p-swamp-jena
   labels:
-    app: p-swamp-oxigraph
+    app: p-swamp-jena
 spec:
   type: ClusterIP
   selector:
-    app: p-swamp-oxigraph
+    app: p-swamp-jena
   ports:
     - name: http
       protocol: TCP
-      port: 7878
-      targetPort: 7878
+      port: 3030
+      targetPort: 3030
