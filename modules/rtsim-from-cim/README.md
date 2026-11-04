@@ -15,7 +15,7 @@ playable: a run follows the source as it goes.
 | Emits | `PmuFrame` (mRID `rtsim-from-cim`): one column group per PMU Analog of the graph, each column carrying its Analog (`header.analog`) | `pmu.frame` | `pswamp_models.pmu` |
 | Emits | `SimEvent`: every command applied, announced at once | `sim.event` | `pswamp_models.rtsim` |
 | Emits | `CimEdits` (producer `rtsim`): an operation, once the engine applied it, for the graph's one writer | `cim.edits` | `pswamp_models.cim` |
-| Accepts | `OperateSwitchCommand`, `OperateLineCommand` (operations); `TripBranchCommand`, `ReconnectBranchCommand`, `ShortCircuitCommand`, `ClearShortCircuitCommand`, `LoadStepCommand` (disturbances); `ResetSimulationCommand` | `<app>.<command>`, under its shared run's key | `pswamp_models.rtsim` |
+| Accepts | `OperateSwitchCommand`, `OperateLineCommand` (operations); `TripBranchCommand`, `ReconnectBranchCommand`, `ShortCircuitCommand`, `ClearShortCircuitCommand`, `FaultAndClearCommand`, `LoadStepCommand` (disturbances); `ResetSimulationCommand` | `<app>.<command>`, under its shared run's key | `pswamp_models.rtsim` |
 
 ## Commands
 
@@ -29,10 +29,24 @@ through `LiveTops`:
 | `TripBranchCommand`, `ReconnectBranchCommand` (a line or a transformer) | the branch disconnected or connected | never: a disturbance |
 | `ShortCircuitCommand(mRID, y)`, `ClearShortCircuitCommand` (a connectivity node) | a fault at the node's bus, through `y` | never |
 | `LoadStepCommand(mRID, p_mw, q_mvar)` | the load's power set | never |
+| `FaultAndClearCommand(mRID, end, clear_ms, y)` (a line) | a fault at the bus of that end now; after `clear_ms` the breakers that isolate the line open (the line itself where it has none) and the fault goes, on time to the frame | the breakers, or the terminal, as protection's; never the fault |
 | `ResetSimulationCommand` | the model built again from the graph: every disturbance gone | nothing changes in the graph |
 
 A command for an object the running model does not have, or a switch already in that state, is
 refused; so is any command while the simulation does not run.
+
+## Protection
+
+The controller runs it on the engine's state each time it looks at the graph (`protection.py`):
+
+- **Overload**: a line end carrying more than `OVERLOAD_PICKUP` times its permanent current limit
+  (the graph's `CurrentLimit`: the one with the longest acceptable duration, or none) trips the line
+  after an inverse time, the IEC standard inverse curve `t = TMS · 0.14 / ((I/Ip)^0.02 − 1)` (with
+  `OVERLOAD_TMS` 0.5: about 13 s at 1.3 times, 5 s at twice). The time is spent while the overload
+  lasts and starts over when it falls back under. The sample grid has no limits; Nordic44 has 474.
+- **Tripping** is by the breakers that isolate the line at both ends (`LiveTops.breakers_isolating`:
+  an end shared with other equipment has none), or by the line's terminal where there are none.
+  Each breaker opened is a `SimEvent` and, once applied, `CimEdits` with cause `protection`.
 
 ## What it measures
 
@@ -92,7 +106,10 @@ is installed, how a rebuild goes while one "runs", and that a machine's set-poin
 **Settings** (`{SOURCE}_{SETTING}`, `RTSIM_RATE` for a source named `rtsim`):
 - `RATE`: frames per second (50);
 - `DT`: the integration step in simulated seconds (0.01); `RATE * DT` must make whole steps per frame;
-- `POLL`: the time between two looks at the graph's version stamp (0.2).
+- `POLL`: the time between two looks at the graph's version stamp (0.2);
+- `PROTECTION`: `on` (the default) or `off`, whether an overloaded line is tripped;
+- `OVERLOAD_PICKUP` (1.0) and `OVERLOAD_TMS` (0.5): the overload relay's pickup, as a multiple of a
+  line's permanent limit, and its curve's time multiplier.
 
 **The simulation runs in real time in a process of its own** (`process.py`, `EngineProcess`): it is
 built from the model `LiveTops` exported, stepped and paced there, and each frame's values are sent
@@ -143,6 +160,7 @@ Against Oxigraph, run `core/tests/test_cim_oxigraph.py` (opt-in, `PSWAMP_TEST_CI
 | `source.py` | the stream, and what follows the graph |
 | `follow.py` | `Controller`: `LiveTops` over the graph; `ControllerProcess`, the same in a process of its own |
 | `runner.py` | `RemoteRunner`: the stand-in through which `LiveTops` steers the engine |
+| `protection.py` | the overload relay's curve, and what has spent its time |
 | `engine.py` | `SimEngine`, the TOPS system the engine steps, and what it is sent |
 | `process.py` | `EngineProcess`: the engine, paced in real time, in a process of its own |
 | `pmu.py` | the PMU layout, from the graph's Analogs |

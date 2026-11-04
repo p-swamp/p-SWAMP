@@ -178,6 +178,17 @@ def test_the_frame_rate_and_step_must_make_whole_steps_per_frame():
         make(poll=0.0)
 
 
+def test_protection_is_on_by_default_and_set_by_its_settings():
+    on = make().protection
+    assert (on.enabled, on.pickup, on.tms) == (True, 1.0, 0.5)
+    off = make(protection="off", overload_pickup=1.2, overload_tms=0.1).protection
+    assert (off.enabled, off.pickup, off.tms) == (False, 1.2, 0.1)
+    with pytest.raises(ValueError, match="on or off"):
+        make(protection="maybe")
+    with pytest.raises(ValueError, match="positive"):
+        make(overload_tms=0.0)
+
+
 async def test_it_runs_in_real_time_and_publishes_the_graph_s_pmu_analogs():
     async with Run(make()) as run:
         await run.until(lambda: len(run.frames) >= 5)

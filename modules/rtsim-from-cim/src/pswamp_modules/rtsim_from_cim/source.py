@@ -62,6 +62,7 @@ from pswamp_models.common import Command, DataModel
 from pswamp_models.pmu import PmuFrame
 from pswamp_models.rtsim import (
     ClearShortCircuitCommand,
+    FaultAndClearCommand,
     LoadStepCommand,
     OperateLineCommand,
     OperateSwitchCommand,
@@ -74,6 +75,7 @@ from pswamp_models.rtsim import (
 from .follow import COMMANDS, Controller, ControllerProcess
 from .pmu import read_analogs
 from .process import MAX_LAG, EngineProcess
+from .protection import ProtectionSettings
 
 __all__ = ["MAX_LAG", "RtsimFromCimSource", "follows_apart"]
 
@@ -93,6 +95,9 @@ class RtsimFromCimSource(SourceModule):
         EnvSetting("RATE", "Frames per second", default="50", kind="float"),
         EnvSetting("DT", "Integration step, simulated seconds", default="0.01", kind="float"),
         EnvSetting("POLL", "Seconds between two looks at the graph's version stamp", default="0.2", kind="float"),
+        EnvSetting("PROTECTION", "Whether a line over its current limit is tripped: on or off", default="on"),
+        EnvSetting("OVERLOAD_PICKUP", "The multiple of a line's permanent limit it trips over", default="1.0", kind="float"),
+        EnvSetting("OVERLOAD_TMS", "The overload curve's time multiplier (IEC standard inverse)", default="0.5", kind="float"),
     )
 
     def __init__(
@@ -109,6 +114,15 @@ class RtsimFromCimSource(SourceModule):
         self.steps_per_frame = round(1.0 / (rate * dt))
         if self.steps_per_frame < 1 or abs(self.steps_per_frame * rate * dt - 1.0) > 1e-6:
             raise ValueError(f"RATE ({rate}) and DT ({dt}) must make a whole number of steps per frame period")
+        if self.settings.protection not in ("on", "off"):
+            raise ValueError(f"PROTECTION is on or off, not {self.settings.protection!r}")
+        if self.settings.overload_pickup <= 0 or self.settings.overload_tms <= 0:
+            raise ValueError("OVERLOAD_PICKUP and OVERLOAD_TMS must be positive")
+        self.protection = ProtectionSettings(
+            enabled=self.settings.protection == "on",
+            pickup=self.settings.overload_pickup,
+            tms=self.settings.overload_tms,
+        )
         self._graph = graph
         self._repo = repo
         #: The running simulation, as commands reach it; ``None`` while it does not run.
@@ -153,7 +167,7 @@ class RtsimFromCimSource(SourceModule):
             # Starting takes seconds (the graph is read and exported, the load flow solved), and a
             # window may close before it is done: then the stream ends, and the start is left to finish.
             if apart:
-                controller = ControllerProcess(settings, poll=self.settings.poll, dt=self.settings.dt)
+                controller = ControllerProcess(settings, poll=self.settings.poll, dt=self.settings.dt, protection=self.protection)
                 starting = loop.run_in_executor(graph, controller.ready)
             else:
                 ours, theirs = multiprocessing.get_context("spawn").Pipe()  # the controller's end, the engine's
@@ -216,7 +230,7 @@ class RtsimFromCimSource(SourceModule):
         store = Store.of(self._repo) if self._repo is not None else open_store(self._graph)
         version = GraphVersion(store)  # watched from before the export
         repo = self._connect()
-        self._controller = Controller(repo, version, dt=self.settings.dt)
+        self._controller = Controller(repo, version, dt=self.settings.dt, protection=self.protection)
         self._controller.attach(link.send)
         sim = self._controller.sim
         return sim.model, sim.ids, read_analogs(repo)
@@ -323,6 +337,7 @@ _OBJECTS = {
     ShortCircuitCommand: (("node_to_bus",), "node"),
     ClearShortCircuitCommand: (("node_to_bus",), "node"),
     LoadStepCommand: (("loads",), "load"),
+    FaultAndClearCommand: (("lines",), "line"),
 }
 
 

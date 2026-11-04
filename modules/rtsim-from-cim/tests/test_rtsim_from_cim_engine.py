@@ -125,6 +125,19 @@ def test_an_input_set_on_a_model_reaches_it(engine, sim):
     assert after.f_hz.mean() < before.f_hz.mean() - 1e-3
 
 
+def test_messages_for_later_are_due_at_their_time_on_the_build_s_clock(engine, sim):
+    later = [switch(BAY_BREAKER, "open")]
+    engine.apply(("at", 0.05, later))
+    engine.step(4)
+    assert engine.due() == []  # 0.04 s
+    engine.step(1)
+    assert engine.due() == later and engine.due() == []  # once
+    engine.apply(("at", 1.0, later))
+    engine.rebuild(sim.model)
+    engine.step(200)
+    assert engine.due() == []  # a model built again forgets what was for later
+
+
 def test_an_event_that_does_not_apply_raises_and_changes_nothing(engine):
     with pytest.raises(KeyError):
         engine.apply(switch("unknown", "open"))
