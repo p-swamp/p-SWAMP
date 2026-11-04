@@ -22,7 +22,9 @@ wait for the interpreter behind a refresh. This stands in for TOPS's simulator i
   again, which leaves a local simulator, and installs itself again (``_stale`` says why);
 - a machine's voltage and power are set with ``set_input`` on the shadow's models, not through
   ``apply_event``: the shadow's ``set_input`` is wrapped to send them down too;
-- ``LiveTops.events()`` is never used: it would replace a schedule the engine never sees.
+- ``LiveTops.events()`` is never used: it would replace a schedule the engine never sees;
+- a restart from the graph (``restart``) marks ``LiveTops`` stale (``_stale``), as a refresh that
+  cannot be absorbed does, and follows.
 
 A command counts as done (``LiveTops.cim_changes``) once the engine has sent a frame after it was
 handed over, which may be a frame or two before the engine applied it.
@@ -37,7 +39,7 @@ from typing import Any
 
 import numpy as np
 
-__all__ = ["RemoteRunner", "follow"]
+__all__ = ["RemoteRunner", "follow", "restart"]
 
 
 @dataclass
@@ -141,3 +143,10 @@ def follow(live: Any, runner: RemoteRunner) -> list[str]:
         return said
     runner.rebuild(live)
     return said
+
+
+def restart(live: Any, runner: RemoteRunner, reason: str) -> list[str]:
+    """Start the simulation over from the model the graph gives now, at steady state, the clock running
+    on: whatever was done to it that the graph does not say (a line tripped, a fault) is gone."""
+    live._stale = reason
+    return follow(live, runner)

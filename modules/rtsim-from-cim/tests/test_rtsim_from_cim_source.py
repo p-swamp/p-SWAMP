@@ -18,8 +18,12 @@ from pswamp_core.cim.testing import edit, reset
 from pswamp_core.playable import Playable
 from pswamp_core.testing import SourceConformance
 from pswamp_core.util.time import utcnow
+from pswamp_core.command_routing import CommandRefused
+from pswamp_models.cim import CimEdits
 from pswamp_models.pmu import PmuFrame
+from pswamp_models.rtsim import OperateSwitchCommand, SimEvent, TripBranchCommand
 from pswamp_modules.rtsim_from_cim import RtsimFromCimSource
+from pswamp_modules.rtsim_from_cim.follow import COMMANDS
 from pswamp_modules.rtsim_from_cim import follow as follow_module
 from pswamp_modules.rtsim_from_cim import source as source_module
 
@@ -52,14 +56,16 @@ class Run:
     def __init__(self, source: RtsimFromCimSource) -> None:
         self.source = source
         self.frames: list[PmuFrame] = []
+        #: What it said beside its frames: ``CimEdits`` and ``SimEvent``.
+        self.said: list = []
 
     async def __aenter__(self) -> Run:
         self.task = asyncio.create_task(self._pump())
         return self
 
     async def _pump(self) -> None:
-        async for frame in self.source.aread():
-            self.frames.append(frame)
+        async for record in self.source.aread():
+            (self.frames if isinstance(record, PmuFrame) else self.said).append(record)
 
     async def __aexit__(self, *exc) -> None:
         self.task.cancel()
@@ -82,10 +88,84 @@ def angles(frame: PmuFrame) -> np.ndarray:
     return values - values[0]
 
 
-def test_it_is_a_live_source_that_reads_the_graph_with_no_commands_and_is_not_playable():
+def test_it_is_a_live_source_that_reads_the_graph_takes_commands_and_is_not_playable():
     assert (RtsimFromCimSource.name, RtsimFromCimSource.kind, RtsimFromCimSource.cim) == ("rtsim-from-cim", "live", True)
-    assert RtsimFromCimSource.outputs == (PmuFrame,) and RtsimFromCimSource.commands == ()
+    assert RtsimFromCimSource.outputs == (PmuFrame, CimEdits, SimEvent)
+    assert RtsimFromCimSource.commands == COMMANDS
     assert not issubclass(RtsimFromCimSource, Playable)
+
+
+def test_a_transformer_is_operated_as_a_line():
+    from pswamp_models.rtsim import OperateLineCommand
+
+    ids = {"lines": {"L": "line-mrid"}, "transformers": {"T": "trafo-mrid"}}
+    source_module._check(OperateLineCommand(mRID="trafo-mrid", in_service=False), ids)  # accepted
+    with pytest.raises(CommandRefused, match="no line or transformer"):
+        source_module._check(OperateLineCommand(mRID="nowhere", in_service=False), ids)
+
+
+def test_a_command_before_the_simulation_runs_is_refused():
+    with pytest.raises(CommandRefused, match="not running"):
+        make().validate(OperateSwitchCommand(mRID=BAY_BREAKER, open=True))
+
+
+async def commanded(apart: bool, monkeypatch) -> None:
+    """A breaker opened by command shows in the frames and is reported for the graph, which the source
+    never writes; an object the simulation lacks is refused before it is sent."""
+    if apart:
+        monkeypatch.setattr(source_module, "follows_apart", lambda settings: True)
+    source = make()
+    async with Run(source) as run:
+        await run.until(lambda: len(run.frames) >= 25)
+        before = angles(run.frames[-1])
+        with pytest.raises(CommandRefused, match="no switch"):
+            source.validate(OperateSwitchCommand(mRID="nowhere", open=True))
+        command = OperateSwitchCommand(mRID=BAY_BREAKER, open=True)
+        source.validate(command)
+        (event,) = await source.arun_command(command)
+        assert isinstance(event, SimEvent) and event.request_id == command.request_id
+        await run.until(lambda: any(isinstance(m, CimEdits) for m in run.said), timeout=10)
+        (edits,) = [m for m in run.said if isinstance(m, CimEdits)]
+        assert (edits.request_id, edits.edits[0].mRID, edits.edits[0].value) == (command.request_id, BAY_BREAKER, True)
+        await run.until(lambda: np.max(np.abs(angles(run.frames[-1]) - before)) > 0.1, timeout=10)
+        with pytest.raises(CommandRefused, match="already open"):
+            await source.arun_command(OperateSwitchCommand(mRID=BAY_BREAKER, open=True))
+        # A disturbance: announced, never reported for the graph.
+        await source.arun_command(TripBranchCommand(mRID="3f5e0000-0000-4000-8000-000000000024"))
+        await asyncio.sleep(1)
+        assert len([m for m in run.said if isinstance(m, CimEdits)]) == 1
+
+
+async def test_a_breaker_commanded_opens_in_the_simulation_and_is_reported_for_the_graph(monkeypatch):
+    await commanded(apart=False, monkeypatch=monkeypatch)
+
+
+async def test_commands_reach_a_controller_in_a_process_of_its_own(monkeypatch):
+    await commanded(apart=True, monkeypatch=monkeypatch)
+
+
+@needs_profiles
+async def test_what_the_simulation_reports_is_taken_however_slow_following_the_graph_is():
+    # Following the graph is Python work in the server's process, so it backs off for three times as
+    # long as it took; what the simulation reports (a breaker it opened) must not wait for that.
+    import time
+
+    source = make()
+    async with Run(source) as run:
+        await run.until(lambda: len(run.frames) >= 25)
+        controller = source._controller
+        follow_graph = controller.changes
+
+        def slow() -> list[str]:
+            time.sleep(1.5)  # a refresh of a big export
+            return follow_graph()
+
+        controller.changes = slow
+        await asyncio.sleep(2)  # into its back-off
+        sent = time.monotonic()
+        await source.arun_command(OperateSwitchCommand(mRID=BAY_BREAKER, open=True))
+        await run.until(lambda: any(isinstance(m, CimEdits) for m in run.said), timeout=10)
+        assert time.monotonic() - sent < 2.5
 
 
 def test_the_frame_rate_and_step_must_make_whole_steps_per_frame():

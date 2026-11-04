@@ -50,7 +50,8 @@ class OperateSwitchCommand(_OnObject):
 
 
 class OperateLineCommand(_OnObject):
-    """Take a line that has no breaker out of service, or bring it back, by its terminal."""
+    """Take a line or a transformer that has no breaker out of service, or bring it back, by its
+    terminal."""
 
     in_service: bool
 

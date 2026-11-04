@@ -8,8 +8,12 @@ LazyCIM's ``LiveTops`` (TOPS 0.6), and runs the simulation **in real time**: one
 simulated time per frame period of the clock. It publishes ``PmuFrame``: one column group per PMU
 Analog of the graph, each column carrying its Analog (``pmu``), ``RATE`` frames per second.
 
-It has no commands yet. **The graph is how it is steered**: whoever edits the graph (the CIM graph
-app, its one writer) steers the simulation. A controller (``follow``) holds ``LiveTops``, which
+**It takes commands** (ADR-015, ``follow.COMMANDS``): an operation (a switch, the terminal of a line
+that has no breaker) or a disturbance (a branch tripped or reconnected, a short circuit, a load
+step), or a reset. Each is announced as a ``SimEvent``; an operation, once the engine has applied
+it, is also said as ``CimEdits`` for the graph's one writer; a disturbance never is. **It also
+follows the graph**: whoever edits it (the CIM graph app, its one writer) steers the simulation too.
+A controller (``follow``) holds ``LiveTops``, which
 follows the graph when its version stamp says it changed: it looks at the stamp every ``POLL``
 seconds (one tiny query), and only then reads the profiles that change (SSH, SV). ``LiveTops``
 decides what a change means for the running simulation, and the controller sends it to the engine's
@@ -48,13 +52,26 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 
 from pswamp_core.cim import CimSettings, GraphVersion, Store, connect_reader, open_store
+from pswamp_core.command_routing import CommandRefused
 from pswamp_core.log import get_logger
 from pswamp_core.settings import EnvSetting
 from pswamp_core.sources import SourceModule
 from pswamp_core.util.time import utcnow
+from pswamp_models.cim import CimEdits
+from pswamp_models.common import Command, DataModel
 from pswamp_models.pmu import PmuFrame
+from pswamp_models.rtsim import (
+    ClearShortCircuitCommand,
+    LoadStepCommand,
+    OperateLineCommand,
+    OperateSwitchCommand,
+    ReconnectBranchCommand,
+    ShortCircuitCommand,
+    SimEvent,
+    TripBranchCommand,
+)
 
-from .follow import Controller, ControllerProcess
+from .follow import COMMANDS, Controller, ControllerProcess
 from .pmu import read_analogs
 from .process import MAX_LAG, EngineProcess
 
@@ -70,7 +87,8 @@ class RtsimFromCimSource(SourceModule):
     name = "rtsim-from-cim"
     kind = "live"
     cim = True
-    outputs = (PmuFrame,)
+    outputs = (PmuFrame, CimEdits, SimEvent)
+    commands = COMMANDS
     env_settings = (
         EnvSetting("RATE", "Frames per second", default="50", kind="float"),
         EnvSetting("DT", "Integration step, simulated seconds", default="0.01", kind="float"),
@@ -93,6 +111,25 @@ class RtsimFromCimSource(SourceModule):
             raise ValueError(f"RATE ({rate}) and DT ({dt}) must make a whole number of steps per frame period")
         self._graph = graph
         self._repo = repo
+        #: The running simulation, as commands reach it; ``None`` while it does not run.
+        self._steering: _Steering | None = None
+
+    # -- commands -----------------------------------------------------------------------------
+
+    def validate(self, command: Command) -> None:
+        """Refuse a command while the simulation does not run, or for an object it does not have."""
+        steering = self._steering
+        if steering is None:
+            raise CommandRefused(f"{command.name}: the simulation is not running")
+        _check(command, steering.ids())
+
+    async def ahandle(self, command: Command) -> list[DataModel]:
+        """Hand ``command`` to the controller; what it announces (a ``SimEvent``) is the answer, and what
+        it reports later (``CimEdits``) comes with the frames."""
+        steering = self._steering
+        if steering is None:
+            raise CommandRefused(f"{command.name}: the simulation is not running")
+        return await steering.command(command)
 
     def _connect(self):
         if self._repo is not None:
@@ -138,11 +175,15 @@ class RtsimFromCimSource(SourceModule):
                 link=controller.link if apart else theirs,
             )
             theirs = None  # the engine's process took it over
-            watch = asyncio.create_task(self._relay(controller, graph) if apart else self._follow(controller, ours, graph))
+            steering = self._steering = _Steering(controller, graph, ids)
+            watch = asyncio.create_task(self._relay(steering) if apart else self._follow(steering, ours))
             header = None
             meter = RateMeter(self.settings.rate)
             while True:
-                for kind, *message in await loop.run_in_executor(receive, engine.receive):
+                received = await loop.run_in_executor(receive, engine.receive)
+                while not steering.said.empty():
+                    yield steering.said.get_nowait()
+                for kind, *message in received:
                     if kind == "error":
                         raise message[0]
                     if kind == "log":
@@ -156,6 +197,7 @@ class RtsimFromCimSource(SourceModule):
                         meter.tick()
                         yield PmuFrame(timestamp=stamped, mRID=STREAM_ID, header=header, values=values)
         finally:
+            self._steering = None
             if watch is not None:
                 watch.cancel()
             if engine is not None:
@@ -179,41 +221,123 @@ class RtsimFromCimSource(SourceModule):
         sim = self._controller.sim
         return sim.model, sim.ids, read_analogs(repo)
 
-    async def _follow(self, controller: Controller, link, graph: ThreadPoolExecutor) -> None:
-        """The graph followed from a thread of the server's process (a store of its own)."""
-        loop = asyncio.get_running_loop()
+    async def _follow(self, steering: _Steering, link) -> None:
+        """The graph followed, and the simulation's reports taken, from a thread of the server's process
+        (a store of its own). Two paces: what the engine sends and what the simulation reports are
+        taken every ``POLL``, which is cheap; the graph is followed at most every ``POLL`` and busy a
+        quarter of the time at most, since a refresh is Python work in the server's process, which
+        everything else there shares. A report so never waits for the graph's back-off."""
+        loop, controller = asyncio.get_running_loop(), steering.controller
 
-        def tick() -> list[str] | None:
+        def take() -> list[CimEdits] | None:
             try:
                 while link.poll():
                     controller.receive(link.recv())
             except (EOFError, OSError):
                 return None  # the engine is gone, and the stream with it
-            return controller.changes()
+            return controller.reports()
 
+        due = 0.0  # when the graph is next followed
         while True:
             started = time.monotonic()
             try:
-                said = await loop.run_in_executor(graph, tick)
-                if said is None:
+                reports = await loop.run_in_executor(steering.graph, take)
+                if reports is None:
                     return
-                for line in said:
-                    logger.info("%s", line)
+                for report in reports:
+                    steering.said.put_nowait(report)
+                if started >= due:
+                    try:
+                        for line in await loop.run_in_executor(steering.graph, controller.changes):
+                            logger.info("%s", line)
+                    finally:
+                        took = time.monotonic() - started
+                        due = time.monotonic() + max(self.settings.poll - took, 3 * took)
             except Exception as error:  # a store that is down for a moment must not end the stream
                 logger.warning("the graph could not be followed, the simulation keeps its last state: %s", error)
-            took = time.monotonic() - started
-            # At most every POLL, and busy a quarter of the time at most: a refresh is Python work in
-            # the server's process, which everything else there shares.
-            await asyncio.sleep(max(self.settings.poll - took, 3 * took))
+            await asyncio.sleep(max(0.0, self.settings.poll - (time.monotonic() - started)))
 
     @staticmethod
-    async def _relay(controller: ControllerProcess, graph: ThreadPoolExecutor) -> None:
-        """What the controller's process says, logged here (from the graph's thread, free once it has
-        started: its wait ends when the controller does)."""
+    async def _relay(steering: _Steering) -> None:
+        """What the controller's process says, taken here (from the graph's thread, free once it has
+        started: its wait ends when the controller does): its logs, its reports, its answers to
+        commands, and the ids of a model built again."""
+        loop, controller = asyncio.get_running_loop(), steering.controller
+        while (said := await loop.run_in_executor(steering.graph, controller.receive)) is not None:
+            kind, *rest = said
+            if kind in ("log", "warning"):
+                (logger.info if kind == "log" else logger.warning)("%s", rest[0])
+            elif kind == "said":
+                for report in rest[0]:
+                    steering.said.put_nowait(report)
+            elif kind == "answer":
+                steering.answered(*rest)
+            elif kind == "ids":
+                steering.known = rest[0]
+
+
+class _Steering:
+    """The running simulation, as commands reach it: its controller (a thread's ``Controller``, or a
+    ``ControllerProcess``), the ids of its model, and what it says beside the frames."""
+
+    #: How long a command may wait for the controller (one busy refreshing the export, say).
+    ANSWER_S = 30.0
+
+    def __init__(self, controller: Controller | ControllerProcess, graph: ThreadPoolExecutor, ids: dict) -> None:
+        self.controller, self.graph, self.known = controller, graph, ids
+        self.said: asyncio.Queue[DataModel] = asyncio.Queue()
+        self._answers: dict[str, asyncio.Future] = {}
+
+    def ids(self) -> dict:
+        """The ids of the model running now: the controller's own, or the last a process sent."""
+        return self.controller.sim.ids if isinstance(self.controller, Controller) else self.known
+
+    async def command(self, command: Command) -> list[DataModel]:
         loop = asyncio.get_running_loop()
-        while (said := await loop.run_in_executor(graph, controller.receive)) is not None:
-            kind, text = said
-            (logger.info if kind == "log" else logger.warning)("%s", text)
+        if isinstance(self.controller, Controller):
+            return await loop.run_in_executor(self.graph, self.controller.command, command)
+        answer = self._answers[command.request_id] = loop.create_future()
+        try:
+            self.controller.command(command)
+            async with asyncio.timeout(self.ANSWER_S):
+                return await answer
+        finally:
+            self._answers.pop(command.request_id, None)
+
+    def answered(self, request: str, messages: list[DataModel] | None, refused: str | None) -> None:
+        answer = self._answers.get(request)
+        if answer is not None and not answer.done():
+            if refused is not None:
+                answer.set_exception(CommandRefused(refused))
+            else:
+                answer.set_result(messages)
+
+
+#: What each command acts on, as the model's ids name it: a component of ``ids`` whose values are
+#: mRIDs, or ``node_to_bus``, whose keys are.
+_OBJECTS = {
+    OperateSwitchCommand: (("switches",), "switch"),
+    OperateLineCommand: (("lines", "transformers"), "line or transformer"),
+    TripBranchCommand: (("lines", "transformers"), "line or transformer"),
+    ReconnectBranchCommand: (("lines", "transformers"), "line or transformer"),
+    ShortCircuitCommand: (("node_to_bus",), "node"),
+    ClearShortCircuitCommand: (("node_to_bus",), "node"),
+    LoadStepCommand: (("loads",), "load"),
+}
+
+
+def _check(command: Command, ids: dict) -> None:
+    """Refuse a command for an object the running model does not have."""
+    found = _OBJECTS.get(type(command))
+    if found is None:
+        return
+    components, kind = found
+    mrid = command.mRID
+    for component in components:
+        group = ids.get(component, {})
+        if mrid in (group if component == "node_to_bus" else group.values()):
+            return
+    raise CommandRefused(f"{mrid} is no {kind} of the simulation")
 
 
 def follows_apart(settings: CimSettings) -> bool:
