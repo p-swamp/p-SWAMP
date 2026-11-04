@@ -2511,7 +2511,7 @@
     },
     "/api/cim-graph/lines/{mrid}": {
       "post": {
-        "description": "Take a line (or a transformer) out of service (``open: true``) or bring it back: the breakers\nthat cut one of its ends off, or, for a line with none, a terminal. 404 for an unknown branch, 409\nwhen it is already so.",
+        "description": "Take a line out of service (``open: true``) or bring it back, in the simulation: by the one\nbreaker that operates it, or, for a line with none, by its terminal. 404 for an unknown branch,\n409 when the graph says it is already so, or the simulation refuses; 503 without the simulation.",
         "operationId": "cim_graph_set_line",
         "parameters": [
           {
@@ -2576,7 +2576,7 @@
     },
     "/api/cim-graph/reset": {
       "post": {
-        "description": "Put the grid back as it was loaded: every switch as the model has it, every branch in service.",
+        "description": "Put the grid back as it was loaded: every switch as the model has it, every branch in service;\nand the simulation, when it runs, starts over from it, every disturbance gone.",
         "operationId": "cim_graph_reset",
         "parameters": [
           {
@@ -2622,7 +2622,7 @@
     },
     "/api/cim-graph/switches/{mrid}": {
       "post": {
-        "description": "Open (``open: true``) or close a switch. 404 for an unknown switch, 409 when it is already so.",
+        "description": "Open (``open: true``) or close a switch, in the simulation. 404 for an unknown switch, 409 when\nthe graph says it is already so, or the simulation refuses; 503 without the simulation.",
         "operationId": "cim_graph_set_switch",
         "parameters": [
           {

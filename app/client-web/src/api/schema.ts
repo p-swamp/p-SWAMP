@@ -35,9 +35,9 @@ export interface paths {
         put?: never;
         /**
          * Set Line
-         * @description Take a line (or a transformer) out of service (``open: true``) or bring it back: the breakers
-         *     that cut one of its ends off, or, for a line with none, a terminal. 404 for an unknown branch, 409
-         *     when it is already so.
+         * @description Take a line out of service (``open: true``) or bring it back, in the simulation: by the one
+         *     breaker that operates it, or, for a line with none, by its terminal. 404 for an unknown branch,
+         *     409 when the graph says it is already so, or the simulation refuses; 503 without the simulation.
          */
         post: operations["cim_graph_set_line"];
         delete?: never;
@@ -57,7 +57,8 @@ export interface paths {
         put?: never;
         /**
          * Reset
-         * @description Put the grid back as it was loaded: every switch as the model has it, every branch in service.
+         * @description Put the grid back as it was loaded: every switch as the model has it, every branch in service;
+         *     and the simulation, when it runs, starts over from it, every disturbance gone.
          */
         post: operations["cim_graph_reset"];
         delete?: never;
@@ -77,7 +78,8 @@ export interface paths {
         put?: never;
         /**
          * Set Switch
-         * @description Open (``open: true``) or close a switch. 404 for an unknown switch, 409 when it is already so.
+         * @description Open (``open: true``) or close a switch, in the simulation. 404 for an unknown switch, 409 when
+         *     the graph says it is already so, or the simulation refuses; 503 without the simulation.
          */
         post: operations["cim_graph_set_switch"];
         delete?: never;

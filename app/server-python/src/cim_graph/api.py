@@ -2,15 +2,19 @@
 graph that every module reads and the grid simulation follows (``pswamp_core.cim``).
 
 **This app is the graph's only writer** (``grid.Writer``). It fills the store when the server starts,
-in the background, and edits it when a visitor operates the grid, and when the live simulation
-reports what it did (``CimEdits`` from its shared run, ADR-015): a breaker it opened, the terminal
-of a line it took out. Nothing else writes it. So the
+in the background, and writes what the live simulation reports it did (``CimEdits`` from its shared
+run, ADR-015): a breaker it opened, the terminal of a line it took out. Nothing else writes it.
+
+**A visitor operates the grid through the simulation**, not the graph: a breaker or a line is a
+command to it (``shared.dispatch_live``), and the graph shows the result once the simulation has
+reported it. Without the simulation (a deployment that does not run it), the grid cannot be
+operated (503); a reset still puts the graph back. So the
 graph changes only when this app writes, and there is nothing to watch: after each write the state is
 read from the writer's own repository and pushed down every open socket. The graph is shared, not
 per client: a breaker opened by any visitor is opened for all of them, and the simulation follows it.
 
-Commands come up over REST (a switch, a line, a reset), each one SPARQL update acknowledged here and
-then shown on the socket like any other change; state goes down the socket.
+Commands come up over REST (a switch, a line, a reset), each acknowledged once the simulation has
+taken it, and shown on the socket like any other change; state goes down the socket.
 
 Until the grid is loaded this app answers 503 ("the grid is loading"), and its socket waits for it;
 when the grid cannot be had, 503 with the reason, and the socket closes with 1013. The rest of the
@@ -27,10 +31,13 @@ from fastapi import APIRouter, FastAPI, HTTPException, WebSocket
 from pswamp_core.subscription import Overflow
 from pswamp_core.util.tasks import cancel_and_wait
 from pswamp_models.cim import CimEdits
+from pswamp_models.rtsim import OperateLineCommand, OperateSwitchCommand, ResetSimulationCommand
 from shared import (
+    LIVE_RUNS,
     ClientId,
     CommandAck,
     SocketRegistry,
+    dispatch_live,
     get_logger,
     read_client_id,
     send_state,
@@ -185,8 +192,13 @@ async def layout() -> CimLayout:
 
 # --- REST commands -------------------------------------------------------------------
 #
-# Each is one update of the graph. The simulation and every screen follow the graph, so none of them
-# answers with state: the change arrives on the socket like any other.
+# Each is a command to the simulation, checked first against what the graph knows. None answers with
+# state: the change arrives on the socket once the simulation has reported it and it is written.
+
+
+def _operate(command, client_id: str) -> CommandAck:
+    app, source = SIMULATION
+    return dispatch_live(app, source, command.model_copy(update={"client_id": client_id}), logger)
 
 
 async def _writable() -> None:
@@ -197,40 +209,44 @@ async def _writable() -> None:
 
 @router.post("/switches/{mrid}", operation_id="cim_graph_set_switch")
 async def set_switch(mrid: str, body: SwitchBody, client_id: ClientId) -> CommandAck:
-    """Open (``open: true``) or close a switch. 404 for an unknown switch, 409 when it is already so."""
+    """Open (``open: true``) or close a switch, in the simulation. 404 for an unknown switch, 409 when
+    the graph says it is already so, or the simulation refuses; 503 without the simulation."""
     await _writable()
     state = await graph.known()
     if mrid not in state.switches:
         raise HTTPException(404, f"no switch {mrid}")
     if state.switches[mrid] == body.open:
         raise HTTPException(409, f"{mrid} is already {'open' if body.open else 'closed'}")
-    done = await graph.write(Writer.set_switch, mrid, body.open)
-    logger.info("client %s: %s", client_id, "; ".join(done))
-    return CommandAck(applied="open switch" if body.open else "close switch")
+    return _operate(OperateSwitchCommand(mRID=mrid, open=body.open), client_id)
 
 
 @router.post("/lines/{mrid}", operation_id="cim_graph_set_line")
 async def set_line(mrid: str, body: SwitchBody, client_id: ClientId) -> CommandAck:
-    """Take a line (or a transformer) out of service (``open: true``) or bring it back: the breakers
-    that cut one of its ends off, or, for a line with none, a terminal. 404 for an unknown branch, 409
-    when it is already so."""
+    """Take a line out of service (``open: true``) or bring it back, in the simulation: by the one
+    breaker that operates it, or, for a line with none, by its terminal. 404 for an unknown branch,
+    409 when the graph says it is already so, or the simulation refuses; 503 without the simulation."""
     await _writable()
     state = await graph.known()
     if mrid not in state.branches:
         raise HTTPException(404, f"no line {mrid}")
     if (mrid in state.out_of_service) == body.open:
         raise HTTPException(409, f"{mrid} is already {'out of' if body.open else 'in'} service")
-    done = await graph.write(Writer.set_line, mrid, body.open)
-    logger.info("client %s: %s", client_id, "; ".join(done))
-    return CommandAck(applied="line out" if body.open else "line in")
+    breaker = next((branch.breaker for branch in (await graph.layout()).branches if branch.mrid == mrid), None)
+    if breaker is not None:
+        return _operate(OperateSwitchCommand(mRID=breaker, open=body.open), client_id)
+    return _operate(OperateLineCommand(mRID=mrid, in_service=not body.open), client_id)
 
 
 @router.post("/reset", operation_id="cim_graph_reset")
 async def reset(client_id: ClientId) -> CommandAck:
-    """Put the grid back as it was loaded: every switch as the model has it, every branch in service."""
+    """Put the grid back as it was loaded: every switch as the model has it, every branch in service;
+    and the simulation, when it runs, starts over from it, every disturbance gone."""
     await graph.ready()
     await graph.write(Writer.reset)
     logger.info("client %s: the grid was reset", client_id)
+    app, source = SIMULATION
+    if (app, source) in LIVE_RUNS:
+        _operate(ResetSimulationCommand(), client_id)
     return CommandAck(applied="reset")
 
 
