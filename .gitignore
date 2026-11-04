@@ -266,3 +266,6 @@ node_modules/
 /e2e/playwright/.cache/
 /e2e/playwright/.auth/
 /test-results/
+
+# Corporate CA certificates for local build environment
+k8s/jena/docker/ca-certificates.crt

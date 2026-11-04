@@ -84,6 +84,13 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends curl \
     && rm -rf /var/lib/apt/lists/*
 
+# If you're building behind a TLS-intercepting corporate proxy, the server may 
+# fail at RUNTIME with a self-signed-certificate error when it downloads the 
+# Nordic44 grid model — see "Building behind corporate proxy" in README.md. 
+# Add your own CA bundle and uncomment:
+#   COPY k8s/jena/docker/<your-corporate-ca>.crt /usr/local/share/ca-certificates/corporate.crt
+#   RUN update-ca-certificates
+
 # Dependency manifests first, on their own layers: the install below is then
 # cached and re-runs only when a pyproject.toml/uv.lock actually changes, not on
 # every source edit. Same trick as `npm ci` in the web-build stage above. The

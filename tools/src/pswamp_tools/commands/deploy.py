@@ -24,9 +24,12 @@ app = typer.Typer(
     no_args_is_help=True,
 )
 
-IMAGE = "p-swamp:latest"
 # A kustomize overlay over k8s/base (see k8s/README.md), applied with `kubectl apply -k`.
 OVERLAY = "k8s/overlays/minikube"
+IMAGE = "p-swamp:latest"
+JENA_VERSION = "6.2.0"
+JENA_IMAGE = f"jena-fuseki:{JENA_VERSION}"
+JENA_BUILD_CONTEXT = "k8s/jena/docker"
 # Must stay in sync with the Service's nodePort in k8s/overlays/minikube.
 NODE_PORT = 30080
 # Rebuilt here and so restarted; Kafka is not, and a restart would empty its topics.
@@ -57,12 +60,16 @@ def image_present(listing: str, image: str = IMAGE) -> bool:
     return any(line.strip().endswith(f"/{image}") for line in listing.splitlines())
 
 
-def _build_image(root: Path) -> None:
-    _ui.section(f"Building {IMAGE} into minikube")
+def _build_image(root: Path, image: str = IMAGE, context: str = ".", build_args: dict[str, str] | None = None) -> None:
+    _ui.section(f"Building {image} into minikube")
     # Inside minikube's runtime, so the image lands where the kubelet looks and
     # matches the node's arch. Output is streamed and kept, to read the failure line.
+    command = [require_tools("minikube")["minikube"], "image", "build", "-t", image]
+    for key, value in (build_args or {}).items():
+        command += ["--build-opt", f"build-arg={key}={value}"]
+    command.append(context)
     process = subprocess.Popen(
-        [require_tools("minikube")["minikube"], "image", "build", "-t", IMAGE, "."],
+        command,
         cwd=root,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
@@ -76,10 +83,10 @@ def _build_image(root: Path) -> None:
         sys.stdout.flush()
     code = process.wait()
     if code != 0 or build_failed("".join(lines)):
-        raise DeployFailed("Refusing to deploy: the image build failed (see the error above).")
+        raise DeployFailed(f"Refusing to deploy: the {image} build failed (see the error above).")
     listing = capture(["minikube", "image", "ls"], cwd=root)
-    if not image_present(listing.stdout):
-        raise DeployFailed(f"Refusing to deploy: {IMAGE} is not in minikube's image store.")
+    if not image_present(listing.stdout, image=image):
+        raise DeployFailed(f"Refusing to deploy: {image} is not in minikube's image store.")
 
 
 def _apply(root: Path) -> None:
@@ -183,6 +190,7 @@ def minikube(
             _ui.section("Starting minikube")
             _must(run(["minikube", "start"], cwd=root), "minikube start")
         _build_image(root)
+        _build_image(root, JENA_IMAGE, JENA_BUILD_CONTEXT, {"JENA_VERSION": JENA_VERSION})
         _apply(root)
 
         with reachable_base_url(root) as (base, tunnelled):

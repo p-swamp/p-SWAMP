@@ -34,7 +34,7 @@ replacements:
           - data.PSWAMP_REMOTE_DATA_HOST
   - source:
       kind: Service
-      name: p-swamp-oxigraph
+      name: p-swamp-jena
     targets:
       - select:
           kind: ConfigMap
