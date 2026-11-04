@@ -6,7 +6,7 @@ nothing to install.
 
 ```
 k8s/
-  base/                 the stack, for any cluster: five Deployments, their Services, two ConfigMaps
+  base/                 the stack, for any cluster: six Deployments, their Services, two ConfigMaps
     p-swamp.yaml        the manifests; the header says what each object is
     kustomization.yaml  lists them and generates the live feed's ConfigMap
   components/hosts/     a helper for overlays that rename the stack
