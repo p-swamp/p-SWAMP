@@ -10,6 +10,7 @@ import subprocess
 
 import pytest
 from pswamp_tools._paths import repo_root
+from pswamp_tools.commands.deploy import JENA_IMAGE
 
 yaml = pytest.importorskip("yaml")
 
@@ -128,8 +129,10 @@ def test_every_pod_reads_its_hosts(rendered):
 def test_overlay_sets_every_p_swamp_image(rendered):
     for deployment, spec in _pod_specs(rendered).items():
         for container in spec["containers"]:
-            assert container["image"] == IMAGE or container["image"].startswith(
-                ("apache/kafka:", "ghcr.io/oxigraph/oxigraph:")
+            assert (
+                container["image"] == IMAGE
+                or container["image"] == JENA_IMAGE
+                or container["image"].startswith(("apache/kafka:", "ghcr.io/oxigraph/oxigraph:"))
             ), (
                 f"{deployment}/{container['name']}: {container['image']} (name the image p-swamp)"
             )
