@@ -2,7 +2,9 @@
 graph that every module reads and the grid simulation follows (``pswamp_core.cim``).
 
 **This app is the graph's only writer** (``grid.Writer``). It fills the store when the server starts,
-in the background, and edits it when a visitor operates the grid; nothing else writes it. So the
+in the background, and edits it when a visitor operates the grid, and when the live simulation
+reports what it did (``CimEdits`` from its shared run, ADR-015): a breaker it opened, the terminal
+of a line it took out. Nothing else writes it. So the
 graph changes only when this app writes, and there is nothing to watch: after each write the state is
 read from the writer's own repository and pushed down every open socket. The graph is shared, not
 per client: a breaker opened by any visitor is opened for all of them, and the simulation follows it.
@@ -22,6 +24,9 @@ from concurrent.futures import ThreadPoolExecutor
 from contextlib import asynccontextmanager
 
 from fastapi import APIRouter, FastAPI, HTTPException, WebSocket
+from pswamp_core.subscription import Overflow
+from pswamp_core.util.tasks import cancel_and_wait
+from pswamp_models.cim import CimEdits
 from shared import (
     ClientId,
     CommandAck,
@@ -29,6 +34,7 @@ from shared import (
     get_logger,
     read_client_id,
     send_state,
+    transport,
     wait_for_disconnect,
 )
 
@@ -38,6 +44,9 @@ from .model import CimGraphState, CimLayout, SwitchBody
 logger = get_logger("cim-graph")
 router = APIRouter()
 sockets = SocketRegistry()
+
+#: The live simulation of the graph: the app whose pipeline runs it, and the source's name there.
+SIMULATION = ("pmu-test-streamer", "rtsim")
 
 
 class Graph:
@@ -127,15 +136,37 @@ class Graph:
 graph = Graph()
 
 
+async def _write_reports() -> None:
+    """Write what the simulation reports (``CimEdits``) as it comes, once the grid is loaded. A report
+    that cannot be written (a producer or a property not allowed, an object the graph does not have)
+    is logged and dropped: the simulation goes on, and the graph keeps what it knows."""
+    app, source = SIMULATION
+    with transport().subscribe(CimEdits, app=app, key=f"live.{source}", overflow=Overflow.GROW) as reports:
+        async for _, report in reports:
+            try:
+                await graph.loaded()
+                done = await graph.write(Writer.apply, report)
+            except (PermissionError, LookupError) as refused:
+                logger.warning("%s reported what is not written: %s", report.producer, refused)
+                continue
+            except Exception:  # the grid is not available: nothing to write to
+                logger.exception("%s reported what could not be written", report.producer)
+                continue
+            logger.info("%s (%s): %s", report.producer, report.cause, "; ".join(done))
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Load the grid into the store, in the background, as the server starts."""
+    """Load the grid into the store, in the background, as the server starts; write what the
+    simulation reports."""
     global graph
     graph = Graph()
     graph.load()
+    writing = asyncio.create_task(_write_reports(), name="cim-graph.reports")
     try:
         yield
     finally:
+        await cancel_and_wait(writing, ignore=(Exception,))
         loading = graph._loading
         graph.stop()
         if loading is not None:

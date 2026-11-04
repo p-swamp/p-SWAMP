@@ -2,8 +2,9 @@
 where it all is on the map.
 
 **This is the only code that writes the CIM graph** (``Writer``). The store (``pswamp_core.cim``) is
-filled by it when the server starts, and edited by it when a visitor operates the grid; every other
-process and module only reads it. So the state the page shows changes only when this writes, and the
+filled by it when the server starts, and edited by it when a producer reports what the graph should
+now hold (``apply``: the live simulation's ``CimEdits``, ADR-015), for the properties ``ALLOWED``
+that producer; every other process and module only reads it. So the state the page shows changes only when this writes, and the
 writer's own repository, which nothing else changes behind its back, is always right: it is read
 after each write, from its cache, and pushed.
 
@@ -25,10 +26,15 @@ from lazycim.sim.base import Tables
 from lazycim.sim.topology import connectivity_buses, switch_states, terminal_table
 from pswamp_core.cim import CimSettings, Store, open_store
 from pswamp_core.cim.grid import NAMESPACE_ALIASES
+from pswamp_models.cim import CimEdits
 
 from .model import CimLayout, LayoutBranch, LayoutBreaker, LayoutSubstation, Point
 
-__all__ = ["GridState", "Writer", "read_layout", "read_state"]
+__all__ = ["ALLOWED", "GridState", "Writer", "read_layout", "read_state"]
+
+#: What each producer may have written, as ``<Class>.<attribute>``: the simulation, the state of the
+#: switches it operated and of the terminals of the lines it operated.
+ALLOWED: dict[str, frozenset[str]] = {"rtsim": frozenset({"Switch.open", "ACDCTerminal.connected"})}
 
 
 @dataclass(frozen=True)
@@ -165,6 +171,31 @@ class Writer:
                 self.repo.from_mRID(terminal).connected = True
         self.repo.commit()
         return done
+
+    def apply(self, edits: CimEdits) -> list[str]:
+        """Write what a producer reports (ADR-015), all or nothing, in one update. ``PermissionError``
+        for a producer, or a property, not in ``ALLOWED``; ``LookupError`` for an object that does not
+        have the property."""
+        allowed = ALLOWED.get(edits.producer)
+        if allowed is None:
+            raise PermissionError(f"{edits.producer} may not write the CIM graph")
+        refused = sorted({edit.attribute for edit in edits.edits} - allowed)
+        if refused:
+            raise PermissionError(f"{edits.producer} may not write {', '.join(refused)}")
+        targets = []
+        for edit in edits.edits:
+            try:
+                target = self.repo.from_mRID(edit.mRID)
+            except ValueError:
+                target = None
+            prop = edit.attribute.partition(".")[2]
+            if target is None or not hasattr(target, prop):
+                raise LookupError(f"{edit.mRID} has no {edit.attribute}")
+            targets.append((target, prop, edit))
+        for target, prop, edit in targets:
+            setattr(target, prop, edit.value)
+        self.repo.commit()
+        return [f"{edit.mRID} {edit.attribute} = {edit.value}" for _, _, edit in targets]
 
     def reset(self) -> None:
         """Put the steady-state hypothesis back as it was loaded, in one update."""
