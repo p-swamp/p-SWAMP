@@ -8,10 +8,10 @@ that producer; every other process and module only reads it. So the state the pa
 writer's own repository, which nothing else changes behind its back, is always right: it is read
 after each write, from its cache, and pushed.
 
-A switch is operated as it is. A line is taken out by the breakers of the bay at one of its ends
-(``_bays``: from the end, across closed disconnectors, up to the first breakers, when nothing but the
-line is in between), or, for a line with no such bay at either end, by disconnecting a terminal;
-brought back by closing those breakers and connecting its terminals. Everything here is synchronous and slow (HTTP, or rdflib), and
+The layout says, for each line, the one breaker that operates it (``_bays``: from an end, across
+closed disconnectors, up to the first breakers, when nothing but the line is in between); a line
+with none is operated by its terminal. Operating it is the simulation's (ADR-015), which reports
+what it did for ``apply`` to write. Everything here is synchronous and slow (HTTP, or rdflib), and
 runs on the app's one thread.
 """
 
@@ -132,45 +132,6 @@ class Writer:
     def state(self) -> GridState:
         self.tables.refresh()
         return read_state(self.tables)
-
-    def set_switch(self, mrid: str, open: bool) -> list[str]:  # noqa: A002
-        """Open or close the switch ``mrid``: one update. ``LookupError`` when there is none."""
-        try:
-            switch = self.repo.from_mRID(mrid)
-        except ValueError:
-            switch = None
-        if switch is None or not hasattr(switch, "open"):
-            raise LookupError(f"no switch {mrid}")
-        switch.open = open
-        self.repo.commit()
-        return [f"{mrid} {'opened' if open else 'closed'}"]
-
-    def set_line(self, mrid: str, open: bool) -> list[str]:  # noqa: A002
-        """Take the line ``mrid`` out (``open``) or bring it back: one update (see the module)."""
-        tables = Tables(self.repo)
-        ends = _bays(tables, mrid)
-        if not ends:
-            raise LookupError(f"no line {mrid}")
-        done: list[str] = []
-        if open:
-            breakers = next((found for found in ends if found), [])
-            for breaker in breakers:
-                self.repo.from_mRID(breaker).open = True
-                done.append(f"{breaker} opened")
-            if not breakers:
-                terminals = terminal_table(tables)
-                terminal = sorted(terminals[terminals["equipment"] == mrid].itertuples(), key=lambda t: t.sequence)[0]
-                self.repo.from_mRID(terminal.terminal).connected = False
-                done.append(f"terminal {terminal.terminal} disconnected")
-        else:
-            for breaker in sorted({b for found in ends for b in found}):
-                self.repo.from_mRID(breaker).open = False
-                done.append(f"{breaker} closed")
-            terminals = terminal_table(tables)
-            for terminal in terminals[terminals["equipment"] == mrid]["terminal"]:
-                self.repo.from_mRID(terminal).connected = True
-        self.repo.commit()
-        return done
 
     def apply(self, edits: CimEdits) -> list[str]:
         """Write what a producer reports (ADR-015), all or nothing, in one update. ``PermissionError``
