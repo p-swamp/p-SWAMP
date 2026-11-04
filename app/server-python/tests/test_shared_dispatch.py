@@ -57,3 +57,35 @@ def test_a_command_nothing_in_the_pipeline_takes_is_a_503():
     # The deployment lacks its receiver (a live source not configured): nothing to retry against.
     missing = answer(Run(NoReceiver("app has no receiver for PlayCommand")))
     assert (missing.status_code, missing.detail) == (503, "app has no receiver for PlayCommand")
+
+
+# -- a command to a live source's shared run ------------------------------------------------
+
+
+def live(runs: dict, command=None):
+    from shared import LIVE_RUNS, dispatch_live
+
+    LIVE_RUNS.clear()
+    LIVE_RUNS.update(runs)
+    try:
+        return dispatch_live("app", "sim", command or PlayCommand(client_id="7"), LOG)
+    except HTTPException as error:
+        return error
+    finally:
+        LIVE_RUNS.clear()
+
+
+def test_a_command_to_a_live_source_goes_to_its_shared_run():
+    run = Run()
+    ack = live({("app", "sim"): run})
+    assert ack.applied == "play" and run.dispatched[0].request_id == ack.request_id
+
+
+def test_no_shared_run_of_that_source_is_a_503():
+    missing = live({("app", "other"): Run()})
+    assert missing.status_code == 503 and "sim" in missing.detail
+
+
+def test_a_live_source_that_refuses_is_a_409():
+    refused = live({("app", "sim"): Run(CommandRefused("not now"))})
+    assert (refused.status_code, refused.detail) == (409, "not now")
