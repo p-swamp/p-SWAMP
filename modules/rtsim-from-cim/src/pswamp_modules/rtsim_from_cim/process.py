@@ -14,8 +14,9 @@ on its own clock.
 
 What the simulation does is decided elsewhere: by ``LiveTops``, in the controller (``follow``),
 which reaches this process through a **link**, a duplex pipe. Down it come the events and inputs
-to apply (``("event", ...)``, ``("input", ...)``) and whole models to start over from
-(``("build", n, model, ids)``), applied before the next frame's steps. Up it goes the state after
+to apply (``("event", ...)``, ``("input", ...)``), messages to apply at a later time on the build's
+clock (``("at", t, messages)``: a fault's clearing, on time to the frame) and whole models to start
+over from (``("build", n, model, ids)``), applied before the next frame's steps. Up it goes the state after
 each frame (``("state", build, frame, t, y, v, rejected)``), only the latest one when the controller
 is busy (a refresh takes a second): it reads the simulation from that, and is told which of the
 events it sent could not be applied.
@@ -169,6 +170,8 @@ def _run(up, down, link, latest, model, dt, rate, steps, analogs, ids) -> None: 
             except (EOFError, OSError):  # the controller is gone: the simulation goes on as it is
                 up.send(("log", "the simulation is no longer steered"))
                 link = None
+            for message in engine.due():  # what was sent for now: a fault's clearing
+                apply(message)
             due += period
             delay = due - time.monotonic()
             if delay > 0:

@@ -18,7 +18,11 @@ has not moved it reads nothing else.
 of a line that has no breaker) goes to the engine, and once a frame has run since, ``reports()``
 gives it as ``CimEdits``: what the graph's one writer should now write. A disturbance (a branch
 tripped or reconnected, a short circuit, a load step) goes to the engine only. Both are announced,
-at once, as a ``SimEvent``. A reset starts the simulation over from the graph.
+at once, as a ``SimEvent``. A reset starts the simulation over from the graph. A fault on a line
+is put on now and cleared by the breakers that isolate the line, on the engine's clock; and every
+look at the graph also runs the protection (``protection``) on the engine's latest state: a line
+over its current limit for long enough is tripped by its breakers. What protection opens is
+reported as an operation is, its cause ``protection``.
 
 ``ControllerProcess`` runs one in a process of its own, over a shared store: a refresh is a second
 or so of Python, which would hold up everything else in the server's process.
@@ -39,6 +43,7 @@ from pswamp_models.cim import CimEdit, CimEdits
 from pswamp_models.common import Command, DataModel
 from pswamp_models.rtsim import (
     ClearShortCircuitCommand,
+    FaultAndClearCommand,
     LoadStepCommand,
     OperateLineCommand,
     OperateSwitchCommand,
@@ -51,6 +56,7 @@ from pswamp_models.rtsim import (
 
 from .engine import EXPORT
 from .pmu import read_analogs
+from .protection import Overload, ProtectionSettings
 from .runner import RemoteRunner, follow, restart
 
 __all__ = ["COMMANDS", "PRODUCER", "Controller", "ControllerProcess"]
@@ -65,6 +71,7 @@ COMMANDS: tuple[type[Command], ...] = (
     ReconnectBranchCommand,
     ShortCircuitCommand,
     ClearShortCircuitCommand,
+    FaultAndClearCommand,
     LoadStepCommand,
     ResetSimulationCommand,
 )
@@ -74,13 +81,23 @@ STREAM_ID = "rtsim-from-cim"
 
 class Controller:
     """``repo``, a reader's repository over the graph, simulated by ``LiveTops`` (exported with
-    ``EXPORT``, stepped every ``dt`` simulated seconds) and followed when ``version`` (the graph's
-    stamp, watched from before the export) says it changed. For one thread."""
+    ``EXPORT``, stepped every ``dt`` simulated seconds), protected as ``protection`` says, and
+    followed when ``version`` (the graph's stamp, watched from before the export) says it changed.
+    For one thread."""
 
-    def __init__(self, repo, version: GraphVersion, *, dt: float) -> None:
+    def __init__(self, repo, version: GraphVersion, *, dt: float, protection: ProtectionSettings | None = None) -> None:
         self.version = version
         self.live = LiveTops.from_repo(repo, dt=dt, **EXPORT)
         self.runner: RemoteRunner | None = None
+        self.protection = protection or ProtectionSettings()
+        self._overload = Overload(self.protection)
+        #: Each protected line end's permanent current limit, A: ``{(line mRID, end): amperes}``.
+        self.limits = self._limits()
+        self._built = 0
+        #: What is to be done at a time on ``LiveTops``'s clock: a fault's clearing, in this process.
+        self._timers: list[tuple[float, Callable[[], list[DataModel]]]] = []
+        #: The lines protection has tripped, which it does not trip again.
+        self._tripped: set[str] = set()
         #: Why each switch the simulation operated was operated, until it is reported: by mRID.
         self._causes: dict[str, tuple[str, str | None]] = {}
         #: Operations of a line's terminal not yet reported: the frame they were handed over at, the
@@ -117,10 +134,11 @@ class Controller:
         except (KeyError, ValueError) as error:
             raise CommandRefused(str(error).strip("'\"")) from error
 
-    def reports(self) -> list[CimEdits]:
-        """What the simulation did that the graph should know, once the engine has applied it: the
+    def reports(self) -> list[DataModel]:
+        """What happened since the last call: what protection did (``SimEvent``), and what the
+        simulation did that the graph should know, once the engine has applied it (``CimEdits``): the
         switches it operated, and the terminals of the lines it operated."""
-        out = []
+        out: list[DataModel] = self._protect()
         for mrid, attribute, value, t in self.live.cim_changes():
             cause, request = self._causes.pop(mrid, ("command", None))
             out.append(self._edits(cause, request, t, [CimEdit(mRID=mrid, attribute=attribute, value=value)]))
@@ -168,10 +186,103 @@ class Controller:
             power = {key: value for key, value in (("P", command.p_mw), ("Q", command.q_mvar)) if value is not None}
             runner.submit("loads", "Load", _row(ids, "loads", mrid), "set_power", **power)
             return self._event("load_step", command, "disturbance", detail=", ".join(f"{k} {v:g}" for k, v in power.items()))
+        if isinstance(command, FaultAndClearCommand):
+            return self._fault(command)
         if isinstance(command, ResetSimulationCommand):
             said = restart(live, runner, "a reset")
             return self._event("reset", command, "command", detail="; ".join(said))
         raise ValueError(f"{command.name} is not a command of the simulation")
+
+    # -- protection ---------------------------------------------------------------------------
+
+    def _fault(self, command: FaultAndClearCommand) -> SimEvent:
+        """A fault at one end of a line now; cleared after ``clear_ms`` by the breakers that isolate the
+        line, or by the line itself where there are none: on time on the engine's clock, and here at
+        the next look after, which reports the breakers opened."""
+        live, ids, runner, line = self.live, self.sim.ids, self.runner, command.mRID
+        _row(ids, "lines", line)
+        terminal = next(
+            (t for t in live.exporter.repo.from_mRID(line).Terminals if t.sequenceNumber == command.end), None
+        )
+        bus = ids["node_to_bus"].get(getattr(getattr(terminal, "ConnectivityNode", None), "mRID", None))
+        if bus is None or bus in ids.get("de_energised", {}):
+            raise ValueError(f"end {command.end} of {line} is on no energised bus of the simulation")
+        runner.submit("buses", "", bus, "short_circuit", y=command.y)
+        when = live.time + command.clear_ms / 1000.0
+        breakers = self._isolating(line)
+        switch = {mrid: name for name, mrid in ids.get("switches", {}).items()}
+        opening = [("event", ("switches", "Switch", switch[b], "open", {})) for b in breakers if b in switch]
+        if not opening:
+            opening = [("event", ("lines", "Line", _row(ids, "lines", line), "disconnect", {}))]
+        runner.at(when, [*opening, ("event", ("buses", "", bus, "clear_short_circuit", {}))])
+
+        def cleared() -> list[DataModel]:
+            runner.submit("buses", "", bus, "clear_short_circuit")  # the engine has: here, the shadow
+            return self._trip(line, f"cleared the fault at end {command.end} after {command.clear_ms:g} ms", breakers)
+
+        self._timers.append((when, cleared))
+        return self._event(
+            "short_circuit", command, "disturbance", detail=f"at end {command.end}, cleared after {command.clear_ms:g} ms"
+        )
+
+    def _protect(self) -> list[DataModel]:
+        """What is due now: the timers whose time has come, and the overloads whose time is spent."""
+        live, runner = self.live, self.runner
+        if runner.build != self._built:  # a model built again: a grid at steady state
+            self._built, self.limits, self._tripped = runner.build, self._limits(), set()
+            self._overload.forget()
+        out: list[DataModel] = []
+        now = live.time + 1e-9
+        due, self._timers = [a for t, a in self._timers if t <= now], [(t, a) for t, a in self._timers if t > now]
+        for action in due:
+            out += action()
+        if not self.protection.enabled or not self.limits:
+            return out
+        readings = [
+            (line, end, abs(live.current(line, end)), limit)
+            for (line, end), limit in self.limits.items()
+            if line not in self._tripped
+        ]
+        for line, end, ratio in self._overload.check(live.time, readings):
+            if line not in self._tripped:  # both ends' relays may run out in one check: one trip
+                out += self._trip(line, f"overload: {ratio:.2f} x its pickup current at end {end}")
+        return out
+
+    def _trip(self, line: str, why: str, breakers: list[str] | None = None) -> list[DataModel]:
+        """Take ``line`` out as its protection does: by the breakers that isolate it, or by its terminal
+        where there are none. The breakers and the terminal are reported as protection's."""
+        live, runner = self.live, self.runner
+        self._tripped.add(line)
+        breakers = self._isolating(line) if breakers is None else breakers
+        out: list[DataModel] = []
+        opened = [b for b in breakers if b in self.sim.ids.get("switches", {}).values() and live.open(b)]
+        for breaker in opened:
+            self._causes[breaker] = ("protection", None)
+            out.append(self._said("open", breaker, "protection", why))
+        if not breakers:
+            name = _row(self.sim.ids, "lines", line)
+            event = ("lines", "Line", name, "disconnect", {})
+            runner.submit(*event[:4])
+            self._pending.append((runner.frame, event, self._edits("protection", None, live.time, self._terminals(line, False))))
+        out.append(self._said("trip", line, "protection", why))
+        return out
+
+    def _isolating(self, line: str) -> list[str]:
+        """The breakers that cut ``line`` off, at both ends."""
+        return sorted({b for end in (1, 2) for b in self.live.breakers_isolating(line, end)})
+
+    def _limits(self) -> dict[tuple[str, int], float]:
+        """Each line end's permanent current limit, where the graph has one."""
+        found = {}
+        for mrid in self.sim.ids.get("lines", {}).values():
+            for end in (1, 2):
+                limit = self.live.limit(mrid, end)
+                if limit is not None:
+                    found[(mrid, end)] = float(limit)
+        return found
+
+    def _said(self, kind: str, mrid: str, cause: str, detail: str) -> SimEvent:
+        return SimEvent(timestamp=utcnow(), mRID=mrid, kind=kind, cause=cause, sim_time=self.live.time, detail=detail)
 
     def _terminals(self, line: str, connected: bool) -> list[CimEdit]:
         """The edits that take a line out by its first terminal, or bring it back by all of them: as
@@ -213,14 +324,14 @@ def _branch(ids: dict[str, Any], mrid: str) -> tuple[str, str, str]:
     raise KeyError(f"{mrid} is no line or transformer of the simulation")
 
 
-def _watch(control, link, up, settings: CimSettings, poll: float, dt: float) -> None:
+def _watch(control, link, up, settings: CimSettings, poll: float, dt: float, protection: ProtectionSettings) -> None:
     """The controller's process: export, say so, then take the engine's state as it comes, look at the
     stamp every ``poll`` seconds, say what it reports, and apply each command that comes down
     ``control`` at once, until told to stop (``None`` on ``control``, or its end closing)."""
     try:
         version = GraphVersion(open_store(settings))  # watched from before the export
         repo = connect_reader(settings)
-        controller = Controller(repo, version, dt=dt)
+        controller = Controller(repo, version, dt=dt, protection=protection)
         controller.attach(link.send)
         up.send(("ready", controller.sim.model, controller.sim.ids, read_analogs(repo)))
     except Exception as error:  # noqa: BLE001 -- the caller raises it
@@ -273,7 +384,9 @@ class ControllerProcess:
     process through ``link`` (the engine's end of a duplex pipe, for ``EngineProcess``). ``ready``
     waits for the export; ``receive`` gives what the controller says, until it ends."""
 
-    def __init__(self, settings: CimSettings, *, poll: float, dt: float) -> None:
+    def __init__(
+        self, settings: CimSettings, *, poll: float, dt: float, protection: ProtectionSettings | None = None
+    ) -> None:
         context = multiprocessing.get_context("spawn")
         control_read, self._control = context.Pipe(duplex=False)
         #: The engine's end of the link, for the engine's process to take over.
@@ -281,7 +394,7 @@ class ControllerProcess:
         self._up, up_write = context.Pipe(duplex=False)
         self._process = context.Process(
             target=_watch,
-            args=(control_read, ours, up_write, settings, poll, dt),
+            args=(control_read, ours, up_write, settings, poll, dt, protection or ProtectionSettings()),
             name="rtsim-follow",
             daemon=True,
         )

@@ -72,6 +72,8 @@ class SimEngine:
         self._time = 0.0
         #: How many times the model was built: a caller that derives from it knows to derive again.
         self.builds = 0
+        #: Messages for later, ``(time on the build's clock, messages)``: a fault's clearing, say.
+        self._later: list[tuple[float, list[tuple]]] = []
         self._build(model)
 
     def _build(self, model: dict[str, Any]) -> None:
@@ -92,13 +94,19 @@ class SimEngine:
         time = self._time + float(self._sim.sol.t)
         self._build(model)
         self._time = time
+        self._later = []  # what was for later was for the system that is gone
 
     # -- what the controller sends ------------------------------------------------------------
 
     def apply(self, message: tuple) -> None:
         """Do what ``message`` says: ``("event", (category, model, unit, action, kwargs))``, a TOPS
-        event; or ``("input", (category, model, input, value, index))``, an input set on a model.
+        event; ``("input", (category, model, input, value, index))``, an input set on a model; or
+        ``("at", t, messages)``, messages to apply once the build's clock reaches ``t`` (``due``).
         Raises what TOPS raises for one that does not apply (``KeyError``, ``ValueError``)."""
+        if message[0] == "at":
+            _, t, messages = message
+            self._later.append((float(t), list(messages)))
+            return
         kind, what = message
         with np.errstate(all="ignore"):
             if kind == "event":
@@ -109,6 +117,13 @@ class SimEngine:
                 self._ps.dyn_mdls_dict[category][model].set_input(name, value, index)
             else:
                 raise ValueError(f"no idea what to do with {kind!r}")
+
+    def due(self) -> list[tuple]:
+        """The messages for later whose time has come, in the order they were sent: once each."""
+        now = float(self._sim.sol.t) + 1e-9
+        ready = [messages for t, messages in self._later if t <= now]
+        self._later = [(t, messages) for t, messages in self._later if t > now]
+        return [message for messages in ready for message in messages]
 
     # -- stepping ----------------------------------------------------------------------------
 

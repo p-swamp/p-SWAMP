@@ -24,7 +24,9 @@ wait for the interpreter behind a refresh. This stands in for TOPS's simulator i
   ``apply_event``: the shadow's ``set_input`` is wrapped to send them down too;
 - ``LiveTops.events()`` is never used: it would replace a schedule the engine never sees;
 - a restart from the graph (``restart``) marks ``LiveTops`` stale (``_stale``), as a refresh that
-  cannot be absorbed does, and follows.
+  cannot be absorbed does, and follows;
+- a message for later (``at``) is timed on the engine's clock, which is ``LiveTops``'s less
+  ``_offset``.
 
 A command counts as done (``LiveTops.cim_changes``) once the engine has sent a frame after it was
 handed over, which may be a frame or two before the engine applied it.
@@ -81,6 +83,11 @@ class RemoteRunner:
         self.ps.apply_event(category, model, unit, action, **kwargs)
         self._send(("event", (category, model, unit, action, kwargs)))
 
+    def at(self, t: float, messages: list[tuple]) -> None:
+        """Have the engine apply ``messages`` once ``LiveTops``'s clock reaches ``t``: on its own
+        clock, which starts over at each build (``_offset`` is where ``LiveTops``'s was then)."""
+        self._send(("at", t - self._live._offset, messages))
+
     def is_alive(self) -> bool:
         """Whether it stands in for a running simulation: ``LiveTops`` then submits, and will not build."""
         return self._alive
@@ -108,7 +115,7 @@ class RemoteRunner:
 
     def _take(self, live: Any) -> None:
         """Shadow ``live``'s system, as it starts: at its power flow, at time 0."""
-        self.ps = live.ps
+        self._live, self.ps = live, live.ps
         self.sol = _Solution(0.0, np.array(self.ps.x0, copy=True), np.array(self.ps.v0, copy=True))
         for category, models in self.ps.dyn_mdls_dict.items():
             for key, model in models.items():
