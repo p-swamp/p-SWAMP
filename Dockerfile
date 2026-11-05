@@ -245,6 +245,17 @@ ENV HOST=0.0.0.0 \
 # without this the server leaves ~12 MB behind per pipeline it builds and runs
 # out of memory after ~60 new clients.
 ENV MALLOC_ARENA_MAX=2
+
+# One BLAS thread per process, not OpenBLAS's default of one per CPU the
+# container sees. Every matrix here is small (the grid simulation's Nordic44 is
+# a few hundred states), so the threads only ever wait, and OpenBLAS's waiting
+# threads spin: the simulation's engine and controller processes and the server
+# each held a thread per CPU spinning, and starved one another. Measured on
+# Nordic44 in compose (7 CPUs): 10 frames/s with gaps of up to half a second and
+# the server at 1059 % CPU; with this, 50.0 frames/s, every gap 20 ms, 98 % CPU.
+ENV OPENBLAS_NUM_THREADS=1 \
+    OMP_NUM_THREADS=1 \
+    MKL_NUM_THREADS=1
 EXPOSE 8000
 
 # Plain python: deps are already installed, so the PEP 723 metadata is ignored
