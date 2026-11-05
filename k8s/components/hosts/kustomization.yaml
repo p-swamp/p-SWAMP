@@ -40,4 +40,4 @@ replacements:
           kind: ConfigMap
           name: p-swamp-hosts
         fieldPaths:
-          - data.PSWAMP_OXIGRAPH_HOST
+          - data.PSWAMP_CIM_STORE_HOST
