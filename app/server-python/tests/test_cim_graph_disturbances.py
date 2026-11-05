@@ -44,6 +44,20 @@ def test_a_line_trip_and_its_reconnection_reach_the_simulation_and_never_the_gra
 
 
 @needs_profiles
+def test_what_the_simulation_announces_reaches_every_socket_and_stays_for_the_next(server):  # noqa: F811
+    def tripped(state: dict) -> bool:
+        return any((e["kind"], e["cause"], e["mRID"]) == ("trip", "disturbance", ALPHA_BETA) for e in state["events"])
+
+    with server.websocket_connect("/api/cim-graph/ws?client_id=406") as ws:
+        assert ws.receive_json()["events"] == []
+        post(server, api(f"/branches/{ALPHA_BETA}/trip", 406))
+        state = next_state(ws, tripped)
+        assert state["out_of_service"] == []  # announced, not written
+    with server.websocket_connect("/api/cim-graph/ws?client_id=407") as later:
+        assert tripped(later.receive_json())  # the recent events are part of the state
+
+
+@needs_profiles
 def test_a_short_circuit_at_a_node_and_its_clearing(server):  # noqa: F811
     ack = post(server, api(f"/nodes/{GAMMA_400}/short-circuit", 402), {"y": 1e3}).json()
     assert ack["applied"] == "short.circuit"

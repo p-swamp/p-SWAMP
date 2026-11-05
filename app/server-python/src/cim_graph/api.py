@@ -16,7 +16,9 @@ per client: a breaker opened by any visitor is opened for all of them, and the s
 Commands come up over REST (a switch, a line, a reset), each acknowledged once the simulation has
 taken it, and shown on the socket like any other change; state goes down the socket. So do the
 **disturbances** (a branch trip, a short circuit, a fault cleared by protection, a load step), which
-go to the simulation only: the graph learns only of what protection does about them.
+go to the simulation only: the graph learns only of what protection does about them. What the
+simulation announces (``SimEvent``) is kept, the most recent ``EVENTS``, and is part of the state the
+socket pushes, which is the only place a person hears of a disturbance.
 
 Until the grid is loaded this app answers 503 ("the grid is loading"), and its socket waits for it;
 when the grid cannot be had, 503 with the reason, and the socket closes with 1013. The rest of the
@@ -25,6 +27,7 @@ blocks (HTTP to the store, or rdflib), so it runs on one thread of its own, whic
 """
 
 import asyncio
+import collections
 import contextlib
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import asynccontextmanager
@@ -42,6 +45,7 @@ from pswamp_models.rtsim import (
     ReconnectBranchCommand,
     ResetSimulationCommand,
     ShortCircuitCommand,
+    SimEvent,
     TripBranchCommand,
 )
 from shared import (
@@ -66,6 +70,8 @@ sockets = SocketRegistry()
 
 #: The live simulation of the graph: the app whose pipeline runs it, and the source's name there.
 SIMULATION = ("pmu-test-streamer", "rtsim")
+#: How many of the simulation's announcements the state carries.
+EVENTS = 50
 
 
 class Graph:
@@ -78,6 +84,8 @@ class Graph:
         self._state: GridState | None = None
         self._last: CimGraphState | None = None
         self._layout: CimLayout | None = None
+        #: What the simulation announced most recently, oldest first.
+        self._events: collections.deque[SimEvent] = collections.deque(maxlen=EVENTS)
 
     async def _run(self, function, *args):
         return await asyncio.get_running_loop().run_in_executor(self._thread, function, *args)
@@ -112,7 +120,10 @@ class Graph:
     def message(self) -> CimGraphState:
         state = self._state
         return CimGraphState(
-            switches=state.switches, out_of_service=sorted(state.out_of_service), writable=self._writer.writable
+            switches=state.switches,
+            out_of_service=sorted(state.out_of_service),
+            writable=self._writer.writable,
+            events=list(self._events),
         )
 
     async def known(self) -> GridState:
@@ -138,12 +149,21 @@ class Graph:
             return done, writer.state()
 
         done, self._state = await self._run(write)
+        await self._push()
+        return done
+
+    async def announce(self, event: SimEvent) -> None:
+        """Keep what the simulation announced, and push it (the grid is loaded)."""
+        await self.loaded()
+        self._events.append(event)
+        await self._push()
+
+    async def _push(self) -> None:
         message = self.message()
         if message != self._last:
             self._last = message
             for client in sockets.clients():
                 await sockets.send_to_client(client, message)
-        return done
 
     def stop(self) -> None:
         if self._loading is not None:
@@ -174,17 +194,31 @@ async def _write_reports() -> None:
             logger.info("%s (%s): %s", report.producer, report.cause, "; ".join(done))
 
 
+async def _relay_events() -> None:
+    """Show what the simulation announces (``SimEvent``: a disturbance, a protection operating) on
+    every socket, as part of the state, once the grid is loaded."""
+    app, source = SIMULATION
+    with transport().subscribe(SimEvent, app=app, key=f"live.{source}", overflow=Overflow.GROW) as events:
+        async for _, event in events:
+            try:
+                await graph.announce(event)
+            except Exception:  # the grid is not available: no state to show it in
+                logger.exception("the simulation's %s of %s could not be shown", event.kind, event.mRID)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Load the grid into the store, in the background, as the server starts; write what the
-    simulation reports."""
+    simulation reports, and show what it announces."""
     global graph
     graph = Graph()
     graph.load()
     writing = asyncio.create_task(_write_reports(), name="cim-graph.reports")
+    relaying = asyncio.create_task(_relay_events(), name="cim-graph.events")
     try:
         yield
     finally:
+        await cancel_and_wait(relaying, ignore=(Exception,))
         await cancel_and_wait(writing, ignore=(Exception,))
         loading = graph._loading
         graph.stop()

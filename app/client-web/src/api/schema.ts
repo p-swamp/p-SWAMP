@@ -764,6 +764,11 @@ export interface components {
          */
         CimGraphState: {
             /**
+             * Events
+             * @description What the live simulation announced most recently (disturbances, protection), oldest first: never written to the graph, so the only place a person hears of them.
+             */
+            events?: components["schemas"]["SimEvent"][];
+            /**
              * Out Of Service
              * @description The lines and transformers (mRIDs) out of service, which is what the simulation follows.
              */
@@ -1846,6 +1851,58 @@ export interface components {
              * @default 1000000
              */
             y: number;
+        };
+        /**
+         * SimEvent
+         * @description A disturbance injected, or a protection operating: announced, never written to CIM.
+         */
+        SimEvent: {
+            /**
+             * Cause
+             * @description Why.
+             * @enum {string}
+             */
+            cause: "command" | "disturbance" | "protection";
+            /**
+             * Detail
+             * @description One line for a person, e.g. 'overload 1.3 x limit'.
+             * @default null
+             */
+            detail: string | null;
+            /**
+             * Kind
+             * @description What happened.
+             * @enum {string}
+             */
+            kind: "open" | "close" | "trip" | "reconnect" | "short_circuit" | "clear_short_circuit" | "load_step" | "reset";
+            /**
+             * Mrid
+             * @description The CIM object it happened to.
+             */
+            mRID: string;
+            /**
+             * Request Id
+             * @description The command it answers, if any.
+             * @default null
+             */
+            request_id: string | null;
+            /**
+             * Sim Time
+             * @description When, on the simulation's clock, s.
+             */
+            sim_time: number;
+            /**
+             * Timestamp
+             * Format: date-time
+             * @description When it happened, wall clock.
+             */
+            timestamp: string;
+            /**
+             * Version
+             * @default v1
+             * @constant
+             */
+            version: "v1";
         };
         /** SourceBody */
         SourceBody: {
