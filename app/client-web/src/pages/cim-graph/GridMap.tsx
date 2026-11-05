@@ -16,6 +16,15 @@ const LIVE_MS = 250
 
 type Branch = CimLayout['branches'][number]
 
+/** What a right-click (or a long press) is on: what a disturbance can be aimed at. */
+export type MenuTarget =
+  | { kind: 'branch'; branch: Branch }
+  | { kind: 'substation'; substation: CimLayout['substations'][number] }
+  | { kind: 'load'; load: CimLayout['loads'][number] }
+
+/** A right-click on the map: on what, and where in the map's box (pixels). */
+export type MenuRequest = { target: MenuTarget; x: number; y: number }
+
 /** A frequency deviation as a colour: blue below 50 Hz, red above, grey on it; full at ±0.2 Hz. */
 function frequencyColor(f: number | null | undefined): string {
   if (f === null || f === undefined) return '#94a3b8'
@@ -39,11 +48,13 @@ type Layers = {
   lines: Map<string, { line: L.Polyline; hit: L.Polyline; branch: Branch }>
   breakers: Map<string, L.Marker>
   substations: Map<string, L.CircleMarker>
+  loads: Map<string, L.Marker>
 }
 
 /**
- * The grid on its geographic layout (the graph's GL profile), on OpenStreetMap: substations, lines and
- * breakers. Leaflet is driven directly (react-leaflet's licence does not pass dependency review): the
+ * The grid on its geographic layout (the graph's GL profile), on OpenStreetMap: substations, lines,
+ * breakers and loads. A click on a breaker or a line operates it; a right-click (a long press) on a
+ * line, a substation or a load asks for its disturbances (``onMenu``). Leaflet is driven directly (react-leaflet's licence does not pass dependency review): the
  * layers are built once per layout and restyled in place, from the graph's state (out of service,
  * open, switching) and, four times a second, from the live feed (each substation coloured by its
  * frequency deviation, and its voltage and frequency on hover).
@@ -60,6 +71,7 @@ export function GridMap({
   subscribe,
   highlight,
   onPick,
+  onMenu,
 }: {
   layout: CimLayout
   state: CimGraphState | null
@@ -72,13 +84,14 @@ export function GridMap({
   subscribe: (listener: () => void) => () => void
   highlight: string | null
   onPick: (substation: string | null) => void
+  onMenu: (request: MenuRequest | null) => void
 }) {
   const container = useRef<HTMLDivElement | null>(null)
   const layers = useRef<Layers | null>(null)
   // The latest props, for the handlers the layers were built with.
-  const props = useRef({ state, editable, onBreaker, onLine, onPick })
+  const props = useRef({ state, editable, onBreaker, onLine, onPick, onMenu })
   useEffect(() => {
-    props.current = { state, editable, onBreaker, onLine, onPick }
+    props.current = { state, editable, onBreaker, onLine, onPick, onMenu }
   })
 
   // Build the map and its layers, once per layout.
@@ -87,12 +100,22 @@ export function GridMap({
     if (!node || layout.substations.length === 0) return
     const map = L.map(node, { preferCanvas: false, zoomSnap: 0.25 })
     L.tileLayer(TILE_URL, { attribution: TILE_ATTRIBUTION, maxZoom: 18 }).addTo(map)
-    map.on('click', () => props.current.onPick(null))
+    map.on('click', () => {
+      props.current.onPick(null)
+      props.current.onMenu(null)
+    })
+    map.on('contextmenu movestart zoomstart', () => props.current.onMenu(null))
+    /** A right-click on a layer: its menu, at the click, and not the map's own. */
+    const menu = (target: MenuTarget) => (event: L.LeafletMouseEvent) => {
+      L.DomEvent.stopPropagation(event)
+      L.DomEvent.preventDefault(event.originalEvent)
+      if (props.current.editable) props.current.onMenu({ target, x: event.containerPoint.x, y: event.containerPoint.y })
+    }
     const at = new Map(layout.substations.map((s) => [s.mrid, L.latLng(s.position.lat, s.position.lon)]))
     // The view first: Leaflet renders a layer only once its map has one, so until then a layer has no
     // element to label (getElement() is undefined) and the labels below would be silently skipped.
     map.fitBounds(L.latLngBounds([...at.values()]), { padding: [24, 24] })
-    const built: Layers = { map, lines: new Map(), breakers: new Map(), substations: new Map() }
+    const built: Layers = { map, lines: new Map(), breakers: new Map(), substations: new Map(), loads: new Map() }
 
     for (const branch of layout.branches) {
       const points =
@@ -107,6 +130,7 @@ export function GridMap({
           const out = new Set(props.current.state?.out_of_service ?? [])
           if (props.current.editable) props.current.onLine(branch, out.has(branch.mrid))
         })
+        .on('contextmenu', menu({ kind: 'branch', branch }))
         .addTo(map)
       hit.getElement()?.setAttribute('data-testid', `line-${branch.name}`)
       built.lines.set(branch.mrid, { line, hit, branch })
@@ -118,6 +142,7 @@ export function GridMap({
           L.DomEvent.stopPropagation(event)
           props.current.onPick(s.mrid)
         })
+        .on('contextmenu', menu({ kind: 'substation', substation: s }))
         .bindTooltip(s.name)
         .addTo(map)
       marker.getElement()?.setAttribute('data-testid', `substation-${s.name}`)
@@ -151,6 +176,26 @@ export function GridMap({
       element?.setAttribute('data-testid', `breaker-${b.name}`)
       element?.setAttribute('role', 'button')
       built.breakers.set(b.mrid, marker)
+    }
+
+    // Loads in a row below their substation, offset in pixels like the breakers.
+    const loadsSeen = new Map<string, number>()
+    for (const load of layout.loads) {
+      const centre = at.get(load.substation)
+      if (!centre) continue
+      const i = loadsSeen.get(load.substation) ?? 0
+      loadsSeen.set(load.substation, i + 1)
+      const marker = L.marker(centre, {
+        icon: L.divIcon({ className: 'cim-load', iconSize: [10, 10], iconAnchor: [5 - 12 * i, -18] }),
+        keyboard: false,
+      })
+        .on('click', (event) => L.DomEvent.stopPropagation(event))
+        .on('contextmenu', menu({ kind: 'load', load }))
+        .addTo(map)
+      const element = marker.getElement()
+      element?.setAttribute('data-testid', `load-${load.name}`)
+      if (element) element.title = `${load.name} (load${load.p_mw === null ? '' : `, ${load.p_mw} MW`}): right-click for a load step`
+      built.loads.set(load.mrid, marker)
     }
 
     layers.current = built
