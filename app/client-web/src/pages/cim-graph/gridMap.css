@@ -21,3 +21,13 @@
     opacity: 0.45;
   }
 }
+
+/* A load on the grid map: a small triangle pointing down, below its substation. */
+.cim-load {
+  width: 0 !important;
+  height: 0 !important;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-top: 10px solid #7c3aed;
+  cursor: context-menu;
+}

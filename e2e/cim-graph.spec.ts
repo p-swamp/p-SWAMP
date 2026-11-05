@@ -1,4 +1,4 @@
-import { test, expect, type Page } from '@playwright/test'
+import { test, expect, type Locator, type Page } from '@playwright/test'
 
 /**
  * The grid page: the grid of the CIM graph on its geographic layout (Leaflet), with a breaker and a
@@ -14,6 +14,16 @@ import { test, expect, type Page } from '@playwright/test'
 
 const breakers = (page: Page) => page.locator('[data-testid^="breaker-"]')
 const lines = (page: Page) => page.locator('[data-testid^="line-"]')
+
+/** Right-click an element of the map, on the element itself: a line's box is not the line, and a
+ *  bare `dispatchEvent('contextmenu')` carries no coordinates, which Leaflet cannot place. */
+async function rightClick(target: Locator) {
+  await target.evaluate((element) => {
+    const box = element.getBoundingClientRect()
+    const at = { clientX: box.x + box.width / 2, clientY: box.y + box.height / 2 }
+    element.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, button: 2, ...at }))
+  })
+}
 
 async function open(page: Page) {
   await page.goto('/cim-graph')
@@ -100,6 +110,48 @@ test.describe('CIM graph', () => {
     await expect(line).toHaveAttribute('data-out', String(!was))
     await line.dispatchEvent('click')
     await expect(line).toHaveAttribute('data-out', String(was))
+  })
+
+  test('a line tripped from its menu is announced, and the map, which shows the graph, does not change', async ({ page }) => {
+    await open(page)
+    const line = lines(page).first()
+    const was = await line.getAttribute('data-out')
+    await rightClick(line)
+    const menu = page.getByTestId('disturbance-menu')
+    await menu.getByRole('menuitem', { name: 'Trip' }).click()
+    await expect(menu).toBeHidden()
+    const newest = page.getByTestId('event-log').locator('li').first()
+    await expect(newest).toHaveAttribute('data-kind', 'trip')
+    await expect(newest).toHaveAttribute('data-cause', 'disturbance')
+    await expect(line).toHaveAttribute('data-out', was ?? 'false') // a disturbance never reaches the graph
+    await rightClick(line)
+    await page.getByTestId('disturbance-menu').getByRole('menuitem', { name: 'Reconnect' }).click()
+    await expect(newest).toHaveAttribute('data-kind', 'reconnect')
+  })
+
+  test('a fault on a line is cleared by its protection, which opens its breaker on the map', async ({ page }) => {
+    await open(page)
+    type Layout = { branches: { name: string; kind: string; breaker: string | null }[]; breakers: { mrid: string; name: string }[] }
+    const layout = (await (await page.request.get('/api/cim-graph/layout')).json()) as Layout
+    const line = layout.branches.find((b) => b.kind === 'line' && b.breaker !== null)
+    test.skip(!line, 'no line with a breaker of its own')
+    const breakerName = layout.breakers.find((b) => b.mrid === line!.breaker)!.name
+    const breaker = page.locator(`[data-testid="breaker-${breakerName}"]`)
+    test.skip((await breaker.getAttribute('data-open')) === 'true', 'its breaker starts open')
+    await rightClick(page.locator(`[data-testid="line-${line!.name}"]`))
+    await page.getByTestId('disturbance-menu').getByRole('menuitem', { name: /^Fault at end 1/ }).click()
+    await expect(breaker).toHaveAttribute('data-open', 'true') // protection's doing, written to the graph
+    await expect(page.getByTestId('event-log').locator('li[data-cause="protection"]').first()).toBeVisible()
+    await reset(page)
+  })
+
+  test('a load step from a load\'s menu is announced', async ({ page }) => {
+    await open(page)
+    const load = page.locator('[data-testid^="load-"]').first()
+    test.skip((await load.count()) === 0, 'the grid has no loads on its layout')
+    await rightClick(load)
+    await page.getByTestId('disturbance-menu').getByRole('menuitem', { name: /^Step to/ }).first().click()
+    await expect(page.getByTestId('event-log').locator('li').first()).toHaveAttribute('data-kind', 'load_step')
   })
 
   test('a change made on one screen shows on another, and Reset grid puts the grid back', async ({ browser }) => {

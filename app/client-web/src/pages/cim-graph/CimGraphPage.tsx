@@ -1,8 +1,11 @@
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 import { WifiOffIcon } from 'lucide-react'
 
 // This page's own pieces, imported relatively so the folder stays self-contained.
+import { DisturbanceMenu } from './DisturbanceMenu'
+import { EventLog } from './EventLog'
 import { GridMap } from './GridMap'
+import type { MenuRequest } from './GridMap'
 import { stationColor } from './colors'
 import { LiveChart } from './LiveChart'
 import { useCimGraphSocket } from './useCimGraphSocket'
@@ -23,15 +26,19 @@ const GRAPH_STATUS: Record<GraphStatus['kind'], string> = {
 
 /**
  * The grid page (route `/cim-graph`): the grid of the CIM graph on OpenStreetMap, and the live grid
- * simulation that follows it, plotted. Click a breaker or a line to switch it (the graph is shared, and
- * the simulation follows it within a second or two); click a substation, or a station below the
- * charts, to pick it out on the charts. The charts show every PMU station's frequency and voltage
+ * simulation that follows it, plotted. Click a breaker or a line to operate it: a command to the
+ * simulation, which the graph (and so the map) shows once the simulation has done it. Right-click (or
+ * long-press) a line, a substation or a load to disturb it: the simulation only, so the map does not
+ * change, and the event log says what happened. Click a substation, or a station below the charts, to
+ * pick it out on the charts. The charts show every PMU station's frequency and voltage
  * over the last 30 s, every frame of the simulation (`/api/cim-live`); the status bar says how many
  * reach this page each second.
  */
 export function CimGraphPage() {
-  const { state, layout, status, connected, graph, error, pending, roundTripMs, changedAt, setSwitch, setLine, reset } =
+  const { state, layout, status, connected, graph, error, pending, roundTripMs, changedAt, setSwitch, setLine, reset, disturb, events } =
     useCimGraphSocket()
+  const [menu, setMenu] = useState<MenuRequest | null>(null)
+  const closeMenu = useCallback(() => setMenu(null), [])
   const live = useLiveFeed()
   const [highlight, setHighlight] = useState<number | null>(null) // a station's index in the feed
 
@@ -63,8 +70,9 @@ export function CimGraphPage() {
       <CardHeader className="border-b">
         <CardTitle className="text-lg">Grid</CardTitle>
         <span className="text-muted-foreground text-sm">
-          The grid as the CIM graph describes it, and its live simulation. Click a breaker or a line to switch
-          it; click a substation to pick it out on the charts.
+          The grid as the CIM graph describes it, and its live simulation. Click a breaker or a line to operate
+          it; right-click a line, a substation or a load to disturb the simulation; click a substation to pick
+          it out on the charts.
         </span>
         <CardAction className="flex items-center gap-2 self-center">
           {state && (
@@ -115,19 +123,23 @@ export function CimGraphPage() {
                 : status.label}
           </div>
         ) : (
-          <GridMap
-            layout={layout}
-            state={state}
-            pending={pending}
-            editable={editable}
-            onBreaker={(mrid, isOpen) => setSwitch(mrid, !isOpen)}
-            onLine={operate}
-            stations={live.stations}
-            buffer={live.buffer}
-            subscribe={live.subscribe}
-            highlight={picked}
-            onPick={pickSubstation}
-          />
+          <div className="relative">
+            <GridMap
+              layout={layout}
+              state={state}
+              pending={pending}
+              editable={editable}
+              onBreaker={(mrid, isOpen) => setSwitch(mrid, !isOpen)}
+              onLine={operate}
+              stations={live.stations}
+              buffer={live.buffer}
+              subscribe={live.subscribe}
+              highlight={picked}
+              onPick={pickSubstation}
+              onMenu={setMenu}
+            />
+            {menu && <DisturbanceMenu request={menu} disturb={disturb} onClose={closeMenu} />}
+          </div>
         )}
 
         <div className="text-muted-foreground flex flex-wrap gap-4 text-xs">
@@ -153,6 +165,13 @@ export function CimGraphPage() {
           <span>
             <span className="mr-1 inline-block size-2 border-2 align-middle" style={{ borderColor: '#f59e0b' }} />
             switching (clicked, not yet in the graph)
+          </span>
+          <span>
+            <span
+              className="mr-1 inline-block align-middle"
+              style={{ borderLeft: '4px solid transparent', borderRight: '4px solid transparent', borderTop: '7px solid #7c3aed' }}
+            />
+            load
           </span>
           <span>substation: blue below 50 Hz, red above</span>
         </div>
@@ -208,6 +227,7 @@ export function CimGraphPage() {
             {pending.size > 0 && ` · ${pending.size} switching`}
           </span>
         </div>
+        <EventLog events={events} layout={layout} />
       </CardContent>
     </Card>
   )
