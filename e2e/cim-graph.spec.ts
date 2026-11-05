@@ -207,6 +207,27 @@ test.describe('CIM graph', () => {
     await expect(page.locator('[data-testid^="line-"][data-loading]:not([data-loading=""])').first()).toBeAttached()
   })
 
+  test('a line pushed over its limit is tripped by its protection, which the map then shows', async ({ page }) => {
+    // Nordic44 by name: tripping Aurland-Eidfjord puts Aurland-Geilo at 1.2 x its limit, which its
+    // inverse-time relay trips in about 25 s. Elsewhere (the sample grid has no limits) it skips.
+    test.slow()
+    await open(page)
+    type Layout = { branches: { name: string }[] }
+    const layout = (await (await page.request.get('/api/cim-graph/layout')).json()) as Layout
+    test.skip(!layout.branches.some((b) => b.name === '420AURLAND-EIDFJORD'), 'needs Nordic44')
+    const tripped = page.locator('[data-testid="line-420AURLAND-EIDFJORD"]')
+    await rightClick(tripped)
+    await page.getByTestId('disturbance-menu').getByRole('menuitem', { name: 'Trip' }).click()
+    // The log keeps earlier events (a reset's, an earlier run's protection): first this trip, then what
+    // protection does about it, written to the graph, on the map. A cascade follows (Aurland-Hagafoss).
+    const log = page.getByTestId('event-log')
+    await expect(log.locator('li').first()).toHaveAttribute('data-cause', 'disturbance')
+    await expect(page.locator('[data-testid="line-420AURLAND-GEILO"]')).toHaveAttribute('data-out', 'true', { timeout: 90_000 })
+    await expect(log.locator('li[data-cause="protection"][data-kind="trip"]', { hasText: '420AURLAND-GEILO' }).first()).toBeVisible()
+    await expect(tripped).toHaveAttribute('data-out', 'false') // the disturbance never reaches the graph
+    await reset(page)
+  })
+
   test('a change made on one screen shows on another, and Reset grid puts the grid back', async ({ browser }) => {
     const one = await (await browser.newContext()).newPage()
     const other = await (await browser.newContext()).newPage()
