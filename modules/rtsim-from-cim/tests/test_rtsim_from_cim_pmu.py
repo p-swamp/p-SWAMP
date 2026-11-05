@@ -36,10 +36,9 @@ def test_the_layout_is_the_graph_s_pmu_analogs(setup):
     layout = pmu_layout(analogs, engine, sim.ids, 25.0)
     header = layout.header
     assert sorted(set(header.station)) == ["Alpha_400", "Beta_400", "Gamma_132", "Gamma_400"]
-    assert header.n_columns == 4 * 2 + 4 + 6 * 2  # a phasor per V and per I, a value per F
+    assert header.n_columns == 4 * 2 + 4 + 6 * 2 + 4 * 2  # a phasor per V and per I, a value per F, a P and a Q per machine and load
     table = analog_table(repo)
-    measured = table[table.quantity.isin(["V", "F", "I"])]  # what the stream measures
-    assert set(header.analog) == set(measured.mRID)  # every such Analog, and the phasors' two columns share one
+    assert set(header.analog) == set(table.mRID)  # every Analog, and the phasors' two columns share one
     assert header.columns(station="Alpha_400", channel="I_Alpha-Beta_400_kV_line") != []
     assert header.data_rate == 25.0
 
@@ -52,6 +51,20 @@ def test_a_frame_reads_the_snapshot_in_physical_units(setup):
     assert 120 < column(frame, "Gamma_132", "V", "V_Magnitude") < 140
     assert math.isclose(column(frame, "Alpha_400", "f", "f"), 50.0, abs_tol=0.01)
     assert column(frame, "Alpha_400", "I_Alpha-Beta_400_kV_line", "I_Magnitude") > 10  # amperes
+
+
+def test_each_machine_and_load_has_its_power_in_mw_and_mvar(setup):
+    _, sim, engine, analogs = setup
+    layout = pmu_layout(analogs, engine, sim.ids, 25.0)
+    frame = pmu_frame(layout, engine.step(10), utcnow(), "s")
+    assert column(frame, "Beta_400", "S_Beta_load_LB", "P") == pytest.approx(400.0, rel=0.02)
+    assert column(frame, "Beta_400", "S_Beta_load_LB", "Q") == pytest.approx(100.0, rel=0.05)
+    assert column(frame, "Gamma_132", "S_Gamma_load_LC", "P") == pytest.approx(90.0, rel=0.02)
+    assert column(frame, "Alpha_400", "S_Alpha_GA", "P") > 0
+    (p,) = frame.header.columns(station="Alpha_400", channel="S_Alpha_GA", measurement="P")
+    (q,) = frame.header.columns(station="Alpha_400", channel="S_Alpha_GA", measurement="Q")
+    assert (frame.header.units[p], frame.header.units[q]) == ("MW", "Mvar")
+    assert frame.header.analog[p] != frame.header.analog[q]  # two Analogs, one per quantity
 
 
 def test_a_line_cut_off_reads_no_current(setup):

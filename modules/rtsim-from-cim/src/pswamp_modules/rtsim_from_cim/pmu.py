@@ -5,10 +5,12 @@
 
 The graph says where PMUs can observe the grid (``pswamp_core.cim.analogs``), and the stream
 measures exactly that: a station per voltage level of each substation (``Beta_400``), with its
-voltage phasor (``V_Magnitude`` kV, ``V_Angle`` deg), its frequency (``f`` Hz) and the current of
-each line leaving it (channel ``I_<line>``: ``I_Magnitude`` A, ``I_Angle`` deg). Each column's
+voltage phasor (``V_Magnitude`` kV, ``V_Angle`` deg), its frequency (``f`` Hz), the current of
+each line leaving it (channel ``I_<line>``: ``I_Magnitude`` A, ``I_Angle`` deg) and the power of each
+generator and load on it (channel ``S_<equipment>``: ``P`` MW, ``Q`` Mvar, each its own Analog). Each column's
 header carries the Analog it measures (``PmuHeader.analog``), so a module goes from a value to the
-graph in one call. A bus that is de-energised, or a line the model does not have, reads ``None``.
+graph in one call. A bus that is de-energised, or a line, a machine or a load the model does not
+have, reads ``None``.
 """
 
 from __future__ import annotations
@@ -36,12 +38,15 @@ class Measured:
 
     mrid: str
     station: str
-    quantity: str  # V, F or I
+    quantity: str  # V, F, I, P or Q
     #: V and F: the connectivity node; I: the line (mRID) and the end (1 or 2).
     node: str | None = None
     line: str | None = None
     line_name: str | None = None
     end: int = 1
+    #: P and Q: the machine or load (mRID) and its name.
+    equipment: str | None = None
+    equipment_name: str | None = None
 
 
 def read_analogs(repo) -> list[Measured]:
@@ -55,8 +60,13 @@ def read_analogs(repo) -> list[Measured]:
         kv=F.ConnectivityNodeContainer.BaseVoltage.nominalVoltage,
     )
     lines = repo.query(L.ACLineSegments).to_dataframe(line=F.mRID, line_name=F.name)
+    names = {
+        row.mRID: str(row.name)
+        for kind in (L.SynchronousMachines, L.EnergyConsumers)
+        for row in repo.query(kind).to_dataframe(mRID=F.mRID, name=F.name).itertuples()
+    }
     table = analogs.merge(levels, on="node", how="left").merge(lines, left_on="equipment", right_on="line", how="left")
-    order = {"V": 0, "F": 1, "I": 2}
+    order = {"V": 0, "F": 1, "I": 2, "P": 3, "Q": 4}
     measured = [
         Measured(
             mrid=row.mRID,
@@ -66,11 +76,17 @@ def read_analogs(repo) -> list[Measured]:
             line=row.line if row.quantity == "I" else None,
             line_name=str(row.line_name) if row.quantity == "I" else None,
             end=int(row.sequence) if row.quantity == "I" else 1,
+            equipment=row.equipment if row.quantity in ("P", "Q") else None,
+            equipment_name=names.get(row.equipment) if row.quantity in ("P", "Q") else None,
         )
         for row in table.itertuples()
         if row.quantity in order and isinstance(row.substation, str)
     ]
-    return sorted(measured, key=lambda m: (m.station, order[m.quantity], m.line_name or ""))
+    # Per station: V, F, the currents by line, then each machine's or load's P and Q together.
+    return sorted(
+        measured,
+        key=lambda m: (m.station, min(order[m.quantity], 3), m.equipment_name or "", order[m.quantity], m.line_name or ""),
+    )
 
 
 @dataclass(frozen=True)
@@ -90,22 +106,38 @@ class PmuLayout:
     i_at: np.ndarray
     i_line: np.ndarray
     i_end: np.ndarray
+    #: Powers: the column, and the row in the machines' arrays then the loads' (``Snapshot.gen_*``
+    #: followed by ``load_*``), for P and for Q.
+    p_at: np.ndarray
+    p_row: np.ndarray
+    q_at: np.ndarray
+    q_row: np.ndarray
 
 
 def pmu_layout(analogs: list[Measured], engine, ids: dict, rate: float) -> PmuLayout:
     """The stream's layout for ``analogs`` over the model ``engine`` was built from (a ``SimEngine``: its
-    ``bus_names``, ``bus_kv`` and ``line_names``; ``ids`` is the export's ``sim.ids``), at ``rate``
-    frames per second. A bus or a line the model lacks is -1."""
+    ``bus_names``, ``bus_kv``, ``line_names``, ``gen_names`` and ``load_names``; ``ids`` is the export's
+    ``sim.ids``), at ``rate`` frames per second. A bus, a line, a machine or a load the model lacks is -1."""
     bus_row = {name: i for i, name in enumerate(engine.bus_names)}
     line_row = {name: i for i, name in enumerate(engine.line_names)}
     line_of = {mrid: name for name, mrid in ids.get("lines", {}).items()}
     node_bus = ids.get("node_to_bus", {})
+    # A machine's or a load's row: the machines first, then the loads, as the snapshot's arrays are joined.
+    injection_row = {name: i for i, name in enumerate(engine.gen_names)}
+    injection_row |= {name: len(engine.gen_names) + i for i, name in enumerate(engine.load_names)}
+    injection_of = {mrid: name for group in ("generators", "loads") for name, mrid in ids.get(group, {}).items()}
 
     station, channel, measurement, units, analog = [], [], [], [], []
     v, f, i = ([], [], []), ([], []), ([], [], [])
+    power = {"P": ([], []), "Q": ([], [])}
     for m in analogs:
         at = len(station)
-        if m.quantity == "I":
+        if m.quantity in power:
+            unit = "MW" if m.quantity == "P" else "Mvar"
+            columns, name = [(m.quantity, unit)], f"S_{_part(m.equipment_name)}"
+            power[m.quantity][0].append(at)
+            power[m.quantity][1].append(injection_row.get(injection_of.get(m.equipment, ""), -1))
+        elif m.quantity == "I":
             columns = [("I_Magnitude", "A"), ("I_Angle", "deg")]
             name = f"I_{_part(m.line_name)}"
             i[0].append(at), i[1].append(line_row.get(line_of.get(m.line, ""), -1)), i[2].append(m.end)
@@ -132,6 +164,7 @@ def pmu_layout(analogs: list[Measured], engine, ids: dict, rate: float) -> PmuLa
         ints(v[0]), ints(v[1]), np.array(v[2], dtype=float),
         ints(f[0]), ints(f[1]),
         ints(i[0]), ints(i[1]), ints(i[2]),
+        ints(power["P"][0]), ints(power["P"][1]), ints(power["Q"][0]), ints(power["Q"][1]),
     )  # fmt: skip
 
 
@@ -152,6 +185,13 @@ def pmu_values(layout: PmuLayout, snapshot: Snapshot) -> list[float | None]:
             current = np.where(layout.i_end == 1, snapshot.i_from_ka[line], snapshot.i_to_ka[line]) * 1000.0
             out[layout.i_at] = np.where(ok, np.abs(current), np.nan)
             out[layout.i_at + 1] = np.where(ok, np.degrees(np.angle(current)), np.nan)
+        for at, row, gen, load in (
+            (layout.p_at, layout.p_row, snapshot.gen_p_mw, snapshot.load_p_mw),
+            (layout.q_at, layout.q_row, snapshot.gen_q_mvar, snapshot.load_q_mvar),
+        ):
+            values = np.concatenate([gen, load])
+            if len(values):
+                out[at] = np.where(row >= 0, values[np.maximum(row, 0)], np.nan)
     return [x if math.isfinite(x) else None for x in out.tolist()]
 
 
