@@ -12,10 +12,29 @@ class Point(BaseModel):
     lat: float = Field(description="Latitude, degrees north (WGS 84).")
 
 
+class LayoutNode(BaseModel):
+    """A connectivity node: where a short circuit can be put (POST /nodes/{mrid}/short-circuit)."""
+
+    mrid: str
+    name: str
+    nominal_kv: float | None = Field(description="Its voltage level's nominal voltage, kV; null: the graph does not say.")
+
+
 class LayoutSubstation(BaseModel):
     mrid: str
     name: str
     position: Point
+    nodes: list[LayoutNode] = Field(description="Its connectivity nodes, highest voltage first.")
+
+
+class LayoutLoad(BaseModel):
+    """A load: what a load step acts on (POST /loads/{mrid}/step)."""
+
+    mrid: str
+    name: str
+    substation: str = Field(description="mRID of the substation it stands in.")
+    p_mw: float | None = Field(description="Its active power as the graph had it when the layout was read, MW.")
+    q_mvar: float | None = Field(description="Its reactive power as the graph had it when the layout was read, Mvar.")
 
 
 class LayoutBranch(BaseModel):
@@ -45,6 +64,7 @@ class CimLayout(BaseModel):
     substations: list[LayoutSubstation]
     branches: list[LayoutBranch]
     breakers: list[LayoutBreaker]
+    loads: list[LayoutLoad]
 
 
 class SwitchBody(BaseModel):
