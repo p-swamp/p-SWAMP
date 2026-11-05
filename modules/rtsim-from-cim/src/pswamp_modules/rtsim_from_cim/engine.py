@@ -60,6 +60,12 @@ class Snapshot:
     #: Each line's current at its first and second end, complex, kA.
     i_from_ka: np.ndarray
     i_to_ka: np.ndarray
+    #: Each machine's electrical power, MW and Mvar, in ``gen_names`` order.
+    gen_p_mw: np.ndarray
+    gen_q_mvar: np.ndarray
+    #: Each load's power, MW and Mvar, in ``load_names`` order.
+    load_p_mw: np.ndarray
+    load_q_mvar: np.ndarray
 
 
 class SimEngine:
@@ -86,6 +92,10 @@ class SimEngine:
         self.bus_names = [str(name) for name in ps.buses["name"]]
         self.bus_kv = np.asarray(ps.buses["V_n"], dtype=float)
         self.line_names = [str(name) for name in self._line.par["name"]]
+        self._gens = list(ps.gen.values())
+        self._loads = list(ps.loads.values())  # every load model of the model: Load, and any other
+        self.gen_names = [str(name) for model in self._gens for name in model.par["name"]]
+        self.load_names = [str(name) for model in self._loads for name in model.par["name"]]
         self.builds += 1
 
     def rebuild(self, model: dict[str, Any]) -> None:
@@ -153,6 +163,8 @@ class SimEngine:
         with np.errstate(all="ignore"):
             f_hz = self._ps.f_n * (1.0 + self._pll.freq_est(y, v))
             i_from, i_to = self._line.I_from(y, v), self._line.I_to(y, v)
+            gen_p, gen_q = _each(self._gens, "P_e", y, v), _each(self._gens, "Q_e", y, v)
+            load_p, load_q = _each(self._loads, "P", y, v), _each(self._loads, "Q", y, v)
         return Snapshot(
             self._time + t,
             np.abs(v).astype(float),
@@ -160,4 +172,16 @@ class SimEngine:
             np.asarray(f_hz, dtype=float),
             np.asarray(i_from, dtype=complex),
             np.asarray(i_to, dtype=complex),
+            gen_p,
+            gen_q,
+            load_p,
+            load_q,
         )
+
+
+def _each(models: list, output: str, y: np.ndarray, v: np.ndarray) -> np.ndarray:
+    """``output`` of every unit of ``models`` (TOPS models of one kind: ``P_e`` of each GEN, MW), one
+    array in their order."""
+    if not models:
+        return np.zeros(0)
+    return np.concatenate([np.asarray(getattr(model, output)(y, v), dtype=float).ravel() for model in models])

@@ -107,6 +107,16 @@ def test_a_bus_coupler_is_followed(engine):
     assert np.max(np.abs(after.v_pu - before.v_pu) + np.abs(relative(after) - relative(before))) > 1e-3
 
 
+def test_each_machine_s_and_each_load_s_power_is_measured(engine, sim):
+    snapshot = engine.step(10)
+    drawn = dict(zip(engine.load_names, snapshot.load_p_mw, strict=True))
+    for row in sim.model["loads"][1:]:  # at steady state, what the model says it draws
+        assert drawn[row[0]] == pytest.approx(row[2], rel=0.02)
+    assert len(snapshot.load_q_mvar) == len(engine.load_names)
+    assert len(snapshot.gen_p_mw) == len(snapshot.gen_q_mvar) == len(engine.gen_names) > 0
+    assert snapshot.gen_p_mw.sum() == pytest.approx(snapshot.load_p_mw.sum(), rel=0.05)  # and the losses
+
+
 def test_a_load_that_draws_more_slows_the_grid(engine, sim):
     name, p = next((row[0], row[2]) for row in sim.model["loads"][1:])
     before = engine.step(50)
