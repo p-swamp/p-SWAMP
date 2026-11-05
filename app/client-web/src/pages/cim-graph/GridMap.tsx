@@ -34,6 +34,9 @@ function frequencyColor(f: number | null | undefined): string {
   return x < 0 ? `rgb(${fade(148, 37)},${fade(163, 99)},${fade(184, 235)})` : `rgb(${fade(148, 220)},${fade(163, 38)},${fade(184, 38)})`
 }
 
+/** A line's weight: thicker when it is the selected one. */
+const thicker = (mrid: string, selected: string | null, weight: number) => (mrid === selected ? weight + 3 : weight)
+
 function title(element: Element | undefined, text: string) {
   if (!element) return
   let node: Element | null = element.querySelector('title')
@@ -54,11 +57,13 @@ type Layers = {
 
 /**
  * The grid on its geographic layout (the graph's GL profile), on OpenStreetMap: substations, lines,
- * breakers and loads. A line in service is coloured by its loading, when it has a limit. A click on a breaker or a line operates it; a right-click (a long press) on a
- * line, a substation or a load asks for its disturbances (``onMenu``). Leaflet is driven directly (react-leaflet's licence does not pass dependency review): the
- * layers are built once per layout and restyled in place, from the graph's state (out of service,
- * open, switching) and, four times a second, from the live feed (each substation coloured by its
- * frequency deviation, and its voltage and frequency on hover).
+ * breakers and loads. A line in service is coloured by its loading, when it has a limit. A click on a
+ * breaker operates it; a click on a line, a substation or a load selects it (`onSelect`: the page
+ * shows it in a panel); a right-click (a long press) on one asks for its disturbances (`onMenu`).
+ * Leaflet is driven directly (react-leaflet's licence does not pass dependency review): the layers
+ * are built once per layout and restyled in place, from the graph's state (out of service, open,
+ * switching) and, four times a second, from the live feed (each substation coloured by its frequency
+ * deviation, and its voltage and frequency on hover).
  */
 export function GridMap({
   layout,
@@ -66,7 +71,8 @@ export function GridMap({
   pending,
   editable,
   onBreaker,
-  onLine,
+  onSelect,
+  selected,
   stations,
   lineEnds,
   buffer,
@@ -80,7 +86,8 @@ export function GridMap({
   pending: ReadonlyMap<string, unknown>
   editable: boolean
   onBreaker: (mrid: string, isOpen: boolean) => void
-  onLine: (branch: Branch, isOut: boolean) => void
+  onSelect: (target: MenuTarget | null) => void
+  selected: string | null
   stations: LiveStation[]
   lineEnds: LiveLineEnd[]
   buffer: React.RefObject<LiveBuffer>
@@ -94,10 +101,15 @@ export function GridMap({
   /** The lines the graph's state colours (out of service, switching): loading does not recolour them. */
   const stateColoured = useRef(new Set<string>())
   // The latest props, for the handlers the layers were built with.
-  const props = useRef({ state, editable, onBreaker, onLine, onPick, onMenu })
+  const props = useRef({ state, editable, onBreaker, onSelect, onPick, onMenu })
   useEffect(() => {
-    props.current = { state, editable, onBreaker, onLine, onPick, onMenu }
+    props.current = { state, editable, onBreaker, onSelect, onPick, onMenu }
   })
+  /** The selected element's mRID, for the live paint: it is drawn thicker. */
+  const chosen = useRef(selected)
+  useEffect(() => {
+    chosen.current = selected
+  }, [selected])
 
   // Build the map and its layers, once per layout.
   useEffect(() => {
@@ -107,6 +119,7 @@ export function GridMap({
     L.tileLayer(TILE_URL, { attribution: TILE_ATTRIBUTION, maxZoom: 18 }).addTo(map)
     map.on('click', () => {
       props.current.onPick(null)
+      props.current.onSelect(null)
       props.current.onMenu(null)
     })
     map.on('contextmenu movestart zoomstart', () => props.current.onMenu(null))
@@ -131,10 +144,7 @@ export function GridMap({
       const line = L.polyline(points, { weight: 3, color: OK, interactive: false }).addTo(map)
       // A wide, invisible twin takes the click: a 3 px line is a small target.
       const hit = L.polyline(points, { weight: 14, opacity: 0, bubblingMouseEvents: false })
-        .on('click', () => {
-          const out = new Set(props.current.state?.out_of_service ?? [])
-          if (props.current.editable) props.current.onLine(branch, out.has(branch.mrid))
-        })
+        .on('click', () => props.current.onSelect({ kind: 'branch', branch }))
         .on('contextmenu', menu({ kind: 'branch', branch }))
         .addTo(map)
       hit.getElement()?.setAttribute('data-testid', `line-${branch.name}`)
@@ -146,6 +156,7 @@ export function GridMap({
         .on('click', (event) => {
           L.DomEvent.stopPropagation(event)
           props.current.onPick(s.mrid)
+          props.current.onSelect({ kind: 'substation', substation: s })
         })
         .on('contextmenu', menu({ kind: 'substation', substation: s }))
         .bindTooltip(s.name)
@@ -194,12 +205,15 @@ export function GridMap({
         icon: L.divIcon({ className: 'cim-load', iconSize: [10, 10], iconAnchor: [5 - 12 * i, -18] }),
         keyboard: false,
       })
-        .on('click', (event) => L.DomEvent.stopPropagation(event))
+        .on('click', (event) => {
+          L.DomEvent.stopPropagation(event)
+          props.current.onSelect({ kind: 'load', load })
+        })
         .on('contextmenu', menu({ kind: 'load', load }))
         .addTo(map)
       const element = marker.getElement()
       element?.setAttribute('data-testid', `load-${load.name}`)
-      if (element) element.title = `${load.name} (load${load.p_mw === null ? '' : `, ${load.p_mw} MW`}): right-click for a load step`
+      if (element) element.title = `${load.name} (load${load.p_mw === null ? '' : `, ${load.p_mw} MW`}): click for its values, right-click for a load step`
       built.loads.set(load.mrid, marker)
     }
 
@@ -222,11 +236,16 @@ export function GridMap({
       const isOut = out.has(mrid)
       const switching = pending.has(mrid) || (!!branch.breaker && pending.has(branch.breaker))
       if (isOut || switching) stateColoured.current.add(mrid)
-      line.setStyle({ color: switching ? PENDING : isOut ? OUT : OK, dashArray: isOut ? '6 5' : undefined, weight: isOut || switching ? 3.5 : 3 })
+      line.setStyle({
+        color: switching ? PENDING : isOut ? OUT : OK,
+        dashArray: isOut ? '6 5' : undefined,
+        weight: thicker(mrid, selected, isOut || switching ? 3.5 : 3),
+      })
       const element = hit.getElement()
+      element?.setAttribute('data-selected', String(mrid === selected))
       element?.setAttribute('data-out', String(isOut))
       element?.setAttribute('data-pending', String(switching))
-      element?.classList.toggle('cursor-pointer', editable)
+      element?.classList.add('cursor-pointer')
       const via = branch.breaker ? `operated by ${breakerNames.get(branch.breaker) ?? branch.breaker}` : 'no breaker of its own'
       title(
         element,
@@ -247,7 +266,12 @@ export function GridMap({
       element.classList.toggle('cim-breaker-closed', !switching && !isOpen)
       element.title = `${b.name} (breaker, ${names.get(b.substation) ?? b.substation}): ${isOpen ? 'open' : 'closed'}${switching ? ' · switching…' : ''}`
     }
-  }, [layout, state, pending, editable])
+    for (const [mrid, marker] of built.loads) {
+      const element = marker.getElement()
+      element?.setAttribute('data-selected', String(mrid === selected))
+      element?.classList.toggle('cim-selected', mrid === selected)
+    }
+  }, [layout, state, pending, editable, selected])
 
   // The highlighted substation stands out.
   useEffect(() => {
@@ -292,7 +316,8 @@ export function GridMap({
         const value = loading.get(mrid)
         hit.getElement()?.setAttribute('data-loading', value === undefined ? '' : value.toFixed(3))
         if (stateColoured.current.has(mrid)) continue
-        line.setStyle(value === undefined ? { color: OK, weight: 3 } : { color: loadingColor(value), weight: value >= 1 ? 5 : 3 })
+        const weight = thicker(mrid, chosen.current, value !== undefined && value >= 1 ? 5 : 3)
+        line.setStyle({ color: value === undefined ? OK : loadingColor(value), weight })
       }
     }
     return subscribe(paint)

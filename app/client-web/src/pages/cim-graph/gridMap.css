@@ -31,3 +31,9 @@
   border-top: 10px solid #7c3aed;
   cursor: context-menu;
 }
+
+/* The selected load: outlined, so it stands out from its neighbours. */
+.cim-load.cim-selected {
+  border-top-color: #4c1d95;
+  filter: drop-shadow(0 0 2px #4c1d95);
+}

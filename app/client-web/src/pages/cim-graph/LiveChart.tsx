@@ -1,43 +1,51 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import uPlot from 'uplot'
 import 'uplot/dist/uPlot.min.css'
 
 import { stationColor } from './colors'
-import type { LiveBuffer, LiveStation } from './useLiveFeed'
+import type { LiveBuffer, Quantity } from './useLiveFeed'
 
 
 /**
- * One live chart: every station a line, `quantity` of `buffer` against time, the last 30 s. uPlot on a
+ * One live chart: `quantity` of `buffer` against time, the last 30 s, a line per series: every one, or
+ * those `pick` lists (indices into the quantity's series), labelled by `labels` (one per series). uPlot on a
  * canvas, driven imperatively: the plot is built when the stations change, and redrawn through
  * `subscribe` (at most once per animation frame), never through a React render. `highlight` (a
- * station's index) is drawn on top and the others faded.
+ * series' index) is drawn on top and the others faded.
  */
 export function LiveChart({
   title,
   unit,
   quantity,
-  stations,
+  labels,
+  pick,
   buffer,
   subscribe,
-  highlight,
+  highlight = null,
   height = 220,
+  digits = 4,
 }: {
   title: string
   unit: string
-  quantity: 'f' | 'v'
-  stations: LiveStation[]
+  quantity: Quantity
+  labels: string[]
+  pick?: number[]
   buffer: React.RefObject<LiveBuffer>
   subscribe: (listener: () => void) => () => void
-  highlight: number | null
+  highlight?: number | null
   height?: number
+  digits?: number
 }) {
   const container = useRef<HTMLDivElement | null>(null)
   const plot = useRef<uPlot | null>(null)
 
+  const shown = useMemo(() => pick ?? labels.map((_, i) => i), [labels, pick])
+  const key = shown.join(',')
+
   useEffect(() => {
     const node = container.current
-    if (!node || stations.length === 0) return
-    const data = () => [buffer.current.t, ...buffer.current[quantity]] as unknown as uPlot.AlignedData
+    if (!node || shown.length === 0) return
+    const data = () => [buffer.current.t, ...shown.map((i) => buffer.current[quantity][i] ?? [])] as unknown as uPlot.AlignedData
     plot.current?.destroy()
     plot.current = new uPlot(
       {
@@ -46,12 +54,12 @@ export function LiveChart({
         height,
         series: [
           {},
-          ...stations.map((station, i) => ({
-            label: station.name,
+          ...shown.map((i) => ({
+            label: labels[i] ?? String(i),
             stroke: stationColor(i),
             width: 1.25,
             spanGaps: false,
-            value: (_: uPlot, v: number | null) => (v === null ? '—' : v.toFixed(4)),
+            value: (_: uPlot, v: number | null) => (v === null ? '—' : v.toFixed(digits)),
           })),
         ],
         axes: [
@@ -69,25 +77,28 @@ export function LiveChart({
       plot.current?.destroy()
       plot.current = null
     }
-  }, [buffer, height, quantity, stations, title, unit])
+    // `key` stands for `shown`: a new array with the same series is the same chart.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [buffer, digits, height, quantity, key, labels, title, unit])
 
   useEffect(
     () =>
       subscribe(() => {
         const p = plot.current
         const buf = buffer.current
-        if (!p || buf[quantity].length !== p.series.length - 1) return
-        p.setData([buf.t, ...buf[quantity]] as unknown as uPlot.AlignedData)
+        if (!p || shown.length !== p.series.length - 1 || shown.some((i) => !buf[quantity][i])) return
+        p.setData([buf.t, ...shown.map((i) => buf[quantity][i])] as unknown as uPlot.AlignedData)
       }),
-    [buffer, quantity, subscribe],
+    [buffer, quantity, shown, subscribe],
   )
 
   useEffect(() => {
     const p = plot.current
     if (!p) return
     // uPlot's own focus: the highlighted series on top, the others faded; none: all as they are.
-    p.setSeries(highlight === null ? null : highlight + 1, { focus: true })
-  }, [highlight, stations])
+    const at = highlight === null ? -1 : shown.indexOf(highlight)
+    p.setSeries(at < 0 ? null : at + 1, { focus: true })
+  }, [highlight, shown])
 
   useEffect(() => {
     const node = container.current
