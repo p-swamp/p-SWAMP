@@ -30,7 +30,8 @@ from pswamp_core.cim import (  # noqa: E402
 from pswamp_core.cim.grid import NAMESPACE_ALIASES  # noqa: E402
 
 SETTINGS = CimSettings(cim_path=SAMPLE_GRID)
-COUPLER = "3f5e0000-0000-4000-8000-000000000034"  # Beta's bus coupler, closed in the sample grid
+P = "3f5e0000-0000-4000-8000-0000000000"
+COUPLER = P + "34"  # Beta's bus coupler, closed in the sample grid
 LINE = "3f5e0000-0000-4000-8000-000000000024"  # Alpha-Beta, a line of the sample grid
 EQ_MODEL = "3f5e0000-0000-4000-8000-000000000001"
 
@@ -93,12 +94,30 @@ def test_the_grid_gets_a_v_and_an_f_per_voltage_level_and_an_i_per_line_end(stor
     assert table.mRID.is_unique and table.node.notna().all()
 
 
+def test_the_grid_gets_a_p_and_a_q_at_each_generator_and_load(store):
+    table = analog_table(connect_reader(store=store))
+    for quantity in ("P", "Q"):
+        assert sorted(table[table.quantity == quantity].name) == [
+            f"PMU_Alpha_400_{quantity}_Alpha_GA",
+            f"PMU_Beta_400_{quantity}_Beta_load_LB",
+            f"PMU_Gamma_132_{quantity}_Gamma_load_LC",
+            f"PMU_Gamma_400_{quantity}_Gamma_GC",
+        ]
+    powers = table[table.quantity.isin(["P", "Q"])]
+    assert set(powers.equipment) == {P + "30", P + "31", P + "32", P + "33"}  # on the machine or load itself
+    assert (powers.sequence == 1).all()
+
+
+def test_the_power_analogs_are_named_by_the_same_rule():
+    assert analog_name("Gamma", 132, "P", "Gamma load LC") == "PMU_Gamma_132_P_Gamma_load_LC"
+
+
 def test_a_reader_finds_every_analog_in_one_query(store):
     reader = connect_reader(store=store)
     analog_index(reader)  # the schema of what it reads is discovered once per repository
     with reader.measure() as work:
         index = analog_index(reader)
-    assert len(index) == 14 and work.queries <= 2
+    assert len(index) == 22 and work.queries <= 2
 
 
 def test_a_reader_never_commits(store):
@@ -173,7 +192,7 @@ def test_a_reset_is_one_update_that_puts_the_ssh_profile_back(store):
     assert store.version() == stamped + 1
     fresh = connect_reader(store=store)
     assert fresh.from_mRID(COUPLER).open is False
-    assert len(analog_index(fresh)) == 14  # the Analogs are part of the grid
+    assert len(analog_index(fresh)) == 22  # the Analogs are part of the grid
 
 
 def test_a_store_is_filled_once(store):

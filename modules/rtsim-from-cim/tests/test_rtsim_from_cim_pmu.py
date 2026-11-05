@@ -38,7 +38,8 @@ def test_the_layout_is_the_graph_s_pmu_analogs(setup):
     assert sorted(set(header.station)) == ["Alpha_400", "Beta_400", "Gamma_132", "Gamma_400"]
     assert header.n_columns == 4 * 2 + 4 + 6 * 2  # a phasor per V and per I, a value per F
     table = analog_table(repo)
-    assert set(header.analog) == set(table.mRID)  # every Analog, and the phasors' two columns share one
+    measured = table[table.quantity.isin(["V", "F", "I"])]  # what the stream measures
+    assert set(header.analog) == set(measured.mRID)  # every such Analog, and the phasors' two columns share one
     assert header.columns(station="Alpha_400", channel="I_Alpha-Beta_400_kV_line") != []
     assert header.data_rate == 25.0
 

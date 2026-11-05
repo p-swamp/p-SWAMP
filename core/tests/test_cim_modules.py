@@ -101,7 +101,7 @@ async def test_a_grid_that_cannot_be_read_leaves_frames_alone(tmp_path):
 
 def test_a_module_reads_the_graph_through_a_repository_of_its_own(grid_env):
     one, two = CountsAnalogs(), CountsAnalogs()
-    assert one.run_one(measurement(1)).result.value == 14
+    assert one.run_one(measurement(1)).result.value == 22
     assert isinstance(one.cim_repo, ReadOnlyRepository) and one.cim_repo is not two.cim_repo
 
 
@@ -135,7 +135,7 @@ async def test_a_host_connects_the_repository_before_setup(grid_env):
     with broker.subscribe(NumberResult, app="a", overflow=Overflow.GROW) as results:
         await broker.publish(measurement(1), app="a", key="k")
         (_, result), = await take(results, 1, timeout=60)
-    assert seen == [True] and result.result.value == 14
+    assert seen == [True] and result.result.value == 22
     await cancel_and_wait(task)
 
 

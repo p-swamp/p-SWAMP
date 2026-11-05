@@ -58,7 +58,7 @@ def test_a_reader_sees_the_grid_and_its_analogs(store):
     analog_index(reader)
     started = time.perf_counter()
     with reader.measure() as work:
-        assert len(analog_index(reader)) == 14
+        assert len(analog_index(reader)) == 22
     print(f"analog index: {work.queries} queries, {1000 * (time.perf_counter() - started):.1f} ms")
 
 

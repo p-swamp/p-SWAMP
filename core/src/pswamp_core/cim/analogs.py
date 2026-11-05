@@ -9,11 +9,14 @@ loaded (``add_pmu_analogs``):
 - a voltage (``V``) and a frequency (``F``) per voltage level of each substation,
   at its main busbar: the node of a ``BusbarSection``, else the one with the most
   terminals;
-- a current (``I``) at each end of each line.
+- a current (``I``) at each end of each line;
+- an active and a reactive power (``P``, ``Q``) at the terminal of each generator
+  (``SynchronousMachine``) and each load (``EnergyConsumer``, and so every kind of
+  load).
 
-Each is named by one rule, ``analog_name``: ``PMU_<substation>_<kV>_<V|F|I>``, and
-for a current ``_<line>`` after it (``PMU_Beta_400_V``,
-``PMU_Beta_400_I_Alpha-Beta_400_kV_line``). That name is how a PMU column finds
+Each is named by one rule, ``analog_name``: ``PMU_<substation>_<kV>_<V|F|I|P|Q>``,
+and for a current or a power ``_<equipment>`` after it (``PMU_Beta_400_V``,
+``PMU_Beta_400_I_Alpha-Beta_400_kV_line``, ``PMU_Beta_400_P_Beta_load_LB``). That name is how a PMU column finds
 its Analog (``analog_index``) and how the simulation knows what to measure
 (``analog_table``). A phasor is one Analog: its magnitude and angle columns share
 it, and a frequency's ``df`` column shares the frequency's.
@@ -33,10 +36,16 @@ if TYPE_CHECKING:
 
 __all__ = ["MEASUREMENT_TYPES", "Quantity", "add_pmu_analogs", "analog_index", "analog_name", "analog_table"]
 
-Quantity = Literal["V", "F", "I"]
+Quantity = Literal["V", "F", "I", "P", "Q"]
 
 #: Each quantity's CIM ``Measurement.measurementType``, and back.
-MEASUREMENT_TYPES: dict[str, str] = {"V": "LineToLineVoltage", "F": "Frequency", "I": "LineCurrent"}
+MEASUREMENT_TYPES: dict[str, str] = {
+    "V": "LineToLineVoltage",
+    "F": "Frequency",
+    "I": "LineCurrent",
+    "P": "ThreePhaseActivePower",
+    "Q": "ThreePhaseReactivePower",
+}
 _QUANTITY = {kind: quantity for quantity, kind in MEASUREMENT_TYPES.items()}
 
 
@@ -46,7 +55,7 @@ def _part(text: object) -> str:
 
 def analog_name(substation: str, kv: float, quantity: Quantity, branch: str | None = None) -> str:
     """The name of the Analog for ``quantity`` at ``substation``'s ``kv`` level (and, for a
-    current, on ``branch``). Whitespace becomes ``_``; kV is written without a trailing ``.0``."""
+    current or a power, on ``branch``: the line, the generator or the load it is measured on). Whitespace becomes ``_``; kV is written without a trailing ``.0``."""
     name = f"PMU_{_part(substation)}_{float(kv):g}_{quantity}"
     return f"{name}_{_part(branch)}" if branch is not None else name
 
@@ -69,6 +78,9 @@ def add_pmu_analogs(repo: CIMRepository) -> int:
     at = terminals.merge(_levels(repo), on="node")
     busbars = set(repo.query(L.BusbarSections).to_dataframe(mRID=F.mRID).get("mRID", ()))
     lines = repo.query(L.ACLineSegments).to_dataframe(mRID=F.mRID, name=F.name)
+    injections = [
+        repo.query(kind).to_dataframe(mRID=F.mRID, name=F.name) for kind in (L.SynchronousMachines, L.EnergyConsumers)
+    ]
 
     created = 0
     for level, rows in at.groupby("level", sort=True):
@@ -84,6 +96,13 @@ def add_pmu_analogs(repo: CIMRepository) -> int:
         for end in at[at["equipment"] == line.mRID].itertuples():
             _create(repo, analog_name(end.substation, end.kv, "I", line.name), "I", end.terminal, line.mRID)
             created += 1
+    for table in injections:
+        for equipment in table.itertuples():
+            for end in at[at["equipment"] == equipment.mRID].itertuples():
+                for quantity in ("P", "Q"):
+                    name = analog_name(end.substation, end.kv, quantity, equipment.name)
+                    _create(repo, name, quantity, end.terminal, equipment.mRID)
+                    created += 1
     return created
 
 
@@ -97,7 +116,7 @@ def _create(repo: CIMRepository, name: str, quantity: Quantity, terminal: str, r
 
 
 def analog_table(repo: CIMRepository) -> pd.DataFrame:
-    """Every PMU Analog: ``mRID``, ``name``, ``quantity`` (V, F or I), its ``terminal``, the
+    """Every PMU Analog: ``mRID``, ``name``, ``quantity`` (V, F, I, P or Q), its ``terminal``, the
     ``node`` that terminal is at, the ``equipment`` it is on and its end (``sequence``)."""
     analogs = repo.query(L.Analogs).to_dataframe(
         mRID=F.mRID,
