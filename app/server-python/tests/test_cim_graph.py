@@ -87,6 +87,14 @@ def test_the_layout_is_the_substations_lines_and_breakers_with_their_coordinates
     assert by_name["Alpha-Gamma 400 kV line"] == BAY_BREAKER and by_name["Alpha-Beta 400 kV line"] is None
     alpha = next(s for s in layout["substations"] if s["name"] == "Alpha")
     assert alpha["position"] == {"lon": 10.0, "lat": 60.0}
+    # what a disturbance can be aimed at: each substation's nodes (a short circuit), the loads (a step)
+    gamma = next(s for s in layout["substations"] if s["name"] == "Gamma")
+    assert {n["name"]: n["nominal_kv"] for n in gamma["nodes"]} == {"Gamma CN C": 400.0, "Gamma CN C132": 132.0}
+    assert {(n["mrid"]) for n in gamma["nodes"]} == {P + "18", P + "19"}
+    assert {load["name"]: (load["mrid"], load["substation"], load["p_mw"], load["q_mvar"]) for load in layout["loads"]} == {
+        "Beta load LB": (P + "32", P + "09", 400.0, 100.0),
+        "Gamma load LC": (P + "33", P + "10", 90.0, 30.0),
+    }
 
 
 def test_the_socket_opens_on_the_state_of_the_graph(server):

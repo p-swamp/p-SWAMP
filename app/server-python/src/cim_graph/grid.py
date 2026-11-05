@@ -28,7 +28,7 @@ from pswamp_core.cim import CimSettings, Store, open_store
 from pswamp_core.cim.grid import NAMESPACE_ALIASES
 from pswamp_models.cim import CimEdits
 
-from .model import CimLayout, LayoutBranch, LayoutBreaker, LayoutSubstation, Point
+from .model import CimLayout, LayoutBranch, LayoutBreaker, LayoutLoad, LayoutNode, LayoutSubstation, Point
 
 __all__ = ["ALLOWED", "GridState", "Writer", "read_layout", "read_state"]
 
@@ -168,15 +168,31 @@ def _text(value) -> str:
     return str(value or "").strip()
 
 
+def _number(value) -> float | None:
+    """A float, or None for a value the graph does not give (None, NaN)."""
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return None
+    return None if number != number else number
+
+
 def read_layout(repo) -> CimLayout:
     """The substations that have a position (the GL profile: ``xPosition`` is the longitude and
-    ``yPosition`` the latitude), the lines and transformers between them, and the breakers in them.
-    Each line says the one breaker that takes it out on its own, if it has one."""
+    ``yPosition`` the latitude), with their connectivity nodes, the lines and transformers between
+    them, and the breakers and loads in them. Each line says the one breaker that takes it out on its
+    own, if it has one."""
     tables = Tables(repo)
     terminals = terminal_table(tables)
     points = tables.query(L.PositionPoints).to_dataframe(loc=F.Location.mRID, x=F.xPosition, y=F.yPosition, seq=F.sequenceNumber)
     placed = tables.query(L.Locations).to_dataframe(loc=F.mRID, psr=F.PowerSystemResources.mRID)
-    nodes = tables.query(L.ConnectivityNodes).to_dataframe(node=F.mRID, substation=F.ConnectivityNodeContainer.Substation.mRID)
+    nodes = tables.query(L.ConnectivityNodes).to_dataframe(
+        node=F.mRID,
+        name=F.name,
+        kv=F.ConnectivityNodeContainer.BaseVoltage.nominalVoltage,
+        substation=F.ConnectivityNodeContainer.Substation.mRID,
+    )
+    loads = tables.query(L.EnergyConsumers).to_dataframe(mRID=F.mRID, name=F.name, p=F.p, q=F.q)
     names = tables.query(L.Substations).to_dataframe(mRID=F.mRID, name=F.name)
     lines = tables.query(L.ACLineSegments).to_dataframe(mRID=F.mRID, name=F.name)
     trafos = tables.query(L.PowerTransformers).to_dataframe(mRID=F.mRID, name=F.name)
@@ -193,12 +209,17 @@ def read_layout(repo) -> CimLayout:
         if isinstance(substation, str) and substation not in substations_at[row.equipment]:
             substations_at[row.equipment].append(substation)
 
+    nodes_in: dict[str, list[LayoutNode]] = defaultdict(list)
+    for row in nodes.itertuples():
+        if isinstance(row.substation, str):
+            nodes_in[row.substation].append(LayoutNode(mrid=row.node, name=_text(row.name) or row.node, nominal_kv=_number(row.kv)))
     positioned: dict[str, LayoutSubstation] = {}
     for mrid, name in zip(names["mRID"], names["name"], strict=True):
         points_of = route.get(where.get(mrid, ""), [])
         if points_of:
             lon, lat = points_of[0]
-            positioned[mrid] = LayoutSubstation(mrid=mrid, name=_text(name) or mrid, position=Point(lon=lon, lat=lat))
+            in_it = sorted(nodes_in[mrid], key=lambda node: (-(node.nominal_kv or 0.0), node.name))
+            positioned[mrid] = LayoutSubstation(mrid=mrid, name=_text(name) or mrid, position=Point(lon=lon, lat=lat), nodes=in_it)
 
     branches: list[LayoutBranch] = []
     for kind, table in (("line", lines), ("transformer", trafos)):
@@ -224,4 +245,15 @@ def read_layout(repo) -> CimLayout:
         for mrid, name in zip(breakers["mRID"], breakers["name"], strict=True)
         if substations_at.get(mrid) and substations_at[mrid][0] in positioned
     ]
-    return CimLayout(substations=list(positioned.values()), branches=branches, breakers=placed_breakers)
+    placed_loads = [
+        LayoutLoad(
+            mrid=row.mRID,
+            name=_text(row.name) or row.mRID,
+            substation=substations_at[row.mRID][0],
+            p_mw=_number(row.p),
+            q_mvar=_number(row.q),
+        )
+        for row in loads.itertuples()
+        if substations_at.get(row.mRID) and substations_at[row.mRID][0] in positioned
+    ]
+    return CimLayout(substations=list(positioned.values()), branches=branches, breakers=placed_breakers, loads=placed_loads)

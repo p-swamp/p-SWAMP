@@ -669,6 +669,8 @@ export interface components {
             branches: components["schemas"]["LayoutBranch"][];
             /** Breakers */
             breakers: components["schemas"]["LayoutBreaker"][];
+            /** Loads */
+            loads: components["schemas"]["LayoutLoad"][];
             /** Substations */
             substations: components["schemas"]["LayoutSubstation"][];
         };
@@ -1096,12 +1098,57 @@ export interface components {
              */
             substation: string;
         };
+        /**
+         * LayoutLoad
+         * @description A load: what a load step acts on (POST /loads/{mrid}/step).
+         */
+        LayoutLoad: {
+            /** Mrid */
+            mrid: string;
+            /** Name */
+            name: string;
+            /**
+             * P Mw
+             * @description Its active power as the graph had it when the layout was read, MW.
+             */
+            p_mw: number | null;
+            /**
+             * Q Mvar
+             * @description Its reactive power as the graph had it when the layout was read, Mvar.
+             */
+            q_mvar: number | null;
+            /**
+             * Substation
+             * @description mRID of the substation it stands in.
+             */
+            substation: string;
+        };
+        /**
+         * LayoutNode
+         * @description A connectivity node: where a short circuit can be put (POST /nodes/{mrid}/short-circuit).
+         */
+        LayoutNode: {
+            /** Mrid */
+            mrid: string;
+            /** Name */
+            name: string;
+            /**
+             * Nominal Kv
+             * @description Its voltage level's nominal voltage, kV; null: the graph does not say.
+             */
+            nominal_kv: number | null;
+        };
         /** LayoutSubstation */
         LayoutSubstation: {
             /** Mrid */
             mrid: string;
             /** Name */
             name: string;
+            /**
+             * Nodes
+             * @description Its connectivity nodes, highest voltage first.
+             */
+            nodes: components["schemas"]["LayoutNode"][];
             position: components["schemas"]["Point"];
         };
         /**

@@ -371,6 +371,13 @@
             "title": "Breakers",
             "type": "array"
           },
+          "loads": {
+            "items": {
+              "$ref": "#/components/schemas/LayoutLoad"
+            },
+            "title": "Loads",
+            "type": "array"
+          },
           "substations": {
             "items": {
               "$ref": "#/components/schemas/LayoutSubstation"
@@ -382,7 +389,8 @@
         "required": [
           "substations",
           "branches",
-          "breakers"
+          "breakers",
+          "loads"
         ],
         "title": "CimLayout",
         "type": "object"
@@ -1224,6 +1232,89 @@
         "title": "LayoutBreaker",
         "type": "object"
       },
+      "LayoutLoad": {
+        "description": "A load: what a load step acts on (POST /loads/{mrid}/step).",
+        "properties": {
+          "mrid": {
+            "title": "Mrid",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "p_mw": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Its active power as the graph had it when the layout was read, MW.",
+            "title": "P Mw"
+          },
+          "q_mvar": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Its reactive power as the graph had it when the layout was read, Mvar.",
+            "title": "Q Mvar"
+          },
+          "substation": {
+            "description": "mRID of the substation it stands in.",
+            "title": "Substation",
+            "type": "string"
+          }
+        },
+        "required": [
+          "mrid",
+          "name",
+          "substation",
+          "p_mw",
+          "q_mvar"
+        ],
+        "title": "LayoutLoad",
+        "type": "object"
+      },
+      "LayoutNode": {
+        "description": "A connectivity node: where a short circuit can be put (POST /nodes/{mrid}/short-circuit).",
+        "properties": {
+          "mrid": {
+            "title": "Mrid",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "nominal_kv": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Its voltage level's nominal voltage, kV; null: the graph does not say.",
+            "title": "Nominal Kv"
+          }
+        },
+        "required": [
+          "mrid",
+          "name",
+          "nominal_kv"
+        ],
+        "title": "LayoutNode",
+        "type": "object"
+      },
       "LayoutSubstation": {
         "properties": {
           "mrid": {
@@ -1234,6 +1325,14 @@
             "title": "Name",
             "type": "string"
           },
+          "nodes": {
+            "description": "Its connectivity nodes, highest voltage first.",
+            "items": {
+              "$ref": "#/components/schemas/LayoutNode"
+            },
+            "title": "Nodes",
+            "type": "array"
+          },
           "position": {
             "$ref": "#/components/schemas/Point"
           }
@@ -1241,7 +1340,8 @@
         "required": [
           "mrid",
           "name",
-          "position"
+          "position",
+          "nodes"
         ],
         "title": "LayoutSubstation",
         "type": "object"
