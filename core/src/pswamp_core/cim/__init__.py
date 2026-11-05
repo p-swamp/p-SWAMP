@@ -13,6 +13,7 @@ that repository up to date before each call.
 """
 
 from .analogs import add_pmu_analogs, analog_index, analog_name, analog_table
+from .limits import current_limits
 from .grid import SAMPLE_GRID, Grid, stage
 from .prepare import prepare
 from .settings import CimSettings
@@ -39,6 +40,7 @@ __all__ = [
     "ReadOnlyRepository",
     "Store",
     "add_pmu_analogs",
+    "current_limits",
     "analog_index",
     "analog_name",
     "analog_table",
