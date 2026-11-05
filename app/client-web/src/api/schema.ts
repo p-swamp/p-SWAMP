@@ -1385,8 +1385,32 @@ export interface components {
             type: "state";
         };
         /**
+         * LiveInjection
+         * @description A generator or a load, whose power a PMU measures.
+         */
+        LiveInjection: {
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "generator" | "load";
+            /**
+             * Mrid
+             * @description mRID of the machine or the load in the CIM graph.
+             */
+            mrid: string;
+            /** Name */
+            name: string;
+            /**
+             * Station
+             * @description The station it is at, '<substation>_<kV>'.
+             */
+            station: string;
+        };
+        /**
          * LiveLayout
-         * @description The stations, in the order every sample lists them. Sent first, and again when it changes.
+         * @description The stations, line ends and injections, each in the order every sample lists them. Sent first,
+         *     and again when it changes.
          */
         LiveLayout: {
             /**
@@ -1394,8 +1418,39 @@ export interface components {
              * @description The frames' layout this describes (PmuHeader.header_id).
              */
             header_id: string;
+            /** Injections */
+            injections?: components["schemas"]["LiveInjection"][];
+            /** Line Ends */
+            line_ends?: components["schemas"]["LiveLineEnd"][];
             /** Stations */
             stations: components["schemas"]["LiveStation"][];
+        };
+        /**
+         * LiveLineEnd
+         * @description One end of a line, where a PMU measures its current.
+         */
+        LiveLineEnd: {
+            /**
+             * End
+             * @description Which end: its terminal's sequence number.
+             * @enum {integer}
+             */
+            end: 1 | 2;
+            /**
+             * Limit A
+             * @description The end's permanent current limit, A; null: the graph gives none.
+             */
+            limit_a: number | null;
+            /**
+             * Line
+             * @description mRID of the line in the CIM graph.
+             */
+            line: string;
+            /**
+             * Station
+             * @description The station at that end, '<substation>_<kV>'.
+             */
+            station: string;
         };
         /**
          * LiveSamples
@@ -1412,6 +1467,26 @@ export interface components {
              * @description Per frame, each station's frequency, Hz.
              */
             f_hz: (number | null)[][];
+            /**
+             * I A
+             * @description Per frame, each line end's current magnitude, A.
+             */
+            i_a?: (number | null)[][];
+            /**
+             * Loading
+             * @description Per frame, each line end's current over its permanent limit (1 is at the limit); null without a limit.
+             */
+            loading?: (number | null)[][];
+            /**
+             * P Mw
+             * @description Per frame, each injection's active power, MW (a load's is what it draws).
+             */
+            p_mw?: (number | null)[][];
+            /**
+             * Q Mvar
+             * @description Per frame, each injection's reactive power, Mvar.
+             */
+            q_mvar?: (number | null)[][];
             /**
              * T
              * @description Each frame's time, seconds since the Unix epoch.

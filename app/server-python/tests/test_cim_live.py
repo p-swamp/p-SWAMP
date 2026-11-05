@@ -37,6 +37,32 @@ def test_the_feed_says_its_stations_first(server):
     assert all(0.95 < v < 1.05 for row in samples["v_pu"] for v in row)
 
 
+def test_the_feed_carries_each_line_end_s_current_and_each_machine_s_and_load_s_power(server):
+    with server.websocket_connect("/api/cim-live/ws?client_id=603") as ws:
+        first = ws.receive_json()
+    layout, samples = first["layout"], first["samples"]
+    ends = layout["line_ends"]
+    assert len(ends) == 6 and {(e["end"]) for e in ends} == {1, 2}  # three lines, both ends
+    assert all(e["line"] and e["station"] for e in ends)
+    assert all(e["limit_a"] is None for e in ends)  # the sample grid has no CurrentLimits
+    assert {i["name"]: i["kind"] for i in layout["injections"]} == {
+        "Alpha GA": "generator", "Gamma GC": "generator", "Beta load LB": "load", "Gamma load LC": "load",
+    }  # fmt: skip
+    assert all(len(row) == len(ends) and all(a > 0 for a in row) for row in samples["i_a"])  # amperes
+    assert all(x is None for row in samples["loading"] for x in row)  # no limit, no loading
+    beta = [i["name"] for i in layout["injections"]].index("Beta load LB")
+    assert all(390 < row[beta] < 410 for row in samples["p_mw"]) and all(len(row) == 4 for row in samples["q_mvar"])
+
+
+def test_loading_is_the_current_over_its_end_s_limit():
+    import numpy as np
+
+    from cim_live.api import _rows
+
+    current = np.array([[300.0, 50.0, 7.0]])  # one frame, three line ends; the second has no limit
+    assert _rows(current, np.array([0, 1, 2]), np.array([600.0, np.nan, 7.0]), 4) == [[0.5, None, 1.0]]
+
+
 def test_every_frame_reaches_the_page_at_the_source_rate(server):
     with server.websocket_connect("/api/cim-live/ws?client_id=602") as ws:
         ws.receive_json()  # the layout, once the simulation runs
