@@ -537,6 +537,19 @@ playback command goes to the active source when it is `Playable`, and is
 refused (`<command> does not apply to a live source`) when it is not. A source
 that is not playable is pumped: its frames go out as they arrive.
 
+**A live source may take commands of its own** (`commands`, ADR-015): the grid
+simulation takes operations (a breaker) and disturbances (a line trip). Each
+class has one receiver in a pipeline, like a module's (`Pipeline.source_commands`).
+A command is published under the source's shared run's key (`live.<source>`),
+whichever run it was sent to, and that run's router hands it to the source:
+`validate` before it is published (the web API's 409; a source not running is
+one), `ahandle` once it arrives. What the source answers with, and what it says
+beside its frames (`outputs[1:]`: the simulation's `CimEdits` and `SimEvent`),
+the shared run publishes under its key without moving its cursor; a run
+following it hears them too. A source the environment adds after the pipeline
+was read (`<APP>_SOURCES`) is a receiver all the same. The web API sends one
+with `shared.dispatch_live` (503 when no such live run is up).
+
 ```python
 router = ActiveSource(sources, sink, loop=True)
 await router.start()        # a recording: paused at its start; a live feed: followed from now

@@ -56,9 +56,12 @@ station, named `<substation>_<kV>` (`Beta_400`). It has:
 - a voltage phasor: `V_Magnitude` kV, `V_Angle` deg;
 - a frequency: `f` Hz, from a PLL on its bus;
 - the current of each line leaving it: channel `I_<line>`, `I_Magnitude` A, `I_Angle` deg, from TOPS's
-  `I_from`/`I_to`.
+  `I_from`/`I_to`;
+- the power of each generator and load on it: channel `S_<equipment>`, `P` MW and `Q` Mvar, each its
+  own Analog, from TOPS's `GEN.P_e`/`Q_e` and `Load.P`/`Q`.
 
-A de-energised bus reads 0 kV and no angle or frequency.
+A de-energised bus reads 0 kV and no angle or frequency; a line, a machine or a load the model does
+not have reads `None`.
 
 ## How it follows the graph
 
@@ -79,7 +82,10 @@ the TOPS system the **engine** steps in a process of its own (`process.py`, `eng
   (`follow.ControllerProcess`), linked straight to the engine's: a refresh is a second or so of
   Python (results parsed into tables), which in the server's process held up the frames on their
   way to the pages, about 2.5 s without a frame at each edit. Over an in-process store (tests,
-  scripts), which no other process can read, it is a thread of the source's process.
+  scripts), which no other process can read, it is a thread of the source's process, at two paces:
+  what the engine sends and what the simulation reports, every `POLL`; the graph, at most a quarter
+  of the time, since a refresh shares the process with everything else. A report so never waits for
+  the graph's back-off (it did: 14 s after a reset).
 
 | In the graph | In the simulation |
 |---|---|

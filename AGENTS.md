@@ -93,8 +93,9 @@ one **Oxigraph** store (`oxigraph` in compose, `p-swamp-oxigraph` in k8s,
 `PSWAMP_CIM_URL`; ADR-014), one named graph per CGMES profile. It has no volume
 either: the server loads the grid into the empty store when it starts, so a
 restart puts every edit back. It is *shared state*, unlike everything else here,
-with **one writer**: the server's CIM graph app. Everything else reads it, each
-through a repository of its own that refuses to commit — see "The CIM graph".
+with **one writer**: the server's CIM graph app, which writes what the live simulation reports it
+did (ADR-015). Everything else reads it, each through a repository of its own that refuses to
+commit — see "The CIM graph".
 Only SPARQL 1.1 is used (queries at `/query`, updates at `/update`), so another
 store can stand in; with `PSWAMP_CIM_URL` unset each process has an in-process
 store of its own (`LocalStore`), which is what tests and scripts use.
@@ -661,7 +662,9 @@ The rules to keep:
   vocabulary into `cgmes:schema:<KW>`, completed in a private copy first, with Nordic44
   dynamics for every machine without any (`cgmes:model:DY`) and a **PMU Analog** for every
   place a PMU can observe (`cgmes:model:OP`): a V and an F per voltage level, an I per line
-  end, named `PMU_<substation>_<kV>_<V|F|I>[_<line>]` (`analogs.analog_name`). The grid is
+  end, a P and a Q at each generator and load, named `PMU_<substation>_<kV>_<V|F|I|P|Q>[_<line or
+  equipment>]` (`analogs.analog_name`). Each line end's permanent current limit is
+  `current_limits(repo)` (`cim/limits.py`, LazyCIM's `permanent_limit`: what protection uses). The grid is
   `PSWAMP_CIM_PATH` (a folder of `*_<PROFILE>.xml` files; the core ships
   `cim/sample_grid/`), or Nordic44, which LazyCIM downloads on first use (CC BY-NC-SA,
   never committed or shipped). A reset puts the SSH profile back, in one update.
@@ -701,37 +704,70 @@ The rules to keep:
   a grid). Keep it that way; a deployment uses Oxigraph.
 
 The web side is the **CIM graph app** (`app/server-python/src/cim_graph/`, page
-`/cim-graph`), the graph's only writer: the grid on its geographic layout; click a breaker
-to open or close it, a line to take it out (the breakers of its bay at one end, or a
-terminal where it has none). It loads the grid **when the server starts**, in the background
-(503 "the grid is loading" until then, and the socket waits; 503 with the reason, and a 1013
-close, when it cannot be had). There is no poller: the graph changes only when this app
-writes, so after each write it pushes the state read from its own repository (an edit is 0
-queries and 1 update). The page shows a click as switching until the state has it, and a
-status bar with the last change and the last click's round trip. Edits need the CGMES
-vocabularies (LazyCIM downloads them; offline, the graph is read-only and the tests skip).
+`/cim-graph`), the graph's only writer (ADR-015):
+
+- **An operation is a command to the live simulation, not an edit.** A breaker
+  (`POST /switches/{mrid}`), or a line (`POST /lines/{mrid}`: the one breaker of its bay the layout
+  names, or its terminal where it has none), goes to the rtsim's shared run through
+  `shared.dispatch_live` (503 without the simulation, 409 when it refuses); the graph shows the
+  result once the simulation reports it. **A disturbance goes to the simulation only**: a branch
+  trip and its reconnection, a short circuit at a connectivity node and its clearing, a fault on a
+  line cleared by its protection, a load step (`/branches/{mrid}/trip`, `/nodes/{mrid}/short-circuit`,
+  `/lines/{mrid}/fault`, `/loads/{mrid}/step`, ...). The graph never hears of one; what protection
+  opens about it, it does. A reset writes the SSH profile back and restarts the simulation.
+- **It writes what the simulation reports**, and nothing else: it subscribes to `CimEdits` on the
+  transport (`live.rtsim`) and applies them through `Writer.apply`, all or nothing, one update,
+  for the properties `grid.ALLOWED` that producer (rtsim: `Switch.open`, `ACDCTerminal.connected`).
+  It subscribes to `SimEvent` too, and keeps the last 50 in the state it pushes (`events`): the
+  only place a person hears of a disturbance.
+- It loads the grid **when the server starts**, in the background (503 "the grid is loading" until
+  then, and the socket waits; 503 with the reason, and a 1013 close, when it cannot be had). After
+  each write it pushes the state read from its own repository (an edit is 0 queries and 1 update).
+  The layout (`GET /layout`) also lists each substation's nodes and the loads, what a disturbance
+  is aimed at. Edits need the CGMES vocabularies (LazyCIM downloads them; offline, the graph is
+  read-only and the tests skip).
 
 The page (`app/client-web/src/pages/cim-graph/`, "Grid") draws that layout with **Leaflet,
 used directly** (react-leaflet's licence fails dependency review) over OpenStreetMap tiles, and
-below it two uPlot charts, every station's frequency and voltage over the last 30 s. Those come
-from **`cim_live`** (`app/server-python/src/cim_live/`, `/api/cim-live/ws`): each socket
-subscribes to the rtsim frames on the transport itself (`live.rtsim`, its own `DROP_OLDEST`
-backlog of 10 s), drains what queued at each wake and sends it as one `LiveFeed` (the layout
-when the header changes, then every frame's time, V p.u., V angle and f), so **no frame is
-merged away**: under load the batches grow. The page keeps the samples in a ref, redraws at
-most once per animation frame, and shows how many samples/s reach it (the Playwright spec
-wants at least 40).
+below it two uPlot charts, every station's frequency and voltage over the last 30 s. **The map
+shows the graph's state only**: a disturbance does not change it. A click on a breaker operates
+it, shown as switching until the graph has it; a click on a line, a substation or a load selects
+it, and a panel beside the map (`DetailPanel.tsx`) shows what the graph says of it, its live
+values and their last 30 s, and operates or disturbs it; a right-click (a long press) opens its
+disturbances (`DisturbanceMenu.tsx`; both lists are `disturbances.ts`). Lines in service are
+coloured by loading, when the graph gives their ends a limit; the status bar sums generation and
+load, and lists the simulation's events. Leaflet renders a layer only once its map has a view, so
+the view is set before any layer is added: otherwise a layer has no element to label.
+
+The values come from **`cim_live`** (`app/server-python/src/cim_live/`, `/api/cim-live/ws`): each
+socket subscribes to the rtsim frames on the transport itself (`live.rtsim`, its own `DROP_OLDEST`
+backlog of 10 s), drains what queued at each wake and sends it as one `LiveFeed` (the layout when
+the header changes: stations, line ends with their limits, generators and loads; then every
+frame's time, V p.u., V angle, f, each line end's current and loading, each injection's P and Q),
+so **no frame is merged away**: under load the batches grow. What each column is comes from the
+graph through its Analog, read once. The page keeps the samples in a ref, redraws at most once
+per animation frame, and shows how many samples/s reach it (the Playwright spec wants at least
+40); the panel's values and the totals are written into the DOM four times a second, never through
+React state.
 
 ### The live grid simulation
 
 `modules/rtsim-from-cim/` is a live `SourceModule` (`pswamp-rtsim-from-cim`, `cim = True`):
 one TOPS dynamic simulation of the grid in the CIM graph, run in real time and published as
 `PmuFrame`, one column group per PMU Analog of the graph (`pmu.py`; voltage and frequency
-per voltage level, current per line end), each column carrying its Analog. **It is steered by commands, and follows the graph**
-(ADR-015, `doc/WIP-rtsim-commands-plan.md`): an operation (a switch; the terminal of a line with no
+per voltage level, current per line end, power per generator and load: channel `S_<equipment>`,
+`P` MW and `Q` Mvar), each column carrying its Analog. **It is steered by commands, and follows the graph**
+(ADR-015): an operation (a switch; the terminal of a line with no
 breaker) is applied, then said as `CimEdits` for the graph's one writer; a disturbance (a trip, a
 fault, a load step) stays in the simulation, announced as a `SimEvent` and seen only in the frames.
-A live source's commands go to its shared run (`pswamp_core`: `Pipeline.source_commands`).
+A live source's commands go to its shared run (`pswamp_core`: `Pipeline.source_commands`); what it
+says beside its frames (`outputs[1:]`) its shared run publishes, also for a source the environment
+added after the pipeline was read. **Protection** (`protection.py`) is the controller's: a fault is
+cleared by the breakers that isolate its line, on time to the frame, and a line end over its
+permanent limit trips on an IEC standard inverse curve (`RTSIM_PROTECTION`, `_OVERLOAD_PICKUP`,
+`_OVERLOAD_TMS`); each operation is a `SimEvent`, and its breakers `CimEdits`. The sample grid's
+machines have no governors, so after a disturbance its frequency is not brought back (ADR-014);
+a reset is.
 The simulation is LazyCIM's **`LiveTops`** (TOPS 0.6) over the export `engine.EXPORT`: every node a
 bus and every switch a TOPS `Switch`, the parts the slack bus cannot reach left out, a PLL on every
 bus, the graph's controllers. `LiveTops` decides what a change of the graph means for a running
@@ -748,7 +784,9 @@ up the frames to the pages for ~2.5 s at each edit. So:
   graph's version stamp every `POLL` (0.2 s), and only when it moved expires SSH and SV and has
   `LiveTops` follow; idle, it reads nothing but the stamp, and an edit reaches the frames in about
   0.25 s. Over Oxigraph it is **a process of its own** (`follow.ControllerProcess`); an in-process
-  store, which no other process can read, is followed from a thread.
+  store, which no other process can read, is followed from a thread, at two paces: the engine's
+  messages and the simulation's reports every `POLL`, the graph at most a quarter of the time (a
+  refresh is Python work in the server's process), so a report never waits for that back-off.
 - **The engine** (`process.EngineProcess`, `engine.SimEngine`) builds the same TOPS system from the
   model, applies what it is sent, steps and paces (`RATE` 50 frames/s, `DT` 0.01 s), stamps each
   frame with its place in the schedule, computes its values and sends them up in batches by a

@@ -799,6 +799,15 @@ its entry point.
   refused without it, since its `read` would hold the event loop while it waits.
   `modules/sample-replay/` (history,
   playable) and `modules/live-synthetic/` (live) are the worked examples.
+- **A live source that takes commands:** list them in `commands` (the classes
+  in your producer's package of `pswamp_models`), refuse what does not apply in
+  `validate` (`CommandRefused`, before the command is published: a 409), and
+  apply them in `async def ahandle`, which may return what to announce. Say
+  anything else beside the frames by yielding it from `aread`, a class declared
+  in `outputs` after `PmuFrame`. The commands reach the source's shared run,
+  whichever page sent them, and a source not running refuses them; the web API
+  sends one with `shared.dispatch_live(app, source, command, log)`.
+  `modules/rtsim-from-cim/` is the worked example (ADR-015).
 - **Using it:** it is installed with the workspace (`uv sync`), and a pipeline
   names it, by entry point, in its `[[sources]]`, or `<APP>_SOURCES` replaces the
   list at run time (`PMU_TEST_STREAMER_SOURCES=sample:sample-replay,mine:my-recording`).
