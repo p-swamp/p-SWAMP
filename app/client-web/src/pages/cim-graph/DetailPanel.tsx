@@ -104,7 +104,8 @@ export function DetailPanel({
     if (target.kind === 'branch') {
       const { branch } = target
       const isOut = state?.out_of_service.includes(branch.mrid) ?? false
-      facts.push(['Between', `${names.get(branch.from_substation) ?? '?'} and ${names.get(branch.to_substation) ?? '?'}`])
+      if (branch.from_substation === branch.to_substation) facts.push(['In', names.get(branch.from_substation) ?? '?'])
+      else facts.push(['Between', `${names.get(branch.from_substation) ?? '?'} and ${names.get(branch.to_substation) ?? '?'}`])
       facts.push(['In the graph', isOut ? 'out of service' : 'in service'])
       const breaker = branch.breaker ? layout.breakers.find((b) => b.mrid === branch.breaker) : undefined
       facts.push(['Operated by', breaker ? `${breaker.name} (${state?.switches[breaker.mrid] ? 'open' : 'closed'})` : 'its terminal (no breaker of its own)'])

@@ -37,3 +37,24 @@
   border-top-color: #4c1d95;
   filter: drop-shadow(0 0 2px #4c1d95);
 }
+
+/* A transformer's symbol: two overlapping windings, coloured as its branch is (in service, out,
+   switching), and outlined when selected. */
+.cim-transformer {
+  cursor: pointer;
+}
+.cim-transformer svg circle {
+  fill: rgba(255, 255, 255, 0.85);
+  stroke: #16a34a;
+  stroke-width: 2;
+}
+.cim-transformer-out svg circle {
+  stroke: #ef4444;
+  stroke-dasharray: 3 2;
+}
+.cim-transformer-pending svg circle {
+  stroke: #f59e0b;
+}
+.cim-transformer.cim-selected svg {
+  filter: drop-shadow(0 0 2px #0f172a);
+}

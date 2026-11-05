@@ -1236,7 +1236,7 @@ export interface components {
             path: components["schemas"]["Point"][];
             /**
              * To Substation
-             * @description mRID of the substation at its second end.
+             * @description mRID of the substation at its second end; the same as the first for a transformer inside one substation.
              */
             to_substation: string;
         };

@@ -45,7 +45,9 @@ class LayoutBranch(BaseModel):
     name: str
     kind: Literal["line", "transformer"]
     from_substation: str = Field(description="mRID of the substation at its first end.")
-    to_substation: str = Field(description="mRID of the substation at its second end.")
+    to_substation: str = Field(
+        description="mRID of the substation at its second end; the same as the first for a transformer inside one substation."
+    )
     path: list[Point] = Field(description="Its route; empty: a straight segment between the substations.")
     breaker: str | None = Field(
         description="mRID of the one breaker that takes it out of service on its own (its bay's, at one end); "

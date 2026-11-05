@@ -127,6 +127,22 @@ test.describe('CIM graph', () => {
     await expect(panel).toBeHidden()
   })
 
+  test('a transformer has its symbol, and its panel takes it out of service and brings it back', async ({ page }) => {
+    await open(page)
+    const transformer = page.locator('[data-testid^="transformer-"]').first()
+    test.skip((await transformer.count()) === 0, 'the grid has no transformer on its layout')
+    const was = (await transformer.getAttribute('data-out')) === 'true'
+    await transformer.dispatchEvent('click')
+    await expect(transformer).toHaveAttribute('data-selected', 'true')
+    const panel = page.getByTestId('detail-panel')
+    await expect(panel).toContainText('transformer')
+    const operate = panel.getByRole('button', { name: /^(Take out of service|Bring back into service)$/ })
+    await operate.click()
+    await expect(transformer).toHaveAttribute('data-out', String(!was)) // the simulation took it, the graph has it
+    await operate.click()
+    await expect(transformer).toHaveAttribute('data-out', String(was))
+  })
+
   test('a substation\'s panel shows its stations and the machines and loads at it, live', async ({ page }) => {
     await open(page)
     await page.locator('[data-testid^="substation-"]').first().dispatchEvent('click')

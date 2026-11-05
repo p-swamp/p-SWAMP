@@ -80,7 +80,11 @@ def test_the_layout_is_the_substations_lines_and_breakers_with_their_coordinates
         "Alpha-Beta 400 kV line",
         "Beta-Gamma 400 kV line",
         "Alpha-Gamma 400 kV line",
+        "Gamma 400/132",
     }
+    # a transformer inside one substation is drawn there: that substation at both ends, no route
+    (trafo,) = [b for b in layout["branches"] if b["kind"] == "transformer"]
+    assert trafo["from_substation"] == trafo["to_substation"] == P + "10" and trafo["path"] == []
     assert {b["name"] for b in layout["breakers"]} == {"Beta bus coupler", "Alpha-Gamma bay breaker"}
     # each line already says its one breaker (null: operated through a terminal)
     by_name = {b["name"]: b["breaker"] for b in layout["branches"]}
