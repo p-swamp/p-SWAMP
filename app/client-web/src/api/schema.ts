@@ -4,6 +4,48 @@
  */
 
 export interface paths {
+    "/api/cim-graph/branches/{mrid}/reconnect": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reconnect Branch
+         * @description A tripped line or transformer comes back. 409 for one the simulation does not have; 503
+         *     without the simulation.
+         */
+        post: operations["cim_graph_reconnect_branch"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/cim-graph/branches/{mrid}/trip": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Trip Branch
+         * @description A line or transformer trips, as no one commanded it. 409 for one the simulation does not have;
+         *     503 without the simulation.
+         */
+        post: operations["cim_graph_trip_branch"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/cim-graph/layout": {
         parameters: {
             query?: never;
@@ -40,6 +82,91 @@ export interface paths {
          *     409 when the graph says it is already so, or the simulation refuses; 503 without the simulation.
          */
         post: operations["cim_graph_set_line"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/cim-graph/lines/{mrid}/fault": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Fault Line
+         * @description A fault at one end of a line, cleared after ``clear_ms`` by its protection, which opens the
+         *     breakers that isolate the line; those the graph then shows open. 409 for a line the simulation
+         *     does not have; 503 without the simulation.
+         */
+        post: operations["cim_graph_fault_line"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/cim-graph/loads/{mrid}/step": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Load Step
+         * @description A load draws other power, as no one told the graph. 409 for a load the simulation does not
+         *     have; 503 without the simulation.
+         */
+        post: operations["cim_graph_load_step"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/cim-graph/nodes/{mrid}/clear-short-circuit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Clear Short Circuit
+         * @description The short circuit at a connectivity node goes. 409 for a node the simulation does not have;
+         *     503 without the simulation.
+         */
+        post: operations["cim_graph_clear_short_circuit"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/cim-graph/nodes/{mrid}/short-circuit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Short Circuit
+         * @description A short circuit at a connectivity node, until it is cleared. 409 for a node the simulation
+         *     does not have (one cut off from the grid); 503 without the simulation.
+         */
+        post: operations["cim_graph_short_circuit"];
         delete?: never;
         options?: never;
         head?: never;
@@ -818,6 +945,28 @@ export interface components {
              */
             version: "v1";
         };
+        /** FaultBody */
+        FaultBody: {
+            /**
+             * Clear Ms
+             * @description How long its protection takes to clear it, ms.
+             * @default 100
+             */
+            clear_ms: number;
+            /**
+             * End
+             * @description The line end the fault is at.
+             * @default 1
+             * @enum {integer}
+             */
+            end: 1 | 2;
+            /**
+             * Y
+             * @description The fault's admittance to ground, per unit.
+             * @default 1000000
+             */
+            y: number;
+        };
         /**
          * FrameStats
          * @description The statistics of one instant.
@@ -1290,6 +1439,19 @@ export interface components {
              */
             substation: string | null;
         };
+        /** LoadStepBody */
+        LoadStepBody: {
+            /**
+             * P Mw
+             * @description Its new active power, MW.
+             */
+            p_mw?: number | null;
+            /**
+             * Q Mvar
+             * @description Its new reactive power, Mvar.
+             */
+            q_mvar?: number | null;
+        };
         /** Phasor */
         Phasor: {
             /** Ang */
@@ -1676,6 +1838,15 @@ export interface components {
              */
             until?: string | null;
         };
+        /** ShortCircuitBody */
+        ShortCircuitBody: {
+            /**
+             * Y
+             * @description The fault's admittance to ground, per unit; the default is bolted.
+             * @default 1000000
+             */
+            y: number;
+        };
         /** SourceBody */
         SourceBody: {
             /**
@@ -1799,6 +1970,74 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    cim_graph_reconnect_branch: {
+        parameters: {
+            query: {
+                /** @description The browser's client id -- the same value its WebSockets send, which is what makes a command apply to the pipeline the page is watching. */
+                client_id: string;
+            };
+            header?: never;
+            path: {
+                mrid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandAck"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    cim_graph_trip_branch: {
+        parameters: {
+            query: {
+                /** @description The browser's client id -- the same value its WebSockets send, which is what makes a command apply to the pipeline the page is watching. */
+                client_id: string;
+            };
+            header?: never;
+            path: {
+                mrid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandAck"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     cim_graph_layout: {
         parameters: {
             query?: never;
@@ -1834,6 +2073,154 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["SwitchBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandAck"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    cim_graph_fault_line: {
+        parameters: {
+            query: {
+                /** @description The browser's client id -- the same value its WebSockets send, which is what makes a command apply to the pipeline the page is watching. */
+                client_id: string;
+            };
+            header?: never;
+            path: {
+                mrid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FaultBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandAck"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    cim_graph_load_step: {
+        parameters: {
+            query: {
+                /** @description The browser's client id -- the same value its WebSockets send, which is what makes a command apply to the pipeline the page is watching. */
+                client_id: string;
+            };
+            header?: never;
+            path: {
+                mrid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LoadStepBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandAck"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    cim_graph_clear_short_circuit: {
+        parameters: {
+            query: {
+                /** @description The browser's client id -- the same value its WebSockets send, which is what makes a command apply to the pipeline the page is watching. */
+                client_id: string;
+            };
+            header?: never;
+            path: {
+                mrid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandAck"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    cim_graph_short_circuit: {
+        parameters: {
+            query: {
+                /** @description The browser's client id -- the same value its WebSockets send, which is what makes a command apply to the pipeline the page is watching. */
+                client_id: string;
+            };
+            header?: never;
+            path: {
+                mrid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ShortCircuitBody"];
             };
         };
         responses: {
