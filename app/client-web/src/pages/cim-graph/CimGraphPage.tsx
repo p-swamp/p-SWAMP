@@ -6,8 +6,9 @@ import { DisturbanceMenu } from './DisturbanceMenu'
 import { EventLog } from './EventLog'
 import { GridMap } from './GridMap'
 import type { MenuRequest } from './GridMap'
-import { stationColor } from './colors'
+import { loadingColor, stationColor } from './colors'
 import { LiveChart } from './LiveChart'
+import { SystemTotals } from './SystemTotals'
 import { useCimGraphSocket } from './useCimGraphSocket'
 import type { CimLayout, GraphStatus } from './useCimGraphSocket'
 import { useLiveFeed, WINDOW_S } from './useLiveFeed'
@@ -132,6 +133,7 @@ export function CimGraphPage() {
               onBreaker={(mrid, isOpen) => setSwitch(mrid, !isOpen)}
               onLine={operate}
               stations={live.stations}
+              lineEnds={live.lineEnds}
               buffer={live.buffer}
               subscribe={live.subscribe}
               highlight={picked}
@@ -153,6 +155,13 @@ export function CimGraphPage() {
               style={{ background: 'repeating-linear-gradient(90deg, #ef4444 0 5px, transparent 5px 9px)' }}
             />
             out of service
+          </span>
+          <span>
+            loading:{' '}
+            {[0.3, 0.6, 0.9, 1].map((x) => (
+              <span key={x} className="mr-0.5 inline-block h-1 w-3 align-middle" style={{ background: loadingColor(x) }} />
+            ))}{' '}
+            under 50 %, 80 %, 100 %, over its limit
           </span>
           <span>
             <span className="mr-1 inline-block size-2 align-middle" style={{ background: '#16a34a' }} />
@@ -221,6 +230,7 @@ export function CimGraphPage() {
           <span data-testid="samples-per-second">
             Simulation: {live.connected ? `${live.samplesPerSecond.toFixed(0)} samples/s` : 'not connected'}
           </span>
+          <SystemTotals injections={live.injections} buffer={live.buffer} subscribe={live.subscribe} />
           <span>Last change: {changedAt ? changedAt.toLocaleTimeString() : 'none since this page opened'}</span>
           <span>
             Last click: {roundTripMs === null ? 'none yet' : `${roundTripMs} ms from click to screen`}

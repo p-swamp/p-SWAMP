@@ -3,8 +3,9 @@ import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 
 import './gridMap.css'
+import { loadingColor } from './colors'
 import type { CimGraphState, CimLayout } from './useCimGraphSocket'
-import type { LiveBuffer, LiveStation } from './useLiveFeed'
+import type { LiveBuffer, LiveLineEnd, LiveStation } from './useLiveFeed'
 
 const TILE_URL = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
 const TILE_ATTRIBUTION = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
@@ -53,7 +54,7 @@ type Layers = {
 
 /**
  * The grid on its geographic layout (the graph's GL profile), on OpenStreetMap: substations, lines,
- * breakers and loads. A click on a breaker or a line operates it; a right-click (a long press) on a
+ * breakers and loads. A line in service is coloured by its loading, when it has a limit. A click on a breaker or a line operates it; a right-click (a long press) on a
  * line, a substation or a load asks for its disturbances (``onMenu``). Leaflet is driven directly (react-leaflet's licence does not pass dependency review): the
  * layers are built once per layout and restyled in place, from the graph's state (out of service,
  * open, switching) and, four times a second, from the live feed (each substation coloured by its
@@ -67,6 +68,7 @@ export function GridMap({
   onBreaker,
   onLine,
   stations,
+  lineEnds,
   buffer,
   subscribe,
   highlight,
@@ -80,6 +82,7 @@ export function GridMap({
   onBreaker: (mrid: string, isOpen: boolean) => void
   onLine: (branch: Branch, isOut: boolean) => void
   stations: LiveStation[]
+  lineEnds: LiveLineEnd[]
   buffer: React.RefObject<LiveBuffer>
   subscribe: (listener: () => void) => () => void
   highlight: string | null
@@ -88,6 +91,8 @@ export function GridMap({
 }) {
   const container = useRef<HTMLDivElement | null>(null)
   const layers = useRef<Layers | null>(null)
+  /** The lines the graph's state colours (out of service, switching): loading does not recolour them. */
+  const stateColoured = useRef(new Set<string>())
   // The latest props, for the handlers the layers were built with.
   const props = useRef({ state, editable, onBreaker, onLine, onPick, onMenu })
   useEffect(() => {
@@ -210,11 +215,13 @@ export function GridMap({
     const built = layers.current
     if (!built) return
     const out = new Set(state?.out_of_service ?? [])
+    stateColoured.current = new Set()
     const names = new Map(layout.substations.map((s) => [s.mrid, s.name]))
     const breakerNames = new Map(layout.breakers.map((b) => [b.mrid, b.name]))
     for (const [mrid, { line, hit, branch }] of built.lines) {
       const isOut = out.has(mrid)
       const switching = pending.has(mrid) || (!!branch.breaker && pending.has(branch.breaker))
+      if (isOut || switching) stateColoured.current.add(mrid)
       line.setStyle({ color: switching ? PENDING : isOut ? OUT : OK, dashArray: isOut ? '6 5' : undefined, weight: isOut || switching ? 3.5 : 3 })
       const element = hit.getElement()
       element?.setAttribute('data-out', String(isOut))
@@ -275,9 +282,21 @@ export function GridMap({
           f === null || f === undefined ? name : `${name}: ${f.toFixed(4)} Hz · ${v === null || v === undefined ? '—' : v.toFixed(3)} p.u.`,
         )
       }
+      // Each line by the more loaded of its ends, unless the graph's state colours it.
+      const loading = new Map<string, number>()
+      lineEnds.forEach((end, i) => {
+        const value = buf.loading[i]?.[buf.loading[i].length - 1]
+        if (value !== null && value !== undefined) loading.set(end.line, Math.max(value, loading.get(end.line) ?? 0))
+      })
+      for (const [mrid, { line, hit }] of built.lines) {
+        const value = loading.get(mrid)
+        hit.getElement()?.setAttribute('data-loading', value === undefined ? '' : value.toFixed(3))
+        if (stateColoured.current.has(mrid)) continue
+        line.setStyle(value === undefined ? { color: OK, weight: 3 } : { color: loadingColor(value), weight: value >= 1 ? 5 : 3 })
+      }
     }
     return subscribe(paint)
-  }, [buffer, layout, stations, subscribe])
+  }, [buffer, layout, lineEnds, stations, subscribe])
 
   return <div ref={container} className="h-[60vh] w-full rounded-md border" role="region" aria-label="The grid on its geographic layout" />
 }
