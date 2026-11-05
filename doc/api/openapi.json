@@ -604,6 +604,36 @@
         "title": "ExcursionResult",
         "type": "object"
       },
+      "FaultBody": {
+        "properties": {
+          "clear_ms": {
+            "default": 100.0,
+            "description": "How long its protection takes to clear it, ms.",
+            "exclusiveMinimum": 0.0,
+            "title": "Clear Ms",
+            "type": "number"
+          },
+          "end": {
+            "default": 1,
+            "description": "The line end the fault is at.",
+            "enum": [
+              1,
+              2
+            ],
+            "title": "End",
+            "type": "integer"
+          },
+          "y": {
+            "default": 1000000.0,
+            "description": "The fault's admittance to ground, per unit.",
+            "exclusiveMinimum": 0.0,
+            "title": "Y",
+            "type": "number"
+          }
+        },
+        "title": "FaultBody",
+        "type": "object"
+      },
       "FrameStats": {
         "description": "The statistics of one instant.",
         "properties": {
@@ -1622,6 +1652,36 @@
         "title": "LiveStation",
         "type": "object"
       },
+      "LoadStepBody": {
+        "properties": {
+          "p_mw": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Its new active power, MW.",
+            "title": "P Mw"
+          },
+          "q_mvar": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Its new reactive power, Mvar.",
+            "title": "Q Mvar"
+          }
+        },
+        "title": "LoadStepBody",
+        "type": "object"
+      },
       "Phasor": {
         "properties": {
           "ang": {
@@ -2351,6 +2411,19 @@
         "title": "SeekBody",
         "type": "object"
       },
+      "ShortCircuitBody": {
+        "properties": {
+          "y": {
+            "default": 1000000.0,
+            "description": "The fault's admittance to ground, per unit; the default is bolted.",
+            "exclusiveMinimum": 0.0,
+            "title": "Y",
+            "type": "number"
+          }
+        },
+        "title": "ShortCircuitBody",
+        "type": "object"
+      },
       "SourceBody": {
         "properties": {
           "name": {
@@ -2587,6 +2660,116 @@
   },
   "openapi": "3.1.0",
   "paths": {
+    "/api/cim-graph/branches/{mrid}/reconnect": {
+      "post": {
+        "description": "A tripped line or transformer comes back. 409 for one the simulation does not have; 503\nwithout the simulation.",
+        "operationId": "cim_graph_reconnect_branch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "mrid",
+            "required": true,
+            "schema": {
+              "title": "Mrid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "The browser's client id -- the same value its WebSockets send, which is what makes a command apply to the pipeline the page is watching.",
+            "in": "query",
+            "name": "client_id",
+            "required": true,
+            "schema": {
+              "description": "The browser's client id -- the same value its WebSockets send, which is what makes a command apply to the pipeline the page is watching.",
+              "pattern": "^\\d{1,20}$",
+              "title": "Client Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandAck"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Reconnect Branch",
+        "tags": [
+          "cim-graph"
+        ]
+      }
+    },
+    "/api/cim-graph/branches/{mrid}/trip": {
+      "post": {
+        "description": "A line or transformer trips, as no one commanded it. 409 for one the simulation does not have;\n503 without the simulation.",
+        "operationId": "cim_graph_trip_branch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "mrid",
+            "required": true,
+            "schema": {
+              "title": "Mrid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "The browser's client id -- the same value its WebSockets send, which is what makes a command apply to the pipeline the page is watching.",
+            "in": "query",
+            "name": "client_id",
+            "required": true,
+            "schema": {
+              "description": "The browser's client id -- the same value its WebSockets send, which is what makes a command apply to the pipeline the page is watching.",
+              "pattern": "^\\d{1,20}$",
+              "title": "Client Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandAck"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Trip Branch",
+        "tags": [
+          "cim-graph"
+        ]
+      }
+    },
     "/api/cim-graph/layout": {
       "get": {
         "description": "Where the substations, lines and breakers are, from the graph's GL profile.",
@@ -2669,6 +2852,256 @@
           }
         },
         "summary": "Set Line",
+        "tags": [
+          "cim-graph"
+        ]
+      }
+    },
+    "/api/cim-graph/lines/{mrid}/fault": {
+      "post": {
+        "description": "A fault at one end of a line, cleared after ``clear_ms`` by its protection, which opens the\nbreakers that isolate the line; those the graph then shows open. 409 for a line the simulation\ndoes not have; 503 without the simulation.",
+        "operationId": "cim_graph_fault_line",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "mrid",
+            "required": true,
+            "schema": {
+              "title": "Mrid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "The browser's client id -- the same value its WebSockets send, which is what makes a command apply to the pipeline the page is watching.",
+            "in": "query",
+            "name": "client_id",
+            "required": true,
+            "schema": {
+              "description": "The browser's client id -- the same value its WebSockets send, which is what makes a command apply to the pipeline the page is watching.",
+              "pattern": "^\\d{1,20}$",
+              "title": "Client Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FaultBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandAck"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Fault Line",
+        "tags": [
+          "cim-graph"
+        ]
+      }
+    },
+    "/api/cim-graph/loads/{mrid}/step": {
+      "post": {
+        "description": "A load draws other power, as no one told the graph. 409 for a load the simulation does not\nhave; 503 without the simulation.",
+        "operationId": "cim_graph_load_step",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "mrid",
+            "required": true,
+            "schema": {
+              "title": "Mrid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "The browser's client id -- the same value its WebSockets send, which is what makes a command apply to the pipeline the page is watching.",
+            "in": "query",
+            "name": "client_id",
+            "required": true,
+            "schema": {
+              "description": "The browser's client id -- the same value its WebSockets send, which is what makes a command apply to the pipeline the page is watching.",
+              "pattern": "^\\d{1,20}$",
+              "title": "Client Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoadStepBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandAck"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Load Step",
+        "tags": [
+          "cim-graph"
+        ]
+      }
+    },
+    "/api/cim-graph/nodes/{mrid}/clear-short-circuit": {
+      "post": {
+        "description": "The short circuit at a connectivity node goes. 409 for a node the simulation does not have;\n503 without the simulation.",
+        "operationId": "cim_graph_clear_short_circuit",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "mrid",
+            "required": true,
+            "schema": {
+              "title": "Mrid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "The browser's client id -- the same value its WebSockets send, which is what makes a command apply to the pipeline the page is watching.",
+            "in": "query",
+            "name": "client_id",
+            "required": true,
+            "schema": {
+              "description": "The browser's client id -- the same value its WebSockets send, which is what makes a command apply to the pipeline the page is watching.",
+              "pattern": "^\\d{1,20}$",
+              "title": "Client Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandAck"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Clear Short Circuit",
+        "tags": [
+          "cim-graph"
+        ]
+      }
+    },
+    "/api/cim-graph/nodes/{mrid}/short-circuit": {
+      "post": {
+        "description": "A short circuit at a connectivity node, until it is cleared. 409 for a node the simulation\ndoes not have (one cut off from the grid); 503 without the simulation.",
+        "operationId": "cim_graph_short_circuit",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "mrid",
+            "required": true,
+            "schema": {
+              "title": "Mrid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "The browser's client id -- the same value its WebSockets send, which is what makes a command apply to the pipeline the page is watching.",
+            "in": "query",
+            "name": "client_id",
+            "required": true,
+            "schema": {
+              "description": "The browser's client id -- the same value its WebSockets send, which is what makes a command apply to the pipeline the page is watching.",
+              "pattern": "^\\d{1,20}$",
+              "title": "Client Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ShortCircuitBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandAck"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Short Circuit",
         "tags": [
           "cim-graph"
         ]

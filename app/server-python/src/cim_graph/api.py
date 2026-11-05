@@ -14,7 +14,9 @@ read from the writer's own repository and pushed down every open socket. The gra
 per client: a breaker opened by any visitor is opened for all of them, and the simulation follows it.
 
 Commands come up over REST (a switch, a line, a reset), each acknowledged once the simulation has
-taken it, and shown on the socket like any other change; state goes down the socket.
+taken it, and shown on the socket like any other change; state goes down the socket. So do the
+**disturbances** (a branch trip, a short circuit, a fault cleared by protection, a load step), which
+go to the simulation only: the graph learns only of what protection does about them.
 
 Until the grid is loaded this app answers 503 ("the grid is loading"), and its socket waits for it;
 when the grid cannot be had, 503 with the reason, and the socket closes with 1013. The rest of the
@@ -31,7 +33,17 @@ from fastapi import APIRouter, FastAPI, HTTPException, WebSocket
 from pswamp_core.subscription import Overflow
 from pswamp_core.util.tasks import cancel_and_wait
 from pswamp_models.cim import CimEdits
-from pswamp_models.rtsim import OperateLineCommand, OperateSwitchCommand, ResetSimulationCommand
+from pswamp_models.rtsim import (
+    ClearShortCircuitCommand,
+    FaultAndClearCommand,
+    LoadStepCommand,
+    OperateLineCommand,
+    OperateSwitchCommand,
+    ReconnectBranchCommand,
+    ResetSimulationCommand,
+    ShortCircuitCommand,
+    TripBranchCommand,
+)
 from shared import (
     LIVE_RUNS,
     ClientId,
@@ -46,7 +58,7 @@ from shared import (
 )
 
 from .grid import GridState, Writer, read_layout
-from .model import CimGraphState, CimLayout, SwitchBody
+from .model import CimGraphState, CimLayout, FaultBody, LoadStepBody, ShortCircuitBody, SwitchBody
 
 logger = get_logger("cim-graph")
 router = APIRouter()
@@ -235,6 +247,56 @@ async def set_line(mrid: str, body: SwitchBody, client_id: ClientId) -> CommandA
     if breaker is not None:
         return _operate(OperateSwitchCommand(mRID=breaker, open=body.open), client_id)
     return _operate(OperateLineCommand(mRID=mrid, in_service=not body.open), client_id)
+
+
+# --- disturbances ---------------------------------------------------------------------
+#
+# Each goes to the simulation only (ADR-015): the graph never hears of it, and the frames show it. What
+# protection does about one (a breaker it opens) is reported like any operation, and written. The
+# simulation knows its objects, so it is the one that refuses an object it does not have (409).
+
+
+@router.post("/branches/{mrid}/trip", operation_id="cim_graph_trip_branch")
+async def trip_branch(mrid: str, client_id: ClientId) -> CommandAck:
+    """A line or transformer trips, as no one commanded it. 409 for one the simulation does not have;
+    503 without the simulation."""
+    return _operate(TripBranchCommand(mRID=mrid), client_id)
+
+
+@router.post("/branches/{mrid}/reconnect", operation_id="cim_graph_reconnect_branch")
+async def reconnect_branch(mrid: str, client_id: ClientId) -> CommandAck:
+    """A tripped line or transformer comes back. 409 for one the simulation does not have; 503
+    without the simulation."""
+    return _operate(ReconnectBranchCommand(mRID=mrid), client_id)
+
+
+@router.post("/nodes/{mrid}/short-circuit", operation_id="cim_graph_short_circuit")
+async def short_circuit(mrid: str, body: ShortCircuitBody, client_id: ClientId) -> CommandAck:
+    """A short circuit at a connectivity node, until it is cleared. 409 for a node the simulation
+    does not have (one cut off from the grid); 503 without the simulation."""
+    return _operate(ShortCircuitCommand(mRID=mrid, y=body.y), client_id)
+
+
+@router.post("/nodes/{mrid}/clear-short-circuit", operation_id="cim_graph_clear_short_circuit")
+async def clear_short_circuit(mrid: str, client_id: ClientId) -> CommandAck:
+    """The short circuit at a connectivity node goes. 409 for a node the simulation does not have;
+    503 without the simulation."""
+    return _operate(ClearShortCircuitCommand(mRID=mrid), client_id)
+
+
+@router.post("/lines/{mrid}/fault", operation_id="cim_graph_fault_line")
+async def fault_line(mrid: str, body: FaultBody, client_id: ClientId) -> CommandAck:
+    """A fault at one end of a line, cleared after ``clear_ms`` by its protection, which opens the
+    breakers that isolate the line; those the graph then shows open. 409 for a line the simulation
+    does not have; 503 without the simulation."""
+    return _operate(FaultAndClearCommand(mRID=mrid, end=body.end, clear_ms=body.clear_ms, y=body.y), client_id)
+
+
+@router.post("/loads/{mrid}/step", operation_id="cim_graph_load_step")
+async def load_step(mrid: str, body: LoadStepBody, client_id: ClientId) -> CommandAck:
+    """A load draws other power, as no one told the graph. 409 for a load the simulation does not
+    have; 503 without the simulation."""
+    return _operate(LoadStepCommand(mRID=mrid, p_mw=body.p_mw, q_mvar=body.q_mvar), client_id)
 
 
 @router.post("/reset", operation_id="cim_graph_reset")
