@@ -225,8 +225,10 @@ def read_layout(repo) -> CimLayout:
     for kind, table in (("line", lines), ("transformer", trafos)):
         for mrid, name in zip(table["mRID"], table["name"], strict=True):
             ends = substations_at.get(mrid, [])
+            if kind == "transformer" and len(ends) == 1:
+                ends = [ends[0], ends[0]]  # inside one substation (a 400/132 kV step): drawn there
             if len(ends) != 2 or not all(end in positioned for end in ends):
-                continue  # inside one substation, or not placed: nothing to draw
+                continue  # a line inside one substation, or not placed: nothing to draw
             path = [Point(lon=lon, lat=lat) for lon, lat in route.get(where.get(mrid, ""), ())]
             branches.append(
                 LayoutBranch(

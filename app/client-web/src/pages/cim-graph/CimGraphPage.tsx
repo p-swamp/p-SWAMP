@@ -197,6 +197,13 @@ export function CimGraphPage() {
             switching (clicked, not yet in the graph)
           </span>
           <span>
+            <svg className="mr-1 inline-block align-middle" width="16" height="10" viewBox="0 0 20 12" aria-hidden="true">
+              <circle cx="6" cy="6" r="5" fill="none" stroke="#16a34a" strokeWidth="2" />
+              <circle cx="14" cy="6" r="5" fill="none" stroke="#16a34a" strokeWidth="2" />
+            </svg>
+            transformer
+          </span>
+          <span>
             <span
               className="mr-1 inline-block align-middle"
               style={{ borderLeft: '4px solid transparent', borderRight: '4px solid transparent', borderTop: '7px solid #7c3aed' }}

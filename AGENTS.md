@@ -734,7 +734,9 @@ shows the graph's state only**: a disturbance does not change it. A click on a b
 it, shown as switching until the graph has it; a click on a line, a substation or a load selects
 it, and a panel beside the map (`DetailPanel.tsx`) shows what the graph says of it, its live
 values and their last 30 s, and operates or disturbs it; a right-click (a long press) opens its
-disturbances (`DisturbanceMenu.tsx`; both lists are `disturbances.ts`). Lines in service are
+disturbances (`DisturbanceMenu.tsx`; both lists are `disturbances.ts`). A transformer carries its
+symbol (two windings), at the middle of its segment, or beside its substation when both its ends
+are in it (the layout then names that substation twice). Lines in service are
 coloured by loading, when the graph gives their ends a limit; the status bar sums generation and
 load, and lists the simulation's events. Leaflet renders a layer only once its map has a view, so
 the view is set before any layer is added: otherwise a layer has no element to label.

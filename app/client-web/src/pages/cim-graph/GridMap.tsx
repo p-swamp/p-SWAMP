@@ -35,6 +35,17 @@ function frequencyColor(f: number | null | undefined): string {
 }
 
 /** A line's weight: thicker when it is the selected one. */
+/** A transformer's symbol: two overlapping windings. Its colour is the element's (``.cim-transformer``). */
+const TRANSFORMER_ICON =
+  '<svg width="20" height="12" viewBox="0 0 20 12" aria-hidden="true"><circle cx="6" cy="6" r="5" /><circle cx="14" cy="6" r="5" /></svg>'
+
+/** The point halfway along ``points``: where a branch's symbol goes. */
+function middle(points: L.LatLng[]): L.LatLng {
+  const i = Math.floor((points.length - 1) / 2)
+  const [a, b] = [points[i], points[Math.min(i + 1, points.length - 1)]]
+  return points.length % 2 === 1 ? points[i] : L.latLng((a.lat + b.lat) / 2, (a.lng + b.lng) / 2)
+}
+
 const thicker = (mrid: string, selected: string | null, weight: number) => (mrid === selected ? weight + 3 : weight)
 
 function title(element: Element | undefined, text: string) {
@@ -50,6 +61,8 @@ function title(element: Element | undefined, text: string) {
 type Layers = {
   map: L.Map
   lines: Map<string, { line: L.Polyline; hit: L.Polyline; branch: Branch }>
+  /** Each transformer's symbol: at the middle of its segment, or beside its substation. */
+  transformers: Map<string, { marker: L.Marker; branch: Branch }>
   breakers: Map<string, L.Marker>
   substations: Map<string, L.CircleMarker>
   loads: Map<string, L.Marker>
@@ -133,14 +146,39 @@ export function GridMap({
     // The view first: Leaflet renders a layer only once its map has one, so until then a layer has no
     // element to label (getElement() is undefined) and the labels below would be silently skipped.
     map.fitBounds(L.latLngBounds([...at.values()]), { padding: [24, 24] })
-    const built: Layers = { map, lines: new Map(), breakers: new Map(), substations: new Map(), loads: new Map() }
+    const built: Layers = { map, lines: new Map(), breakers: new Map(), substations: new Map(), loads: new Map(), transformers: new Map() }
 
+    const inside = new Map<string, number>() // substation -> transformers drawn beside it so far
     for (const branch of layout.branches) {
+      const within = branch.from_substation === branch.to_substation
       const points =
         branch.path.length >= 2
           ? branch.path.map((p) => L.latLng(p.lat, p.lon))
           : [at.get(branch.from_substation), at.get(branch.to_substation)].filter((p): p is L.LatLng => !!p)
-      if (points.length < 2) continue
+      if (branch.kind === 'transformer') {
+        // Its symbol: at the middle of its segment, or above its substation when both ends are in it.
+        const i = within ? (inside.get(branch.from_substation) ?? 0) : 0
+        if (within) inside.set(branch.from_substation, i + 1)
+        const where = within ? at.get(branch.from_substation) : points.length >= 2 ? middle(points) : undefined
+        if (where) {
+          const marker = L.marker(where, {
+            icon: L.divIcon({ className: 'cim-transformer', html: TRANSFORMER_ICON, iconSize: [20, 12], iconAnchor: within ? [10 - 24 * i, 30] : [10, 6] }),
+            keyboard: false,
+            zIndexOffset: 500,
+          })
+            .on('click', (event) => {
+              L.DomEvent.stopPropagation(event)
+              props.current.onSelect({ kind: 'branch', branch })
+            })
+            .on('contextmenu', menu({ kind: 'branch', branch }))
+            .addTo(map)
+          const element = marker.getElement()
+          element?.setAttribute('data-testid', `transformer-${branch.name}`)
+          element?.setAttribute('role', 'button')
+          built.transformers.set(branch.mrid, { marker, branch })
+        }
+      }
+      if (within || points.length < 2) continue // a transformer inside its substation has no segment
       const line = L.polyline(points, { weight: 3, color: OK, interactive: false }).addTo(map)
       // A wide, invisible twin takes the click: a 3 px line is a small target.
       const hit = L.polyline(points, { weight: 14, opacity: 0, bubblingMouseEvents: false })
@@ -265,6 +303,23 @@ export function GridMap({
       element.classList.toggle('cim-breaker-open', !switching && isOpen)
       element.classList.toggle('cim-breaker-closed', !switching && !isOpen)
       element.title = `${b.name} (breaker, ${names.get(b.substation) ?? b.substation}): ${isOpen ? 'open' : 'closed'}${switching ? ' · switching…' : ''}`
+    }
+    for (const [mrid, { marker, branch }] of built.transformers) {
+      const element = marker.getElement()
+      if (!element) continue
+      const isOut = out.has(mrid)
+      const switching = pending.has(mrid) || (!!branch.breaker && pending.has(branch.breaker))
+      element.dataset.out = String(isOut)
+      element.dataset.pending = String(switching)
+      element.dataset.selected = String(mrid === selected)
+      element.classList.toggle('cim-transformer-out', !switching && isOut)
+      element.classList.toggle('cim-transformer-pending', switching)
+      element.classList.toggle('cim-selected', mrid === selected)
+      const between =
+        branch.from_substation === branch.to_substation
+          ? `in ${names.get(branch.from_substation) ?? '?'}`
+          : `${names.get(branch.from_substation) ?? '?'} to ${names.get(branch.to_substation) ?? '?'}`
+      element.title = `${branch.name} (transformer, ${between}): ${isOut ? 'out of service' : 'in service'}${switching ? ' · switching…' : ''}`
     }
     for (const [mrid, marker] of built.loads) {
       const element = marker.getElement()
