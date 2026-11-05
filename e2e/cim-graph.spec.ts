@@ -154,6 +154,29 @@ test.describe('CIM graph', () => {
     await expect(page.getByTestId('event-log').locator('li').first()).toHaveAttribute('data-kind', 'load_step')
   })
 
+  test('the status bar sums the generation and the load the simulation measures', async ({ page }) => {
+    await open(page)
+    await expect(page.getByTestId('system-totals')).toHaveText(/^Generation \d+ MW · load \d+ MW$/)
+  })
+
+  test('a line with a current limit shows its loading on the map', async ({ page }) => {
+    await open(page)
+    type Feed = { layout: { line_ends: { limit_a: number | null }[] } }
+    const limited = await page.evaluate(
+      () =>
+        new Promise<boolean>((resolve) => {
+          const url = `${location.origin.replace(/^http/, 'ws')}/api/cim-live/ws?client_id=1`
+          const socket = new WebSocket(url)
+          socket.onmessage = (m) => {
+            socket.close()
+            resolve((JSON.parse(m.data) as Feed).layout.line_ends.some((e) => e.limit_a !== null))
+          }
+        }),
+    )
+    test.skip(!limited, 'the grid has no current limits (the sample grid has none)')
+    await expect(page.locator('[data-testid^="line-"][data-loading]:not([data-loading=""])').first()).toBeAttached()
+  })
+
   test('a change made on one screen shows on another, and Reset grid puts the grid back', async ({ browser }) => {
     const one = await (await browser.newContext()).newPage()
     const other = await (await browser.newContext()).newPage()
