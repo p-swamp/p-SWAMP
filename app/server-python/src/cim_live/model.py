@@ -16,11 +16,32 @@ class LiveStation(BaseModel):
     kv: float | None = Field(description="Its nominal voltage, kV: what v_pu is per unit of.")
 
 
+class LiveLineEnd(BaseModel):
+    """One end of a line, where a PMU measures its current."""
+
+    line: str = Field(description="mRID of the line in the CIM graph.")
+    end: Literal[1, 2] = Field(description="Which end: its terminal's sequence number.")
+    station: str = Field(description="The station at that end, '<substation>_<kV>'.")
+    limit_a: float | None = Field(description="The end's permanent current limit, A; null: the graph gives none.")
+
+
+class LiveInjection(BaseModel):
+    """A generator or a load, whose power a PMU measures."""
+
+    mrid: str = Field(description="mRID of the machine or the load in the CIM graph.")
+    name: str
+    kind: Literal["generator", "load"]
+    station: str = Field(description="The station it is at, '<substation>_<kV>'.")
+
+
 class LiveLayout(BaseModel):
-    """The stations, in the order every sample lists them. Sent first, and again when it changes."""
+    """The stations, line ends and injections, each in the order every sample lists them. Sent first,
+    and again when it changes."""
 
     header_id: str = Field(description="The frames' layout this describes (PmuHeader.header_id).")
     stations: list[LiveStation]
+    line_ends: list[LiveLineEnd] = Field(default_factory=list)
+    injections: list[LiveInjection] = Field(default_factory=list)
 
 
 class LiveSamples(BaseModel):
@@ -30,6 +51,15 @@ class LiveSamples(BaseModel):
     v_pu: list[list[float | None]] = Field(description="Per frame, each station's voltage magnitude, per unit.")
     angle_deg: list[list[float | None]] = Field(description="Per frame, each station's voltage angle, degrees.")
     f_hz: list[list[float | None]] = Field(description="Per frame, each station's frequency, Hz.")
+    i_a: list[list[float | None]] = Field(default_factory=list, description="Per frame, each line end's current magnitude, A.")
+    loading: list[list[float | None]] = Field(
+        default_factory=list,
+        description="Per frame, each line end's current over its permanent limit (1 is at the limit); null without a limit.",
+    )
+    p_mw: list[list[float | None]] = Field(
+        default_factory=list, description="Per frame, each injection's active power, MW (a load's is what it draws)."
+    )
+    q_mvar: list[list[float | None]] = Field(default_factory=list, description="Per frame, each injection's reactive power, Mvar.")
 
 
 class LiveFeed(BaseModel):

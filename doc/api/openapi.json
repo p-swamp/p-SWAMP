@@ -1521,13 +1521,62 @@
         "title": "LiveFeed",
         "type": "object"
       },
+      "LiveInjection": {
+        "description": "A generator or a load, whose power a PMU measures.",
+        "properties": {
+          "kind": {
+            "enum": [
+              "generator",
+              "load"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "mrid": {
+            "description": "mRID of the machine or the load in the CIM graph.",
+            "title": "Mrid",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "station": {
+            "description": "The station it is at, '<substation>_<kV>'.",
+            "title": "Station",
+            "type": "string"
+          }
+        },
+        "required": [
+          "mrid",
+          "name",
+          "kind",
+          "station"
+        ],
+        "title": "LiveInjection",
+        "type": "object"
+      },
       "LiveLayout": {
-        "description": "The stations, in the order every sample lists them. Sent first, and again when it changes.",
+        "description": "The stations, line ends and injections, each in the order every sample lists them. Sent first,\nand again when it changes.",
         "properties": {
           "header_id": {
             "description": "The frames' layout this describes (PmuHeader.header_id).",
             "title": "Header Id",
             "type": "string"
+          },
+          "injections": {
+            "items": {
+              "$ref": "#/components/schemas/LiveInjection"
+            },
+            "title": "Injections",
+            "type": "array"
+          },
+          "line_ends": {
+            "items": {
+              "$ref": "#/components/schemas/LiveLineEnd"
+            },
+            "title": "Line Ends",
+            "type": "array"
           },
           "stations": {
             "items": {
@@ -1542,6 +1591,50 @@
           "stations"
         ],
         "title": "LiveLayout",
+        "type": "object"
+      },
+      "LiveLineEnd": {
+        "description": "One end of a line, where a PMU measures its current.",
+        "properties": {
+          "end": {
+            "description": "Which end: its terminal's sequence number.",
+            "enum": [
+              1,
+              2
+            ],
+            "title": "End",
+            "type": "integer"
+          },
+          "limit_a": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The end's permanent current limit, A; null: the graph gives none.",
+            "title": "Limit A"
+          },
+          "line": {
+            "description": "mRID of the line in the CIM graph.",
+            "title": "Line",
+            "type": "string"
+          },
+          "station": {
+            "description": "The station at that end, '<substation>_<kV>'.",
+            "title": "Station",
+            "type": "string"
+          }
+        },
+        "required": [
+          "line",
+          "end",
+          "station",
+          "limit_a"
+        ],
+        "title": "LiveLineEnd",
         "type": "object"
       },
       "LiveSamples": {
@@ -1581,6 +1674,78 @@
               "type": "array"
             },
             "title": "F Hz",
+            "type": "array"
+          },
+          "i_a": {
+            "description": "Per frame, each line end's current magnitude, A.",
+            "items": {
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "type": "array"
+            },
+            "title": "I A",
+            "type": "array"
+          },
+          "loading": {
+            "description": "Per frame, each line end's current over its permanent limit (1 is at the limit); null without a limit.",
+            "items": {
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "type": "array"
+            },
+            "title": "Loading",
+            "type": "array"
+          },
+          "p_mw": {
+            "description": "Per frame, each injection's active power, MW (a load's is what it draws).",
+            "items": {
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "type": "array"
+            },
+            "title": "P Mw",
+            "type": "array"
+          },
+          "q_mvar": {
+            "description": "Per frame, each injection's reactive power, Mvar.",
+            "items": {
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "type": "array"
+            },
+            "title": "Q Mvar",
             "type": "array"
           },
           "t": {
