@@ -15,6 +15,14 @@ import { test, expect, type Locator, type Page } from '@playwright/test'
 const breakers = (page: Page) => page.locator('[data-testid^="breaker-"]')
 const lines = (page: Page) => page.locator('[data-testid^="line-"]')
 
+/** Operate a line from its panel: click it (on the element: a line's box is not the line), then its
+ *  panel's button. */
+async function operateLine(page: Page, line: Locator) {
+  await line.dispatchEvent('click')
+  const panel = page.getByTestId('detail-panel')
+  await panel.getByRole('button', { name: /^(Take out of service|Bring back into service)$/ }).click()
+}
+
 /** Right-click an element of the map, on the element itself: a line's box is not the line, and a
  *  bare `dispatchEvent('contextmenu')` carries no coordinates, which Leaflet cannot place. */
 async function rightClick(target: Locator) {
@@ -102,14 +110,36 @@ test.describe('CIM graph', () => {
     await expect(breaker).toHaveAttribute('data-open', String(was))
   })
 
-  test('clicking a line takes it out of service, and again brings it back', async ({ page }) => {
+  test('clicking a line selects it, and its panel takes it out of service and brings it back', async ({ page }) => {
     await open(page)
     const line = lines(page).first()
     const was = (await line.getAttribute('data-out')) === 'true'
-    await line.dispatchEvent('click') // a line's box is not the line: click the element, not a point in the box
-    await expect(line).toHaveAttribute('data-out', String(!was))
     await line.dispatchEvent('click')
+    await expect(line).toHaveAttribute('data-selected', 'true')
+    await expect(line).toHaveAttribute('data-out', String(was)) // a click selects, it does not operate
+    const panel = page.getByTestId('detail-panel')
+    await expect(panel.getByTestId('detail-live')).toContainText(/\d+ A/) // its current, end by end
+    await operateLine(page, line)
+    await expect(line).toHaveAttribute('data-out', String(!was))
+    await operateLine(page, line)
     await expect(line).toHaveAttribute('data-out', String(was))
+    await panel.getByRole('button', { name: 'Close' }).click()
+    await expect(panel).toBeHidden()
+  })
+
+  test('a substation\'s panel shows its stations and the machines and loads at it, live', async ({ page }) => {
+    await open(page)
+    await page.locator('[data-testid^="substation-"]').first().dispatchEvent('click')
+    const live = page.getByTestId('detail-panel').getByTestId('detail-live')
+    await expect(live).toContainText(/\d\.\d{4} p\.u\. · \d+\.\d{4} Hz/)
+  })
+
+  test('a load\'s panel shows what it draws now', async ({ page }) => {
+    await open(page)
+    const load = page.locator('[data-testid^="load-"]').first()
+    test.skip((await load.count()) === 0, 'the grid has no loads on its layout')
+    await load.dispatchEvent('click')
+    await expect(page.getByTestId('detail-panel').getByTestId('detail-live')).toContainText(/\d+\.\d MW · -?\d+\.\d Mvar/)
   })
 
   test('a line tripped from its menu is announced, and the map, which shows the graph, does not change', async ({ page }) => {
@@ -185,7 +215,7 @@ test.describe('CIM graph', () => {
     const line = lines(one).first()
     const name = await line.getAttribute('data-testid')
     const was = (await line.getAttribute('data-out')) === 'true'
-    await line.dispatchEvent('click')
+    await operateLine(one, line)
     await expect(other.locator(`[data-testid="${name}"]`)).toHaveAttribute('data-out', String(!was))
     await reset(other)
     await expect(one.locator(`[data-testid="${name}"]`)).toHaveAttribute('data-out', String(was))

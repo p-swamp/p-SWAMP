@@ -1,11 +1,12 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { WifiOffIcon } from 'lucide-react'
 
 // This page's own pieces, imported relatively so the folder stays self-contained.
 import { DisturbanceMenu } from './DisturbanceMenu'
 import { EventLog } from './EventLog'
 import { GridMap } from './GridMap'
-import type { MenuRequest } from './GridMap'
+import type { MenuRequest, MenuTarget } from './GridMap'
+import { DetailPanel } from './DetailPanel'
 import { loadingColor, stationColor } from './colors'
 import { LiveChart } from './LiveChart'
 import { SystemTotals } from './SystemTotals'
@@ -27,11 +28,12 @@ const GRAPH_STATUS: Record<GraphStatus['kind'], string> = {
 
 /**
  * The grid page (route `/cim-graph`): the grid of the CIM graph on OpenStreetMap, and the live grid
- * simulation that follows it, plotted. Click a breaker or a line to operate it: a command to the
- * simulation, which the graph (and so the map) shows once the simulation has done it. Right-click (or
- * long-press) a line, a substation or a load to disturb it: the simulation only, so the map does not
- * change, and the event log says what happened. Click a substation, or a station below the charts, to
- * pick it out on the charts. The charts show every PMU station's frequency and voltage
+ * simulation that follows it, plotted. Click a breaker to operate it: a command to the simulation,
+ * which the graph (and so the map) shows once the simulation has done it. Click a line, a substation
+ * or a load to select it: a panel beside the map shows what the graph says of it, its live values and
+ * charts, and operates or disturbs it. Right-click (or long-press) one for its disturbances: the
+ * simulation only, so the map does not change, and the event log says what happened. A substation
+ * clicked, or a station below the charts, is picked out on the charts. The charts show every PMU station's frequency and voltage
  * over the last 30 s, every frame of the simulation (`/api/cim-live`); the status bar says how many
  * reach this page each second.
  */
@@ -39,6 +41,8 @@ export function CimGraphPage() {
   const { state, layout, status, connected, graph, error, pending, roundTripMs, changedAt, setSwitch, setLine, reset, disturb, events } =
     useCimGraphSocket()
   const [menu, setMenu] = useState<MenuRequest | null>(null)
+  const [selected, setSelected] = useState<MenuTarget | null>(null)
+  const closePanel = useCallback(() => setSelected(null), [])
   const closeMenu = useCallback(() => setMenu(null), [])
   const live = useLiveFeed()
   const [highlight, setHighlight] = useState<number | null>(null) // a station's index in the feed
@@ -53,6 +57,7 @@ export function CimGraphPage() {
     setHighlight(best)
   }
   const picked = highlight === null ? null : (live.stations[highlight]?.substation ?? null)
+  const stationNames = useMemo(() => live.stations.map((s) => s.name), [live.stations])
 
   /** Click a line. The layout already says which breaker takes it out on its own, so taking it out is
    *  that one breaker, and bringing it back is closing it (or, if it was put out some other way, or has
@@ -71,9 +76,8 @@ export function CimGraphPage() {
       <CardHeader className="border-b">
         <CardTitle className="text-lg">Grid</CardTitle>
         <span className="text-muted-foreground text-sm">
-          The grid as the CIM graph describes it, and its live simulation. Click a breaker or a line to operate
-          it; right-click a line, a substation or a load to disturb the simulation; click a substation to pick
-          it out on the charts.
+          The grid as the CIM graph describes it, and its live simulation. Click a breaker to operate it; click
+          a line, a substation or a load to see it and act on it; right-click one to disturb the simulation.
         </span>
         <CardAction className="flex items-center gap-2 self-center">
           {state && (
@@ -124,23 +128,40 @@ export function CimGraphPage() {
                 : status.label}
           </div>
         ) : (
-          <div className="relative">
-            <GridMap
-              layout={layout}
-              state={state}
-              pending={pending}
-              editable={editable}
-              onBreaker={(mrid, isOpen) => setSwitch(mrid, !isOpen)}
-              onLine={operate}
-              stations={live.stations}
-              lineEnds={live.lineEnds}
-              buffer={live.buffer}
-              subscribe={live.subscribe}
-              highlight={picked}
-              onPick={pickSubstation}
-              onMenu={setMenu}
-            />
-            {menu && <DisturbanceMenu request={menu} disturb={disturb} onClose={closeMenu} />}
+          <div className="grid grid-cols-1 gap-3 xl:grid-cols-[1fr_24rem]">
+            <div className="relative">
+              <GridMap
+                layout={layout}
+                state={state}
+                pending={pending}
+                editable={editable}
+                onBreaker={(mrid, isOpen) => setSwitch(mrid, !isOpen)}
+                onSelect={setSelected}
+                selected={selectedMrid(selected)}
+                stations={live.stations}
+                lineEnds={live.lineEnds}
+                buffer={live.buffer}
+                subscribe={live.subscribe}
+                highlight={picked}
+                onPick={pickSubstation}
+                onMenu={setMenu}
+              />
+              {menu && <DisturbanceMenu request={menu} disturb={disturb} onClose={closeMenu} />}
+            </div>
+            {selected && (
+              <DetailPanel
+                target={selected}
+                layout={layout}
+                state={state}
+                pending={pending}
+                editable={editable}
+                live={live}
+                disturb={disturb}
+                onOperate={operate}
+                onBreaker={(mrid, isOpen) => setSwitch(mrid, !isOpen)}
+                onClose={closePanel}
+              />
+            )}
           </div>
         )}
 
@@ -190,7 +211,7 @@ export function CimGraphPage() {
             title={`Frequency (last ${WINDOW_S} s)`}
             unit="Hz"
             quantity="f"
-            stations={live.stations}
+            labels={stationNames}
             buffer={live.buffer}
             subscribe={live.subscribe}
             highlight={highlight}
@@ -199,7 +220,7 @@ export function CimGraphPage() {
             title={`Voltage (last ${WINDOW_S} s)`}
             unit="p.u."
             quantity="v"
-            stations={live.stations}
+            labels={stationNames}
             buffer={live.buffer}
             subscribe={live.subscribe}
             highlight={highlight}
@@ -241,4 +262,10 @@ export function CimGraphPage() {
       </CardContent>
     </Card>
   )
+}
+
+/** The mRID of what is selected, which the map draws as such. */
+function selectedMrid(target: MenuTarget | null): string | null {
+  if (!target) return null
+  return target.kind === 'branch' ? target.branch.mrid : target.kind === 'substation' ? target.substation.mrid : target.load.mrid
 }
