@@ -4,6 +4,7 @@ the routes and from ``WS_MESSAGE``), so the page's types are generated from thes
 
 from typing import Literal
 
+from pswamp_models.rtsim import SimEvent
 from pydantic import BaseModel, Field, model_validator
 
 
@@ -102,3 +103,8 @@ class CimGraphState(BaseModel):
     switches: dict[str, bool] = Field(description="Every switch (mRID) and whether it is open.")
     out_of_service: list[str] = Field(description="The lines and transformers (mRIDs) out of service, which is what the simulation follows.")
     writable: bool = Field(description="Whether the graph can be edited (the CGMES profiles are in it).")
+    events: list[SimEvent] = Field(
+        default_factory=list,
+        description="What the live simulation announced most recently (disturbances, protection), oldest first: "
+        "never written to the graph, so the only place a person hears of them.",
+    )
