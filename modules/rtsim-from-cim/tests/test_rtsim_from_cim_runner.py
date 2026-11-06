@@ -66,8 +66,10 @@ def test_live_tops_reads_the_state_the_engine_sends(live, link):
     assert live.simulator is runner and live.time == 0.0
     link.run(runner, frames=50)
     assert live.time == pytest.approx(1.0)  # 50 frames of 2 steps of 10 ms
-    kv, _ = live.voltage(next(iter(live.sim.ids["node_to_bus"])))
-    assert 300 < kv < 450  # read off the engine's state, through the shadow's model
+    # read off the engine's state, through the shadow's model: the 400 kV and the 132 kV buses, in
+    # whatever order the store lists the nodes (it varies with what else a test session wrote to it)
+    kvs = sorted(live.voltage(node)[0] for node in live.sim.ids["node_to_bus"])
+    assert 120 < kvs[0] < 145 and 300 < kvs[-1] < 450
 
 
 def test_a_switch_opened_through_live_tops_goes_to_the_engine_and_is_a_change_once_a_frame_ran(live, link):
