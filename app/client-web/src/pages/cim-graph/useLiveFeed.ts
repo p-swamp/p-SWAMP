@@ -8,6 +8,8 @@ export type LiveFeed = Wire['LiveFeed']
 export type LiveStation = Wire['LiveStation']
 export type LiveLineEnd = Wire['LiveLineEnd']
 export type LiveInjection = Wire['LiveInjection']
+export type LiveScadaPoint = Wire['LiveScadaPoint']
+export type LiveScan = Wire['LiveScan']
 
 /** Seconds of history the charts show. */
 export const WINDOW_S = 30
@@ -15,8 +17,9 @@ export const WINDOW_S = 30
 const RATE_WINDOW_S = 2
 
 /** The plotted history: one time axis; per station a frequency and a voltage series; per line end a
- *  current and a loading series; per injection a P and a Q series. Kept in a ref, outside React: 50
- *  frames a second must not mean 50 renders a second. */
+ *  current and a loading series; per injection a P and a Q series; and the latest SCADA scan, one
+ *  value per SCADA point of the layout. Kept in a ref, outside React: 50 frames a second must not mean
+ *  50 renders a second. */
 export type LiveBuffer = {
   t: number[]
   f: (number | null)[][]
@@ -25,10 +28,11 @@ export type LiveBuffer = {
   loading: (number | null)[][]
   p: (number | null)[][]
   q: (number | null)[][]
+  scan: LiveScan | null
 }
 
 /** The buffer's series, each a quantity of one kind of thing. */
-export type Quantity = Exclude<keyof LiveBuffer, 't'>
+export type Quantity = Exclude<keyof LiveBuffer, 't' | 'scan'>
 
 const series = (n: number) => Array.from({ length: n }, () => [] as (number | null)[])
 const empty = (stations = 0, ends = 0, injections = 0): LiveBuffer => ({
@@ -39,6 +43,7 @@ const empty = (stations = 0, ends = 0, injections = 0): LiveBuffer => ({
   loading: series(ends),
   p: series(injections),
   q: series(injections),
+  scan: null,
 })
 
 /** Which wire field fills which series. */
@@ -53,7 +58,8 @@ const FIELDS: [Quantity, keyof LiveFeed['samples']][] = [
 
 /**
  * The live grid feed (`/api/cim-live/ws`): every frame of the RT sim, as each station's voltage and
- * frequency, each line end's current and loading, and each generator's and load's power. The samples go into `buffer` and wake `subscribe`rs (the charts, the map's colours) at
+ * frequency, each line end's current and loading, and each generator's and load's power; and, every
+ * couple of seconds, the latest SCADA scan (`buffer.scan`, one value per point of `scada`). The samples go into `buffer` and wake `subscribe`rs (the charts, the map's colours) at
  * most once per animation frame; React renders only when the stations change, and once a second for
  * `samplesPerSecond`, what the page measured arriving.
  */
@@ -61,6 +67,7 @@ export function useLiveFeed() {
   const [stations, setStations] = useState<LiveStation[]>([])
   const [lineEnds, setLineEnds] = useState<LiveLineEnd[]>([])
   const [injections, setInjections] = useState<LiveInjection[]>([])
+  const [scada, setScada] = useState<LiveScadaPoint[]>([])
   const [samplesPerSecond, setSamplesPerSecond] = useState(0)
   const buffer = useRef<LiveBuffer>(empty(0))
   const listeners = useRef(new Set<() => void>())
@@ -79,13 +86,15 @@ export function useLiveFeed() {
   const onMessage = useCallback(
     (feed: LiveFeed) => {
       if (feed.layout) {
-        const { stations, line_ends = [], injections = [] } = feed.layout
+        const { stations, line_ends = [], injections = [], scada = [] } = feed.layout
         buffer.current = empty(stations.length, line_ends.length, injections.length)
         setStations(stations)
         setLineEnds(line_ends)
         setInjections(injections)
+        setScada(scada)
       }
       const buf = buffer.current
+      if (feed.scan) buf.scan = feed.scan
       const { t } = feed.samples
       for (let i = 0; i < t.length; i++) {
         buf.t.push(t[i])
@@ -124,5 +133,5 @@ export function useLiveFeed() {
     }
   }, [])
 
-  return { stations, lineEnds, injections, buffer, subscribe, samplesPerSecond, status, connected }
+  return { stations, lineEnds, injections, scada, buffer, subscribe, samplesPerSecond, status, connected }
 }

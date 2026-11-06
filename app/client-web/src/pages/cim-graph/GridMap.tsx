@@ -5,7 +5,8 @@ import 'leaflet/dist/leaflet.css'
 import './gridMap.css'
 import { loadingColor } from './colors'
 import type { CimGraphState, CimLayout } from './useCimGraphSocket'
-import type { LiveBuffer, LiveLineEnd, LiveStation } from './useLiveFeed'
+import { scadaValue } from './scada'
+import type { LiveBuffer, LiveLineEnd, LiveScadaPoint, LiveStation } from './useLiveFeed'
 
 const TILE_URL = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
 const TILE_ATTRIBUTION = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
@@ -76,7 +77,8 @@ type Layers = {
  * Leaflet is driven directly (react-leaflet's licence does not pass dependency review): the layers
  * are built once per layout and restyled in place, from the graph's state (out of service, open,
  * switching) and, four times a second, from the live feed (each substation coloured by its frequency
- * deviation, and its voltage and frequency on hover).
+ * deviation, and its voltage and frequency on hover; a breaker whose position in the latest SCADA scan
+ * is not the graph's marked as such).
  */
 export function GridMap({
   layout,
@@ -88,6 +90,7 @@ export function GridMap({
   selected,
   stations,
   lineEnds,
+  scada = [],
   buffer,
   subscribe,
   highlight,
@@ -103,6 +106,8 @@ export function GridMap({
   selected: string | null
   stations: LiveStation[]
   lineEnds: LiveLineEnd[]
+  /** The grid's SCADA points (``buffer.scan`` lists their values): the switches' positions are checked against the graph. */
+  scada?: LiveScadaPoint[]
   buffer: React.RefObject<LiveBuffer>
   subscribe: (listener: () => void) => () => void
   highlight: string | null
@@ -374,9 +379,22 @@ export function GridMap({
         const weight = thicker(mrid, chosen.current, value !== undefined && value >= 1 ? 5 : 3)
         line.setStyle({ color: value === undefined ? OK : loadingColor(value), weight })
       }
+      // Each breaker whose position, as SCADA last scanned it, is not the graph's.
+      scada.forEach((point, i) => {
+        if (point.quantity !== 'Pos') return
+        const element = built.breakers.get(point.equipment)?.getElement()
+        if (!element) return
+        const value = scadaValue(buf, i)
+        const graphOpen = props.current.state?.switches[point.equipment]
+        const scadaOpen = value === null ? undefined : value === 0
+        const mismatch = scadaOpen !== undefined && graphOpen !== undefined && scadaOpen !== graphOpen
+        element.dataset.scada = scadaOpen === undefined ? '' : scadaOpen ? 'open' : 'closed'
+        element.dataset.mismatch = String(mismatch)
+        element.classList.toggle('cim-breaker-mismatch', mismatch)
+      })
     }
     return subscribe(paint)
-  }, [buffer, layout, lineEnds, stations, subscribe])
+  }, [buffer, layout, lineEnds, scada, stations, subscribe])
 
   return <div ref={container} className="h-[60vh] w-full rounded-md border" role="region" aria-label="The grid on its geographic layout" />
 }

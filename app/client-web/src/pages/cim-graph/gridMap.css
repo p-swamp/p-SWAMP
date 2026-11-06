@@ -22,6 +22,12 @@
   }
 }
 
+/* A breaker whose position in the latest SCADA scan is not the graph's: ringed in violet. */
+.cim-breaker-mismatch {
+  outline: 2px dashed #7c3aed;
+  outline-offset: 2px;
+}
+
 /* A load on the grid map: a small triangle pointing down, below its substation. */
 .cim-load {
   width: 0 !important;

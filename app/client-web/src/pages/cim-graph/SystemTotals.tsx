@@ -1,32 +1,22 @@
 import { useEffect, useRef } from 'react'
 
-import type { LiveBuffer, LiveInjection } from './useLiveFeed'
+import { scadaTotals, scanTime } from './scada'
+import type { LiveBuffer, LiveScadaPoint } from './useLiveFeed'
 
 /** How often the totals are rewritten: a reader need not follow 50 frames a second. */
 const EVERY_MS = 250
 
-/** The newest value of each of ``kind``'s injections' P series, summed (MW); null: none is known. */
-function total(buffer: LiveBuffer, injections: LiveInjection[], kind: LiveInjection['kind']): number | null {
-  let sum: number | null = null
-  injections.forEach((injection, i) => {
-    const series = buffer.p[i]
-    const value = series?.[series.length - 1]
-    if (injection.kind === kind && value !== null && value !== undefined) sum = (sum ?? 0) + value
-  })
-  return sum
-}
-
 /**
- * The system's generation and load, MW, as the simulation measures them now: the sums of its
- * generators' and its loads' active power. Written into the DOM from the live buffer, four times a
- * second, never through a React render.
+ * The system's generation and load, MW, as the latest SCADA scan has them: the sums of its generators'
+ * and its loads' active power (the grid's PMUs need not measure power; its SCADA does). Written into
+ * the DOM from the live buffer, four times a second, never through a React render.
  */
 export function SystemTotals({
-  injections,
+  scada,
   buffer,
   subscribe,
 }: {
-  injections: LiveInjection[]
+  scada: LiveScadaPoint[]
   buffer: React.RefObject<LiveBuffer>
   subscribe: (listener: () => void) => () => void
 }) {
@@ -37,12 +27,12 @@ export function SystemTotals({
       const now = performance.now()
       if (now - last < EVERY_MS || !text.current) return
       last = now
-      const generation = total(buffer.current, injections, 'generator')
-      const load = total(buffer.current, injections, 'load')
+      const { generation, load } = scadaTotals(buffer.current, scada)
       const mw = (x: number | null) => (x === null ? '—' : `${x.toFixed(0)} MW`)
-      text.current.textContent = `Generation ${mw(generation)} · load ${mw(load)}`
+      const at = scanTime(buffer.current)
+      text.current.textContent = `Generation ${mw(generation)} · load ${mw(load)}${at ? ` (SCADA, ${at})` : ''}`
     })
-  }, [buffer, injections, subscribe])
+  }, [buffer, scada, subscribe])
   return (
     <span ref={text} data-testid="system-totals">
       Generation — · load —

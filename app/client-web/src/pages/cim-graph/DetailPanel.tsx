@@ -5,8 +5,9 @@ import { disturbancesOf } from './disturbances'
 import type { Disturb } from './disturbances'
 import type { MenuTarget } from './GridMap'
 import { LiveChart } from './LiveChart'
+import { pointsOn, scadaValue, scanTime } from './scada'
 import type { CimGraphState, CimLayout } from './useCimGraphSocket'
-import type { LiveBuffer, LiveInjection, LiveLineEnd, LiveStation } from './useLiveFeed'
+import type { LiveBuffer, LiveInjection, LiveLineEnd, LiveScadaPoint, LiveStation } from './useLiveFeed'
 import { Button } from '@/components/ui/button'
 
 /** How often the live values are rewritten: a reader need not follow 50 frames a second. */
@@ -16,6 +17,7 @@ type Live = {
   stations: LiveStation[]
   lineEnds: LiveLineEnd[]
   injections: LiveInjection[]
+  scada: LiveScadaPoint[]
   buffer: React.RefObject<LiveBuffer>
   subscribe: (listener: () => void) => () => void
 }
@@ -26,8 +28,56 @@ type Reading = { label: string; read: (buffer: LiveBuffer) => string }
 const newest = (series: (number | null)[] | undefined) => series?.[series.length - 1] ?? null
 const fixed = (x: number | null, digits: number, unit: string) => (x === null ? '—' : `${x.toFixed(digits)} ${unit}`)
 
+/** What the latest SCADA scan says of `points`, one reading per thing measured (`label` names it): a
+ *  branch end's P and Q (and I), a machine's or a load's P and Q, a voltage level's V, a switch's
+ *  position. */
+function scadaReadings(points: [LiveScadaPoint, number][], label: (point: LiveScadaPoint) => string): Reading[] {
+  const groups = new Map<string, [LiveScadaPoint, number][]>()
+  for (const entry of points) {
+    const key = label(entry[0])
+    groups.set(key, [...(groups.get(key) ?? []), entry])
+  }
+  return [...groups].map(([key, group]) => ({
+    label: key,
+    read: (b: LiveBuffer) =>
+      group
+        .map(([point, i]) => {
+          const value = scadaValue(b, i)
+          if (point.quantity === 'Pos') return value === null ? '—' : value === 1 ? 'closed' : 'open'
+          return fixed(value, point.quantity === 'I' ? 0 : 1, point.unit)
+        })
+        .join(' · '),
+  }))
+}
+
+/** The scan's own reading: when it was made. */
+const SCANNED: Reading = {
+  label: 'Scanned at',
+  read: (b) => {
+    const at = scanTime(b)
+    const sim = b.scan?.sim_time
+    return at === null ? 'not yet' : `${at}${sim === null || sim === undefined ? '' : ` (t = ${sim.toFixed(1)} s)`}`
+  },
+}
+
+/** The order a thing's values are read in: P, Q, I; a voltage; a position. */
+const ORDER = { P: 0, Q: 1, I: 2, V: 3, Pos: 4 } as const
+const byQuantity = (a: [LiveScadaPoint, number], b: [LiveScadaPoint, number]) => ORDER[a[0].quantity] - ORDER[b[0].quantity]
+
 /** The live values of the selection, written into the DOM from the buffer, never through a render. */
-function LiveValues({ readings, buffer, subscribe }: { readings: Reading[]; buffer: React.RefObject<LiveBuffer>; subscribe: Live['subscribe'] }) {
+function LiveValues({
+  readings,
+  buffer,
+  subscribe,
+  testId = 'detail-live',
+  none = 'The simulation measures nothing here.',
+}: {
+  readings: Reading[]
+  buffer: React.RefObject<LiveBuffer>
+  subscribe: Live['subscribe']
+  testId?: string
+  none?: string
+}) {
   const cells = useRef<(HTMLElement | null)[]>([])
   useEffect(() => {
     let last = 0
@@ -41,9 +91,9 @@ function LiveValues({ readings, buffer, subscribe }: { readings: Reading[]; buff
       })
     })
   }, [buffer, readings, subscribe])
-  if (readings.length === 0) return <p className="text-muted-foreground text-xs">The simulation measures nothing here.</p>
+  if (readings.length === 0) return <p className="text-muted-foreground text-xs">{none}</p>
   return (
-    <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 text-xs" data-testid="detail-live">
+    <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 text-xs" data-testid={testId}>
       {readings.map((reading, i) => (
         <div key={reading.label} className="contents">
           <dt className="text-muted-foreground">{reading.label}</dt>
@@ -97,10 +147,12 @@ export function DetailPanel({
   const endLabels = useMemo(() => live.lineEnds.map((e) => `end ${e.end} (${e.station})`), [live.lineEnds])
   const injectionNames = useMemo(() => live.injections.map((i) => i.name), [live.injections])
 
-  const { kind, title, facts, readings, charts } = useMemo(() => {
+  const { kind, title, facts, readings, charts, scada } = useMemo(() => {
     const facts: [string, string][] = []
     const readings: Reading[] = []
     const charts: Chart[] = []
+    const scada: Reading[] = []
+    const on = (test: (point: LiveScadaPoint) => boolean) => pointsOn(live.scada, test).sort(byQuantity)
     if (target.kind === 'branch') {
       const { branch } = target
       const isOut = state?.out_of_service.includes(branch.mrid) ?? false
@@ -124,7 +176,9 @@ export function DetailPanel({
       if (ends.some((i) => live.lineEnds[i].limit_a !== null)) {
         charts.push({ title: 'Loading', unit: '× limit', quantity: 'loading', labels: endLabels, pick: ends, digits: 3 })
       }
-      return { kind: branch.kind, title: branch.name, facts, readings, charts }
+      const atEnds = on((p) => p.equipment === branch.mrid).sort((a, b) => (a[0].end ?? 0) - (b[0].end ?? 0))
+      scada.push(...scadaReadings(atEnds, (p) => `End ${p.end} (${names.get(p.substation ?? '') ?? '?'})`))
+      return { kind: branch.kind, title: branch.name, facts, readings, charts, scada }
     }
     if (target.kind === 'substation') {
       const { substation } = target
@@ -144,7 +198,11 @@ export function DetailPanel({
         charts.push({ title: 'Frequency', unit: 'Hz', quantity: 'f', labels: stationNames, pick: stations, digits: 4 })
         charts.push({ title: 'Voltage', unit: 'p.u.', quantity: 'v', labels: stationNames, pick: stations, digits: 4 })
       }
-      return { kind: 'substation', title: substation.name, facts, readings, charts }
+      const inIt = (kinds: LiveScadaPoint['kind'][]) => on((p) => p.substation === substation.mrid && kinds.includes(p.kind))
+      scada.push(...scadaReadings(inIt(['voltage_level']), (p) => `Voltage, ${p.name ?? `${p.kv} kV`}`))
+      scada.push(...scadaReadings(inIt(['generator', 'load']), (p) => `${p.name ?? p.equipment} (${p.kind})`))
+      scada.push(...scadaReadings(inIt(['switch']), (p) => p.name ?? p.equipment))
+      return { kind: 'substation', title: substation.name, facts, readings, charts, scada }
     }
     const { load } = target
     facts.push(['In', names.get(load.substation) ?? load.substation])
@@ -155,8 +213,10 @@ export function DetailPanel({
       charts.push({ title: 'Active power', unit: 'MW', quantity: 'p', labels: injectionNames, pick: [i], digits: 1 })
       charts.push({ title: 'Reactive power', unit: 'Mvar', quantity: 'q', labels: injectionNames, pick: [i], digits: 1 })
     }
-    return { kind: 'load', title: load.name, facts, readings, charts }
-  }, [target, state, names, layout.breakers, live.lineEnds, live.stations, live.injections, endLabels, stationNames, injectionNames])
+    scada.push(...scadaReadings(on((p) => p.equipment === load.mrid), () => 'Drawing'))
+    return { kind: 'load', title: load.name, facts, readings, charts, scada }
+  }, [target, state, names, layout.breakers, live.lineEnds, live.stations, live.injections, live.scada, endLabels, stationNames, injectionNames])
+  const scadaWithTime = useMemo(() => (scada.length ? [...scada, SCANNED] : scada), [scada])
 
   const { items } = disturbancesOf(target, disturb)
   const branch = target.kind === 'branch' ? target.branch : null
@@ -186,8 +246,19 @@ export function DetailPanel({
       </dl>
 
       <section className="space-y-1">
-        <h3 className="text-xs font-medium">Live, as the simulation measures it</h3>
-        <LiveValues readings={readings} buffer={live.buffer} subscribe={live.subscribe} />
+        <h3 className="text-xs font-medium">Live, as the simulation's PMUs measure it</h3>
+        <LiveValues readings={readings} buffer={live.buffer} subscribe={live.subscribe} none="No PMU measures here." />
+      </section>
+
+      <section className="space-y-1">
+        <h3 className="text-xs font-medium">SCADA, as last scanned</h3>
+        <LiveValues
+          readings={scadaWithTime}
+          buffer={live.buffer}
+          subscribe={live.subscribe}
+          testId="detail-scada"
+          none="No SCADA measurement here."
+        />
       </section>
 
       {charts.map((chart) => (
