@@ -14,6 +14,8 @@ and the package is the namespace to import it from.
 - ``cim``: ``CimEdits``, what a producer proposes the CIM graph's one writer
   should write (ADR-015).
 - ``rtsim``: the live grid simulation's commands and its ``SimEvent``.
+- ``scada``: ``ScadaScan``, the latest value of every SCADA measurement, at once
+  (ADR-016).
 - ``frame_stats``, ``excursion``, ``range_summary``: what each of those modules
   publishes, and the commands it takes. A module's code imports its messages
   from here, and so does everyone else: nobody imports a module for its data.
