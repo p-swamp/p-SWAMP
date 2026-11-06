@@ -28,6 +28,7 @@ from pswamp_core.cim import (  # noqa: E402
 )
 from pswamp_core.cim.grid import NAMESPACE_ALIASES  # noqa: E402
 from pswamp_core.cim.measurements import name_part  # noqa: E402
+from pswamp_core.cim.store import MEASUREMENTS_GRAPH  # noqa: E402
 
 SETTINGS = CimSettings(cim_path=SAMPLE_GRID)
 P = "3f5e0000-0000-4000-8000-0000000000"
@@ -218,6 +219,40 @@ def test_a_reset_is_one_update_that_puts_the_ssh_profile_back(store):
     fresh = connect_reader(store=store)
     assert fresh.from_mRID(COUPLER).open is False
     assert len(measurement_table(fresh)) == 58  # the measurements are part of the grid
+
+
+def _latest(store: Store) -> set:
+    from rdflib import URIRef
+
+    return set(store.backend.dataset.graph(URIRef(MEASUREMENTS_GRAPH)))
+
+
+def _values(n: float):
+    from rdflib import Graph, Literal, URIRef
+
+    graph = Graph()
+    graph.add((URIRef("urn:uuid:v"), URIRef("http://iec.ch/TC57/CIM100#AnalogValue.value"), Literal(n)))
+    return graph
+
+
+def test_the_latest_scada_values_replace_the_last_without_moving_the_stamp(store):
+    version = store.version()
+    store.put_measurements(_values(1.0))
+    store.put_measurements(_values(2.0))
+    assert [str(o) for _, _, o in _latest(store)] == ["2.0"]
+    assert store.version() == version and store.scans() == 2  # a scan is no edit of the grid
+    assert not GraphVersion(store).changed()
+
+
+def test_a_reset_forgets_the_latest_scada_values(store):
+    store.put_measurements(_values(1.0))
+    store.reset()
+    assert _latest(store) == set() and store.scans() == 1
+
+
+def test_only_the_store_s_owner_writes_the_latest_values(grid):
+    with pytest.raises(PermissionError, match="did not load"):
+        open_store(THEIRS).put_measurements(_values(1.0))
 
 
 def test_a_store_is_filled_once(store):
