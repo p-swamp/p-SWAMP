@@ -78,7 +78,6 @@ COMMANDS: tuple[type[Command], ...] = (
 #: What a ``SimEvent`` of the simulation as a whole (a reset) is about.
 STREAM_ID = "rtsim-from-cim"
 
-
 class Controller:
     """``repo``, a reader's repository over the graph, simulated by ``LiveTops`` (exported with
     ``EXPORT``, stepped every ``dt`` simulated seconds), protected as ``protection`` says, and
@@ -132,7 +131,28 @@ class Controller:
         try:
             return [self._apply(command)]
         except (KeyError, ValueError) as error:
+            mrid = getattr(command, "mRID", None)
+            if isinstance(error, KeyError) and mrid and self._in_dead_part(mrid):
+                raise CommandRefused(
+                    f"{mrid} is in a part of the grid the slack bus cannot reach, which the simulation leaves out: "
+                    "reconnect a line or close a breaker that feeds it"
+                ) from error
             raise CommandRefused(str(error).strip("'\"")) from error
+
+    def _in_dead_part(self, mrid: str) -> bool:
+        """Whether a terminal of ``mrid`` (or ``mrid``, a node) is in a de-energised part."""
+        ids = self.sim.ids
+        dead = ids.get("de_energised") or {}
+        if not dead:
+            return False
+        if ids["node_to_bus"].get(mrid) in dead:
+            return True
+        try:
+            found = self.live.exporter.repo.from_mRID(mrid)
+        except (KeyError, ValueError):
+            return False
+        nodes = (getattr(getattr(t, "ConnectivityNode", None), "mRID", None) for t in getattr(found, "Terminals", None) or ())
+        return any(ids["node_to_bus"].get(node) in dead for node in nodes)
 
     def reports(self) -> list[DataModel]:
         """What happened since the last call: what protection did (``SimEvent``), and what the
