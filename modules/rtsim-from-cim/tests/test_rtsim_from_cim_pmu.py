@@ -7,10 +7,11 @@ import math
 
 import pytest
 
-from pswamp_core.cim import SAMPLE_GRID, CimSettings, GraphVersion, analog_table, connect_reader, open_store
+from lazycim.sim import get_exporter
+
+from pswamp_core.cim import SAMPLE_GRID, CimSettings, analog_table, connect_reader
 from pswamp_core.util.time import utcnow
-from pswamp_modules.rtsim_from_cim.engine import Change, SimEngine
-from pswamp_modules.rtsim_from_cim.follow import Follower
+from pswamp_modules.rtsim_from_cim.engine import EXPORT, SimEngine
 from pswamp_modules.rtsim_from_cim.pmu import pmu_frame, pmu_layout, read_analogs
 
 SETTINGS = CimSettings(cim_path=SAMPLE_GRID)
@@ -19,11 +20,10 @@ SETTINGS = CimSettings(cim_path=SAMPLE_GRID)
 @pytest.fixture(scope="module")
 def setup():
     repo = connect_reader(SETTINGS)
-    follower = Follower(repo, GraphVersion(open_store(SETTINGS)))
+    sim = get_exporter("tops", repo, **EXPORT).build()
     if analog_table(repo).empty:
         pytest.skip("the grid has no PMU Analogs: the CGMES vocabularies are not available to LazyCIM")
-    engine = SimEngine(follower.sim.model, open_switches=follower.open_switches)
-    return repo, follower.sim, engine, read_analogs(repo)
+    return repo, sim, SimEngine(sim.model), read_analogs(repo)
 
 
 def column(frame, station, channel, measurement):
@@ -55,10 +55,10 @@ def test_a_frame_reads_the_snapshot_in_physical_units(setup):
 
 def test_a_line_cut_off_reads_no_current(setup):
     _, sim, base, analogs = setup
-    engine = SimEngine(sim.model, open_switches=sim.ids["open_switches"])
+    engine = SimEngine(sim.model)
     layout = pmu_layout(analogs, engine, sim.ids, 25.0)
     before = column(pmu_frame(layout, engine.step(10), utcnow(), "s"), "Alpha_400", "I_Alpha-Gamma_400_kV_line", "I_Magnitude")
-    breaker = {mrid: name for name, mrid in sim.ids["lines"].items()}["3f5e0000-0000-4000-8000-0000000000a1"]
-    engine.apply(Change(opened=frozenset({breaker})))
+    breaker = {mrid: name for name, mrid in sim.ids["switches"].items()}["3f5e0000-0000-4000-8000-0000000000a1"]
+    engine.apply(("event", ("switches", "Switch", breaker, "open", {})))
     after = column(pmu_frame(layout, engine.step(50), utcnow(), "s"), "Alpha_400", "I_Alpha-Gamma_400_kV_line", "I_Magnitude")
     assert after < 0.01 * before  # the bay breaker is at Alpha: nothing flows out there

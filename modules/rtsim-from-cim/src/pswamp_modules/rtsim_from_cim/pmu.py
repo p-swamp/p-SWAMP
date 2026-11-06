@@ -93,9 +93,9 @@ class PmuLayout:
 
 
 def pmu_layout(analogs: list[Measured], engine, ids: dict, rate: float) -> PmuLayout:
-    """The stream's layout for ``analogs`` over the model ``engine`` was built from (a ``SimEngine``, or
-    an ``EngineProcess``'s ``shape``: its ``bus_names``, ``bus_kv`` and ``line_names``; ``ids`` is the
-    export's ``sim.ids``), at ``rate`` frames per second. A bus or a line the model lacks is -1."""
+    """The stream's layout for ``analogs`` over the model ``engine`` was built from (a ``SimEngine``: its
+    ``bus_names``, ``bus_kv`` and ``line_names``; ``ids`` is the export's ``sim.ids``), at ``rate``
+    frames per second. A bus or a line the model lacks is -1."""
     bus_row = {name: i for i, name in enumerate(engine.bus_names)}
     line_row = {name: i for i, name in enumerate(engine.line_names)}
     line_of = {mrid: name for name, mrid in ids.get("lines", {}).items()}

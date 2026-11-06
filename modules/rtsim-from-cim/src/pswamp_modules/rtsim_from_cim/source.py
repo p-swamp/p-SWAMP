@@ -3,19 +3,20 @@
 
 """The RT sim (CIM) source: a live TOPS simulation of the grid in the CIM graph.
 
-It reads the graph (``pswamp_core.cim``) through a repository of its own, exports it with LazyCIM
-as a TOPS dynamic model (``engine``), and runs it **in real time**: one frame period of simulated
-time per frame period of the clock. It publishes ``PmuFrame``: one column group per PMU Analog of
-the graph, each column carrying its Analog (``pmu``), ``RATE`` frames per second.
+It reads the graph (``pswamp_core.cim``) through a repository of its own, simulates it with
+LazyCIM's ``LiveTops`` (TOPS 0.6), and runs the simulation **in real time**: one frame period of
+simulated time per frame period of the clock. It publishes ``PmuFrame``: one column group per PMU
+Analog of the graph, each column carrying its Analog (``pmu``), ``RATE`` frames per second.
 
-It has no commands. **The graph is how it is steered**: whoever edits the graph (the CIM graph app,
-its one writer) steers the simulation. A follower brings the export up to date with LazyCIM's
-``refresh`` (``follow``) when the graph's version stamp says it changed: it looks at the stamp every
-``POLL`` seconds (one tiny query), and only then reads the profiles that change (SSH, SV); what
-changed is applied before the next frame's steps. A change reaches the simulation within about
-``POLL`` and one refresh. Over a shared store (Oxigraph) the follower is **a process of its own**
-(``follow.FollowerProcess``), which sends what changed straight to the engine's: a refresh is a
-second or so of Python, which in the server's process held up the frames on their way to the pages
+It has no commands yet. **The graph is how it is steered**: whoever edits the graph (the CIM graph
+app, its one writer) steers the simulation. A controller (``follow``) holds ``LiveTops``, which
+follows the graph when its version stamp says it changed: it looks at the stamp every ``POLL``
+seconds (one tiny query), and only then reads the profiles that change (SSH, SV). ``LiveTops``
+decides what a change means for the running simulation, and the controller sends it to the engine's
+process (``runner``), where it is applied before the next frame's steps. A change reaches the
+simulation within about ``POLL`` and one refresh. Over a shared store (Oxigraph) the controller is
+**a process of its own** (``follow.ControllerProcess``), linked straight to the engine's: a refresh is
+a second or so of Python, which in the server's process held up the frames on their way to the pages
 (about 2.5 s without a frame, at each edit). Over an in-process store it is a thread here.
 
 **Pacing** is the engine's own: the model is built, stepped and paced in **a process of its own**
@@ -40,6 +41,7 @@ couple of seconds (``pswamp_core.cim.GraphVersion``).
 from __future__ import annotations
 
 import asyncio
+import multiprocessing
 import time
 from collections.abc import AsyncIterator
 from concurrent.futures import ThreadPoolExecutor
@@ -52,7 +54,7 @@ from pswamp_core.sources import SourceModule
 from pswamp_core.util.time import utcnow
 from pswamp_models.pmu import PmuFrame
 
-from .follow import Follower, FollowerProcess
+from .follow import Controller, ControllerProcess
 from .pmu import read_analogs
 from .process import MAX_LAG, EngineProcess
 
@@ -105,36 +107,38 @@ class RtsimFromCimSource(SourceModule):
         loop = asyncio.get_running_loop()
         settings = self._graph or CimSettings.from_env()
         apart = self._repo is None and follows_apart(settings)  # a repository cannot leave the process
-        follower: Follower | FollowerProcess | None = None
+        controller: Controller | ControllerProcess | None = None
         watch: asyncio.Task | None = None
         engine: EngineProcess | None = None
+        ours = theirs = None
 
         try:
             # Starting takes seconds (the graph is read and exported, the load flow solved), and a
             # window may close before it is done: then the stream ends, and the start is left to finish.
             if apart:
-                follower = FollowerProcess(settings, poll=self.settings.poll)
-                starting = loop.run_in_executor(graph, follower.ready)
+                controller = ControllerProcess(settings, poll=self.settings.poll, dt=self.settings.dt)
+                starting = loop.run_in_executor(graph, controller.ready)
             else:
-                starting = loop.run_in_executor(graph, self._start)
+                ours, theirs = multiprocessing.get_context("spawn").Pipe()  # the controller's end, the engine's
+                starting = loop.run_in_executor(graph, self._start, ours)
             if end is not None:
                 await asyncio.wait({starting}, timeout=max(0.0, (end - utcnow()).total_seconds()))
                 if not starting.done():
                     return
-            model, open_switches, ids, analogs = await starting
+            model, ids, analogs = await starting
             if not apart:
-                follower = self._follower
+                controller = self._controller
             engine = EngineProcess(
                 model,
-                open_switches=open_switches,
                 dt=self.settings.dt,
                 rate=self.settings.rate,
                 steps=self.steps_per_frame,
                 analogs=analogs,
                 ids=ids,
-                changes=follower.changes if apart else None,
+                link=controller.link if apart else theirs,
             )
-            watch = asyncio.create_task(self._relay(follower, graph) if apart else self._follow(follower, engine, graph))
+            theirs = None  # the engine's process took it over
+            watch = asyncio.create_task(self._relay(controller, graph) if apart else self._follow(controller, ours, graph))
             header = None
             meter = RateMeter(self.settings.rate)
             while True:
@@ -156,43 +160,60 @@ class RtsimFromCimSource(SourceModule):
                 watch.cancel()
             if engine is not None:
                 await loop.run_in_executor(None, engine.close)
-            if isinstance(follower, FollowerProcess):
-                await loop.run_in_executor(None, follower.close)
+            if isinstance(controller, ControllerProcess):
+                await loop.run_in_executor(None, controller.close)
+            for end_ in (ours, theirs):
+                if end_ is not None:
+                    end_.close()
             receive.shutdown(wait=True, cancel_futures=True)
             graph.shutdown(wait=False, cancel_futures=True)  # a start still running finishes on its own
 
-    def _start(self) -> tuple:
-        """Connect, export the graph and read its PMU Analogs (in the graph's thread)."""
+    def _start(self, link) -> tuple:
+        """Connect, simulate the graph with ``LiveTops`` steering the engine at the other end of ``link``,
+        and read its PMU Analogs (in the graph's thread)."""
         store = Store.of(self._repo) if self._repo is not None else open_store(self._graph)
         version = GraphVersion(store)  # watched from before the export
         repo = self._connect()
-        self._follower = Follower(repo, version)
-        sim = self._follower.sim
-        return sim.model, self._follower.open_switches, sim.ids, read_analogs(repo)
+        self._controller = Controller(repo, version, dt=self.settings.dt)
+        self._controller.attach(link.send)
+        sim = self._controller.sim
+        return sim.model, sim.ids, read_analogs(repo)
 
-    async def _follow(self, follower: Follower, engine: EngineProcess, graph: ThreadPoolExecutor) -> None:
+    async def _follow(self, controller: Controller, link, graph: ThreadPoolExecutor) -> None:
         """The graph followed from a thread of the server's process (a store of its own)."""
         loop = asyncio.get_running_loop()
+
+        def tick() -> list[str] | None:
+            try:
+                while link.poll():
+                    controller.receive(link.recv())
+            except (EOFError, OSError):
+                return None  # the engine is gone, and the stream with it
+            return controller.changes()
+
         while True:
             started = time.monotonic()
             try:
-                change = await loop.run_in_executor(graph, follower.changes)
-                if change:
-                    await loop.run_in_executor(graph, engine.send, change)
+                said = await loop.run_in_executor(graph, tick)
+                if said is None:
+                    return
+                for line in said:
+                    logger.info("%s", line)
             except Exception as error:  # a store that is down for a moment must not end the stream
-                logger.warning("the graph could not be read, the simulation keeps its last state: %s", error)
+                logger.warning("the graph could not be followed, the simulation keeps its last state: %s", error)
             took = time.monotonic() - started
             # At most every POLL, and busy a quarter of the time at most: a refresh is Python work in
             # the server's process, which everything else there shares.
             await asyncio.sleep(max(self.settings.poll - took, 3 * took))
 
     @staticmethod
-    async def _relay(follower: FollowerProcess, graph: ThreadPoolExecutor) -> None:
-        """What the follower's process says, logged here (from the graph's thread, free once it has
-        started: its wait ends when the follower does)."""
+    async def _relay(controller: ControllerProcess, graph: ThreadPoolExecutor) -> None:
+        """What the controller's process says, logged here (from the graph's thread, free once it has
+        started: its wait ends when the controller does)."""
         loop = asyncio.get_running_loop()
-        while (said := await loop.run_in_executor(graph, follower.receive)) is not None:
-            logger.warning("%s", said)
+        while (said := await loop.run_in_executor(graph, controller.receive)) is not None:
+            kind, text = said
+            (logger.info if kind == "log" else logger.warning)("%s", text)
 
 
 def follows_apart(settings: CimSettings) -> bool:

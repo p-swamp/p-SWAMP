@@ -12,12 +12,17 @@ stamps each frame with its place in the schedule, and sends the values down a pi
 only forwards them: when it is busy, a few frames arrive at once, but none is lost and none is late
 on its own clock.
 
-Two pipes, one each way. Down: what the graph changed (a ``Change``), applied before the next
-frame's steps, and ``None`` to stop. Up: the frame layout's ``header`` (first, and again when the
-model is built again), then ``("frame", timestamp, values)`` per frame, and ``("error", error)``
-when the run cannot go on. And, when given, a third: ``changes``, the read end of a pipe whose
-``Change``s come straight from a follower in another process (``follow.FollowerProcess``), so that
-following the graph costs the server nothing.
+What the simulation does is decided elsewhere: by ``LiveTops``, in the controller (``follow``),
+which reaches this process through a **link**, a duplex pipe. Down it come the events and inputs
+to apply (``("event", ...)``, ``("input", ...)``) and whole models to start over from
+(``("build", n, model, ids)``), applied before the next frame's steps. Up it goes the state after
+each frame (``("state", build, frame, t, y, v, rejected)``), only the latest one when the controller
+is busy (a refresh takes a second): it reads the simulation from that, and is told which of the
+events it sent could not be applied.
+
+Two more pipes, with the server: down, ``None`` to stop; up, the frame layout's ``header`` (first,
+and again when the model is built again), then ``("frame", timestamp, values)`` per frame,
+``("log", text)``, and ``("error", error)`` when the run cannot go on.
 """
 
 from __future__ import annotations
@@ -28,7 +33,7 @@ import threading
 import time
 from datetime import datetime, timedelta, timezone
 
-from .engine import Change, SimEngine
+from .engine import SimEngine
 from .pmu import Measured, pmu_layout, pmu_values
 
 __all__ = ["EngineProcess", "MAX_LAG"]
@@ -69,33 +74,86 @@ class _Outbox:
             return
 
 
-def _serve(down, changes, up, model, open_switches, dt, rate, steps, analogs, ids) -> None:  # noqa: PLR0913
-    """The engine process: ``_run``, with what it sends up flushed before the process ends."""
+class _Latest:
+    """The state sent to the controller by a thread of its own, only the latest when it is behind: a
+    state replaces the one still waiting, keeping its rejections, so the loop never waits on the link
+    and the controller never reads an old state."""
+
+    def __init__(self, link) -> None:
+        self._link, self._state = link, None
+        self._ready = threading.Condition()
+        self._closed = False
+        self._thread = threading.Thread(target=self._run, name="rtsim-state", daemon=True)
+        self._thread.start()
+
+    def put(self, state: tuple) -> None:
+        with self._ready:
+            if self._state is not None:
+                *rest, rejected = state
+                state = (*rest, self._state[-1] + rejected)
+            self._state = state
+            self._ready.notify()
+
+    def close(self) -> None:
+        with self._ready:
+            self._closed = True
+            self._ready.notify()
+        self._thread.join(timeout=5)
+
+    def _run(self) -> None:
+        try:
+            while True:
+                with self._ready:
+                    while self._state is None and not self._closed:
+                        self._ready.wait()
+                    if self._state is None:
+                        return
+                    state, self._state = self._state, None
+                self._link.send(state)
+        except (BrokenPipeError, EOFError, OSError):
+            return
+
+
+def _serve(down, link, up, model, dt, rate, steps, analogs, ids) -> None:  # noqa: PLR0913
+    """The engine process: ``_run``, with what it sends flushed before the process ends."""
     up = _Outbox(up)
+    latest = _Latest(link) if link is not None else None
     try:
-        _run(up, down, changes, model, open_switches, dt, rate, steps, analogs, ids)
+        _run(up, down, link, latest, model, dt, rate, steps, analogs, ids)
     finally:
+        if latest is not None:
+            latest.close()
         up.close()
 
 
-def _run(up, down, changes, model, open_switches, dt, rate, steps, analogs, ids) -> None:  # noqa: PLR0913
+def _run(up, down, link, latest, model, dt, rate, steps, analogs, ids) -> None:  # noqa: PLR0913
     """Build, then step in real time until told to stop, sending each frame up."""
     try:
-        engine = SimEngine(model, open_switches=open_switches, dt=dt)
+        engine = SimEngine(model, dt=dt)
         layout = pmu_layout(analogs, engine, ids, rate)
     except Exception as error:  # noqa: BLE001 -- the caller raises it
         up.send(("error", error))
         return
     up.send(("header", layout.header))
+    build, frames, rejected = 0, 0, []
 
-    def apply(change: Change) -> None:
-        nonlocal layout
-        builds = engine.builds
-        for done in engine.apply(change):
-            up.send(("log", done))
-        if engine.builds != builds and change.ids is not None:
-            layout = pmu_layout(analogs, engine, change.ids, rate)
+    def apply(message: tuple) -> None:
+        nonlocal layout, build
+        if message[0] == "build":
+            _, number, new_model, new_ids = message
+            try:
+                engine.rebuild(new_model)
+            except Exception as error:  # noqa: BLE001 -- the running simulation goes on as it was
+                up.send(("log", f"the model could not be built again: {error}; the simulation goes on as it was"))
+                return
+            build, layout = number, pmu_layout(analogs, engine, new_ids, rate)
             up.send(("header", layout.header))
+            return
+        try:
+            engine.apply(message)
+        except Exception as error:  # noqa: BLE001 -- said back to the controller, and the run goes on
+            rejected.append((message[1], f"{type(error).__name__}: {error}"))
+            up.send(("log", f"could not apply {message[1]}: {error}"))
 
     period = 1.0 / rate
     origin, due = datetime.now(timezone.utc), time.monotonic()
@@ -103,16 +161,14 @@ def _run(up, down, changes, model, open_switches, dt, rate, steps, analogs, ids)
     try:
         while True:
             while down.poll():
-                change = down.recv()
-                if change is None:
+                if down.recv() is None:
                     return
-                apply(change)
             try:
-                while changes is not None and changes.poll():
-                    apply(changes.recv())
-            except (EOFError, OSError):  # the follower is gone: the simulation goes on as it is
-                up.send(("log", "the graph is no longer followed"))
-                changes = None
+                while link is not None and link.poll():
+                    apply(link.recv())
+            except (EOFError, OSError):  # the controller is gone: the simulation goes on as it is
+                up.send(("log", "the simulation is no longer steered"))
+                link = None
             due += period
             delay = due - time.monotonic()
             if delay > 0:
@@ -120,7 +176,11 @@ def _run(up, down, changes, model, open_switches, dt, rate, steps, analogs, ids)
             elif -delay > MAX_LAG:  # far behind: drop the time rather than burst through it
                 due = time.monotonic()
             snapshot = engine.step(steps)
+            frames += 1
             up.send(("frame", origin + timedelta(seconds=due - start), pmu_values(layout, snapshot)))
+            if link is not None:
+                latest.put(("state", build, frames, *engine.state(), rejected))
+                rejected = []
     except (BrokenPipeError, EOFError, KeyboardInterrupt):
         return
     except Exception as error:  # noqa: BLE001 -- the caller raises it
@@ -128,40 +188,36 @@ def _run(up, down, changes, model, open_switches, dt, rate, steps, analogs, ids)
 
 
 class EngineProcess:
-    """The simulation of ``model`` (with ``open_switches`` open), run in real time at ``rate`` frames per
-    second of ``steps`` steps of ``dt``, measured at ``analogs`` (``ids`` is the export's
-    ``sim.ids``). ``send`` a change, or have it read them from ``changes`` (a pipe's read end, which
-    it takes over); ``receive`` what it sends up (blocking: from a thread)."""
+    """The simulation of ``model`` run in real time at ``rate`` frames per second of ``steps`` steps of
+    ``dt``, measured at ``analogs`` (``ids`` is the export's ``sim.ids``), steered through ``link`` (the
+    engine's end of a duplex pipe to the controller, which it takes over). ``receive`` what it sends
+    up (blocking: from a thread)."""
 
     def __init__(
         self,
         model: dict,
         *,
-        open_switches=(),
         dt: float,
         rate: float,
         steps: int,
         analogs: list[Measured],
         ids: dict,
-        changes=None,
+        link=None,
     ) -> None:
         context = multiprocessing.get_context("spawn")  # nothing of the server's state comes along
         down_read, self._down = context.Pipe(duplex=False)
         self._up, up_write = context.Pipe(duplex=False)
         self._process = context.Process(
             target=_serve,
-            args=(down_read, changes, up_write, model, frozenset(open_switches), dt, rate, steps, analogs, ids),
+            args=(down_read, link, up_write, model, dt, rate, steps, analogs, ids),
             name="rtsim-engine",
             daemon=True,
         )
         self._process.start()
         down_read.close()
         up_write.close()
-        if changes is not None:
-            changes.close()  # the engine's process has its own
-
-    def send(self, change: Change) -> None:
-        self._down.send(change)
+        if link is not None:
+            link.close()  # the engine's process has its own
 
     def receive(self) -> list[tuple]:
         """What was sent up since the last call, at least one message (blocking: from a thread): each

@@ -647,7 +647,7 @@ The rules to keep:
 
 ### The CIM graph
 
-`core/src/pswamp_core/cim/` (the core's `[cim]` extra, LazyCIM `0.2.2`) is the grid every module can read (ADR-014). The rules:
+`core/src/pswamp_core/cim/` (the core's `[cim]` extra, LazyCIM `0.3.0`) is the grid every module can read (ADR-014). The rules:
 
 - **One store, many readers, one writer.** `open_store()` is the process's handle on
   Oxigraph (`PSWAMP_CIM_URL`, through LazyCIM's `OxigraphServerBackend`, imported from
@@ -728,32 +728,36 @@ wants at least 40).
 one TOPS dynamic simulation of the grid in the CIM graph, run in real time and published as
 `PmuFrame`, one column group per PMU Analog of the graph (`pmu.py`; voltage and frequency
 per voltage level, current per line end), each column carrying its Analog. **The graph is
-how it is steered; the source has no commands.** The model is LazyCIM's TOPS export
-(`engine.EXPORT`): every switch a branch of its own (open ones tripped after the load flow),
-a PLL on every bus, the graph's controllers, and a negligible shunt to ground on every bus
-(floating bay nodes made Nordic44's network singular). `follow.py` looks at the graph's
-version stamp every `POLL` (0.2 s), and only when it moved expires SSH and SV and brings the
-export up to date with `exporter.refresh()`; idle, it reads nothing but the stamp, and an edit
-reaches the frames in about 0.25 s. Over Oxigraph the follower is **a process of its own**
-(`follow.FollowerProcess`) that pipes each change straight to the engine's process: a refresh is a
-second or so of Python, which in the server's process held up the frames to the pages for ~2.5 s
-at each edit. Keep it there; an in-process store, which no other process can read, is followed
-from a thread. A switch, or a line whose terminal is disconnected, is a `Line.event` on its own row (couplers included,
-transient kept); a transformer whose terminal is disconnected has its admittance taken off the
-network (`SimEngine._transformer`: TOPS has no transformer event), a load's P/Q moves its
-admittance, and only other rows that come or go rebuild the model (leaving out what the slack bus
-cannot reach: an island makes TOPS's load flow singular), which starts it over at steady state,
-seconds without a frame. **Taking any branch out must stay live**: a transformer between two
-substations is drawn on the grid page like a line (Nordic44's `MO T1`, Mo-Narvik), and used to be
-that rebuild. **The simulation runs in real time in a process of its own**
-(`process.EngineProcess`): built, stepped and paced there (`RATE` 50 frames/s, `DT` 0.01 s),
-each frame stamped with its place in the schedule, its values computed there and sent up in
-batches by a thread of that process. In the server, a step's many small numpy calls and the
-pacing would each wait for the interpreter lock behind every other thread (Nordic44: 4 ms
-alone, 834 ms next to one busy thread); there, the source only turns values into a
-`PmuFrame`, and a busy server delays frames without losing any (Nordic44 over 20 s: 51.0
-frames/s next to an always-busy thread). Keep it there. LazyCIM 0.2.1 exported each
-breaker twice (0.2.2 does not); the engine keeps one row per name. Not in the streamer's pipeline file,
+how it is steered; the source has no commands** (yet: `doc/WIP-rtsim-commands-plan.md`, ADR-015).
+The simulation is LazyCIM's **`LiveTops`** (TOPS 0.6) over the export `engine.EXPORT`: every node a
+bus and every switch a TOPS `Switch`, the parts the slack bus cannot reach left out, a PLL on every
+bus, the graph's controllers. `LiveTops` decides what a change of the graph means for a running
+simulation: a switch opened or closed, a line or transformer disconnected or connected (TOPS
+events, transient kept), a load's power set, a machine's set-point moved through its controllers'
+bias; or a model to build again, which starts over at steady state, seconds without a frame (a
+part cut off from the slack, or brought back, or equipment added).
+
+**Two processes, because of the GIL.** In the server, a TOPS step's many small numpy calls and the
+pacing would each wait for the interpreter lock behind every other thread (Nordic44: 4 ms alone,
+834 ms next to one busy thread), and a refresh of the export is a second or so of Python, which held
+up the frames to the pages for ~2.5 s at each edit. So:
+- **The controller** (`follow.Controller`) holds `LiveTops` and the repository. It looks at the
+  graph's version stamp every `POLL` (0.2 s), and only when it moved expires SSH and SV and has
+  `LiveTops` follow; idle, it reads nothing but the stamp, and an edit reaches the frames in about
+  0.25 s. Over Oxigraph it is **a process of its own** (`follow.ControllerProcess`); an in-process
+  store, which no other process can read, is followed from a thread.
+- **The engine** (`process.EngineProcess`, `engine.SimEngine`) builds the same TOPS system from the
+  model, applies what it is sent, steps and paces (`RATE` 50 frames/s, `DT` 0.01 s), stamps each
+  frame with its place in the schedule, computes its values and sends them up in batches by a
+  thread of that process; the source only turns them into a `PmuFrame`, and a busy server delays
+  frames without losing any (Nordic44 over 20 s: 51.0 frames/s next to an always-busy thread).
+- **Between them, a link** (a duplex pipe): `LiveTops` steers a shadow of the system through a
+  stand-in for TOPS's simulator (`runner.RemoteRunner`), which sends each event and each input set
+  down, and reads the engine's state, sent up after each frame (the latest only, when the
+  controller is busy). The stand-in relies on private details of `LiveTops` (listed in
+  `runner.py`), until LazyCIM takes a runner of its own. Keep both processes.
+
+Not in the streamer's pipeline file,
 because a live source's shared run starts with the server: compose and k8s add
 `rtsim:rtsim-from-cim` to `PMU_TEST_STREAMER_SOURCES`, beside the streamer's other sources.
 
