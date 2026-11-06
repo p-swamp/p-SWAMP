@@ -22,6 +22,7 @@ from pswamp_core.command_routing import CommandRefused
 from pswamp_models.cim import CimEdits
 from pswamp_models.pmu import PmuFrame
 from pswamp_models.rtsim import OperateSwitchCommand, SimEvent, TripBranchCommand
+from pswamp_models.scada import ScadaScan
 from pswamp_modules.rtsim_from_cim import RtsimFromCimSource
 from pswamp_modules.rtsim_from_cim.follow import COMMANDS
 from pswamp_modules.rtsim_from_cim import follow as follow_module
@@ -56,7 +57,7 @@ class Run:
     def __init__(self, source: RtsimFromCimSource) -> None:
         self.source = source
         self.frames: list[PmuFrame] = []
-        #: What it said beside its frames: ``CimEdits`` and ``SimEvent``.
+        #: What it said beside its frames: ``CimEdits``, ``SimEvent`` and ``ScadaScan``.
         self.said: list = []
 
     async def __aenter__(self) -> Run:
@@ -90,7 +91,7 @@ def angles(frame: PmuFrame) -> np.ndarray:
 
 def test_it_is_a_live_source_that_reads_the_graph_takes_commands_and_is_not_playable():
     assert (RtsimFromCimSource.name, RtsimFromCimSource.kind, RtsimFromCimSource.cim) == ("rtsim-from-cim", "live", True)
-    assert RtsimFromCimSource.outputs == (PmuFrame, CimEdits, SimEvent)
+    assert RtsimFromCimSource.outputs == (PmuFrame, CimEdits, SimEvent, ScadaScan)
     assert RtsimFromCimSource.commands == COMMANDS
     assert not issubclass(RtsimFromCimSource, Playable)
 
@@ -178,6 +179,22 @@ def test_the_frame_rate_and_step_must_make_whole_steps_per_frame():
         make(poll=0.0)
 
 
+def test_scada_is_scanned_every_two_seconds_by_default_and_never_at_zero():
+    assert make().settings.scada_period == 2.0 and make(scada_period=0.0).settings.scada_period == 0.0
+    with pytest.raises(ValueError, match="SCADA_PERIOD"):
+        make(scada_period=-1.0)
+
+
+async def test_it_publishes_a_scada_scan_of_the_graph_beside_its_frames():
+    async with Run(make(scada_period=0.5)) as run:
+        await run.until(lambda: sum(isinstance(m, ScadaScan) for m in run.said) >= 2)
+    first, second = [m for m in run.said if isinstance(m, ScadaScan)][:2]
+    assert (first.source, first.cimReferenceId) == ("rtsim-from-cim", "3f5e0000-0000-4000-8000-000000000001")
+    assert len(first.analogs) == 28 and len(first.discretes) == 2
+    assert second.sim_time - first.sim_time == pytest.approx(0.5, abs=0.021)
+    assert first.timestamp <= second.timestamp
+
+
 def test_protection_is_on_by_default_and_set_by_its_settings():
     on = make().protection
     assert (on.enabled, on.pickup, on.tms) == (True, 1.0, 0.5)
@@ -249,7 +266,8 @@ async def test_a_store_that_cannot_be_read_does_not_end_the_stream(monkeypatch):
 
 
 def test_a_script_reads_a_bounded_window():
-    frames = list(islice(make().read(end=utcnow() + timedelta(seconds=120)), 25))  # starting takes seconds
+    read = make().read(end=utcnow() + timedelta(seconds=120))  # starting takes seconds
+    frames = list(islice((record for record in read if isinstance(record, PmuFrame)), 25))  # and SCADA scans come too
     assert len(frames) == 25 and all(f.header.data_rate == 50.0 for f in frames)
 
 

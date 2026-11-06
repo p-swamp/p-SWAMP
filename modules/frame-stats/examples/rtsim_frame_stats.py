@@ -65,9 +65,9 @@ def main() -> None:
 
     print("loading Nordic44 into an embedded Oxigraph store ...")
     store = nordic44()
-    print(f"{prepare(repository(store))} PMU Analogs added")
+    print(f"{prepare(repository(store))} PMU and SCADA measurements added")
     # Read through a repository made after prepare, so it sees the graphs prepare created.
-    sim = source("rtsim-from-cim", repo=repository(store))
+    sim = source("rtsim-from-cim", repo=repository(store), scada_period=0)  # frames only: no SCADA scans
     stats = FrameStatsModule()
 
     print("starting the simulation ...")

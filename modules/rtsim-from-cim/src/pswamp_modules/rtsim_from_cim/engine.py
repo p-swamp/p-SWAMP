@@ -31,7 +31,7 @@ import numpy as np
 import tops.dynamic as dynamic
 from tops.simulator import Simulator
 
-__all__ = ["DEFAULT_DYNAMICS", "EXPORT", "MAX_V_PU", "SimEngine", "Snapshot"]
+__all__ = ["DEFAULT_DYNAMICS", "EXPORT", "MAX_V_PU", "Flows", "SimEngine", "Snapshot"]
 
 #: Past this a bus voltage is not physical any more: the run has diverged.
 MAX_V_PU = 5.0
@@ -71,6 +71,27 @@ class Snapshot:
     #: Each load's power, MW and Mvar, in ``load_names`` order.
     load_p_mw: np.ndarray
     load_q_mvar: np.ndarray
+
+
+@dataclass(frozen=True)
+class Flows:
+    """What a SCADA scan reads, at one instant: arrays are copies, in the model's orders. A branch's
+    ``from`` end is its first bus in the model, its ``to`` end the second; its power at an end flows into
+    it there."""
+
+    sim_time_s: float
+    v_pu: np.ndarray
+    #: Each line's, then each transformer's, power at its from and to end, complex, MVA.
+    s_from_mva: np.ndarray
+    s_to_mva: np.ndarray
+    #: Each line's, then each transformer's, current at its from and to end, complex, kA.
+    i_from_ka: np.ndarray
+    i_to_ka: np.ndarray
+    #: Each machine's power (as it generates), then each load's (as it draws), MW and Mvar.
+    p_mw: np.ndarray
+    q_mvar: np.ndarray
+    #: Whether each switch is closed, in ``switch_names`` order.
+    closed: np.ndarray
 
 
 class SimEngine:
@@ -203,6 +224,26 @@ class SimEngine:
             load_p,
             load_q,
         )
+
+    def flows(self) -> Flows:
+        """What a SCADA scan reads (``Flows``), as the simulation is now: once a scan, not per frame."""
+        sol = self._sim.sol
+        t, y, v = float(sol.t), sol.y, sol.v
+        s_n = float(self._ps.s_n)
+        branches = [self._line] + ([self._trafo] if self._trafo is not None else [])
+        with np.errstate(all="ignore"):
+            joined = lambda f: np.concatenate([np.asarray(f(b), dtype=complex).ravel() for b in branches])  # noqa: E731
+            return Flows(
+                self._time + t,
+                np.abs(v).astype(float),
+                joined(lambda b: b.s_from(y, v)) * s_n,
+                joined(lambda b: b.s_to(y, v)) * s_n,
+                joined(lambda b: b.I_from(y, v)),
+                joined(lambda b: b.I_to(y, v)),
+                np.concatenate([_each(self._gens, "P_e", y, v), _each(self._loads, "P", y, v)]),
+                np.concatenate([_each(self._gens, "Q_e", y, v), _each(self._loads, "Q", y, v)]),
+                np.array(self._switch.connected, dtype=bool, copy=True) if self._switch is not None else np.zeros(0, dtype=bool),
+            )
 
 
 def _each(models: list, output: str, y: np.ndarray, v: np.ndarray) -> np.ndarray:

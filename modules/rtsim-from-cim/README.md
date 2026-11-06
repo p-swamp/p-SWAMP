@@ -12,7 +12,8 @@ playable: a run follows the source as it goes.
 | | Message | Topic | Defined in |
 |---|---|---|---|
 | Reads | nothing on the transport (the CIM graph, through its own repository: `cim = True`) | | |
-| Emits | `PmuFrame` (mRID `rtsim-from-cim`): one column group per PMU Analog of the graph, each column carrying its Analog (`header.analog`) | `pmu.frame` | `pswamp_models.pmu` |
+| Emits | `PmuFrame` (mRID `rtsim-from-cim`): one column per PMU measurement of the graph, each column carrying its own Analog (`header.analog`) | `pmu.frame` | `pswamp_models.pmu` |
+| Emits | `ScadaScan` (source `rtsim-from-cim`): every `SCADA_PERIOD` s of its clock, the value of every SCADA measurement of the graph, for the graph's one writer to keep as the latest (ADR-016) | `scada.scan` | `pswamp_models.scada` |
 | Emits | `SimEvent`: every command applied, announced at once | `sim.event` | `pswamp_models.rtsim` |
 | Emits | `CimEdits` (producer `rtsim`): an operation, once the engine applied it, for the graph's one writer | `cim.edits` | `pswamp_models.cim` |
 | Accepts | `OperateSwitchCommand`, `OperateLineCommand` (operations); `TripBranchCommand`, `ReconnectBranchCommand`, `ShortCircuitCommand`, `ClearShortCircuitCommand`, `FaultAndClearCommand`, `LoadStepCommand` (disturbances); `ResetSimulationCommand` | `<app>.<command>`, under its shared run's key | `pswamp_models.rtsim` |
@@ -50,18 +51,39 @@ The controller runs it on the engine's state each time it looks at the graph (`p
 
 ## What it measures
 
-The graph's PMU Analogs (`pswamp_core.cim.analogs`). Each voltage level of each substation is a
-station, named `<substation>_<kV>` (`Beta_400`). It has:
+The graph's measurements (`pswamp_core.cim.measurement_table`, ADR-016): those of the grid's own
+Operation profile (`Analog`s and `Discrete`s whose values come from the `PMU` or the `SCADA`
+`MeasurementValueSource`), or, for a grid that has none, those the core gives it when it loads it.
 
-- a voltage phasor: `V_Magnitude` kV, `V_Angle` deg;
-- a frequency: `f` Hz, from a PLL on its bus;
-- the current of each line leaving it: channel `I_<line>`, `I_Magnitude` A, `I_Angle` deg, from TOPS's
-  `I_from`/`I_to`;
-- the power of each generator and load on it: channel `S_<equipment>`, `P` MW and `Q` Mvar, each its
-  own Analog, from TOPS's `GEN.P_e`/`Q_e` and `Load.P`/`Q`.
+**PMU, in every frame.** Each voltage level of each substation is a station, named `<substation>_<kV>`
+(`Beta_400`). Each column is one PMU Analog of the graph, and carries it:
 
-A de-energised bus reads 0 kV and no angle or frequency; a line, a machine or a load the model does
-not have reads `None`.
+- the voltage's magnitude and angle: channel `V`, `V_Magnitude` kV and `V_Angle` deg;
+- the frequency and its rate of change: channel `f`, `f` Hz (from a PLL on its bus) and `df` Hz/s (over
+  the frame's steps);
+- the current at a line's or a transformer's end, at the station of that end: channel `I_<branch>`,
+  `I_Magnitude` A and `I_Angle` deg, from TOPS's `I_from`/`I_to` (the end is the one whose bus the
+  terminal is at);
+- only where the grid's PMUs measure it, the power of a generator or a load: channel `S_<equipment>`,
+  `P` MW and `Q` Mvar, signed as CGMES has it (into the equipment, so a generator's is negative). The
+  sample grid's and Nordic44's PMUs measure none.
+
+A de-energised bus reads 0 kV and no angle or frequency; what the model does not have reads `None`.
+
+**SCADA, every `SCADA_PERIOD` seconds of the simulation's clock** (`scada.py`), at the first frame and
+then on: computed in the engine's process from TOPS (`SimEngine.flows`), sent up beside the frames, and
+published as one `ScadaScan` of every SCADA measurement of the graph, in the units and with the sign it
+declares:
+
+- `P` MW and `Q` Mvar at a terminal of a line, a transformer, a machine or a load: the flow into the
+  equipment there (`positiveFlowIn`; a measurement that says `false` reads the other way round);
+- `V` kV: the line-to-line voltage's magnitude at the node; `I` A: a branch end's current;
+- `Pos` (a `Discrete`, `SwitchPosition`): 1 closed, 0 open, as the simulation has the switch.
+
+A measurement of a part the model left out has no value and is not in the scan; one of a part that
+is de-energised reads what TOPS gives. The scan says the grid's model id (`cimReferenceId`) and its
+time on the simulation's clock. The web backend's CIM graph app writes each scan's values as the
+latest, in a graph of their own that does not move the version stamp (ADR-016).
 
 ## How it follows the graph
 
@@ -115,7 +137,8 @@ is installed, how a rebuild goes while one "runs", and that a machine's set-poin
 - `POLL`: the time between two looks at the graph's version stamp (0.2);
 - `PROTECTION`: `on` (the default) or `off`, whether an overloaded line is tripped;
 - `OVERLOAD_PICKUP` (1.0) and `OVERLOAD_TMS` (0.5): the overload relay's pickup, as a multiple of a
-  line's permanent limit, and its curve's time multiplier.
+  line's permanent limit, and its curve's time multiplier;
+- `SCADA_PERIOD`: seconds of simulated time between two SCADA scans (2); 0 scans nothing.
 
 **The simulation runs in real time in a process of its own** (`process.py`, `EngineProcess`): it is
 built from the model `LiveTops` exported, stepped and paced there, and each frame's values are sent

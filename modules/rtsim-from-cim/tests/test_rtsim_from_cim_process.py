@@ -23,7 +23,7 @@ class Received:
     """What the engine sent up, read until a condition holds."""
 
     def __init__(self, engine: EngineProcess) -> None:
-        self.engine, self.frames, self.logs, self.headers = engine, [], [], 0
+        self.engine, self.frames, self.logs, self.headers, self.scans = engine, [], [], 0, []
 
     def until(self, condition, timeout: float = 60.0) -> None:
         deadline = time.monotonic() + timeout
@@ -38,6 +38,8 @@ class Received:
                     self.frames.append(message[1])
                 elif kind == "header":
                     self.header, self.headers = message[0], self.headers + 1
+                elif kind == "scan":
+                    self.scans.append(message)
 
     def angles(self) -> np.ndarray:
         values = np.array([v for v, m in zip(self.frames[-1], self.header.measurement, strict=True) if m == "V_Angle"], dtype=float)
@@ -62,6 +64,29 @@ def engine():
     yield engine, ours, sim
     ours.close()
     engine.close()
+
+
+def test_scada_is_scanned_at_the_first_frame_then_every_period_of_the_simulation_s_clock():
+    repo = connect_reader(SETTINGS)
+    sim = get_exporter("tops", repo, **EXPORT).build()
+    engine = EngineProcess(sim.model, dt=0.01, rate=50.0, steps=2, measurements=read_measurements(repo), ids=sim.ids, scada_period=0.2)
+    try:
+        seen = Received(engine)
+        seen.until(lambda: len(seen.scans) >= 4)
+    finally:
+        engine.close()
+    times = [sim_time for _, sim_time, _, _ in seen.scans]
+    assert times[0] == pytest.approx(0.02)  # the first frame
+    assert np.allclose(np.diff(times), 0.2, atol=0.021)  # then every 0.2 s of simulated time
+    _, _, analogs, discretes = seen.scans[-1]
+    assert len(analogs) == 28 and {value for _, value in discretes} == {1}
+
+
+def test_no_period_no_scan(engine):
+    engine, _, _ = engine
+    seen = Received(engine)
+    seen.until(lambda: len(seen.frames) >= 25)
+    assert seen.scans == []
 
 
 def test_its_state_comes_up_the_link_a_frame_at_a_time(engine):
