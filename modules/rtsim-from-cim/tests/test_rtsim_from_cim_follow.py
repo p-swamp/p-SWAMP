@@ -9,6 +9,8 @@ import pytest
 
 from pswamp_core.cim import SAMPLE_GRID, CimSettings, GraphVersion, connect_reader, open_store, stage
 from pswamp_core.cim.testing import edit, reset
+from pswamp_core.command_routing import CommandRefused
+from pswamp_models.rtsim import OperateSwitchCommand, TripBranchCommand
 from pswamp_modules.rtsim_from_cim.follow import Controller
 
 SETTINGS = CimSettings(cim_path=SAMPLE_GRID)
@@ -84,3 +86,14 @@ def test_a_part_cut_off_is_a_model_built_again_the_clock_running_on(controller):
     kind, build, model, ids = controller.sent[-1]
     assert (kind, build) == ("build", 1) and ids["de_energised"]
     assert controller.live.time == pytest.approx(2.0)  # the clock runs on from where the engine was
+
+
+@needs_profiles
+def test_a_command_on_what_the_simulation_left_out_says_why(controller):
+    terminal = next(t.mRID for t in controller.live.exporter.repo.from_mRID(TRANSFORMER).Terminals if t.sequenceNumber == 1)
+    edit(SETTINGS, terminal, connected=False)
+    controller.changes()
+    with pytest.raises(CommandRefused, match="slack bus cannot reach"):
+        controller.command(OperateSwitchCommand(mRID=TRANSFORMER, open=False))
+    with pytest.raises(CommandRefused, match="slack bus cannot reach"):
+        controller.command(TripBranchCommand(mRID=TRANSFORMER))
