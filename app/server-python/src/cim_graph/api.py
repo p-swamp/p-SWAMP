@@ -3,7 +3,9 @@ graph that every module reads and the grid simulation follows (``pswamp_core.cim
 
 **This app is the graph's only writer** (``grid.Writer``). It fills the store when the server starts,
 in the background, and writes what the live simulation reports it did (``CimEdits`` from its shared
-run, ADR-015): a breaker it opened, the terminal of a line it took out. Nothing else writes it.
+run, ADR-015): a breaker it opened, the terminal of a line it took out. Nothing else writes it. It also
+keeps the latest SCADA values the simulation scans (``ScadaScan``), each scan replacing the last, in a
+graph of their own that does not move the version stamp (ADR-016); a reset forgets them.
 
 **A visitor operates the grid through the simulation**, not the graph: a breaker or a line is a
 command to it (``shared.dispatch_live``), and the graph shows the result once the simulation has
@@ -36,6 +38,7 @@ from fastapi import APIRouter, FastAPI, HTTPException, WebSocket
 from pswamp_core.subscription import Overflow
 from pswamp_core.util.tasks import cancel_and_wait
 from pswamp_models.cim import CimEdits
+from pswamp_models.scada import ScadaScan
 from pswamp_models.rtsim import (
     ClearShortCircuitCommand,
     FaultAndClearCommand,
@@ -194,6 +197,22 @@ async def _write_reports() -> None:
             logger.info("%s (%s): %s", report.producer, report.cause, "; ".join(done))
 
 
+async def _write_scans() -> None:
+    """Keep the latest SCADA scan in the graph (``Writer.write_scan``), once the grid is loaded. Only
+    the latest matters: a scan that comes while one is written replaces any still waiting."""
+    app, source = SIMULATION
+    with transport().subscribe(ScadaScan, app=app, key=f"live.{source}", overflow=Overflow.DROP_OLDEST, maxsize=1) as scans:
+        async for _, scan in scans:
+            try:
+                writer = await graph.loaded()
+                written, left_out = await graph._run(writer.write_scan, scan)
+            except Exception:  # the grid is not available: nothing to write to
+                logger.exception("a SCADA scan of %s could not be written", scan.source)
+                continue
+            if left_out:
+                logger.warning("a SCADA scan of %s: %d values written, %d for no SCADA measurement of the grid", scan.source, written, left_out)
+
+
 async def _relay_events() -> None:
     """Show what the simulation announces (``SimEvent``: a disturbance, a protection operating) on
     every socket, as part of the state, once the grid is loaded."""
@@ -209,15 +228,17 @@ async def _relay_events() -> None:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Load the grid into the store, in the background, as the server starts; write what the
-    simulation reports, and show what it announces."""
+    simulation reports and the latest SCADA scan, and show what it announces."""
     global graph
     graph = Graph()
     graph.load()
     writing = asyncio.create_task(_write_reports(), name="cim-graph.reports")
     relaying = asyncio.create_task(_relay_events(), name="cim-graph.events")
+    scanning = asyncio.create_task(_write_scans(), name="cim-graph.scans")
     try:
         yield
     finally:
+        await cancel_and_wait(scanning, ignore=(Exception,))
         await cancel_and_wait(relaying, ignore=(Exception,))
         await cancel_and_wait(writing, ignore=(Exception,))
         loading = graph._loading
