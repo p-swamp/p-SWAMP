@@ -1,4 +1,4 @@
-"""The CIM graph: the grid as loaded, the PMU Analogs, the store and its readers."""
+"""The CIM graph: the grid as loaded, its measurements, the store and its readers."""
 
 from __future__ import annotations
 
@@ -17,17 +17,17 @@ from pswamp_core.cim import (  # noqa: E402
     GraphVersion,
     LocalStore,
     Store,
-    analog_index,
-    analog_name,
-    analog_table,
     connect_reader,
+    measurement_table,
     model_id,
     open_store,
     prepare,
     refresh_expired,
     stage,
+    station_name,
 )
 from pswamp_core.cim.grid import NAMESPACE_ALIASES  # noqa: E402
+from pswamp_core.cim.measurements import name_part  # noqa: E402
 
 SETTINGS = CimSettings(cim_path=SAMPLE_GRID)
 P = "3f5e0000-0000-4000-8000-0000000000"
@@ -67,11 +67,10 @@ def test_settings_come_from_the_environment(monkeypatch):
     assert (settings.url, settings.cim_path) == ("http://oxigraph:7878", Path("/grid"))
 
 
-def test_the_analog_naming_rule():
-    assert analog_name("Beta", 400.0, "V") == "PMU_Beta_400_V"
-    assert analog_name("HELSINKI", 420, "F") == "PMU_HELSINKI_420_F"
-    assert analog_name("Alpha", 400, "I", "Alpha-Beta 400 kV line") == "PMU_Alpha_400_I_Alpha-Beta_400_kV_line"
-    assert analog_name(" OSLO ", 132.5, "V") == "PMU_OSLO_132.5_V"
+def test_the_naming_rules():
+    assert name_part(" ASKER   300 M1 ") == "ASKER___300_M1"  # one _ per whitespace character, as Nordic44's OP has it
+    assert station_name("Beta", 400.0) == "Beta_400"
+    assert station_name(" OSLO  2 ", 132.5) == "OSLO_2_132.5"
 
 
 def test_the_grid_is_staged_one_profile_per_graph(grid):
@@ -81,43 +80,69 @@ def test_the_grid_is_staged_one_profile_per_graph(grid):
     assert grid.model_id == EQ_MODEL
 
 
-def test_the_grid_gets_a_v_and_an_f_per_voltage_level_and_an_i_per_line_end(store):
-    reader = connect_reader(store=store)
-    table = analog_table(reader)
-    assert sorted(table[table.quantity == "V"].name) == [
-        "PMU_Alpha_400_V", "PMU_Beta_400_V", "PMU_Gamma_132_V", "PMU_Gamma_400_V",
+def by(table, source, quantity):
+    return table[(table.source == source) & (table.quantity == quantity)]
+
+
+def test_a_grid_without_measurements_gets_pmus_at_each_voltage_level_and_line_end(store):
+    table = measurement_table(connect_reader(store=store))
+    assert sorted(by(table, "PMU", "V").name) == [
+        "PMU_Alpha_Vmag", "PMU_Beta_Vmag", "PMU_Gamma_132_Vmag", "PMU_Gamma_400_Vmag",
     ]  # fmt: skip
-    assert len(table[table.quantity == "F"]) == 4
-    currents = table[table.quantity == "I"]
-    assert len(currents) == 6 and set(currents.sequence) == {1, 2}
-    assert "PMU_Alpha_400_I_Alpha-Beta_400_kV_line" in set(currents.name)
+    for quantity in ("V_angle", "F", "ROCOF"):
+        assert len(by(table, "PMU", quantity)) == 4, quantity
+    currents = by(table, "PMU", "I")
+    assert len(currents) == 6 and set(currents.sequence) == {1, 2} and set(currents.equipment_class) == {"ACLineSegment"}
+    assert "PMU_Alpha-Beta_400_kV_line_T1_Imag" in set(currents.name)
+    angles = by(table, "PMU", "I_angle")
+    assert set(zip(angles.terminal, angles.equipment)) == set(zip(currents.terminal, currents.equipment))  # magnitude and angle
+    pmu = table[table.source == "PMU"]
+    assert len(pmu) == 28 and not set(pmu.quantity) & {"P", "Q"}
     assert table.mRID.is_unique and table.node.notna().all()
 
 
-def test_the_grid_gets_a_p_and_a_q_at_each_generator_and_load(store):
-    table = analog_table(connect_reader(store=store))
+def test_a_grid_without_measurements_gets_scada_flows_voltages_and_switch_positions(store):
+    table = measurement_table(connect_reader(store=store))
     for quantity in ("P", "Q"):
-        assert sorted(table[table.quantity == quantity].name) == [
-            f"PMU_Alpha_400_{quantity}_Alpha_GA",
-            f"PMU_Beta_400_{quantity}_Beta_load_LB",
-            f"PMU_Gamma_132_{quantity}_Gamma_load_LC",
-            f"PMU_Gamma_400_{quantity}_Gamma_GC",
-        ]
-    powers = table[table.quantity.isin(["P", "Q"])]
-    assert set(powers.equipment) == {P + "30", P + "31", P + "32", P + "33"}  # on the machine or load itself
-    assert (powers.sequence == 1).all()
+        flows = by(table, "SCADA", quantity)
+        assert len(flows) == 2 * 3 + 2 + 2 + 2  # each end of three lines and a transformer, two machines, two loads
+        assert f"SCADA_Gamma_400/132_T2_{quantity}" in set(flows.name)
+        assert f"SCADA_Beta_load_LB_{quantity}" in set(flows.name)
+    assert sorted(by(table, "SCADA", "V").name) == ["SCADA_Alpha_V", "SCADA_Beta_V", "SCADA_Gamma_132_V", "SCADA_Gamma_400_V"]
+    positions = by(table, "SCADA", "Pos")
+    assert set(positions.equipment) == {COUPLER, P + "a1"} and set(positions.kind) == {"Discrete"}
+    assert len(table) == 58
 
 
-def test_the_power_analogs_are_named_by_the_same_rule():
-    assert analog_name("Gamma", 132, "P", "Gamma load LC") == "PMU_Gamma_132_P_Gamma_load_LC"
+def test_each_measurement_says_its_units_and_its_sign_as_cgmes_does(store):
+    table = measurement_table(connect_reader(store=store)).set_index("name")
+    load = table.loc["SCADA_Beta_load_LB_P"]
+    assert (load.measurementType, load.unitSymbol, load.unitMultiplier, load.unit) == ("ActivePower", "W", "M", "MW")
+    assert load.positiveFlowIn is True and load.phases == "ABC" and load.equipment_class == "EnergyConsumer"
+    assert table.loc["SCADA_Beta_load_LB_Q"].unit == "Mvar"
+    assert table.loc["PMU_Beta_Vmag"].unit == "kV" and table.loc["PMU_Beta_Vmag"].positiveFlowIn is None
+    assert table.loc["PMU_Beta_ROCOF"].unit == "Hz/s" and table.loc["PMU_Beta_Vang"].unit == "deg"
+    assert table.loc["PMU_Beta_Vmag"].station == "Beta_400" and table.loc["PMU_Beta_Vmag"].kv == 400.0
 
 
-def test_a_reader_finds_every_analog_in_one_query(store):
+def test_a_reader_reads_every_measurement_in_a_handful_of_queries(store):
     reader = connect_reader(store=store)
-    analog_index(reader)  # the schema of what it reads is discovered once per repository
+    measurement_table(reader)  # the schema of what it reads is discovered once per repository
     with reader.measure() as work:
-        index = analog_index(reader)
-    assert len(index) == 22 and work.queries <= 2
+        table = measurement_table(reader)
+    assert len(table) == 58 and work.queries <= 20
+
+
+def test_a_grid_that_brings_its_measurements_keeps_them_and_gets_none(grid, tmp_path):
+    for file in SAMPLE_GRID.glob("*.xml"):
+        (tmp_path / file.name).write_bytes(file.read_bytes())
+    own = Path(__file__).parent / "own_measurements_OP.xml"  # three measurements, PMU and SCADA
+    (tmp_path / "ThreeSubstations_OP.xml").write_bytes(own.read_bytes())
+    store = Store(CimSettings(cim_path=tmp_path), LocalStore())
+    store.fill()
+    table = measurement_table(connect_reader(store=store))
+    assert dict(zip(table.mRID, table.source, strict=True)) == {"own-p": "SCADA", "own-pos": "SCADA", "own-v": "PMU"}
+    assert table.set_index("mRID").loc["own-p"].positiveFlowIn is True
 
 
 def test_a_reader_never_commits(store):
@@ -192,7 +217,7 @@ def test_a_reset_is_one_update_that_puts_the_ssh_profile_back(store):
     assert store.version() == stamped + 1
     fresh = connect_reader(store=store)
     assert fresh.from_mRID(COUPLER).open is False
-    assert len(analog_index(fresh)) == 22  # the Analogs are part of the grid
+    assert len(measurement_table(fresh)) == 58  # the measurements are part of the grid
 
 
 def test_a_store_is_filled_once(store):
@@ -241,7 +266,7 @@ def test_a_backend_s_store_is_read_and_never_loaded_reset_or_written(grid):
     store = open_store(THEIRS)
     assert not store.owned and store.version() == 0
     reader = connect_reader(THEIRS, timeout=5)
-    assert len(analog_table(reader)) > 0
+    assert len(measurement_table(reader)) > 0
     for doing in (store.fill, store.reset, store.writer_backend):
         with pytest.raises(PermissionError, match="did not load"):
             doing()
@@ -279,18 +304,18 @@ def test_a_module_reads_the_repository_a_script_hands_it(store):
     assert watched.backend is store.backend and not watched.owned
 
 
-def test_prepare_leaves_a_grid_that_has_its_analogs_alone(store):
+def test_prepare_leaves_a_grid_that_has_its_measurements_alone(store):
     repo = CIMRepository(store.backend, graphs="discover", namespace_aliases=NAMESPACE_ALIASES)
     before = store.version()
     assert prepare(repo) == 0 and store.version() == before
 
 
-def test_prepare_gives_a_grid_its_dynamics_and_analogs_in_graphs_it_lacks(store):
+def test_prepare_gives_a_grid_its_dynamics_and_measurements_in_graphs_it_lacks(store):
     """As a LazyCIM demo model in a store of a script's own: no Dynamics or Operation data graph."""
     for keyword in ("DY", "OP"):
         store.backend.dataset.remove_graph(_iri(f"cgmes:model:{keyword}"))
     repo = CIMRepository(store.backend, graphs="discover", namespace_aliases=NAMESPACE_ALIASES)
-    assert prepare(repo) == len(analog_table(connect_reader(store=store))) > 0
+    assert prepare(repo) == len(measurement_table(connect_reader(store=store))) == 58
     machines = connect_reader(store=store).query(L.SynchronousMachineTimeConstantReactances).count()
     assert machines > 0 and prepare(repo) == 0
 

@@ -13,7 +13,7 @@ from lazycim.sim import get_exporter
 
 from pswamp_core.cim import SAMPLE_GRID, CimSettings, connect_reader
 from pswamp_modules.rtsim_from_cim.engine import EXPORT
-from pswamp_modules.rtsim_from_cim.pmu import read_analogs
+from pswamp_modules.rtsim_from_cim.pmu import read_measurements
 from pswamp_modules.rtsim_from_cim.process import EngineProcess
 
 SETTINGS = CimSettings(cim_path=SAMPLE_GRID)
@@ -58,7 +58,7 @@ def engine():
     repo = connect_reader(SETTINGS)
     sim = get_exporter("tops", repo, **EXPORT).build()
     ours, theirs = multiprocessing.get_context("spawn").Pipe()
-    engine = EngineProcess(sim.model, dt=0.01, rate=50.0, steps=2, analogs=read_analogs(repo), ids=sim.ids, link=theirs)
+    engine = EngineProcess(sim.model, dt=0.01, rate=50.0, steps=2, measurements=read_measurements(repo), ids=sim.ids, link=theirs)
     yield engine, ours, sim
     ours.close()
     engine.close()

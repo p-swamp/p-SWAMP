@@ -24,7 +24,7 @@ from pswamp_core.cim import (  # noqa: E402
     SAMPLE_GRID,
     CimSettings,
     GraphVersion,
-    analog_index,
+    measurement_table,
     connect_reader,
     model_id,
     refresh_expired,
@@ -52,14 +52,14 @@ def store():
     return remote
 
 
-def test_a_reader_sees_the_grid_and_its_analogs(store):
+def test_a_reader_sees_the_grid_and_its_measurements(store):
     reader = connect_reader(store=store)
     assert model_id(store) == "3f5e0000-0000-4000-8000-000000000001"
-    analog_index(reader)
+    measurement_table(reader)
     started = time.perf_counter()
     with reader.measure() as work:
-        assert len(analog_index(reader)) == 22
-    print(f"analog index: {work.queries} queries, {1000 * (time.perf_counter() - started):.1f} ms")
+        assert len(measurement_table(reader)) == 58
+    print(f"measurement table: {work.queries} queries, {1000 * (time.perf_counter() - started):.1f} ms")
 
 
 def test_one_writer_one_update_and_a_reader_sees_it_once_the_stamp_moved(store):

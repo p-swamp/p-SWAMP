@@ -10,9 +10,9 @@ copy, before any store sees it:
 
 - every synchronous machine without dynamics gets those of the nearest Nordic44
   machine (``add_nordic44_dynamics``), in ``cgmes:model:DY``;
-- every place a PMU can observe gets its Analog (``analogs.add_pmu_analogs``), in
-  ``cgmes:model:OP``, the Operation profile, which is where CGMES keeps
-  measurements.
+- a grid whose Operation profile has no PMU or SCADA measurements gets them
+  (``measurements.add_measurements``), in ``cgmes:model:OP``, which is where CGMES
+  keeps measurements; one that has them keeps its own, and nothing is added.
 
 Data graphs are ``cgmes:model:<KW>`` and vocabularies ``cgmes:schema:<KW>``, the
 convention LazyCIM reads (``graphs="discover"``). The result is what a store is
@@ -33,7 +33,7 @@ from rdflib import Graph, URIRef
 from rdflib.namespace import RDF
 
 from ..log import get_logger
-from .analogs import add_pmu_analogs
+from .measurements import add_measurements, has_measurements
 from .settings import CimSettings
 
 __all__ = ["NAMESPACE_ALIASES", "SAMPLE_GRID", "Grid", "model_graph", "schema_graph", "stage"]
@@ -110,7 +110,7 @@ def _stage(folder: Path | None) -> Grid:
     try:
         vocabularies = cgmes_profile_files(dynamics=True)
     except CorpusUnavailable as error:
-        logger.warning("the CGMES vocabularies are not available (%s): the graph is read-only, with no PMU Analogs", error)
+        logger.warning("the CGMES vocabularies are not available (%s): the graph is read-only, with no measurements added", error)
         return Grid(graphs, model_id, writable=False)
     for file in vocabularies:
         graphs[schema_graph(str(vocabulary_source(file).keyword))] = Graph().parse(file, format="xml")
@@ -120,12 +120,14 @@ def _stage(folder: Path | None) -> Grid:
         merged.graph.__iadd__(graph)
     repo = CIMRepository(merged, default_namespace=CIM100, namespace_aliases=NAMESPACE_ALIASES)
     _complete(merged.graph, graphs, model_graph("DY"), lambda: add_nordic44_dynamics(repo), "machines given dynamics")
-    _complete(merged.graph, graphs, model_graph("OP"), lambda: _analogs(repo), "PMU Analogs")
+    _complete(merged.graph, graphs, model_graph("OP"), lambda: _measurements(repo), "PMU and SCADA measurements added")
     return Grid(graphs, model_id, writable=True)
 
 
-def _analogs(repo: CIMRepository) -> int:
-    added = add_pmu_analogs(repo)
+def _measurements(repo: CIMRepository) -> int:
+    if has_measurements(repo):
+        return 0  # the grid brings its own: they are used as they are
+    added = add_measurements(repo)
     repo.commit()
     return added
 
