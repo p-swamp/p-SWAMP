@@ -1,5 +1,5 @@
-"""Following the graph: an edit in the store comes back from ``Follower.changes`` as what the engine
-applies, once the reader's cache policy has let the SSH profile expire, and nothing is read before."""
+"""Following the graph: an edit in the store becomes, through ``LiveTops``, what the engine is sent,
+once the stamp says the graph changed; and nothing is read before."""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ import pytest
 
 from pswamp_core.cim import SAMPLE_GRID, CimSettings, GraphVersion, connect_reader, open_store, stage
 from pswamp_core.cim.testing import edit, reset
-from pswamp_modules.rtsim_from_cim.follow import Follower
+from pswamp_modules.rtsim_from_cim.follow import Controller
 
 SETTINGS = CimSettings(cim_path=SAMPLE_GRID)
 P = "3f5e0000-0000-4000-8000-0000000000"
@@ -18,72 +18,69 @@ BAY_BREAKER, ALPHA_BETA, LOAD, TRANSFORMER = P + "a1", P + "24", P + "33", P + "
 needs_profiles = pytest.mark.skipif(not stage(SETTINGS).writable, reason="the CGMES vocabularies are not available to LazyCIM")
 
 
-def follow() -> Follower:
-    return Follower(connect_reader(SETTINGS), GraphVersion(open_store(SETTINGS)))
-
-
 @pytest.fixture
-def follower():
-    yield follow()
+def controller():
+    controller = Controller(connect_reader(SETTINGS), GraphVersion(open_store(SETTINGS)), dt=0.01)
+    controller.sent = []
+    controller.attach(controller.sent.append)
+    yield controller
     reset(SETTINGS)
 
 
-def expire():
-    """Nothing to wait for: a write moves the stamp, which the follower looks at."""
+def events(controller) -> list[tuple]:
+    return [what for kind, what in (m[:2] for m in controller.sent) if kind == "event"]
 
 
-def test_nothing_changed_is_nothing_read_but_the_stamp(follower):
+def test_nothing_changed_is_nothing_read_but_the_stamp(controller):
     time.sleep(0.3)  # nothing expires on a timer
-    with follower.exporter.repo.measure() as work:
-        assert not follower.changes()
-    assert work.queries == 0  # the stamp is asked of the store, not through the repository
+    with controller.live.exporter.repo.measure() as work:
+        assert controller.changes() == []
+    assert work.queries == 0 and controller.sent == []  # the stamp is asked of the store, not the repository
 
 
 @needs_profiles
-def test_a_breaker_opened_in_the_graph_is_a_switch_to_open(follower):
+def test_a_breaker_opened_in_the_graph_is_a_switch_opened_in_the_engine(controller):
     edit(SETTINGS, BAY_BREAKER, open=True)
-    expire()
-    change = follower.changes()
-    name = {mrid: name for name, mrid in follower.sim.ids["lines"].items()}[BAY_BREAKER]
-    assert change.opened == {name} and not change.closed and change.model is None
+    said = controller.changes()
+    assert events(controller) == [("switches", "Switch", "Alpha-Gamma bay breaker", "open", {})]
+    assert said == ["switch Alpha-Gamma bay breaker opened"]
+    controller.sent.clear()
     edit(SETTINGS, BAY_BREAKER, open=False)
-    expire()
-    assert follower.changes().closed == {name}
+    controller.changes()
+    assert events(controller) == [("switches", "Switch", "Alpha-Gamma bay breaker", "close", {})]
 
 
 @needs_profiles
-def test_a_load_that_draws_more_is_a_value_that_moved(follower):
+def test_a_load_that_draws_more_is_its_power_set(controller):
+    name = {mrid: name for name, mrid in controller.live.sim.ids["loads"].items()}[LOAD]
     edit(SETTINGS, LOAD, p=150.0)
-    expire()
-    (moved,) = follower.changes().values
-    assert (moved.component, moved.column, moved.new) == ("loads", "P", 150.0)
+    controller.changes()
+    assert events(controller) == [("loads", "Load", name, "set_power", {"P": 150.0})]
 
 
 @needs_profiles
-def test_a_terminal_disconnected_takes_its_line_out_live(follower):
-    terminal = next(
-        t.mRID for t in follower.exporter.repo.from_mRID(ALPHA_BETA).Terminals if t.sequenceNumber == 1
-    )
+def test_a_terminal_disconnected_takes_its_line_out_live(controller):
+    terminal = next(t.mRID for t in controller.live.exporter.repo.from_mRID(ALPHA_BETA).Terminals if t.sequenceNumber == 1)
     edit(SETTINGS, terminal, connected=False)
-    expire()
-    change = follower.changes()
-    assert change.live and change.opened == {"Alpha-Beta 400 kV line"}  # an event, not a new model
-    assert change.model is not None  # in case the line comes back to a part the model left out
+    controller.changes()
+    assert events(controller) == [("lines", "Line", "Alpha-Beta 400 kV line", "disconnect", {})]
+    controller.sent.clear()
     edit(SETTINGS, terminal, connected=True)
-    expire()
-    assert follower.changes().closed == {"Alpha-Beta 400 kV line"}
+    controller.changes()
+    assert events(controller) == [("lines", "Line", "Alpha-Beta 400 kV line", "connect", {})]
 
 
 @needs_profiles
-def test_a_terminal_disconnected_takes_its_transformer_out_live(follower):
-    # A transformer between two substations is drawn as a line on the map (Mo-Narvik in Nordic44), and
-    # taken out the same way: its row goes, which used to make the simulation start over.
-    terminal = next(t.mRID for t in follower.exporter.repo.from_mRID(TRANSFORMER).Terminals if t.sequenceNumber == 1)
+def test_a_part_cut_off_is_a_model_built_again_the_clock_running_on(controller):
+    # Gamma's 132 kV side hangs off its transformer alone: taken out, it is left out of the model
+    # (de-energised), which a running simulation cannot absorb.
+    runner = controller.runner
+    _, y, v = runner.sol.t, runner.sol.y, runner.sol.v
+    runner.receive(("state", 0, 100, 2.0, y, v, []))  # two seconds into the run
+    terminal = next(t.mRID for t in controller.live.exporter.repo.from_mRID(TRANSFORMER).Terminals if t.sequenceNumber == 1)
     edit(SETTINGS, terminal, connected=False)
-    expire()
-    change = follower.changes()
-    assert change.live and change.transformers_out == {"Gamma 400/132"} and not change.opened
-    edit(SETTINGS, terminal, connected=True)
-    expire()
-    back = follower.changes()
-    assert back.live and back.transformers_in == {"Gamma 400/132"}
+    said = controller.changes()
+    assert any("built again" in line for line in said)
+    kind, build, model, ids = controller.sent[-1]
+    assert (kind, build) == ("build", 1) and ids["de_energised"]
+    assert controller.live.time == pytest.approx(2.0)  # the clock runs on from where the engine was

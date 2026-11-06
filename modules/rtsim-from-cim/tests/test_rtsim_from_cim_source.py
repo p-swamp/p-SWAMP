@@ -150,7 +150,7 @@ async def test_a_store_that_cannot_be_read_does_not_end_the_stream(monkeypatch):
         calls["n"] += 1
         raise ConnectionError("the store is down")
 
-    monkeypatch.setattr(follow_module.Follower, "changes", flaky)
+    monkeypatch.setattr(follow_module.Controller, "changes", flaky)
     async with Run(make(poll=0.05)) as run:
         await run.until(lambda: calls["n"] >= 3)
         count = len(run.frames)

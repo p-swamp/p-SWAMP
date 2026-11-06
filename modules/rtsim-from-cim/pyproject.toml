@@ -21,8 +21,8 @@ requires-python = ">=3.12"
 dependencies = [
     "pswamp-core[cim]",
     "pswamp-models",
-    "lazycim[graphdb]==0.2.2",
-    "tops>=0.3,<0.4",
+    "lazycim[graphdb]==0.3.1",
+    "tops>=0.6",
     "numpy>=2.0",
     "scipy>=1.11",
 ]

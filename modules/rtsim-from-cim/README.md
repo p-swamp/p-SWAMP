@@ -28,47 +28,46 @@ A de-energised bus reads 0 kV and no angle or frequency.
 
 ## How it follows the graph
 
-- `follow.py`: LazyCIM exports the graph as a TOPS model once
-  (`get_exporter("tops", repo, **engine.EXPORT).build()`).
-- Every `POLL` seconds (0.2) it looks at the graph's version stamp (`pswamp_core.cim.GraphVersion`:
-  one tiny query; the writer bumps it in the same update as each edit). Only when it moved does it
-  expire the profiles that change (SSH, SV) and bring the export up to date with `exporter.refresh()`.
-  Idle, it reads nothing but the stamp.
-- Over a shared store (Oxigraph, `PSWAMP_CIM_URL`) it runs in **a process of its own**
-  (`follow.FollowerProcess`) and sends what changed straight down a pipe to the engine's process,
-  which applies it before the next frame's steps (`engine.py`). A refresh is a second or so of
-  Python (results parsed into tables); in the server's process it held up the frames on their way
-  to the pages, about 2.5 s without a frame at each edit. Over an in-process store (tests,
+The simulation is LazyCIM's **`LiveTops`** (TOPS 0.6), in a **controller** (`follow.py`), which steers
+the TOPS system the **engine** steps in a process of its own (`process.py`, `engine.py`).
+
+- `LiveTops` exports the graph as a TOPS model once (`engine.EXPORT`), and builds a shadow of the
+  system it never steps.
+- Every `POLL` seconds (0.2) the controller looks at the graph's version stamp
+  (`pswamp_core.cim.GraphVersion`: one tiny query; the writer bumps it in the same update as each
+  edit). Only when it moved does it expire the profiles that change (SSH, SV) and have `LiveTops`
+  follow (`exporter.refresh()`). Idle, it reads nothing but the stamp.
+- `LiveTops` decides what the change means for the running simulation, and applies it to its shadow
+  through a stand-in for TOPS's simulator (`runner.RemoteRunner`), which sends each event and each
+  input set down the link to the engine. The engine applies it before the next frame's steps, and
+  sends its state back up after each frame: what `LiveTops` reads the simulation from.
+- Over a shared store (Oxigraph, `PSWAMP_CIM_URL`) the controller is **a process of its own**
+  (`follow.ControllerProcess`), linked straight to the engine's: a refresh is a second or so of
+  Python (results parsed into tables), which in the server's process held up the frames on their
+  way to the pages, about 2.5 s without a frame at each edit. Over an in-process store (tests,
   scripts), which no other process can read, it is a thread of the source's process.
-- Measured on the sample grid: 0.25 s from the edit to the frames. On Nordic44, applying a line
-  flip in the engine takes 1 ms (a `Line.event`, not a rebuild); the refresh is the cost.
 
 | In the graph | In the simulation |
 |---|---|
-| a switch opened or closed | `Line.event` on the switch's own branch: every switch is a branch (`switches_as_branches`), so the buses never change and the transient is kept; couplers included |
-| a load's `p` or `q` | its admittance moves, live |
-| a line's terminal disconnected or connected again (its row goes or comes back) | `Line.event` on the line, like a switch |
-| a transformer's terminal disconnected or connected again (its row goes or comes back) | its admittance comes off the network, or goes back on (`SimEngine._transformer`: TOPS has no transformer event), and its currents read 0 while it is out |
-| other rows come or go (equipment added) | the model is built again, without the buses the slack cannot reach, and the simulation starts over at steady state (logged; a model that cannot be built leaves the simulation as it was) |
+| a switch opened or closed | its TOPS `Switch` opened or closed: every node is a bus and every switch a `Switch`, so the buses never change and the transient is kept; couplers included |
+| a load's `p` or `q` | its power set (TOPS `set_power`), live |
+| a line's or a transformer's terminal disconnected or connected again | the branch disconnected or connected (TOPS event), live, when no part of the grid is cut off by it |
+| a machine's voltage or power set-point | its exciter's or governor's bias moved (or its mechanical power, with no governor), live |
+| a part of the grid cut off from the slack bus, or brought back; equipment added | the model is built again, without what the slack bus cannot reach, and the simulation starts over at steady state, the clock running on (logged; a model that cannot be built leaves the simulation as it was) |
 | anything else | logged as not followed live |
 
 ## The model
 
-LazyCIM's TOPS export: open switches exported closed and tripped after the load flow, a PLL on every
-bus, the machines' dynamics (the graph's, else `DEFAULT_DYNAMICS`) and their governors, exciters and
-stabilisers where the graph has them. Nordic44's dynamics have none, so its frequency is not
-regulated.
+LazyCIM's TOPS export: every connectivity node a bus and every switch a TOPS `Switch` (open ones
+exported open), what the slack bus cannot reach left out, a PLL on every bus, the machines' dynamics
+(the graph's, else `DEFAULT_DYNAMICS`) and their governors, exciters and stabilisers where the graph
+has them. Nordic44's dynamics have none, so its frequency is not regulated.
 
-Every bus gets a 0.001 Mvar shunt to ground. On Nordic44 the open switches leave bay nodes floating,
-which made the network singular.
+A bay node that open switches leave floating reads 0 V: TOPS pins a bus without admittance to 0 V.
 
-A transformer whose two windings are in two substations is drawn on the grid page as a branch
-between them, like a line (Nordic44's `MO T1`, Mo-Narvik), and taken out the same way: by a
-terminal, since it has no bay. Before transformers were followed live, that made the simulation
-start over at steady state, a few seconds without a frame.
-
-The export of LazyCIM 0.2.1 listed each breaker twice, as a Switch and as a Breaker (0.2.2 does
-not); the engine keeps one row per name.
+**The stand-in relies on private details of `LiveTops`** (listed in `runner.py`): how a simulator
+is installed, how a rebuild goes while one "runs", and that a machine's set-point is set with
+`set_input` rather than an event. It goes when LazyCIM's `LiveTops` takes a runner of its own.
 
 **Settings** (`{SOURCE}_{SETTING}`, `RTSIM_RATE` for a source named `rtsim`):
 - `RATE`: frames per second (50);
@@ -76,7 +75,9 @@ not); the engine keeps one row per name.
 - `POLL`: the time between two looks at the graph's version stamp (0.2).
 
 **The simulation runs in real time in a process of its own** (`process.py`, `EngineProcess`): it is
-built, stepped and paced there, and each frame's values are sent up ready. A TOPS step is many small
+built from the model `LiveTops` exported, stepped and paced there, and each frame's values are sent
+up ready; its state goes to the controller after each frame, the latest only when the controller is
+busy. A TOPS step is many small
 numpy calls, each taking Python's interpreter lock back when it returns; in the server every other
 thread wants that lock too, so each call waits its turn (on Nordic44, four steps took 4.4 ms alone and
 834 ms next to one busy thread). The pacing and the frame's values need the lock as often. So in the
@@ -97,7 +98,8 @@ the run reports. Reading the source again starts over at t = 0 from the graph as
 
 ## Measured
 
-On the sample grid, in the process's own store:
+Measured before the simulation moved to `LiveTops` (2026-10); the costs of the export and the
+refresh are LazyCIM's, and the engine's process is unchanged. On the sample grid, in the process's own store:
 - the export is about 50 queries;
 - an idle refresh is 0 queries;
 - a refresh after SSH expired is 4 queries (about 60 ms of rdflib).
@@ -119,8 +121,9 @@ Against Oxigraph, run `core/tests/test_cim_oxigraph.py` (opt-in, `PSWAMP_TEST_CI
 | File | What it holds |
 |---|---|
 | `source.py` | the stream, and what follows the graph |
-| `follow.py` | the export and its refresh; `FollowerProcess`, the same in a process of its own |
-| `engine.py` | `SimEngine`, the pure stepper, and how a change is applied |
+| `follow.py` | `Controller`: `LiveTops` over the graph; `ControllerProcess`, the same in a process of its own |
+| `runner.py` | `RemoteRunner`: the stand-in through which `LiveTops` steers the engine |
+| `engine.py` | `SimEngine`, the TOPS system the engine steps, and what it is sent |
 | `process.py` | `EngineProcess`: the engine, paced in real time, in a process of its own |
 | `pmu.py` | the PMU layout, from the graph's Analogs |
 
@@ -151,4 +154,5 @@ the CGMES vocabularies.
 
 ## Dependency
 
-`pswamp-core[cim]` (LazyCIM `0.2.2`), TOPS for the simulation, numpy and scipy.
+`pswamp-core[cim]` and LazyCIM (`LiveTops`, `0.3.0`), TOPS 0.6
+for the simulation, numpy and scipy.
