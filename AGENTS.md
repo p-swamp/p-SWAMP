@@ -660,14 +660,32 @@ The rules to keep:
   `tools/tests/test_tools_layering.py` holds that. Don't add a writer.
 - **What is loaded** (`grid.stage`): each CGMES profile into `cgmes:model:<KW>` and each
   vocabulary into `cgmes:schema:<KW>`, completed in a private copy first, with Nordic44
-  dynamics for every machine without any (`cgmes:model:DY`) and a **PMU Analog** for every
-  place a PMU can observe (`cgmes:model:OP`): a V and an F per voltage level, an I per line
-  end, a P and a Q at each generator and load, named `PMU_<substation>_<kV>_<V|F|I|P|Q>[_<line or
-  equipment>]` (`analogs.analog_name`). Each line end's permanent current limit is
+  dynamics for every machine without any (`cgmes:model:DY`) and, when its Operation profile
+  has none, its **measurements** (`cgmes:model:OP`, `cim/measurements.py`, ADR-016). Each line end's permanent current limit is
   `current_limits(repo)` (`cim/limits.py`, LazyCIM's `permanent_limit`: what protection uses). The grid is
   `PSWAMP_CIM_PATH` (a folder of `*_<PROFILE>.xml` files; the core ships
   `cim/sample_grid/`), or Nordic44, which LazyCIM downloads on first use (CC BY-NC-SA,
   never committed or shipped). A reset puts the SSH profile back, in one update.
+- **Measurements come from the grid's Operation profile.** An `Analog` or a `Discrete` is
+  p-SWAMP's when a value of it comes from the `MeasurementValueSource` `PMU` or `SCADA`; a grid
+  that has any gets nothing added, and its mRIDs are what frames and scans point at. A grid with
+  none (the sample grid, stock Nordic44) is given them (`add_measurements`), by the conventions
+  of the user's Nordic44 OP: **PMU** `Vmag`, `Vang`, `Freq`, `ROCOF` per voltage level (at its
+  main node) and `Imag`, `Iang` per line end; **SCADA** `P` and `Q` per line and transformer end,
+  machine and load, `V` per voltage level and a `Pos` `Discrete` (`SwitchPosition`, 1 closed) per
+  switch; CGMES `measurementType`s, `unitSymbol`/`unitMultiplier`, `phases`, `positiveFlowIn`
+  (into the equipment: a generator's power is negative); named `<PMU|SCADA>_<where>_<what>`
+  (`<where>`: the substation, `_<kV>` when it has several levels, or the equipment's name and
+  `_T<n>` for a branch end; each whitespace character an `_`); mRIDs derived from what they
+  measure. **`measurement_table(repo)` is how anything reads them** (one row per measurement:
+  `kind`, `source`, `measurementType`, `quantity` V/V_angle/F/ROCOF/I/I_angle/P/Q/Pos, `unit`,
+  terminal, node, equipment and its class, station `<substation>_<kV>`). The sample grid has 58.
+- **The latest SCADA values are a graph of their own, not an edit.** The writer keeps each
+  `ScadaScan` (the simulation's, every `RTSIM_SCADA_PERIOD` s) as `AnalogValue`s/`DiscreteValue`s
+  from the `SCADA` source in `urn:pswamp:measurements` (`Writer.write_scan` →
+  `Store.put_measurements`): replaced whole, one update, counted by `<urn:pswamp:measurements>
+  <urn:pswamp:scan>` in `urn:pswamp:meta`, and **never moving the version stamp**, so no reader
+  re-reads SSH and SV for a measurement. A reset empties it. Don't stamp it.
 - **A change is signalled by a version stamp, never by a timer.** The writer's backend
   (`Store.writer_backend()`) appends a bump of `<urn:pswamp:cim> <urn:pswamp:version>` (graph
   `urn:pswamp:meta`) to the same SPARQL update as every edit, so no reader sees the one
@@ -684,18 +702,18 @@ The rules to keep:
   calls `cim_changed()`, the hook for whatever the instance derived from the graph. Don't add
   refresh code to a module; `GraphVersion` and `refresh_expired` are for readers that are not
   modules.
-- **PMU frames point into the graph.** `PmuHeader.analog` is each column's Analog mRID
-  (a phasor's two columns share one), `cimReferenceId` the grid's model id. A pipeline
-  file's `[enrich] cim = true` sets both (`cim.enrich.CimEnricher`, matching columns to
-  Analogs by name, once per layout, off the event loop); a station named otherwise gets an
-  alias (`PSWAMP_CIM_STATIONS`). The recordings name their stations by TOPS bus numbers,
+- **PMU frames point into the graph.** `PmuHeader.analog` is each column's own Analog mRID
+  (a magnitude and its angle are two), `cimReferenceId` the grid's model id. A pipeline
+  file's `[enrich] cim = true` sets both (`cim.enrich.CimEnricher`, matching each column to
+  the PMU Analog of what it measures where, `pmu_index`, once per layout, off the event loop); a
+  station named otherwise gets an alias (`PSWAMP_CIM_STATIONS`). The recordings name their stations by TOPS bus numbers,
   which have no alias table yet, so their columns carry no Analog.
 - **A script may bring its own store.** `module.cim_repo = repo` hands a module a
   repository over any LazyCIM backend; `CimSettings(backend=<picklable callable>,
   shared=...)` names one for whoever opens the store. First match wins: a repository
   handed over, then `backend`, then `PSWAMP_CIM_URL`, then the in-process store. A store
   p-SWAMP did not load is only read (`Store.owned`: never filled, reset or stamped);
-  `pswamp_core.cim.prepare(repo)` gives such a grid its PMU Analogs, once. With no stamp
+  `pswamp_core.cim.prepare(repo)` gives such a grid its measurements, once, unless it has some. With no stamp
   to look at, `GraphVersion` says such a store changed every 2 s, so a reader re-reads SSH
   and SV that often (ADR-014). The core's `[oxigraph]` extra brings LazyCIM's
   embedded pyoxigraph store, for scripts; the image does not take it.
@@ -719,7 +737,8 @@ The web side is the **CIM graph app** (`app/server-python/src/cim_graph/`, page
   transport (`live.rtsim`) and applies them through `Writer.apply`, all or nothing, one update,
   for the properties `grid.ALLOWED` that producer (rtsim: `Switch.open`, `ACDCTerminal.connected`).
   It subscribes to `SimEvent` too, and keeps the last 50 in the state it pushes (`events`): the
-  only place a person hears of a disturbance.
+  only place a person hears of a disturbance. And to `ScadaScan`: the latest scan's values go to
+  `urn:pswamp:measurements`, unstamped (above; ADR-016).
 - It loads the grid **when the server starts**, in the background (503 "the grid is loading" until
   then, and the socket waits; 503 with the reason, and a 1013 close, when it cannot be had). After
   each write it pushes the state read from its own repository (an edit is 0 queries and 1 update).
@@ -733,12 +752,14 @@ below it two uPlot charts, every station's frequency and voltage over the last 3
 shows the graph's state only**: a disturbance does not change it. A click on a breaker operates
 it, shown as switching until the graph has it; a click on a line, a substation or a load selects
 it, and a panel beside the map (`DetailPanel.tsx`) shows what the graph says of it, its live
-values and their last 30 s, and operates or disturbs it; a right-click (a long press) opens its
+values and their last 30 s (PMU), what the latest SCADA scan says of it and when, and operates or
+disturbs it; a right-click (a long press) opens its
 disturbances (`DisturbanceMenu.tsx`; both lists are `disturbances.ts`). A transformer carries its
 symbol (two windings), at the middle of its segment, or beside its substation when both its ends
 are in it (the layout then names that substation twice). Lines in service are
-coloured by loading, when the graph gives their ends a limit; the status bar sums generation and
-load, and lists the simulation's events. Leaflet renders a layer only once its map has a view, so
+coloured by loading, when the graph gives their ends a limit; a breaker whose scanned SCADA
+position is not the graph's is ringed; the status bar sums generation and load **from SCADA** (the
+grid's PMUs need not measure power: Nordic44's do not), and lists the simulation's events. Leaflet renders a layer only once its map has a view, so
 the view is set before any layer is added: otherwise a layer has no element to label.
 
 The values come from **`cim_live`** (`app/server-python/src/cim_live/`, `/api/cim-live/ws`): each
@@ -747,7 +768,10 @@ backlog of 10 s), drains what queued at each wake and sends it as one `LiveFeed`
 the header changes: stations, line ends with their limits, generators and loads; then every
 frame's time, V p.u., V angle, f, each line end's current and loading, each injection's P and Q),
 so **no frame is merged away**: under load the batches grow. What each column is comes from the
-graph through its Analog, read once. The page keeps the samples in a ref, redraws at most once
+graph through its Analog, read once. It also keeps the latest `ScadaScan` and sends it once with
+the next push (`LiveFeed.scan`, one value per `LiveLayout.scada` point: what each SCADA
+measurement is on, line or transformer end, machine, load, switch or voltage level); the page keeps
+it in the same buffer ref. The page keeps the samples in a ref, redraws at most once
 per animation frame, and shows how many samples/s reach it (the Playwright spec wants at least
 40); the panel's values and the totals are written into the DOM four times a second, never through
 React state.
@@ -756,9 +780,12 @@ React state.
 
 `modules/rtsim-from-cim/` is a live `SourceModule` (`pswamp-rtsim-from-cim`, `cim = True`):
 one TOPS dynamic simulation of the grid in the CIM graph, run in real time and published as
-`PmuFrame`, one column group per PMU Analog of the graph (`pmu.py`; voltage and frequency
-per voltage level, current per line end, power per generator and load: channel `S_<equipment>`,
-`P` MW and `Q` Mvar), each column carrying its Analog. **It is steered by commands, and follows the graph**
+`PmuFrame`, one column per PMU measurement of the graph (`pmu.py`; per voltage level the
+voltage's magnitude and angle, `f` and `df` (ROCOF), per branch end the current's magnitude and
+angle, and power only where the grid's PMUs measure it), each column carrying its own Analog; and,
+every `RTSIM_SCADA_PERIOD` s of its clock (2; 0: none), a `ScadaScan` of every SCADA measurement,
+computed in the engine's process (`scada.py`, `SimEngine.flows`) and published beside the frames
+(ADR-016). **It is steered by commands, and follows the graph**
 (ADR-015): an operation (a switch; the terminal of a line with no
 breaker) is applied, then said as `CimEdits` for the graph's one writer; a disturbance (a trip, a
 fault, a load step) stays in the simulation, announced as a `SimEvent` and seen only in the frames.
