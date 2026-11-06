@@ -37,7 +37,7 @@ def main() -> None:
     import matplotlib.pyplot as plt
 
     settings = CimSettings() if args.nordic44 else CimSettings(cim_path=SAMPLE_GRID)
-    source = RtsimFromCimSource(graph=settings)
+    source = RtsimFromCimSource(graph=settings, scada_period=0)  # frames only: no SCADA scans
     print("loading the model ...")
     frequency, out = [], False
     for i, frame in enumerate(source.read(end=utcnow() + timedelta(seconds=args.seconds + 60))):

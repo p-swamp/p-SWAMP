@@ -6,7 +6,9 @@
 It reads the graph (``pswamp_core.cim``) through a repository of its own, simulates it with
 LazyCIM's ``LiveTops`` (TOPS 0.6), and runs the simulation **in real time**: one frame period of
 simulated time per frame period of the clock. It publishes ``PmuFrame``: one column per PMU
-measurement of the graph, each column carrying its own Analog (``pmu``), ``RATE`` frames per second.
+measurement of the graph, each column carrying its own Analog (``pmu``), ``RATE`` frames per second;
+and, every ``SCADA_PERIOD`` seconds of the simulation's clock, a ``ScadaScan``: the value of every SCADA
+measurement of the graph (``scada``), which the graph's one writer keeps as the latest (ADR-016).
 
 **It takes commands** (ADR-015, ``follow.COMMANDS``): an operation (a switch, the terminal of a line
 that has no breaker) or a disturbance (a branch tripped or reconnected, a short circuit, a load
@@ -51,7 +53,7 @@ from collections.abc import AsyncIterator
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 
-from pswamp_core.cim import CimSettings, GraphVersion, Store, connect_reader, open_store
+from pswamp_core.cim import CimSettings, GraphVersion, Store, connect_reader, model_id, open_store
 from pswamp_core.command_routing import CommandRefused
 from pswamp_core.log import get_logger
 from pswamp_core.settings import EnvSetting
@@ -71,6 +73,7 @@ from pswamp_models.rtsim import (
     SimEvent,
     TripBranchCommand,
 )
+from pswamp_models.scada import AnalogReading, DiscreteReading, ScadaScan
 
 from .follow import COMMANDS, Controller, ControllerProcess
 from .pmu import read_measurements
@@ -89,7 +92,7 @@ class RtsimFromCimSource(SourceModule):
     name = "rtsim-from-cim"
     kind = "live"
     cim = True
-    outputs = (PmuFrame, CimEdits, SimEvent)
+    outputs = (PmuFrame, CimEdits, SimEvent, ScadaScan)
     commands = COMMANDS
     env_settings = (
         EnvSetting("RATE", "Frames per second", default="50", kind="float"),
@@ -98,6 +101,7 @@ class RtsimFromCimSource(SourceModule):
         EnvSetting("PROTECTION", "Whether a line over its current limit is tripped: on or off", default="on"),
         EnvSetting("OVERLOAD_PICKUP", "The multiple of a line's permanent limit it trips over", default="1.0", kind="float"),
         EnvSetting("OVERLOAD_TMS", "The overload curve's time multiplier (IEC standard inverse)", default="0.5", kind="float"),
+        EnvSetting("SCADA_PERIOD", "Seconds of simulated time between two SCADA scans; 0: none", default="2", kind="float"),
     )
 
     def __init__(
@@ -118,6 +122,8 @@ class RtsimFromCimSource(SourceModule):
             raise ValueError(f"PROTECTION is on or off, not {self.settings.protection!r}")
         if self.settings.overload_pickup <= 0 or self.settings.overload_tms <= 0:
             raise ValueError("OVERLOAD_PICKUP and OVERLOAD_TMS must be positive")
+        if self.settings.scada_period < 0:
+            raise ValueError(f"SCADA_PERIOD ({self.settings.scada_period}) is 0 (no scans) or positive")
         self.protection = ProtectionSettings(
             enabled=self.settings.protection == "on",
             pickup=self.settings.overload_pickup,
@@ -179,6 +185,7 @@ class RtsimFromCimSource(SourceModule):
             model, ids, measurements = await starting
             if not apart:
                 controller = self._controller
+            reference = await loop.run_in_executor(graph, self._reference, settings)
             engine = EngineProcess(
                 model,
                 dt=self.settings.dt,
@@ -187,6 +194,7 @@ class RtsimFromCimSource(SourceModule):
                 measurements=measurements,
                 ids=ids,
                 link=controller.link if apart else theirs,
+                scada_period=self.settings.scada_period,
             )
             theirs = None  # the engine's process took it over
             steering = self._steering = _Steering(controller, graph, ids)
@@ -204,6 +212,18 @@ class RtsimFromCimSource(SourceModule):
                         logger.info("%s", message[0])
                     elif kind == "header":
                         header = message[0]
+                    elif kind == "scan":
+                        stamped, sim_time, analogs, discretes = message
+                        if end is not None and stamped >= end:
+                            return
+                        yield ScadaScan(
+                            timestamp=stamped,
+                            source=STREAM_ID,
+                            sim_time=sim_time,
+                            cimReferenceId=reference,
+                            analogs=[AnalogReading(mRID=mrid, value=value) for mrid, value in analogs],
+                            discretes=[DiscreteReading(mRID=mrid, value=value) for mrid, value in discretes],
+                        )
                     else:
                         stamped, values = message
                         if end is not None and stamped >= end:
@@ -223,6 +243,14 @@ class RtsimFromCimSource(SourceModule):
                     end_.close()
             receive.shutdown(wait=True, cancel_futures=True)
             graph.shutdown(wait=False, cancel_futures=True)  # a start still running finishes on its own
+
+    def _reference(self, settings: CimSettings) -> str | None:
+        """The grid's model id, what a scan says it is of (in the graph's thread)."""
+        try:
+            return model_id(Store.of(self._repo) if self._repo is not None else open_store(settings))
+        except Exception as error:  # a store that does not say: the scans say nothing either
+            logger.warning("the grid's model id cannot be read: %s", error)
+            return None
 
     def _start(self, link) -> tuple:
         """Connect, simulate the graph with ``LiveTops`` steering the engine at the other end of ``link``,

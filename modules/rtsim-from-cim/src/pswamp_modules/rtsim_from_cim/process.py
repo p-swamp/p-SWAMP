@@ -23,6 +23,8 @@ events it sent could not be applied.
 
 Two more pipes, with the server: down, ``None`` to stop; up, the frame layout's ``header`` (first,
 and again when the model is built again), then ``("frame", timestamp, values)`` per frame,
+``("scan", timestamp, sim_time, analogs, discretes)`` per SCADA scan (``scada``: at the first frame,
+then every ``scada_period`` seconds of the simulation's clock; none when it is 0),
 ``("log", text)``, and ``("error", error)`` when the run cannot go on.
 """
 
@@ -36,6 +38,7 @@ from datetime import datetime, timedelta, timezone
 
 from .engine import SimEngine
 from .pmu import Measured, pmu_layout, pmu_values
+from .scada import scada_layout, scada_values
 
 __all__ = ["EngineProcess", "MAX_LAG"]
 
@@ -115,31 +118,33 @@ class _Latest:
             return
 
 
-def _serve(down, link, up, model, dt, rate, steps, measurements, ids) -> None:  # noqa: PLR0913
+def _serve(down, link, up, model, dt, rate, steps, measurements, ids, scada_period=0.0) -> None:  # noqa: PLR0913
     """The engine process: ``_run``, with what it sends flushed before the process ends."""
     up = _Outbox(up)
     latest = _Latest(link) if link is not None else None
     try:
-        _run(up, down, link, latest, model, dt, rate, steps, measurements, ids)
+        _run(up, down, link, latest, model, dt, rate, steps, measurements, ids, scada_period)
     finally:
         if latest is not None:
             latest.close()
         up.close()
 
 
-def _run(up, down, link, latest, model, dt, rate, steps, measurements, ids) -> None:  # noqa: PLR0913
+def _run(up, down, link, latest, model, dt, rate, steps, measurements, ids, scada_period=0.0) -> None:  # noqa: PLR0913
     """Build, then step in real time until told to stop, sending each frame up."""
     try:
         engine = SimEngine(model, dt=dt)
         layout = pmu_layout(measurements, engine, ids, rate)
+        scada = scada_layout(measurements, engine, ids) if scada_period > 0 else None
     except Exception as error:  # noqa: BLE001 -- the caller raises it
         up.send(("error", error))
         return
     up.send(("header", layout.header))
     build, frames, rejected = 0, 0, []
+    next_scan = 0.0  # on the simulation's clock: the first frame is scanned
 
     def apply(message: tuple) -> None:
-        nonlocal layout, build
+        nonlocal layout, scada, build
         if message[0] == "build":
             _, number, new_model, new_ids = message
             try:
@@ -148,6 +153,7 @@ def _run(up, down, link, latest, model, dt, rate, steps, measurements, ids) -> N
                 up.send(("log", f"the model could not be built again: {error}; the simulation goes on as it was"))
                 return
             build, layout = number, pmu_layout(measurements, engine, new_ids, rate)
+            scada = scada_layout(measurements, engine, new_ids) if scada_period > 0 else None
             up.send(("header", layout.header))
             return
         try:
@@ -180,7 +186,11 @@ def _run(up, down, link, latest, model, dt, rate, steps, measurements, ids) -> N
                 due = time.monotonic()
             snapshot = engine.step(steps)
             frames += 1
-            up.send(("frame", origin + timedelta(seconds=due - start), pmu_values(layout, snapshot)))
+            stamped = origin + timedelta(seconds=due - start)
+            up.send(("frame", stamped, pmu_values(layout, snapshot)))
+            if scada is not None and snapshot.sim_time_s >= next_scan - 1e-9:
+                up.send(("scan", stamped, snapshot.sim_time_s, *scada_values(scada, engine.flows())))
+                next_scan = max(next_scan + scada_period, snapshot.sim_time_s + 0.5 * scada_period)
             if link is not None:
                 latest.put(("state", build, frames, *engine.state(), rejected))
                 rejected = []
@@ -193,8 +203,9 @@ def _run(up, down, link, latest, model, dt, rate, steps, measurements, ids) -> N
 class EngineProcess:
     """The simulation of ``model`` run in real time at ``rate`` frames per second of ``steps`` steps of
     ``dt``, measured as the graph's ``measurements`` say (``ids`` is the export's ``sim.ids``), steered through ``link`` (the
-    engine's end of a duplex pipe to the controller, which it takes over). ``receive`` what it sends
-    up (blocking: from a thread)."""
+    engine's end of a duplex pipe to the controller, which it takes over), scanning the graph's SCADA
+    measurements every ``scada_period`` seconds of the simulation's clock (0: never). ``receive`` what it
+    sends up (blocking: from a thread)."""
 
     def __init__(
         self,
@@ -206,13 +217,14 @@ class EngineProcess:
         measurements: list[Measured],
         ids: dict,
         link=None,
+        scada_period: float = 0.0,
     ) -> None:
         context = multiprocessing.get_context("spawn")  # nothing of the server's state comes along
         down_read, self._down = context.Pipe(duplex=False)
         self._up, up_write = context.Pipe(duplex=False)
         self._process = context.Process(
             target=_serve,
-            args=(down_read, link, up_write, model, dt, rate, steps, measurements, ids),
+            args=(down_read, link, up_write, model, dt, rate, steps, measurements, ids, scada_period),
             name="rtsim-engine",
             daemon=True,
         )
@@ -224,7 +236,8 @@ class EngineProcess:
 
     def receive(self) -> list[tuple]:
         """What was sent up since the last call, at least one message (blocking: from a thread): each
-        ``("header", h)``, ``("frame", t, values)``, ``("log", text)`` or ``("error", e)``, and
+        ``("header", h)``, ``("frame", t, values)``, ``("scan", t, sim_time, analogs, discretes)``,
+        ``("log", text)`` or ``("error", e)``, and
         ``("error", RuntimeError)`` when the process is gone. All at once, so that a busy server pays
         for one wake-up however many frames came meanwhile."""
         try:
