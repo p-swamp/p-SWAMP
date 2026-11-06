@@ -55,7 +55,7 @@ from pswamp_models.rtsim import (
 )
 
 from .engine import EXPORT
-from .pmu import read_analogs
+from .pmu import read_measurements
 from .protection import Overload, ProtectionSettings
 from .runner import RemoteRunner, follow, restart
 
@@ -353,7 +353,7 @@ def _watch(control, link, up, settings: CimSettings, poll: float, dt: float, pro
         repo = connect_reader(settings)
         controller = Controller(repo, version, dt=dt, protection=protection)
         controller.attach(link.send)
-        up.send(("ready", controller.sim.model, controller.sim.ids, read_analogs(repo)))
+        up.send(("ready", controller.sim.model, controller.sim.ids, read_measurements(repo)))
     except Exception as error:  # noqa: BLE001 -- the caller raises it
         up.send(("error", error))
         return
@@ -423,7 +423,7 @@ class ControllerProcess:
             end.close()
 
     def ready(self) -> tuple:
-        """Wait for the export (blocking: from a thread): its model, ids and the PMU Analogs. Raises what
+        """Wait for the export (blocking: from a thread): its model, ids and the measurements. Raises what
         the controller could not get past."""
         message = self._receive()
         if message[0] != "ready":

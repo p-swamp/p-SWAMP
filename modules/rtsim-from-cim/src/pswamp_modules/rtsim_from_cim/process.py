@@ -115,23 +115,23 @@ class _Latest:
             return
 
 
-def _serve(down, link, up, model, dt, rate, steps, analogs, ids) -> None:  # noqa: PLR0913
+def _serve(down, link, up, model, dt, rate, steps, measurements, ids) -> None:  # noqa: PLR0913
     """The engine process: ``_run``, with what it sends flushed before the process ends."""
     up = _Outbox(up)
     latest = _Latest(link) if link is not None else None
     try:
-        _run(up, down, link, latest, model, dt, rate, steps, analogs, ids)
+        _run(up, down, link, latest, model, dt, rate, steps, measurements, ids)
     finally:
         if latest is not None:
             latest.close()
         up.close()
 
 
-def _run(up, down, link, latest, model, dt, rate, steps, analogs, ids) -> None:  # noqa: PLR0913
+def _run(up, down, link, latest, model, dt, rate, steps, measurements, ids) -> None:  # noqa: PLR0913
     """Build, then step in real time until told to stop, sending each frame up."""
     try:
         engine = SimEngine(model, dt=dt)
-        layout = pmu_layout(analogs, engine, ids, rate)
+        layout = pmu_layout(measurements, engine, ids, rate)
     except Exception as error:  # noqa: BLE001 -- the caller raises it
         up.send(("error", error))
         return
@@ -147,7 +147,7 @@ def _run(up, down, link, latest, model, dt, rate, steps, analogs, ids) -> None: 
             except Exception as error:  # noqa: BLE001 -- the running simulation goes on as it was
                 up.send(("log", f"the model could not be built again: {error}; the simulation goes on as it was"))
                 return
-            build, layout = number, pmu_layout(analogs, engine, new_ids, rate)
+            build, layout = number, pmu_layout(measurements, engine, new_ids, rate)
             up.send(("header", layout.header))
             return
         try:
@@ -192,7 +192,7 @@ def _run(up, down, link, latest, model, dt, rate, steps, analogs, ids) -> None: 
 
 class EngineProcess:
     """The simulation of ``model`` run in real time at ``rate`` frames per second of ``steps`` steps of
-    ``dt``, measured at ``analogs`` (``ids`` is the export's ``sim.ids``), steered through ``link`` (the
+    ``dt``, measured as the graph's ``measurements`` say (``ids`` is the export's ``sim.ids``), steered through ``link`` (the
     engine's end of a duplex pipe to the controller, which it takes over). ``receive`` what it sends
     up (blocking: from a thread)."""
 
@@ -203,7 +203,7 @@ class EngineProcess:
         dt: float,
         rate: float,
         steps: int,
-        analogs: list[Measured],
+        measurements: list[Measured],
         ids: dict,
         link=None,
     ) -> None:
@@ -212,7 +212,7 @@ class EngineProcess:
         self._up, up_write = context.Pipe(duplex=False)
         self._process = context.Process(
             target=_serve,
-            args=(down_read, link, up_write, model, dt, rate, steps, analogs, ids),
+            args=(down_read, link, up_write, model, dt, rate, steps, measurements, ids),
             name="rtsim-engine",
             daemon=True,
         )

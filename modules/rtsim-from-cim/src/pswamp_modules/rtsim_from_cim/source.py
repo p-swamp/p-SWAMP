@@ -5,8 +5,8 @@
 
 It reads the graph (``pswamp_core.cim``) through a repository of its own, simulates it with
 LazyCIM's ``LiveTops`` (TOPS 0.6), and runs the simulation **in real time**: one frame period of
-simulated time per frame period of the clock. It publishes ``PmuFrame``: one column group per PMU
-Analog of the graph, each column carrying its Analog (``pmu``), ``RATE`` frames per second.
+simulated time per frame period of the clock. It publishes ``PmuFrame``: one column per PMU
+measurement of the graph, each column carrying its own Analog (``pmu``), ``RATE`` frames per second.
 
 **It takes commands** (ADR-015, ``follow.COMMANDS``): an operation (a switch, the terminal of a line
 that has no breaker) or a disturbance (a branch tripped or reconnected, a short circuit, a load
@@ -73,7 +73,7 @@ from pswamp_models.rtsim import (
 )
 
 from .follow import COMMANDS, Controller, ControllerProcess
-from .pmu import read_analogs
+from .pmu import read_measurements
 from .process import MAX_LAG, EngineProcess
 from .protection import ProtectionSettings
 
@@ -176,7 +176,7 @@ class RtsimFromCimSource(SourceModule):
                 await asyncio.wait({starting}, timeout=max(0.0, (end - utcnow()).total_seconds()))
                 if not starting.done():
                     return
-            model, ids, analogs = await starting
+            model, ids, measurements = await starting
             if not apart:
                 controller = self._controller
             engine = EngineProcess(
@@ -184,7 +184,7 @@ class RtsimFromCimSource(SourceModule):
                 dt=self.settings.dt,
                 rate=self.settings.rate,
                 steps=self.steps_per_frame,
-                analogs=analogs,
+                measurements=measurements,
                 ids=ids,
                 link=controller.link if apart else theirs,
             )
@@ -226,14 +226,14 @@ class RtsimFromCimSource(SourceModule):
 
     def _start(self, link) -> tuple:
         """Connect, simulate the graph with ``LiveTops`` steering the engine at the other end of ``link``,
-        and read its PMU Analogs (in the graph's thread)."""
+        and read its measurements (in the graph's thread)."""
         store = Store.of(self._repo) if self._repo is not None else open_store(self._graph)
         version = GraphVersion(store)  # watched from before the export
         repo = self._connect()
         self._controller = Controller(repo, version, dt=self.settings.dt, protection=self.protection)
         self._controller.attach(link.send)
         sim = self._controller.sim
-        return sim.model, sim.ids, read_analogs(repo)
+        return sim.model, sim.ids, read_measurements(repo)
 
     async def _follow(self, steering: _Steering, link) -> None:
         """The graph followed, and the simulation's reports taken, from a thread of the server's process

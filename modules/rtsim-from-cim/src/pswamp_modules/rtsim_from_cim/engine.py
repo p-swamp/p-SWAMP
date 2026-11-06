@@ -57,9 +57,14 @@ class Snapshot:
     v_pu: np.ndarray
     angle_deg: np.ndarray
     f_hz: np.ndarray
-    #: Each line's current at its first and second end, complex, kA.
+    #: Each bus's rate of change of frequency over the last steps, Hz/s (zero for a snapshot not stepped to).
+    rocof_hz_s: np.ndarray
+    #: Each line's current at its from and to end, complex, kA.
     i_from_ka: np.ndarray
     i_to_ka: np.ndarray
+    #: Each transformer's current at its from and to end, complex, kA, in ``trafo_names`` order.
+    t_from_ka: np.ndarray
+    t_to_ka: np.ndarray
     #: Each machine's electrical power, MW and Mvar, in ``gen_names`` order.
     gen_p_mw: np.ndarray
     gen_q_mvar: np.ndarray
@@ -89,9 +94,17 @@ class SimEngine:
             sim = Simulator(ps, dt=self.dt)
         self._ps, self._sim = ps, sim
         self._line, self._pll = ps.lines["Line"], ps.pll["PLL1"]
+        self._trafo = getattr(ps, "trafos", {}).get("Trafo")
+        self._switch = ps.dyn_mdls_dict.get("switches", {}).get("Switch")
         self.bus_names = [str(name) for name in ps.buses["name"]]
         self.bus_kv = np.asarray(ps.buses["V_n"], dtype=float)
         self.line_names = [str(name) for name in self._line.par["name"]]
+        #: Each line's and transformer's (from bus, to bus), by name.
+        self.line_buses = [(str(a), str(b)) for a, b in zip(self._line.par["from_bus"], self._line.par["to_bus"], strict=True)]
+        trafo = self._trafo.par if self._trafo is not None else {"name": [], "from_bus": [], "to_bus": []}
+        self.trafo_names = [str(name) for name in trafo["name"]]
+        self.trafo_buses = [(str(a), str(b)) for a, b in zip(trafo["from_bus"], trafo["to_bus"], strict=True)]
+        self.switch_names = [str(name) for name in self._switch.par["name"]] if self._switch is not None else []
         self._gens = list(ps.gen.values())
         self._loads = list(ps.loads.values())  # every load model of the model: Load, and any other
         self.gen_names = [str(name) for model in self._gens for name in model.par["name"]]
@@ -140,11 +153,12 @@ class SimEngine:
     def step(self, steps: int = 1) -> Snapshot:
         """Advance ``steps`` steps and sample."""
         with np.errstate(all="ignore"):
+            before = self._f_hz(self._sim.sol.y, self._sim.sol.v)
             for _ in range(steps):
                 self._sim.make_simulation_step()
             if not (np.isfinite(self._sim.sol.y).all() and np.isfinite(self._sim.sol.v).all()):
                 raise ArithmeticError("the state is not finite")
-            snapshot = self.snapshot()
+            snapshot = self.snapshot(since=(before, steps * self.dt))
         highest = float(np.nanmax(snapshot.v_pu))
         if highest > MAX_V_PU:
             raise ArithmeticError(f"a bus voltage reached {highest:.1f} p.u.")
@@ -156,22 +170,34 @@ class SimEngine:
         sol = self._sim.sol
         return float(sol.t), np.array(sol.y, copy=True), np.array(sol.v, copy=True)
 
-    def snapshot(self) -> Snapshot:
-        """The simulation as it is, copied. Cheap enough to call once per frame."""
+    def _f_hz(self, y: np.ndarray, v: np.ndarray) -> np.ndarray:
+        return np.asarray(self._ps.f_n * (1.0 + self._pll.freq_est(y, v)), dtype=float)
+
+    def snapshot(self, since: tuple[np.ndarray, float] | None = None) -> Snapshot:
+        """The simulation as it is, copied. Cheap enough to call once per frame. ``since``, the
+        frequencies some seconds ago and how many, gives the rate of change of frequency."""
         sol = self._sim.sol
         t, y, v = float(sol.t), sol.y, sol.v
         with np.errstate(all="ignore"):
-            f_hz = self._ps.f_n * (1.0 + self._pll.freq_est(y, v))
+            f_hz = self._f_hz(y, v)
+            rocof = (f_hz - since[0]) / since[1] if since is not None and since[1] > 0 else np.zeros_like(f_hz)
             i_from, i_to = self._line.I_from(y, v), self._line.I_to(y, v)
+            if self._trafo is not None:
+                t_from, t_to = self._trafo.I_from(y, v), self._trafo.I_to(y, v)
+            else:
+                t_from = t_to = np.zeros(0, dtype=complex)
             gen_p, gen_q = _each(self._gens, "P_e", y, v), _each(self._gens, "Q_e", y, v)
             load_p, load_q = _each(self._loads, "P", y, v), _each(self._loads, "Q", y, v)
         return Snapshot(
             self._time + t,
             np.abs(v).astype(float),
             np.degrees(np.angle(v)).astype(float),
-            np.asarray(f_hz, dtype=float),
+            f_hz,
+            np.asarray(rocof, dtype=float),
             np.asarray(i_from, dtype=complex),
             np.asarray(i_to, dtype=complex),
+            np.asarray(t_from, dtype=complex),
+            np.asarray(t_to, dtype=complex),
             gen_p,
             gen_q,
             load_p,

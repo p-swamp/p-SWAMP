@@ -14,7 +14,8 @@ is more than the backlog behind. Nothing here wakes on anything but a frame.
 
 Which substation and nominal voltage each station is, which line end a current is at (and its
 limit), which machine or load a power is of, come from the CIM graph, through the PMU Analog each
-column carries (``PmuHeader.analog``), read once.
+column carries (``PmuHeader.analog``; ``pswamp_core.cim.measurement_table``), read once. A grid's PMUs
+may measure no power (Nordic44's do not): its machines and loads are then in no frame.
 """
 
 from __future__ import annotations
@@ -65,37 +66,25 @@ NO_FACTS = Facts({}, {}, {}, {})
 @functools.cache
 def _facts() -> Facts:
     """What the CIM graph says of each PMU Analog (see ``Facts``). Read once (in a thread)."""
-    from lazycim import F, L
-    from pswamp_core.cim import analog_table, connect_reader, current_limits
+    from pswamp_core.cim import connect_reader, current_limits, measurement_table
 
     try:
         repo = connect_reader()
-        analogs = analog_table(repo)
-        nodes = repo.query(L.ConnectivityNodes).to_dataframe(
-            node=F.mRID,
-            substation=F.ConnectivityNodeContainer.Substation.mRID,
-            kv=F.ConnectivityNodeContainer.BaseVoltage.nominalVoltage,
-        )
-        kinds = {
-            row.mRID: (str(row.name), kind)
-            for kind, table in (("generator", L.SynchronousMachines), ("load", L.EnergyConsumers))
-            for row in repo.query(table).to_dataframe(mRID=F.mRID, name=F.name).itertuples()
-        }
+        table = measurement_table(repo)
         limits = current_limits(repo)
     except Exception as error:  # no graph: the stations are still plotted, in kV units unknown
         logger.warning("the CIM graph cannot be read, stations have no substation: %s", error)
         return NO_FACTS
-    at = {
-        row.node: (row.substation if isinstance(row.substation, str) else None, float(row.kv) if row.kv == row.kv else None)
-        for row in nodes.itertuples()
-    }
-    ends, injections = {}, {}
-    for row in analogs.itertuples():
-        if row.quantity == "I":
+    kinds = {"SynchronousMachine": "generator", "EnergyConsumer": "load"}
+    pmu = table[table["source"] == "PMU"]
+    places, ends, injections = {}, {}, {}
+    for row in pmu.itertuples():
+        places[row.mRID] = (row.substation if isinstance(row.substation, str) else None, float(row.kv) if row.kv == row.kv else None)
+        if row.quantity == "I" and row.equipment_class in ("ACLineSegment", "PowerTransformer"):
             ends[row.mRID] = (row.equipment, int(row.sequence))
-        elif row.quantity in ("P", "Q") and row.equipment in kinds:
-            injections[row.mRID] = (row.equipment, *kinds[row.equipment])
-    return Facts({row.mRID: at.get(row.node, (None, None)) for row in analogs.itertuples()}, ends, injections, limits)
+        elif row.quantity in ("P", "Q") and row.equipment_class in kinds:
+            injections[row.mRID] = (row.equipment, str(row.equipment_name), kinds[row.equipment_class])
+    return Facts(places, ends, injections, limits)
 
 
 @dataclass(frozen=True)

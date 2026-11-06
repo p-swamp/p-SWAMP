@@ -3,7 +3,7 @@
 
 """The RT sim (CIM) source (``rtsim-from-cim``): see ``source.py``. The graph it follows is the CIM
 graph every module reads (``pswamp_core.cim``); ``follow.py`` keeps its TOPS export up to date,
-``engine.py`` steps it, ``pmu.py`` measures it at the graph's PMU Analogs."""
+``engine.py`` steps it, ``pmu.py`` measures it at the graph's PMU measurements."""
 
 from .source import RtsimFromCimSource
 

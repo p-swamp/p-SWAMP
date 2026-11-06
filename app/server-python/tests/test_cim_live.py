@@ -37,7 +37,7 @@ def test_the_feed_says_its_stations_first(server):
     assert all(0.95 < v < 1.05 for row in samples["v_pu"] for v in row)
 
 
-def test_the_feed_carries_each_line_end_s_current_and_each_machine_s_and_load_s_power(server):
+def test_the_feed_carries_each_line_end_s_current(server):
     with server.websocket_connect("/api/cim-live/ws?client_id=603") as ws:
         first = ws.receive_json()
     layout, samples = first["layout"], first["samples"]
@@ -45,13 +45,9 @@ def test_the_feed_carries_each_line_end_s_current_and_each_machine_s_and_load_s_
     assert len(ends) == 6 and {(e["end"]) for e in ends} == {1, 2}  # three lines, both ends
     assert all(e["line"] and e["station"] for e in ends)
     assert all(e["limit_a"] is None for e in ends)  # the sample grid has no CurrentLimits
-    assert {i["name"]: i["kind"] for i in layout["injections"]} == {
-        "Alpha GA": "generator", "Gamma GC": "generator", "Beta load LB": "load", "Gamma load LC": "load",
-    }  # fmt: skip
+    assert layout["injections"] == []  # the sample grid's PMUs measure no power
     assert all(len(row) == len(ends) and all(a > 0 for a in row) for row in samples["i_a"])  # amperes
     assert all(x is None for row in samples["loading"] for x in row)  # no limit, no loading
-    beta = [i["name"] for i in layout["injections"]].index("Beta load LB")
-    assert all(390 < row[beta] < 410 for row in samples["p_mw"]) and all(len(row) == 4 for row in samples["q_mvar"])
 
 
 def test_loading_is_the_current_over_its_end_s_limit():

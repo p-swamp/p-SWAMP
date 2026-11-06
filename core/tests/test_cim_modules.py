@@ -12,7 +12,7 @@ pytest.importorskip("lazycim")
 
 from support import Measurement, Number, NumberResult, at, measurement, take  # noqa: E402
 
-from pswamp_core.cim import SAMPLE_GRID, CimSettings, ReadOnlyRepository, analog_index, stage  # noqa: E402
+from pswamp_core.cim import SAMPLE_GRID, CimSettings, ReadOnlyRepository, measurement_table, stage  # noqa: E402
 from pswamp_core.cim.enrich import CimEnricher, column_analogs  # noqa: E402
 from pswamp_core.host import ModuleHost  # noqa: E402
 from pswamp_core.modules import Module  # noqa: E402
@@ -24,11 +24,15 @@ from pswamp_models.pmu import PmuFrame, PmuHeader  # noqa: E402
 
 SETTINGS = CimSettings(cim_path=SAMPLE_GRID)
 INDEX = {
-    "PMU_Beta_400_V": "beta-v",
-    "PMU_Beta_400_F": "beta-f",
-    "PMU_Gamma_132_V": "gamma132-v",
-    "PMU_Gamma_400_V": "gamma400-v",
-    "PMU_Alpha_400_I_Alpha-Beta_400_kV_line": "alpha-i-ab",
+    ("Beta", "V", None): "beta-v",
+    ("Beta_400", "V", None): "beta-v",
+    ("Beta", "V_angle", None): "beta-va",
+    ("Beta", "F", None): "beta-f",
+    ("Beta", "ROCOF", None): "beta-rocof",
+    ("Gamma_132", "V", None): "gamma132-v",
+    ("Gamma_400", "V", None): "gamma400-v",
+    ("Alpha", "I", "Alpha-Beta_400_kV_line"): "alpha-i-ab",
+    ("Alpha", "I_angle", "Alpha-Beta_400_kV_line"): "alpha-ia-ab",
 }
 
 
@@ -56,22 +60,33 @@ class CountsAnalogs(Module):
     outputs = (NumberResult,)
 
     def process(self, message):
-        return Number(value=len(analog_index(self.cim_repo)))
+        return Number(value=len(measurement_table(self.cim_repo)))
 
 
-def test_a_column_finds_its_analog_by_name():
+def test_a_column_finds_its_own_analog_where_it_measures():
     h = header(
-        ["Beta", "Beta", "Beta", "Gamma", "Alpha", "Delta"],
-        ["V", "V", "f", "V", "I_Alpha-Beta 400 kV line", "V"],
-        ["V_Magnitude", "V_Angle", "f", "V_Magnitude", "I_Magnitude", "V_Magnitude"],
+        ["Beta", "Beta", "Beta", "Gamma", "Alpha", "Alpha", "Delta"],
+        ["V", "V", "f", "V", "I_Alpha-Beta 400 kV line", "I_Alpha-Beta 400 kV line", "V"],
+        ["V_Magnitude", "V_Angle", "f", "V_Magnitude", "I_Magnitude", "I_Angle", "V_Magnitude"],
     )
-    # A phasor's two columns share an Analog; Gamma has two levels, so it is ambiguous; Delta is no station.
-    assert column_analogs(h, INDEX) == ["beta-v", "beta-v", "beta-f", None, "alpha-i-ab", None]
+    # A phasor's magnitude and angle are two Analogs; Gamma has two levels, so it is ambiguous; Delta is no station.
+    assert column_analogs(h, INDEX) == ["beta-v", "beta-va", "beta-f", None, "alpha-i-ab", "alpha-ia-ab", None]
     assert column_analogs(h, INDEX, {"Gamma": "Gamma_400"})[3] == "gamma400-v"
 
 
-def test_a_frequency_derivative_shares_the_frequency_s_analog():
-    assert column_analogs(header(["Beta"], ["f"], ["df"]), INDEX) == ["beta-f"]
+def test_a_frequency_derivative_is_the_rate_of_change_of_frequency():
+    assert column_analogs(header(["Beta"], ["f"], ["df"]), INDEX) == ["beta-rocof"]
+
+
+def test_the_index_says_where_each_pmu_analog_of_the_grid_measures(grid_env):
+    from pswamp_core.cim import connect_reader
+    from pswamp_core.cim.enrich import pmu_index
+
+    index = pmu_index(measurement_table(connect_reader(SETTINGS)))
+    assert len(set(index.values())) == 28  # every PMU Analog, by station alone where it has one level
+    assert ("Beta", "V", None) in index and index[("Beta", "V", None)] == index[("Beta_400", "V", None)]
+    assert ("Gamma", "V", None) not in index and ("Gamma_132", "F", None) in index
+    assert ("Beta", "I", "Alpha-Beta_400_kV_line") in index  # the line's end at Beta
 
 
 async def test_frames_are_tied_to_the_grid_once_it_is_read(grid_env):
@@ -81,7 +96,7 @@ async def test_frames_are_tied_to_the_grid_once_it_is_read(grid_env):
     await enricher.ready()
     first, second = enricher.enrich(untouched), enricher.enrich(pmu(untouched.header))
     assert first.header.cimReferenceId == "3f5e0000-0000-4000-8000-000000000001"
-    assert first.header.analog == [enricher.index["PMU_Beta_400_V"]]
+    assert first.header.analog == [enricher.index[("Beta", "V", None)]]
     assert first.header is second.header  # once per layout
 
 
@@ -101,7 +116,7 @@ async def test_a_grid_that_cannot_be_read_leaves_frames_alone(tmp_path):
 
 def test_a_module_reads_the_graph_through_a_repository_of_its_own(grid_env):
     one, two = CountsAnalogs(), CountsAnalogs()
-    assert one.run_one(measurement(1)).result.value == 22
+    assert one.run_one(measurement(1)).result.value == 58
     assert isinstance(one.cim_repo, ReadOnlyRepository) and one.cim_repo is not two.cim_repo
 
 
@@ -135,7 +150,7 @@ async def test_a_host_connects_the_repository_before_setup(grid_env):
     with broker.subscribe(NumberResult, app="a", overflow=Overflow.GROW) as results:
         await broker.publish(measurement(1), app="a", key="k")
         (_, result), = await take(results, 1, timeout=60)
-    assert seen == [True] and result.result.value == 22
+    assert seen == [True] and result.result.value == 58
     await cancel_and_wait(task)
 
 

@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- A grid's own Operation profile for the sample grid: three measurements in Nordic44's conventions. Apache-2.0. -->
+<rdf:RDF xmlns:cim="http://iec.ch/TC57/CIM100#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+  <cim:MeasurementValueSource rdf:ID="_pmu"><cim:IdentifiedObject.mRID>pmu</cim:IdentifiedObject.mRID><cim:IdentifiedObject.name>PMU</cim:IdentifiedObject.name></cim:MeasurementValueSource>
+  <cim:MeasurementValueSource rdf:ID="_scada"><cim:IdentifiedObject.mRID>scada</cim:IdentifiedObject.mRID><cim:IdentifiedObject.name>SCADA</cim:IdentifiedObject.name></cim:MeasurementValueSource>
+  <cim:Analog rdf:ID="_own-v">
+    <cim:IdentifiedObject.mRID>own-v</cim:IdentifiedObject.mRID>
+    <cim:IdentifiedObject.name>PMU_Beta_Vmag</cim:IdentifiedObject.name>
+    <cim:Measurement.Terminal rdf:resource="#_3f5e0000-0000-4000-8000-000000000048"/>
+    <cim:Measurement.PowerSystemResource rdf:resource="#_3f5e0000-0000-4000-8000-000000000012"/>
+    <cim:Measurement.measurementType>LineToLineVoltage</cim:Measurement.measurementType>
+    <cim:Measurement.unitSymbol>V</cim:Measurement.unitSymbol>
+    <cim:Measurement.unitMultiplier>k</cim:Measurement.unitMultiplier>
+  </cim:Analog>
+  <cim:AnalogValue rdf:ID="_own-v-value"><cim:IdentifiedObject.mRID>own-v-value</cim:IdentifiedObject.mRID><cim:AnalogValue.Analog rdf:resource="#_own-v"/><cim:MeasurementValue.MeasurementValueSource rdf:resource="#_pmu"/></cim:AnalogValue>
+  <cim:Analog rdf:ID="_own-p">
+    <cim:IdentifiedObject.mRID>own-p</cim:IdentifiedObject.mRID>
+    <cim:IdentifiedObject.name>SCADA_Beta_load_LB_P</cim:IdentifiedObject.name>
+    <cim:Analog.positiveFlowIn>true</cim:Analog.positiveFlowIn>
+    <cim:Measurement.Terminal rdf:resource="#_3f5e0000-0000-4000-8000-000000000048"/>
+    <cim:Measurement.PowerSystemResource rdf:resource="#_3f5e0000-0000-4000-8000-000000000032"/>
+    <cim:Measurement.measurementType>ActivePower</cim:Measurement.measurementType>
+    <cim:Measurement.unitSymbol>W</cim:Measurement.unitSymbol>
+    <cim:Measurement.unitMultiplier>M</cim:Measurement.unitMultiplier>
+  </cim:Analog>
+  <cim:AnalogValue rdf:ID="_own-p-value"><cim:IdentifiedObject.mRID>own-p-value</cim:IdentifiedObject.mRID><cim:AnalogValue.Analog rdf:resource="#_own-p"/><cim:AnalogValue.value>400.0</cim:AnalogValue.value><cim:MeasurementValue.MeasurementValueSource rdf:resource="#_scada"/></cim:AnalogValue>
+  <cim:Discrete rdf:ID="_own-pos">
+    <cim:IdentifiedObject.mRID>own-pos</cim:IdentifiedObject.mRID>
+    <cim:IdentifiedObject.name>SCADA_Beta_bus_coupler_Pos</cim:IdentifiedObject.name>
+    <cim:Measurement.Terminal rdf:resource="#_3f5e0000-0000-4000-8000-000000000044"/>
+    <cim:Measurement.PowerSystemResource rdf:resource="#_3f5e0000-0000-4000-8000-000000000034"/>
+    <cim:Measurement.measurementType>SwitchPosition</cim:Measurement.measurementType>
+  </cim:Discrete>
+  <cim:DiscreteValue rdf:ID="_own-pos-value"><cim:IdentifiedObject.mRID>own-pos-value</cim:IdentifiedObject.mRID><cim:DiscreteValue.Discrete rdf:resource="#_own-pos"/><cim:MeasurementValue.MeasurementValueSource rdf:resource="#_scada"/></cim:DiscreteValue>
+</rdf:RDF>
