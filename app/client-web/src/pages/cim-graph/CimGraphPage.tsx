@@ -35,7 +35,8 @@ const GRAPH_STATUS: Record<GraphStatus['kind'], string> = {
  * simulation only, so the map does not change, and the event log says what happened. A substation
  * clicked, or a station below the charts, is picked out on the charts. The charts show every PMU station's frequency and voltage
  * over the last 30 s, every frame of the simulation (`/api/cim-live`); the status bar says how many
- * reach this page each second.
+ * reach this page each second, and sums generation and load as the latest SCADA scan has them. A
+ * breaker whose scanned position is not the graph's is ringed on the map.
  */
 export function CimGraphPage() {
   const { state, layout, status, connected, graph, error, pending, roundTripMs, changedAt, setSwitch, setLine, reset, disturb, events } =
@@ -140,6 +141,7 @@ export function CimGraphPage() {
                 selected={selectedMrid(selected)}
                 stations={live.stations}
                 lineEnds={live.lineEnds}
+                scada={live.scada}
                 buffer={live.buffer}
                 subscribe={live.subscribe}
                 highlight={picked}
@@ -195,6 +197,10 @@ export function CimGraphPage() {
           <span>
             <span className="mr-1 inline-block size-2 border-2 align-middle" style={{ borderColor: '#f59e0b' }} />
             switching (clicked, not yet in the graph)
+          </span>
+          <span>
+            <span className="mr-1 inline-block size-2 align-middle" style={{ outline: '2px dashed #7c3aed', outlineOffset: 1 }} />
+            breaker SCADA sees otherwise than the graph
           </span>
           <span>
             <svg className="mr-1 inline-block align-middle" width="16" height="10" viewBox="0 0 20 12" aria-hidden="true">
@@ -258,7 +264,7 @@ export function CimGraphPage() {
           <span data-testid="samples-per-second">
             Simulation: {live.connected ? `${live.samplesPerSecond.toFixed(0)} samples/s` : 'not connected'}
           </span>
-          <SystemTotals injections={live.injections} buffer={live.buffer} subscribe={live.subscribe} />
+          <SystemTotals scada={live.scada} buffer={live.buffer} subscribe={live.subscribe} />
           <span>Last change: {changedAt ? changedAt.toLocaleTimeString() : 'none since this page opened'}</span>
           <span>
             Last click: {roundTripMs === null ? 'none yet' : `${roundTripMs} ms from click to screen`}
