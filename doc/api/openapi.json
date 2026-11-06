@@ -1508,6 +1508,18 @@
           "samples": {
             "$ref": "#/components/schemas/LiveSamples"
           },
+          "scan": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LiveScan"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "The latest SCADA scan, when it is new (or the layout is)."
+          },
           "type": {
             "const": "state",
             "default": "state",
@@ -1576,6 +1588,14 @@
               "$ref": "#/components/schemas/LiveLineEnd"
             },
             "title": "Line Ends",
+            "type": "array"
+          },
+          "scada": {
+            "description": "The grid's SCADA measurements, in the order a scan lists them.",
+            "items": {
+              "$ref": "#/components/schemas/LiveScadaPoint"
+            },
+            "title": "Scada",
             "type": "array"
           },
           "stations": {
@@ -1782,6 +1802,169 @@
           "f_hz"
         ],
         "title": "LiveSamples",
+        "type": "object"
+      },
+      "LiveScadaPoint": {
+        "description": "One SCADA measurement of the grid (an Analog, or a switch's Discrete), and what it is on.",
+        "properties": {
+          "end": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "For a line's or a transformer's end: its terminal's sequence number.",
+            "title": "End"
+          },
+          "equipment": {
+            "description": "mRID of the line, transformer, machine, load or switch; of the node, for a voltage.",
+            "title": "Equipment",
+            "type": "string"
+          },
+          "kind": {
+            "description": "What it is on.",
+            "enum": [
+              "line",
+              "transformer",
+              "generator",
+              "load",
+              "switch",
+              "voltage_level"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "kv": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "The nominal voltage where it measures, kV.",
+            "title": "Kv"
+          },
+          "mrid": {
+            "description": "mRID of the Analog or the Discrete in the CIM graph.",
+            "title": "Mrid",
+            "type": "string"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "The name of what it is on, as the graph has it.",
+            "title": "Name"
+          },
+          "positive_flow_in": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "For a power: true when a flow into the equipment is positive (CGMES), so a generator's is negative.",
+            "title": "Positive Flow In"
+          },
+          "quantity": {
+            "description": "Active or reactive power, a voltage, a current, a switch's position (1 closed, 0 open).",
+            "enum": [
+              "P",
+              "Q",
+              "V",
+              "I",
+              "Pos"
+            ],
+            "title": "Quantity",
+            "type": "string"
+          },
+          "substation": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "mRID of the substation its terminal is in.",
+            "title": "Substation"
+          },
+          "unit": {
+            "description": "What its values are in: 'MW', 'Mvar', 'kV', 'A'; '' for a position.",
+            "title": "Unit",
+            "type": "string"
+          }
+        },
+        "required": [
+          "mrid",
+          "quantity",
+          "unit",
+          "kind",
+          "equipment"
+        ],
+        "title": "LiveScadaPoint",
+        "type": "object"
+      },
+      "LiveScan": {
+        "description": "The latest SCADA scan: one value per SCADA point of the layout, in its order.",
+        "properties": {
+          "sim_time": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "When, on the simulation's clock, s.",
+            "title": "Sim Time"
+          },
+          "t": {
+            "description": "When it was scanned, seconds since the Unix epoch.",
+            "title": "T",
+            "type": "number"
+          },
+          "values": {
+            "description": "Each point's value; null: the scan has none for it.",
+            "items": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "title": "Values",
+            "type": "array"
+          }
+        },
+        "required": [
+          "t",
+          "values"
+        ],
+        "title": "LiveScan",
         "type": "object"
       },
       "LiveStation": {
