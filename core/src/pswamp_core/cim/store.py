@@ -17,6 +17,12 @@ state variables stale (``refresh_expired``) and reads again. Nothing expires on 
 timer, so a reader that finds nothing new has read nothing else. A module does none of
 this itself: the core does it for its repository before each call (``watch``).
 
+**The latest SCADA values are not the grid, and do not move the stamp.** They are a graph of their
+own (``MEASUREMENTS_GRAPH``), replaced whole at each scan in one update
+(``Store.put_measurements``), with a counter of their own (``Store.scans``), so a reader of the
+steady-state hypothesis is not sent to read it again every couple of seconds for a measurement
+(ADR-016). A reset empties it.
+
 The store is an **Oxigraph** server (``PSWAMP_CIM_URL``), spoken to through LazyCIM's
 ``OxigraphServerBackend`` (SPARQL 1.1 queries and updates, and the graph store to fill it), or, when that is unset, a ``LocalStore`` in the process: the same
 named graphs and the same SPARQL, over an rdflib dataset. Either way a commit is
@@ -43,6 +49,7 @@ from .grid import _FULL_MODEL, NAMESPACE_ALIASES, Grid, model_graph, stage
 from .settings import CimSettings
 
 __all__ = [
+    "MEASUREMENTS_GRAPH",
     "LocalStore",
     "ReadOnlyRepository",
     "Store",
@@ -68,6 +75,15 @@ _BUMP = (
     f"DELETE {{ GRAPH <{META_GRAPH}> {{ {_STAMP} ?old }} }} "
     f"INSERT {{ GRAPH <{META_GRAPH}> {{ {_STAMP} ?new }} }} "
     f"WHERE {{ OPTIONAL {{ GRAPH <{META_GRAPH}> {{ {_STAMP} ?old }} }} BIND(COALESCE(?old, 0) + 1 AS ?new) }}"
+)
+#: The latest value of each SCADA measurement: a graph of its own, replaced at each scan.
+MEASUREMENTS_GRAPH = "urn:pswamp:measurements"
+_SCAN = "<urn:pswamp:measurements> <urn:pswamp:scan>"
+#: The update that counts a scan, from nothing to 1: beside the version stamp, never it.
+_SCAN_BUMP = (
+    f"DELETE {{ GRAPH <{META_GRAPH}> {{ {_SCAN} ?old }} }} "
+    f"INSERT {{ GRAPH <{META_GRAPH}> {{ {_SCAN} ?new }} }} "
+    f"WHERE {{ OPTIONAL {{ GRAPH <{META_GRAPH}> {{ {_SCAN} ?old }} }} BIND(COALESCE(?old, 0) + 1 AS ?new) }}"
 )
 #: A query's dataset clause, ``FROM <g>`` or ``FROM NAMED <g>``.
 _DATASET_CLAUSE = re.compile(r"\bFROM\s+(?:NAMED\s+)?<[^>]*>")
@@ -184,9 +200,28 @@ class Store:
 
     def version(self) -> int:
         """The version stamp: how many times the graph was written (0 before it is filled)."""
-        found = self.backend.execute(f"SELECT ?v WHERE {{ GRAPH <{META_GRAPH}> {{ {_STAMP} ?v }} }}")
+        return self._count(_STAMP)
+
+    def scans(self) -> int:
+        """How many times the latest SCADA values were written (``put_measurements``): 0 before the first."""
+        return self._count(_SCAN)
+
+    def _count(self, triple: str) -> int:
+        found = self.backend.execute(f"SELECT ?v WHERE {{ GRAPH <{META_GRAPH}> {{ {triple} ?v }} }}")
         bindings = found["results"]["bindings"]
         return int(bindings[0]["v"]["value"]) if bindings else 0
+
+    def put_measurements(self, graph: Graph) -> None:
+        """Replace the latest SCADA values (``MEASUREMENTS_GRAPH``) with ``graph``, and count the scan, in
+        one update. The version stamp does not move: a measurement is not an edit of the grid."""
+        self._check_owned("write to")
+        if isinstance(self.backend, LocalStore):
+            with self.backend._lock:
+                self.backend.put(MEASUREMENTS_GRAPH, graph, replace=True)
+                self.backend.update(_SCAN_BUMP)
+            return
+        insert = f"{_insert(MEASUREMENTS_GRAPH, list(graph))} ;\n" if len(graph) else ""
+        self.backend.update(f"CLEAR SILENT GRAPH <{MEASUREMENTS_GRAPH}> ;\n{insert}{_SCAN_BUMP}")
 
     def loaded(self) -> bool:
         """Whether the store holds a grid (its EQ graph has anything in it; for a store p-SWAMP did
@@ -227,23 +262,26 @@ class Store:
 
     def reset(self) -> None:
         """Put the steady-state hypothesis back as it was loaded (every switch, terminal and set
-        point the grid has been operated through), in one update."""
+        point the grid has been operated through), and forget the latest SCADA values, in one update."""
         self._check_owned("reset")
         name = model_graph("SSH")
-        self._put(name, self.grid.graphs.get(name, Graph()), replace=True)
+        self._put(name, self.grid.graphs.get(name, Graph()), replace=True, emptied=MEASUREMENTS_GRAPH)
 
-    def _put(self, name: str, graph: Graph, *, replace: bool = False) -> None:
+    def _put(self, name: str, graph: Graph, *, replace: bool = False, emptied: str | None = None) -> None:
         """``graph`` into the named graph ``name``: one update per chunk, or, with ``replace``,
-        one update that empties the graph first and moves the version stamp, so a reader never
-        sees it empty, nor changed with the old stamp."""
+        one update that empties the graph first (and the graph ``emptied``, if named) and moves the
+        version stamp, so a reader never sees it empty, nor changed with the old stamp."""
         if isinstance(self.backend, LocalStore):
             with self.backend._lock:
                 self.backend.put(name, graph, replace=replace)
+                if emptied is not None:
+                    self.backend.put(emptied, Graph(), replace=True)
                 if replace:
                     self.backend.update(_BUMP)
             return
         if replace:
-            self.backend.update(f"CLEAR SILENT GRAPH <{name}> ;\n{_insert(name, list(graph))} ;\n{_BUMP}")
+            also = f"CLEAR SILENT GRAPH <{emptied}> ;\n" if emptied is not None else ""
+            self.backend.update(f"CLEAR SILENT GRAPH <{name}> ;\n{also}{_insert(name, list(graph))} ;\n{_BUMP}")
             return
         # A fill goes through the graph store: a whole graph as N-Triples in one request, which the
         # server takes far faster than as many SPARQL updates.

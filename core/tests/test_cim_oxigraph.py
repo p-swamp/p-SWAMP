@@ -86,3 +86,21 @@ def test_one_writer_one_update_and_a_reader_sees_it_once_the_stamp_moved(store):
     assert watch.changed() is True
     refresh_expired(reader)
     assert reader.from_mRID(COUPLER).open is False
+
+
+def test_the_latest_scada_values_are_one_update_that_does_not_move_the_stamp(store):
+    from rdflib import Graph, Literal, URIRef
+
+    from pswamp_core.cim.store import MEASUREMENTS_GRAPH
+
+    def latest() -> list[str]:
+        found = store.backend.execute(f"SELECT ?v WHERE {{ GRAPH <{MEASUREMENTS_GRAPH}> {{ ?s ?p ?v }} }}")
+        return [row["v"]["value"] for row in found["results"]["bindings"]]
+
+    values = Graph()
+    values.add((URIRef("urn:uuid:v"), URIRef("http://iec.ch/TC57/CIM100#AnalogValue.value"), Literal(1.5)))
+    watch, scans = GraphVersion(store), store.scans()
+    store.put_measurements(values)
+    assert latest() == ["1.5"] and store.scans() == scans + 1 and watch.changed() is False
+    store.reset()
+    assert latest() == []
