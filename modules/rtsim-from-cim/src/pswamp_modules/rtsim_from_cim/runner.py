@@ -11,7 +11,8 @@ wait for the interpreter behind a refresh. This stands in for TOPS's simulator i
   down to the engine as a message (``("event", ...)``, ``("input", ...)``), in the order applied;
 - the state the engine sends back each frame (``receive``) is what ``LiveTops`` reads from: its time,
   its voltages and currents, and which commands the engine applied or rejected;
-- a model that has to be built again is built by ``LiveTops`` and sent whole (``("build", ...)``).
+- a model that has to be built again is built by ``LiveTops`` and sent whole (``("build", ...)``), as
+  ``LiveTops.built`` has it: the model, less the parts left out, and the events applied right after.
 
 **What this relies on in LazyCIM that is not public** (``lazycim/sim/tops_live.py``), until
 ``LiveTops`` takes a runner of its own (LazyCIM, later):
@@ -104,10 +105,11 @@ class RemoteRunner:
         self.rejected.extend(rejected)
 
     def rebuild(self, live: Any) -> None:
-        """``live`` was built again: send its model, and stand in for its new simulator."""
+        """``live`` was built again: send what it built from (``live.built``: the model, and the events
+        applied right after it), and stand in for its new simulator."""
         self.build += 1
         self._take(live)
-        self._send(("build", self.build, live.sim.model, live.sim.ids))
+        self._send(("build", self.build, live.built.model, live.sim.ids, live.built.events))
         self._alive = True
         _install(live, self)
 

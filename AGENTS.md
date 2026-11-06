@@ -797,13 +797,17 @@ permanent limit trips on an IEC standard inverse curve (`RTSIM_PROTECTION`, `_OV
 `_OVERLOAD_TMS`); each operation is a `SimEvent`, and its breakers `CimEdits`. The sample grid's
 machines have no governors, so after a disturbance its frequency is not brought back (ADR-014);
 a reset is.
-The simulation is LazyCIM's **`LiveTops`** (TOPS 0.6) over the export `engine.EXPORT`: every node a
-bus and every switch a TOPS `Switch`, the parts the slack bus cannot reach left out, a PLL on every
-bus, the graph's controllers. `LiveTops` decides what a change of the graph means for a running
+The simulation is LazyCIM's **`LiveTops`** (TOPS 0.6, LazyCIM 0.3.1) over the export `engine.EXPORT`:
+every node a bus and every switch a TOPS `Switch`, the parts the slack bus cannot reach kept, a PLL on
+every bus, the graph's controllers. `LiveTops` decides what a change of the graph means for a running
 simulation: a switch opened or closed, a line or transformer disconnected or connected (TOPS
 events, transient kept), a load's power set, a machine's set-point moved through its controllers'
 bias; or a model to build again, which starts over at steady state, seconds without a frame (a
-part cut off from the slack, or brought back, or equipment added).
+part left out at a build joined again, or equipment added). **An island formed while running runs
+on**, as in the desktop simulation: a part cut off is a TOPS event, never a rebuild. A build cannot
+initialise a part the slack does not reach, so the engine builds `LiveTops.built` (the model and
+the events applied right after it, which cut a part with no load or machine off again), and a part
+with one is left out (`LiveTops.left_out`): a command on it is refused, saying why.
 
 **Two processes, because of the GIL.** In the server, a TOPS step's many small numpy calls and the
 pacing would each wait for the interpreter lock behind every other thread (Nordic44: 4 ms alone,

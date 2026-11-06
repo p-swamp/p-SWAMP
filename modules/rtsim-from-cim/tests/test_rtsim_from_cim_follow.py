@@ -10,7 +10,7 @@ import pytest
 from pswamp_core.cim import SAMPLE_GRID, CimSettings, GraphVersion, connect_reader, open_store, stage
 from pswamp_core.cim.testing import edit, reset
 from pswamp_core.command_routing import CommandRefused
-from pswamp_models.rtsim import OperateSwitchCommand, TripBranchCommand
+from pswamp_models.rtsim import OperateLineCommand, ResetSimulationCommand, TripBranchCommand
 from pswamp_modules.rtsim_from_cim.follow import Controller
 
 SETTINGS = CimSettings(cim_path=SAMPLE_GRID)
@@ -72,28 +72,48 @@ def test_a_terminal_disconnected_takes_its_line_out_live(controller):
     assert events(controller) == [("lines", "Line", "Alpha-Beta 400 kV line", "connect", {})]
 
 
-@needs_profiles
-def test_a_part_cut_off_is_a_model_built_again_the_clock_running_on(controller):
-    # Gamma's 132 kV side hangs off its transformer alone: taken out, it is left out of the model
-    # (de-energised), which a running simulation cannot absorb.
-    runner = controller.runner
-    _, y, v = runner.sol.t, runner.sol.y, runner.sol.v
-    runner.receive(("state", 0, 100, 2.0, y, v, []))  # two seconds into the run
+def _cut_off_gamma_132(controller) -> str:
+    """Take Gamma's 132 kV side off the grid: it hangs off its transformer alone, with a load on it.
+    Returns the transformer's first terminal, the one disconnected."""
     terminal = next(t.mRID for t in controller.live.exporter.repo.from_mRID(TRANSFORMER).Terminals if t.sequenceNumber == 1)
     edit(SETTINGS, terminal, connected=False)
+    return terminal
+
+
+@needs_profiles
+def test_a_part_cut_off_while_running_is_an_island_that_runs_on(controller):
+    # The graph says the transformer is out: the slack bus no longer reaches Gamma's 132 kV side, a
+    # change the running simulation takes as it is, with no build, and the island stays in it.
+    _cut_off_gamma_132(controller)
+    said = controller.changes()
+    assert not any("built again" in line for line in said)
+    name = {mrid: name for name, mrid in controller.sim.ids["transformers"].items()}[TRANSFORMER]
+    assert events(controller) == [("trafos", "Trafo", name, "disconnect", {})]
+    assert controller.sim.ids["de_energised"] and controller.live.left_out == {}
+    assert not any(message[0] == "build" for message in controller.sent)
+    controller.sent.clear()
+    controller.command(TripBranchCommand(mRID=TRANSFORMER))  # still a branch of the simulation
+    assert events(controller) == [("trafos", "Trafo", name, "disconnect", {})]
+
+
+@needs_profiles
+def test_a_part_left_out_at_a_build_says_why_and_comes_back_with_a_build(controller):
+    # Cut off when the system is built, with a load on it, the part cannot be initialised: it is left
+    # out, and a command on it says so. The graph joining it again builds the system again.
+    runner = controller.runner
+    terminal = _cut_off_gamma_132(controller)
+    controller.changes()
+    controller.command(ResetSimulationCommand())  # built from the graph: the part is cut off
+    assert controller.live.left_out.get("transformers")
+    kind, build, model, ids, built_events = controller.sent[-1]
+    assert (kind, build) == ("build", 1) and TRANSFORMER in ids["transformers"].values()
+    _, y, v = runner.sol.t, runner.sol.y, runner.sol.v
+    runner.receive(("state", 1, 100, 2.0, y, v, []))  # two seconds into the run
+    for command in (OperateLineCommand(mRID=TRANSFORMER, in_service=True), TripBranchCommand(mRID=TRANSFORMER)):
+        with pytest.raises(CommandRefused, match="left out when it was built"):
+            controller.command(command)
+    edit(SETTINGS, terminal, connected=True)
     said = controller.changes()
     assert any("built again" in line for line in said)
-    kind, build, model, ids = controller.sent[-1]
-    assert (kind, build) == ("build", 1) and ids["de_energised"]
+    assert controller.sent[-1][:2] == ("build", 2) and controller.live.left_out == {}
     assert controller.live.time == pytest.approx(2.0)  # the clock runs on from where the engine was
-
-
-@needs_profiles
-def test_a_command_on_what_the_simulation_left_out_says_why(controller):
-    terminal = next(t.mRID for t in controller.live.exporter.repo.from_mRID(TRANSFORMER).Terminals if t.sequenceNumber == 1)
-    edit(SETTINGS, terminal, connected=False)
-    controller.changes()
-    with pytest.raises(CommandRefused, match="slack bus cannot reach"):
-        controller.command(OperateSwitchCommand(mRID=TRANSFORMER, open=False))
-    with pytest.raises(CommandRefused, match="slack bus cannot reach"):
-        controller.command(TripBranchCommand(mRID=TRANSFORMER))

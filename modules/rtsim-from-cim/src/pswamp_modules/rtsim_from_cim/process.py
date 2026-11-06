@@ -16,7 +16,7 @@ What the simulation does is decided elsewhere: by ``LiveTops``, in the controlle
 which reaches this process through a **link**, a duplex pipe. Down it come the events and inputs
 to apply (``("event", ...)``, ``("input", ...)``), messages to apply at a later time on the build's
 clock (``("at", t, messages)``: a fault's clearing, on time to the frame) and whole models to start
-over from (``("build", n, model, ids)``), applied before the next frame's steps. Up it goes the state after
+over from (``("build", n, model, ids, events)``, ``LiveTops.built``), applied before the next frame's steps. Up it goes the state after
 each frame (``("state", build, frame, t, y, v, rejected)``), only the latest one when the controller
 is busy (a refresh takes a second): it reads the simulation from that, and is told which of the
 events it sent could not be applied.
@@ -25,16 +25,21 @@ Two more pipes, with the server: down, ``None`` to stop; up, the frame layout's 
 and again when the model is built again), then ``("frame", timestamp, values)`` per frame,
 ``("scan", timestamp, sim_time, analogs, discretes)`` per SCADA scan (``scada``: at the first frame,
 then every ``scada_period`` seconds of the simulation's clock; none when it is 0),
-``("log", text)``, and ``("error", error)`` when the run cannot go on.
+``("log", text)``, and ``("error", error)`` when the run cannot go on. A bus left with no admittance
+(TOPS's ``DeadBusWarning``: an island's bay with every breaker open) is held at 0 V, and said once.
 """
 
 from __future__ import annotations
 
 import multiprocessing
 import queue
+import re
 import threading
 import time
+import warnings
 from datetime import datetime, timedelta, timezone
+
+from tops.events import DeadBusWarning
 
 from .engine import SimEngine
 from .pmu import Measured, pmu_layout, pmu_values
@@ -118,22 +123,42 @@ class _Latest:
             return
 
 
-def _serve(down, link, up, model, dt, rate, steps, measurements, ids, scada_period=0.0) -> None:  # noqa: PLR0913
+def _say_dead_buses(up) -> None:
+    """Have TOPS's ``DeadBusWarning`` said up as a log line, once per bus however often it comes back
+    (the engine's process is ours: the hook is global to it); every other warning as before."""
+    said: set[str] = set()
+    shown = warnings.showwarning
+
+    def show(message, category, *args, **kwargs) -> None:
+        if not issubclass(category, DeadBusWarning):
+            shown(message, category, *args, **kwargs)
+            return
+        buses = [bus for bus in re.findall(r"'([^']*)'", str(message)) if bus not in said]
+        if buses:
+            said.update(buses)
+            up.send(("log", f"no admittance left at {', '.join(buses)}: held at 0 V"))
+
+    warnings.simplefilter("always", DeadBusWarning)
+    warnings.showwarning = show
+
+
+def _serve(down, link, up, model, dt, rate, steps, measurements, ids, scada_period=0.0, events=()) -> None:  # noqa: PLR0913
     """The engine process: ``_run``, with what it sends flushed before the process ends."""
     up = _Outbox(up)
     latest = _Latest(link) if link is not None else None
+    _say_dead_buses(up)
     try:
-        _run(up, down, link, latest, model, dt, rate, steps, measurements, ids, scada_period)
+        _run(up, down, link, latest, model, dt, rate, steps, measurements, ids, scada_period, events)
     finally:
         if latest is not None:
             latest.close()
         up.close()
 
 
-def _run(up, down, link, latest, model, dt, rate, steps, measurements, ids, scada_period=0.0) -> None:  # noqa: PLR0913
+def _run(up, down, link, latest, model, dt, rate, steps, measurements, ids, scada_period=0.0, events=()) -> None:  # noqa: PLR0913
     """Build, then step in real time until told to stop, sending each frame up."""
     try:
-        engine = SimEngine(model, dt=dt)
+        engine = SimEngine(model, dt=dt, events=events)
         layout = pmu_layout(measurements, engine, ids, rate)
         scada = scada_layout(measurements, engine, ids) if scada_period > 0 else None
     except Exception as error:  # noqa: BLE001 -- the caller raises it
@@ -146,9 +171,9 @@ def _run(up, down, link, latest, model, dt, rate, steps, measurements, ids, scad
     def apply(message: tuple) -> None:
         nonlocal layout, scada, build
         if message[0] == "build":
-            _, number, new_model, new_ids = message
+            _, number, new_model, new_ids, events = message
             try:
-                engine.rebuild(new_model)
+                engine.rebuild(new_model, events)
             except Exception as error:  # noqa: BLE001 -- the running simulation goes on as it was
                 up.send(("log", f"the model could not be built again: {error}; the simulation goes on as it was"))
                 return
@@ -201,8 +226,8 @@ def _run(up, down, link, latest, model, dt, rate, steps, measurements, ids, scad
 
 
 class EngineProcess:
-    """The simulation of ``model`` run in real time at ``rate`` frames per second of ``steps`` steps of
-    ``dt``, measured as the graph's ``measurements`` say (``ids`` is the export's ``sim.ids``), steered through ``link`` (the
+    """The simulation of ``model`` (``events`` applied right after its initialisation: ``LiveTops.built``)
+    run in real time at ``rate`` frames per second of ``steps`` steps of ``dt``, measured as the graph's ``measurements`` say (``ids`` is the export's ``sim.ids``), steered through ``link`` (the
     engine's end of a duplex pipe to the controller, which it takes over), scanning the graph's SCADA
     measurements every ``scada_period`` seconds of the simulation's clock (0: never). ``receive`` what it
     sends up (blocking: from a thread)."""
@@ -218,13 +243,14 @@ class EngineProcess:
         ids: dict,
         link=None,
         scada_period: float = 0.0,
+        events: list[tuple] = (),
     ) -> None:
         context = multiprocessing.get_context("spawn")  # nothing of the server's state comes along
         down_read, self._down = context.Pipe(duplex=False)
         self._up, up_write = context.Pipe(duplex=False)
         self._process = context.Process(
             target=_serve,
-            args=(down_read, link, up_write, model, dt, rate, steps, measurements, ids, scada_period),
+            args=(down_read, link, up_write, model, dt, rate, steps, measurements, ids, scada_period, list(events)),
             name="rtsim-engine",
             daemon=True,
         )
