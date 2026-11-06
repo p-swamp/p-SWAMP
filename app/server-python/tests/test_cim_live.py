@@ -50,6 +50,24 @@ def test_the_feed_carries_each_line_end_s_current(server):
     assert all(x is None for row in samples["loading"] for x in row)  # no limit, no loading
 
 
+def test_the_feed_carries_the_latest_scada_scan_of_the_grid_s_scada_measurements(server):
+    with server.websocket_connect("/api/cim-live/ws?client_id=604") as ws:
+        first = ws.receive_json()
+        points = first["layout"]["scada"]
+        scan, until = first["scan"], time.monotonic() + 15
+        while scan is None and time.monotonic() < until:
+            scan = ws.receive_json()["scan"]  # every 2 s of the simulation's clock
+    assert scan is not None and len(scan["values"]) == len(points) == 30  # the sample grid's SCADA
+    assert {p["kind"] for p in points} == {"line", "transformer", "generator", "load", "switch", "voltage_level"}
+    value = {(p["kind"], p["equipment"], p["quantity"], p["end"]): v for p, v in zip(points, scan["values"], strict=True)}
+    assert value[("load", "3f5e0000-0000-4000-8000-000000000032", "P", None)] == pytest.approx(400, rel=0.03)  # Beta load LB
+    assert value[("generator", "3f5e0000-0000-4000-8000-000000000030", "P", None)] < 0  # a generator, as CGMES signs it
+    assert {v for p, v in zip(points, scan["values"], strict=True) if p["quantity"] == "Pos"} == {1}  # every switch closed
+    ends = [p for p in points if p["kind"] == "line" and p["quantity"] == "P"]
+    assert len(ends) == 6 and {p["end"] for p in ends} == {1, 2} and all(p["positive_flow_in"] for p in ends)
+    assert scan["sim_time"] is not None and scan["t"] > 0
+
+
 def test_loading_is_the_current_over_its_end_s_limit():
     import numpy as np
 

@@ -1378,6 +1378,11 @@ export interface components {
             layout: components["schemas"]["LiveLayout"] | null;
             samples: components["schemas"]["LiveSamples"];
             /**
+             * @description The latest SCADA scan, when it is new (or the layout is).
+             * @default null
+             */
+            scan: components["schemas"]["LiveScan"] | null;
+            /**
              * Type
              * @default state
              * @constant
@@ -1422,6 +1427,11 @@ export interface components {
             injections?: components["schemas"]["LiveInjection"][];
             /** Line Ends */
             line_ends?: components["schemas"]["LiveLineEnd"][];
+            /**
+             * Scada
+             * @description The grid's SCADA measurements, in the order a scan lists them.
+             */
+            scada?: components["schemas"]["LiveScadaPoint"][];
             /** Stations */
             stations: components["schemas"]["LiveStation"][];
         };
@@ -1497,6 +1507,91 @@ export interface components {
              * @description Per frame, each station's voltage magnitude, per unit.
              */
             v_pu: (number | null)[][];
+        };
+        /**
+         * LiveScadaPoint
+         * @description One SCADA measurement of the grid (an Analog, or a switch's Discrete), and what it is on.
+         */
+        LiveScadaPoint: {
+            /**
+             * End
+             * @description For a line's or a transformer's end: its terminal's sequence number.
+             * @default null
+             */
+            end: number | null;
+            /**
+             * Equipment
+             * @description mRID of the line, transformer, machine, load or switch; of the node, for a voltage.
+             */
+            equipment: string;
+            /**
+             * Kind
+             * @description What it is on.
+             * @enum {string}
+             */
+            kind: "line" | "transformer" | "generator" | "load" | "switch" | "voltage_level";
+            /**
+             * Kv
+             * @description The nominal voltage where it measures, kV.
+             * @default null
+             */
+            kv: number | null;
+            /**
+             * Mrid
+             * @description mRID of the Analog or the Discrete in the CIM graph.
+             */
+            mrid: string;
+            /**
+             * Name
+             * @description The name of what it is on, as the graph has it.
+             * @default null
+             */
+            name: string | null;
+            /**
+             * Positive Flow In
+             * @description For a power: true when a flow into the equipment is positive (CGMES), so a generator's is negative.
+             * @default null
+             */
+            positive_flow_in: boolean | null;
+            /**
+             * Quantity
+             * @description Active or reactive power, a voltage, a current, a switch's position (1 closed, 0 open).
+             * @enum {string}
+             */
+            quantity: "P" | "Q" | "V" | "I" | "Pos";
+            /**
+             * Substation
+             * @description mRID of the substation its terminal is in.
+             * @default null
+             */
+            substation: string | null;
+            /**
+             * Unit
+             * @description What its values are in: 'MW', 'Mvar', 'kV', 'A'; '' for a position.
+             */
+            unit: string;
+        };
+        /**
+         * LiveScan
+         * @description The latest SCADA scan: one value per SCADA point of the layout, in its order.
+         */
+        LiveScan: {
+            /**
+             * Sim Time
+             * @description When, on the simulation's clock, s.
+             * @default null
+             */
+            sim_time: number | null;
+            /**
+             * T
+             * @description When it was scanned, seconds since the Unix epoch.
+             */
+            t: number;
+            /**
+             * Values
+             * @description Each point's value; null: the scan has none for it.
+             */
+            values: (number | null)[];
         };
         /**
          * LiveStation

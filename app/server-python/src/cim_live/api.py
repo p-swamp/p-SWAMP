@@ -16,6 +16,11 @@ Which substation and nominal voltage each station is, which line end a current i
 limit), which machine or load a power is of, come from the CIM graph, through the PMU Analog each
 column carries (``PmuHeader.analog``; ``pswamp_core.cim.measurement_table``), read once. A grid's PMUs
 may measure no power (Nordic44's do not): its machines and loads are then in no frame.
+
+**The latest SCADA scan goes with the frames.** The RT sim scans the grid's SCADA measurements every
+couple of seconds (``ScadaScan``, ADR-016); the socket keeps the latest, and sends it with the next push
+once (again with a new layout), as one value per SCADA point of the layout (``LiveLayout.scada``: what
+each measures, on which line end, transformer end, machine, load, switch or voltage level).
 """
 
 from __future__ import annotations
@@ -32,8 +37,9 @@ from shared import get_logger, read_client_id, send_state, transport, wait_for_d
 
 from pswamp_core.subscription import Overflow
 from pswamp_models.pmu import PmuFrame, PmuHeader
+from pswamp_models.scada import ScadaScan
 
-from .model import LiveFeed, LiveInjection, LiveLayout, LiveLineEnd, LiveSamples, LiveStation
+from .model import LiveFeed, LiveInjection, LiveLayout, LiveLineEnd, LiveSamples, LiveScadaPoint, LiveScan, LiveStation
 
 logger = get_logger("cim-live")
 router = APIRouter()
@@ -58,9 +64,55 @@ class Facts:
     injections: dict[str, tuple[str, str, str]]
     #: (line mRID, end) -> its permanent current limit, A.
     limits: dict[tuple[str, int], float]
+    #: The grid's SCADA measurements, as the layout lists them.
+    scada: tuple[LiveScadaPoint, ...] = ()
 
 
 NO_FACTS = Facts({}, {}, {}, {})
+
+#: What a SCADA measurement is on, by the class ``measurement_table`` gives its equipment.
+_ON = {
+    "ACLineSegment": "line",
+    "PowerTransformer": "transformer",
+    "SynchronousMachine": "generator",
+    "EnergyConsumer": "load",
+    "Switch": "switch",
+}
+
+
+def _scada_points(table) -> tuple[LiveScadaPoint, ...]:
+    """The SCADA measurements of ``table`` (a ``measurement_table``) the page shows, by name."""
+    points = []
+    for row in table[table["source"] == "SCADA"].itertuples():
+        kind = "voltage_level" if row.quantity == "V" else _ON.get(row.equipment_class)
+        if kind is None or row.quantity not in ("P", "Q", "V", "I", "Pos"):
+            continue
+        branch = kind in ("line", "transformer")
+        points.append(
+            LiveScadaPoint(
+                mrid=row.mRID,
+                quantity=row.quantity,
+                unit=row.unit or "",
+                kind=kind,
+                equipment=row.node if kind == "voltage_level" else row.equipment,
+                name=row.station if kind == "voltage_level" else (row.equipment_name if isinstance(row.equipment_name, str) else None),
+                end=int(row.sequence) if branch and row.sequence == row.sequence else None,
+                substation=row.substation if isinstance(row.substation, str) else None,
+                kv=float(row.kv) if row.kv == row.kv and row.kv is not None else None,
+                positive_flow_in=row.positiveFlowIn if isinstance(row.positiveFlowIn, bool) else None,
+            )
+        )
+    return tuple(points)
+
+
+def scan_of(points: tuple[LiveScadaPoint, ...], scan: ScadaScan) -> LiveScan:
+    """``scan``'s values in the order of ``points``."""
+    values: dict[str, float] = {r.mRID: r.value for r in scan.analogs} | {r.mRID: float(r.value) for r in scan.discretes}
+    return LiveScan(
+        t=scan.timestamp.timestamp() if scan.timestamp is not None else 0.0,
+        sim_time=scan.sim_time,
+        values=[values.get(point.mrid) for point in points],
+    )
 
 
 @functools.cache
@@ -84,7 +136,7 @@ def _facts() -> Facts:
             ends[row.mRID] = (row.equipment, int(row.sequence))
         elif row.quantity in ("P", "Q") and row.equipment_class in kinds:
             injections[row.mRID] = (row.equipment, str(row.equipment_name), kinds[row.equipment_class])
-    return Facts(places, ends, injections, limits)
+    return Facts(places, ends, injections, limits, _scada_points(table))
 
 
 @dataclass(frozen=True)
@@ -138,7 +190,7 @@ def _layout(header: PmuHeader, facts: Facts) -> Layout:
     ]
     ints = lambda values: np.array(values, dtype=int)  # noqa: E731
     return Layout(
-        LiveLayout(header_id=header.header_id, stations=stations, line_ends=line_ends, injections=injections),
+        LiveLayout(header_id=header.header_id, stations=stations, line_ends=line_ends, injections=injections, scada=list(facts.scada)),
         np.array(v), np.array(angle), np.array(f), np.array(kv, dtype=float),
         ints([column for _, column in ends.values()]),
         np.array([np.nan if e.limit_a is None else e.limit_a for e in line_ends], dtype=float),
@@ -180,10 +232,19 @@ async def ws_endpoint(ws: WebSocket) -> None:
     await ws.accept()
     loop = asyncio.get_running_loop()
     facts = await loop.run_in_executor(_cim, _facts)
-    with transport().subscribe(PmuFrame, app=APP, key=KEY, overflow=Overflow.DROP_OLDEST, maxsize=BACKLOG) as frames:
+    with (
+        transport().subscribe(PmuFrame, app=APP, key=KEY, overflow=Overflow.DROP_OLDEST, maxsize=BACKLOG) as frames,
+        transport().subscribe(ScadaScan, app=APP, key=KEY, overflow=Overflow.DROP_OLDEST, maxsize=1) as scans,
+    ):
+        latest: list[ScadaScan | None] = [None]  # the latest scan, which goes with the next push
+
+        async def keep() -> None:
+            async for _, scan in scans:
+                latest[0] = scan
 
         async def push() -> None:
             layout: Layout | None = None
+            sent: ScadaScan | None = None
             while True:
                 _, first = await frames.get()
                 batch = [first]
@@ -193,12 +254,17 @@ async def ws_endpoint(ws: WebSocket) -> None:
                     group, new = list(run), None
                     if layout is None or header_id != layout.message.header_id:
                         layout = _layout(group[0].header, facts)
-                        new = layout.message
-                    await send_state(ws, LiveFeed(layout=new, samples=samples(layout, group)))
+                        new, sent = layout.message, None  # a new layout gets the latest scan again
+                    scan = latest[0]
+                    feed = LiveFeed(layout=new, samples=samples(layout, group))
+                    if scan is not None and scan is not sent:
+                        feed.scan, sent = scan_of(facts.scada, scan), scan
+                    await send_state(ws, feed)
 
-        pusher = asyncio.create_task(push())
+        tasks = [asyncio.create_task(keep()), asyncio.create_task(push())]
         try:
             await wait_for_disconnect(ws)
         finally:
-            pusher.cancel()
-            await asyncio.gather(pusher, return_exceptions=True)
+            for task in tasks:
+                task.cancel()
+            await asyncio.gather(*tasks, return_exceptions=True)

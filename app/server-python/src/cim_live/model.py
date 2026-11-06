@@ -1,4 +1,5 @@
-"""The wire shapes of the live grid feed: every frame of the RT sim, as the page plots it.
+"""The wire shapes of the live grid feed: every frame of the RT sim, as the page plots it, and its
+latest SCADA scan.
 
 Pure pydantic: the published contract (api_contract.py reads ``WS_MESSAGE``), so the page's types
 are generated from these."""
@@ -34,6 +35,33 @@ class LiveInjection(BaseModel):
     station: str = Field(description="The station it is at, '<substation>_<kV>'.")
 
 
+class LiveScadaPoint(BaseModel):
+    """One SCADA measurement of the grid (an Analog, or a switch's Discrete), and what it is on."""
+
+    mrid: str = Field(description="mRID of the Analog or the Discrete in the CIM graph.")
+    quantity: Literal["P", "Q", "V", "I", "Pos"] = Field(
+        description="Active or reactive power, a voltage, a current, a switch's position (1 closed, 0 open)."
+    )
+    unit: str = Field(description="What its values are in: 'MW', 'Mvar', 'kV', 'A'; '' for a position.")
+    kind: Literal["line", "transformer", "generator", "load", "switch", "voltage_level"] = Field(description="What it is on.")
+    equipment: str = Field(description="mRID of the line, transformer, machine, load or switch; of the node, for a voltage.")
+    name: str | None = Field(default=None, description="The name of what it is on, as the graph has it.")
+    end: int | None = Field(default=None, description="For a line's or a transformer's end: its terminal's sequence number.")
+    substation: str | None = Field(default=None, description="mRID of the substation its terminal is in.")
+    kv: float | None = Field(default=None, description="The nominal voltage where it measures, kV.")
+    positive_flow_in: bool | None = Field(
+        default=None, description="For a power: true when a flow into the equipment is positive (CGMES), so a generator's is negative."
+    )
+
+
+class LiveScan(BaseModel):
+    """The latest SCADA scan: one value per SCADA point of the layout, in its order."""
+
+    t: float = Field(description="When it was scanned, seconds since the Unix epoch.")
+    sim_time: float | None = Field(default=None, description="When, on the simulation's clock, s.")
+    values: list[float | None] = Field(description="Each point's value; null: the scan has none for it.")
+
+
 class LiveLayout(BaseModel):
     """The stations, line ends and injections, each in the order every sample lists them. Sent first,
     and again when it changes."""
@@ -42,6 +70,7 @@ class LiveLayout(BaseModel):
     stations: list[LiveStation]
     line_ends: list[LiveLineEnd] = Field(default_factory=list)
     injections: list[LiveInjection] = Field(default_factory=list)
+    scada: list[LiveScadaPoint] = Field(default_factory=list, description="The grid's SCADA measurements, in the order a scan lists them.")
 
 
 class LiveSamples(BaseModel):
@@ -71,3 +100,4 @@ class LiveFeed(BaseModel):
     type: Literal["state"] = "state"
     layout: LiveLayout | None = Field(default=None, description="The stations, when they are new.")
     samples: LiveSamples
+    scan: LiveScan | None = Field(default=None, description="The latest SCADA scan, when it is new (or the layout is).")
