@@ -182,7 +182,7 @@ class RtsimFromCimSource(SourceModule):
                 await asyncio.wait({starting}, timeout=max(0.0, (end - utcnow()).total_seconds()))
                 if not starting.done():
                     return
-            model, ids, measurements = await starting
+            model, ids, measurements, events = await starting
             if not apart:
                 controller = self._controller
             reference = await loop.run_in_executor(graph, self._reference, settings)
@@ -195,6 +195,7 @@ class RtsimFromCimSource(SourceModule):
                 ids=ids,
                 link=controller.link if apart else theirs,
                 scada_period=self.settings.scada_period,
+                events=events,
             )
             theirs = None  # the engine's process took it over
             steering = self._steering = _Steering(controller, graph, ids)
@@ -260,8 +261,8 @@ class RtsimFromCimSource(SourceModule):
         repo = self._connect()
         self._controller = Controller(repo, version, dt=self.settings.dt, protection=self.protection)
         self._controller.attach(link.send)
-        sim = self._controller.sim
-        return sim.model, sim.ids, read_measurements(repo)
+        built = self._controller.live.built  # the model less what is left out, and what to apply after
+        return built.model, self._controller.sim.ids, read_measurements(repo), built.events
 
     async def _follow(self, steering: _Steering, link) -> None:
         """The graph followed, and the simulation's reports taken, from a thread of the server's process

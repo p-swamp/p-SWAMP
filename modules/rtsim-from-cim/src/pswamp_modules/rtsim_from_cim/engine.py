@@ -5,8 +5,8 @@
 
 Pure and synchronous: no clock, no thread, no event loop::
 
-    sim = get_exporter("tops", repo, **EXPORT).build()
-    engine = SimEngine(sim.model, dt=0.01)
+    live = LiveTops.from_repo(repo, **EXPORT)
+    engine = SimEngine(live.built.model, dt=0.01, events=live.built.events)
     engine.apply(("event", ("switches", "Switch", name, "open", {})))   # what LiveTops sent
     snapshot = engine.step(steps=4)                                       # advance 4 steps and sample
 
@@ -44,8 +44,8 @@ DEFAULT_DYNAMICS = {
 }  # fmt: skip
 
 #: How the graph is exported (LazyCIM's TOPS exporter): every node a bus and every switch a TOPS
-#: ``Switch`` (its default topology), the parts the slack bus cannot reach left out, and a PLL on
-#: every bus to measure the frequency.
+#: ``Switch`` (its default topology), the parts the slack bus cannot reach kept (``LiveTops``'s
+#: default: an island formed while running runs on), and a PLL on every bus to measure the frequency.
 EXPORT = {"defaults": DEFAULT_DYNAMICS, "plls": True}
 
 
@@ -95,10 +95,11 @@ class Flows:
 
 
 class SimEngine:
-    """A TOPS system built from ``model`` (``sim.model``); ``dt`` is the integration step in simulated
-    seconds."""
+    """A TOPS system built from ``model`` (``LiveTops.built.model``), with ``events`` applied right after
+    its initialisation (``LiveTops.built.events``: the branches that join a part built at once and cut
+    off again); ``dt`` is the integration step in simulated seconds."""
 
-    def __init__(self, model: dict[str, Any], *, dt: float = 0.01) -> None:
+    def __init__(self, model: dict[str, Any], *, dt: float = 0.01, events: list[tuple] = ()) -> None:
         self.dt = dt
         #: Simulated seconds before the current build: the clock runs on across ``rebuild``.
         self._time = 0.0
@@ -106,12 +107,14 @@ class SimEngine:
         self.builds = 0
         #: Messages for later, ``(time on the build's clock, messages)``: a fault's clearing, say.
         self._later: list[tuple[float, list[tuple]]] = []
-        self._build(model)
+        self._build(model, events)
 
-    def _build(self, model: dict[str, Any]) -> None:
+    def _build(self, model: dict[str, Any], events: list[tuple] = ()) -> None:
         with np.errstate(all="ignore"):
             ps = dynamic.PowerSystemModel(model=copy.deepcopy(model))
             ps.init_dyn_sim()
+            for event in events:
+                ps.apply_event(*event)
             sim = Simulator(ps, dt=self.dt)
         self._ps, self._sim = ps, sim
         self._line, self._pll = ps.lines["Line"], ps.pll["PLL1"]
@@ -132,11 +135,11 @@ class SimEngine:
         self.load_names = [str(name) for model in self._loads for name in model.par["name"]]
         self.builds += 1
 
-    def rebuild(self, model: dict[str, Any]) -> None:
-        """Start over from ``model`` at steady state; the clock runs on. Raises what TOPS raises, and
-        then the running simulation goes on as it was."""
+    def rebuild(self, model: dict[str, Any], events: list[tuple] = ()) -> None:
+        """Start over from ``model`` at steady state, ``events`` applied; the clock runs on. Raises what
+        TOPS raises, and then the running simulation goes on as it was."""
         time = self._time + float(self._sim.sol.t)
-        self._build(model)
+        self._build(model, events)
         self._time = time
         self._later = []  # what was for later was for the system that is gone
 

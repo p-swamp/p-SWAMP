@@ -26,7 +26,7 @@ class Link:
 
     def __init__(self, live: LiveTops) -> None:
         self.sent: list[tuple] = []
-        self.engine = SimEngine(live.sim.model, dt=live.dt)
+        self.engine = SimEngine(live.built.model, dt=live.dt, events=live.built.events)
         self.frame, self.build = 0, 0
 
     def send(self, message: tuple) -> None:
@@ -38,7 +38,7 @@ class Link:
         for message in self.sent:
             if message[0] == "build":
                 self.build = message[1]
-                self.engine.rebuild(message[2])
+                self.engine.rebuild(message[2], message[4])
             else:
                 try:
                     self.engine.apply(message)

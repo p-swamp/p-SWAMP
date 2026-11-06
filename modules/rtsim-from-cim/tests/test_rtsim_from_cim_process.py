@@ -6,15 +6,17 @@ from __future__ import annotations
 
 import multiprocessing
 import time
+import warnings
 
 import numpy as np
 import pytest
 from lazycim.sim import get_exporter
+from tops.events import DeadBusWarning
 
 from pswamp_core.cim import SAMPLE_GRID, CimSettings, connect_reader
 from pswamp_modules.rtsim_from_cim.engine import EXPORT
 from pswamp_modules.rtsim_from_cim.pmu import read_measurements
-from pswamp_modules.rtsim_from_cim.process import EngineProcess
+from pswamp_modules.rtsim_from_cim.process import EngineProcess, _say_dead_buses
 
 SETTINGS = CimSettings(cim_path=SAMPLE_GRID)
 
@@ -127,7 +129,7 @@ def test_a_model_sent_whole_is_built_again_with_a_new_header(engine):
     engine, link, sim = engine
     seen = Received(engine)
     seen.until(lambda: len(seen.frames) >= 10)
-    link.send(("build", 1, sim.model, sim.ids))
+    link.send(("build", 1, sim.model, sim.ids, []))
     seen.until(lambda: seen.headers >= 2)
     deadline = time.monotonic() + 10
     while not any(state[1] == 1 for state in states(link)):
@@ -144,3 +146,18 @@ def test_the_controller_gone_the_simulation_goes_on(engine):
     seen.until(lambda: "the simulation is no longer steered" in seen.logs, timeout=5)
     then = len(seen.frames)
     seen.until(lambda: len(seen.frames) >= then + 25)
+
+
+def test_a_dead_bus_is_said_once():
+    # TOPS warns with every bus dead after each event that changes them; each is said once.
+    sent: list[tuple] = []
+
+    class Up:
+        send = staticmethod(sent.append)
+
+    with warnings.catch_warnings():
+        _say_dead_buses(Up())
+        warnings.warn(DeadBusWarning("Buses ['bay A', 'bay B'] have no admittance and are pinned to 0 V."))
+        warnings.warn(DeadBusWarning("Buses ['bay A', 'bay B', 'bay C'] have no admittance and are pinned to 0 V."))
+        warnings.warn(DeadBusWarning("Buses ['bay A'] have no admittance and are pinned to 0 V."))
+    assert sent == [("log", "no admittance left at bay A, bay B: held at 0 V"), ("log", "no admittance left at bay C: held at 0 V")]

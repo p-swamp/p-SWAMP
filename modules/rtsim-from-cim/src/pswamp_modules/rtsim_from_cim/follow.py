@@ -109,7 +109,7 @@ class Controller:
         return self.live.sim
 
     def attach(self, send: Callable[[tuple], None]) -> None:
-        """Steer the engine at the other end of ``send``, which runs ``sim.model`` as it is now."""
+        """Steer the engine at the other end of ``send``, which runs ``live.built`` as it is now."""
         self.runner = RemoteRunner(self.live, send)
 
     def receive(self, message: tuple) -> None:
@@ -128,31 +128,35 @@ class Controller:
     def command(self, command: Command) -> list[DataModel]:
         """Apply ``command``; return what to announce now (a ``SimEvent``). ``CommandRefused`` when it
         does not apply: an object of another kind, or a switch already in that state."""
+        mrid = getattr(command, "mRID", None)
+        if mrid and self._left_out(mrid):
+            raise CommandRefused(
+                f"{mrid} is in a part of the grid the simulation left out when it was built: cut off from the "
+                "slack bus, with power drawn or made in it. It comes back when the graph joins it to the grid "
+                "again, as a reset of the grid does"
+            )
         try:
             return [self._apply(command)]
         except (KeyError, ValueError) as error:
-            mrid = getattr(command, "mRID", None)
-            if isinstance(error, KeyError) and mrid and self._in_dead_part(mrid):
-                raise CommandRefused(
-                    f"{mrid} is in a part of the grid the slack bus cannot reach, which the simulation leaves out: "
-                    "reconnect a line or close a breaker that feeds it"
-                ) from error
             raise CommandRefused(str(error).strip("'\"")) from error
 
-    def _in_dead_part(self, mrid: str) -> bool:
-        """Whether a terminal of ``mrid`` (or ``mrid``, a node) is in a de-energised part."""
-        ids = self.sim.ids
-        dead = ids.get("de_energised") or {}
-        if not dead:
+    def _left_out(self, mrid: str) -> bool:
+        """Whether ``mrid`` (a row of the model, or a node) or a terminal of it is in what the running
+        system does not hold (``LiveTops.left_out``). An island formed while running is held: it runs on."""
+        left, ids = self.live.left_out, self.sim.ids
+        if not left:
             return False
-        if ids["node_to_bus"].get(mrid) in dead:
+        if any(ids.get(component, {}).get(name) == mrid for component, names in left.items() for name in names):
+            return True
+        buses = left.get("buses", set())
+        if ids["node_to_bus"].get(mrid) in buses:
             return True
         try:
             found = self.live.exporter.repo.from_mRID(mrid)
         except (KeyError, ValueError):
             return False
         nodes = (getattr(getattr(t, "ConnectivityNode", None), "mRID", None) for t in getattr(found, "Terminals", None) or ())
-        return any(ids["node_to_bus"].get(node) in dead for node in nodes)
+        return any(ids["node_to_bus"].get(node) in buses for node in nodes)
 
     def reports(self) -> list[DataModel]:
         """What happened since the last call: what protection did (``SimEvent``), and what the
@@ -195,8 +199,8 @@ class Controller:
             return self._event("reconnect" if isinstance(command, ReconnectBranchCommand) else "trip", command, "disturbance")
         if isinstance(command, ShortCircuitCommand | ClearShortCircuitCommand):
             bus = ids["node_to_bus"].get(mrid)
-            if bus is None or bus in ids.get("de_energised", {}):
-                raise ValueError(f"{mrid} is no energised node of the simulation")
+            if bus is None:
+                raise ValueError(f"{mrid} is no node of the simulation")
             if isinstance(command, ShortCircuitCommand):
                 runner.submit("buses", "", bus, "short_circuit", y=command.y)
                 return self._event("short_circuit", command, "disturbance")
@@ -225,8 +229,8 @@ class Controller:
             (t for t in live.exporter.repo.from_mRID(line).Terminals if t.sequenceNumber == command.end), None
         )
         bus = ids["node_to_bus"].get(getattr(getattr(terminal, "ConnectivityNode", None), "mRID", None))
-        if bus is None or bus in ids.get("de_energised", {}):
-            raise ValueError(f"end {command.end} of {line} is on no energised bus of the simulation")
+        if bus is None or bus in self.live.left_out.get("buses", ()):
+            raise ValueError(f"end {command.end} of {line} is on no bus of the simulation")
         runner.submit("buses", "", bus, "short_circuit", y=command.y)
         when = live.time + command.clear_ms / 1000.0
         breakers = self._isolating(line)
@@ -353,7 +357,8 @@ def _watch(control, link, up, settings: CimSettings, poll: float, dt: float, pro
         repo = connect_reader(settings)
         controller = Controller(repo, version, dt=dt, protection=protection)
         controller.attach(link.send)
-        up.send(("ready", controller.sim.model, controller.sim.ids, read_measurements(repo)))
+        built = controller.live.built
+        up.send(("ready", built.model, controller.sim.ids, read_measurements(repo), built.events))
     except Exception as error:  # noqa: BLE001 -- the caller raises it
         up.send(("error", error))
         return
@@ -423,7 +428,8 @@ class ControllerProcess:
             end.close()
 
     def ready(self) -> tuple:
-        """Wait for the export (blocking: from a thread): its model, ids and the measurements. Raises what
+        """Wait for the export (blocking: from a thread): the model to build, the ids, the measurements
+        and the events to apply right after the build (``LiveTops.built``). Raises what
         the controller could not get past."""
         message = self._receive()
         if message[0] != "ready":

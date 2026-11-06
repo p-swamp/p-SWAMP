@@ -113,19 +113,32 @@ the TOPS system the **engine** steps in a process of its own (`process.py`, `eng
 |---|---|
 | a switch opened or closed | its TOPS `Switch` opened or closed: every node is a bus and every switch a `Switch`, so the buses never change and the transient is kept; couplers included |
 | a load's `p` or `q` | its power set (TOPS `set_power`), live |
-| a line's or a transformer's terminal disconnected or connected again | the branch disconnected or connected (TOPS event), live, when no part of the grid is cut off by it |
+| a line's or a transformer's terminal disconnected or connected again | the branch disconnected or connected (TOPS event), live, also when it cuts a part of the grid off or joins it again: that part runs on as an island, at its own frequency |
 | a machine's voltage or power set-point | its exciter's or governor's bias moved (or its mechanical power, with no governor), live |
-| a part of the grid cut off from the slack bus, or brought back; equipment added | the model is built again, without what the slack bus cannot reach, and the simulation starts over at steady state, the clock running on (logged; a model that cannot be built leaves the simulation as it was) |
+| a part left out when the model was built (below) joined to the grid again; equipment added | the model is built again and the simulation starts over at steady state, the clock running on (logged; a model that cannot be built leaves the simulation as it was) |
 | anything else | logged as not followed live |
 
 ## The model
 
 LazyCIM's TOPS export: every connectivity node a bus and every switch a TOPS `Switch` (open ones
-exported open), what the slack bus cannot reach left out, a PLL on every bus, the machines' dynamics
-(the graph's, else `DEFAULT_DYNAMICS`) and their governors, exciters and stabilisers where the graph
-has them. Nordic44's dynamics have none, so its frequency is not regulated.
+exported open), what the slack bus cannot reach kept (LazyCIM 0.3.1, `LiveTops`'s default), a PLL on
+every bus, the machines' dynamics (the graph's, else `DEFAULT_DYNAMICS`) and their governors,
+exciters and stabilisers where the graph has them. Nordic44's dynamics have none, so its frequency is
+not regulated.
 
-A bay node that open switches leave floating reads 0 V: TOPS pins a bus without admittance to 0 V.
+**Islands.** A part cut off from the slack bus while the simulation runs stays in it: TOPS goes on
+with it as an island (its machines keep it at their own frequency; a part with none falls to 0 V), and
+every command on it applies. The engine builds what `LiveTops.built` says and applies its events
+right after the initialisation. TOPS's load flow cannot initialise a part the slack bus does not
+reach, so a model built (at the start, a reset, a rebuild) with a part already cut off
+
+- builds it and cuts it off again at once, when nothing in it draws or makes power (an open bay);
+- leaves it out, otherwise (`LiveTops.left_out`): it has no PMU or SCADA value, and a command on it
+  is refused, saying so. It comes back, with a build, when the graph joins it to the grid again, as a
+  reset of the grid does.
+
+A bus with no admittance left (a bay whose breakers are all open, a dead island) reads 0 V: TOPS
+pins it there, and the engine logs it once per bus.
 
 **The stand-in relies on private details of `LiveTops`** (listed in `runner.py`): how a simulator
 is installed, how a rebuild goes while one "runs", and that a machine's set-point is set with
