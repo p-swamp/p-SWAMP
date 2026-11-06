@@ -150,12 +150,29 @@ test.describe('CIM graph', () => {
     await expect(live).toContainText(/\d\.\d{4} p\.u\. · \d+\.\d{4} Hz/)
   })
 
-  test('a load\'s panel shows what it draws now', async ({ page }) => {
+  test('a load\'s panel shows what it draws, as SCADA last scanned it', async ({ page }) => {
     await open(page)
     const load = page.locator('[data-testid^="load-"]').first()
     test.skip((await load.count()) === 0, 'the grid has no loads on its layout')
     await load.dispatchEvent('click')
-    await expect(page.getByTestId('detail-panel').getByTestId('detail-live')).toContainText(/\d+\.\d MW · -?\d+\.\d Mvar/)
+    const scada = page.getByTestId('detail-panel').getByTestId('detail-scada')
+    await expect(scada).toContainText(/Drawing\s*-?\d+\.\d MW · -?\d+\.\d Mvar/) // its P and Q, signed into it
+    await expect(scada).toContainText(/Scanned at\s*\d/) // a scan every couple of seconds
+  })
+
+  test('a line\'s panel shows its ends\' power flows as SCADA last scanned them', async ({ page }) => {
+    await open(page)
+    await lines(page).first().dispatchEvent('click')
+    const scada = page.getByTestId('detail-panel').getByTestId('detail-scada')
+    await expect(scada).toContainText(/End 1 .*-?\d+\.\d MW · -?\d+\.\d Mvar/)
+    await expect(scada).toContainText(/End 2 /)
+    await expect(scada).toContainText(/Scanned at\s*\d/)
+  })
+
+  test('a substation\'s panel shows its voltage and its breakers as SCADA last scanned them', async ({ page }) => {
+    await open(page)
+    await page.locator('[data-testid^="substation-"]').first().dispatchEvent('click')
+    await expect(page.getByTestId('detail-panel').getByTestId('detail-scada')).toContainText(/Voltage, .*\d+\.\d kV/)
   })
 
   test('a line tripped from its menu is announced, and the map, which shows the graph, does not change', async ({ page }) => {
@@ -200,9 +217,9 @@ test.describe('CIM graph', () => {
     await expect(page.getByTestId('event-log').locator('li').first()).toHaveAttribute('data-kind', 'load_step')
   })
 
-  test('the status bar sums the generation and the load the simulation measures', async ({ page }) => {
+  test('the status bar sums the generation and the load SCADA last scanned', async ({ page }) => {
     await open(page)
-    await expect(page.getByTestId('system-totals')).toHaveText(/^Generation \d+ MW · load \d+ MW$/)
+    await expect(page.getByTestId('system-totals')).toHaveText(/^Generation \d+ MW · load \d+ MW \(SCADA, .+\)$/)
   })
 
   test('a line with a current limit shows its loading on the map', async ({ page }) => {
