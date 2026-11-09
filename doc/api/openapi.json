@@ -1493,6 +1493,19 @@
       "LiveFeed": {
         "description": "One push: the layout when it is new, and every frame read since the last push.\n\nNothing is merged or skipped: a push carries as many frames as came while the last one was\nbeing sent, so under load the pushes get fewer and larger, and no frame is lost.",
         "properties": {
+          "lag_s": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "How far behind real time the newest frame is, s, on the server's clock: the simulation catching up, plus the way to the page. None with no frame.",
+            "title": "Lag S"
+          },
           "layout": {
             "anyOf": [
               {

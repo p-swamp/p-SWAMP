@@ -101,3 +101,8 @@ class LiveFeed(BaseModel):
     layout: LiveLayout | None = Field(default=None, description="The stations, when they are new.")
     samples: LiveSamples
     scan: LiveScan | None = Field(default=None, description="The latest SCADA scan, when it is new (or the layout is).")
+    lag_s: float | None = Field(
+        default=None,
+        description="How far behind real time the newest frame is, s, on the server's clock: the simulation "
+        "catching up, plus the way to the page. None with no frame.",
+    )

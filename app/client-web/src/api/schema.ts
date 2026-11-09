@@ -1372,6 +1372,12 @@ export interface components {
          */
         LiveFeed: {
             /**
+             * Lag S
+             * @description How far behind real time the newest frame is, s, on the server's clock: the simulation catching up, plus the way to the page. None with no frame.
+             * @default null
+             */
+            lag_s: number | null;
+            /**
              * @description The stations, when they are new.
              * @default null
              */

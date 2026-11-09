@@ -30,6 +30,7 @@ import functools
 import itertools
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
+from datetime import datetime, timezone
 
 import numpy as np
 from fastapi import APIRouter, WebSocket
@@ -210,6 +211,15 @@ def _rows(values: np.ndarray, index: np.ndarray, scale: np.ndarray | None, digit
     return [[None if x != x else x for x in row] for row in picked.tolist()]  # NaN -> null
 
 
+def lag_s(frames: list[PmuFrame], now: datetime | None = None) -> float | None:
+    """How far behind real time the newest of ``frames`` is, s (never below 0), by the server's clock:
+    the browser's may be set otherwise. None with no frame."""
+    if not frames:
+        return None
+    now = now or datetime.now(timezone.utc)
+    return round(max(0.0, (now - frames[-1].timestamp).total_seconds()), 3)
+
+
 def samples(layout: Layout, frames: list[PmuFrame]) -> LiveSamples:
     values = np.array([[np.nan if v is None else v for v in frame.values] for frame in frames], dtype=float)
     return LiveSamples(
@@ -256,7 +266,7 @@ async def ws_endpoint(ws: WebSocket) -> None:
                         layout = _layout(group[0].header, facts)
                         new, sent = layout.message, None  # a new layout gets the latest scan again
                     scan = latest[0]
-                    feed = LiveFeed(layout=new, samples=samples(layout, group))
+                    feed = LiveFeed(layout=new, samples=samples(layout, group), lag_s=lag_s(group))
                     if scan is not None and scan is not sent:
                         feed.scan, sent = scan_of(facts.scada, scan), scan
                     await send_state(ws, feed)
