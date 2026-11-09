@@ -45,10 +45,61 @@ from .engine import SimEngine
 from .pmu import Measured, pmu_layout, pmu_values
 from .scada import scada_layout, scada_values
 
-__all__ = ["EngineProcess", "MAX_LAG"]
+__all__ = ["EngineProcess", "LAG_WARNING", "LAG_WARNING_EVERY"]
 
-#: Seconds behind the clock the loop catches up from; beyond, the lost time is dropped.
-MAX_LAG = 0.25
+#: Seconds behind its schedule past which the simulation is said to lag (a warning), and how often
+#: it is said again while it does.
+LAG_WARNING = 1.0
+LAG_WARNING_EVERY = 10.0
+
+
+class _Pacer:
+    """When each frame goes, and what it is stamped. Frame ``k`` (from 1) is due ``k / rate`` seconds
+    after ``start`` and stamped there: a schedule never reset, so two frames are always ``1 / rate``
+    apart, as the simulation's own steps are, and a frame stamped is the simulation's state at that
+    time. One that is late goes as soon as it can, but no sooner than ``1 / (rate * catch_up)`` after
+    the one before: a lag (a busy machine, a model built again) is made up at ``catch_up`` times real
+    time at most, and no time is dropped. One that cannot keep up only falls further behind, said by
+    ``report``. Pure: the clock is the caller's."""
+
+    def __init__(self, rate: float, catch_up: float, start: float) -> None:
+        self.period, self.gap, self.start = 1.0 / rate, 1.0 / (rate * catch_up), start
+        self.catch_up = catch_up
+        #: Frames gone, and when the last one went.
+        self.frames, self._last = 0, None
+        self._warned_at: float | None = None
+
+    def wait(self, now: float) -> float:
+        """Seconds to wait before the next frame."""
+        due = self.start + (self.frames + 1) * self.period
+        earliest = due if self._last is None else max(due, self._last + self.gap)
+        return max(0.0, earliest - now)
+
+    def go(self, now: float) -> float:
+        """The next frame goes at ``now``: its stamp, in seconds after ``start``."""
+        self.frames += 1
+        self._last = now
+        return self.frames * self.period
+
+    def lag(self, now: float) -> float:
+        """Seconds behind the schedule: how late the last frame went (0 when on time)."""
+        return max(0.0, now - (self.start + self.frames * self.period))
+
+    def report(self, now: float) -> tuple[str, str] | None:
+        """What to say of the lag now, if anything: ``("warning", text)`` past ``LAG_WARNING``, again
+        every ``LAG_WARNING_EVERY`` seconds while it lasts; ``("log", text)`` once caught up."""
+        lag = self.lag(now)
+        if lag > LAG_WARNING:
+            if self._warned_at is None or now - self._warned_at >= LAG_WARNING_EVERY:
+                self._warned_at = now
+                return "warning", (
+                    f"the simulation is {lag:.1f} s behind real time: catching up at up to "
+                    f"{self.catch_up:g} times real time, nothing dropped"
+                )
+        elif self._warned_at is not None and lag < self.period:
+            self._warned_at = None
+            return "log", "the simulation has caught up with real time"
+        return None
 
 
 class _Outbox:
@@ -142,20 +193,20 @@ def _say_dead_buses(up) -> None:
     warnings.showwarning = show
 
 
-def _serve(down, link, up, model, dt, rate, steps, measurements, ids, scada_period=0.0, events=()) -> None:  # noqa: PLR0913
+def _serve(down, link, up, model, dt, rate, steps, measurements, ids, scada_period=0.0, events=(), catch_up=1.5) -> None:  # noqa: PLR0913
     """The engine process: ``_run``, with what it sends flushed before the process ends."""
     up = _Outbox(up)
     latest = _Latest(link) if link is not None else None
     _say_dead_buses(up)
     try:
-        _run(up, down, link, latest, model, dt, rate, steps, measurements, ids, scada_period, events)
+        _run(up, down, link, latest, model, dt, rate, steps, measurements, ids, scada_period, events, catch_up)
     finally:
         if latest is not None:
             latest.close()
         up.close()
 
 
-def _run(up, down, link, latest, model, dt, rate, steps, measurements, ids, scada_period=0.0, events=()) -> None:  # noqa: PLR0913
+def _run(up, down, link, latest, model, dt, rate, steps, measurements, ids, scada_period=0.0, events=(), catch_up=1.5) -> None:  # noqa: PLR0913
     """Build, then step in real time until told to stop, sending each frame up."""
     try:
         engine = SimEngine(model, dt=dt, events=events)
@@ -187,9 +238,8 @@ def _run(up, down, link, latest, model, dt, rate, steps, measurements, ids, scad
             rejected.append((message[1], f"{type(error).__name__}: {error}"))
             up.send(("log", f"could not apply {message[1]}: {error}"))
 
-    period = 1.0 / rate
-    origin, due = datetime.now(timezone.utc), time.monotonic()
-    start = due
+    origin = datetime.now(timezone.utc)
+    pacer = _Pacer(rate, catch_up, time.monotonic())
     try:
         while True:
             while down.poll():
@@ -203,15 +253,15 @@ def _run(up, down, link, latest, model, dt, rate, steps, measurements, ids, scad
                 link = None
             for message in engine.due():  # what was sent for now: a fault's clearing
                 apply(message)
-            due += period
-            delay = due - time.monotonic()
+            delay = pacer.wait(time.monotonic())
             if delay > 0:
                 time.sleep(delay)
-            elif -delay > MAX_LAG:  # far behind: drop the time rather than burst through it
-                due = time.monotonic()
+            now = time.monotonic()
+            stamped = origin + timedelta(seconds=pacer.go(now))  # its place in the schedule, never the clock
+            if said := pacer.report(now):
+                up.send(said)
             snapshot = engine.step(steps)
             frames += 1
-            stamped = origin + timedelta(seconds=due - start)
             up.send(("frame", stamped, pmu_values(layout, snapshot)))
             if scada is not None and snapshot.sim_time_s >= next_scan - 1e-9:
                 up.send(("scan", stamped, snapshot.sim_time_s, *scada_values(scada, engine.flows())))
@@ -244,13 +294,14 @@ class EngineProcess:
         link=None,
         scada_period: float = 0.0,
         events: list[tuple] = (),
+        catch_up: float = 1.5,
     ) -> None:
         context = multiprocessing.get_context("spawn")  # nothing of the server's state comes along
         down_read, self._down = context.Pipe(duplex=False)
         self._up, up_write = context.Pipe(duplex=False)
         self._process = context.Process(
             target=_serve,
-            args=(down_read, link, up_write, model, dt, rate, steps, measurements, ids, scada_period, list(events)),
+            args=(down_read, link, up_write, model, dt, rate, steps, measurements, ids, scada_period, list(events), catch_up),
             name="rtsim-engine",
             daemon=True,
         )

@@ -16,7 +16,7 @@ from tops.events import DeadBusWarning
 from pswamp_core.cim import SAMPLE_GRID, CimSettings, connect_reader
 from pswamp_modules.rtsim_from_cim.engine import EXPORT
 from pswamp_modules.rtsim_from_cim.pmu import read_measurements
-from pswamp_modules.rtsim_from_cim.process import EngineProcess, _say_dead_buses
+from pswamp_modules.rtsim_from_cim.process import EngineProcess, _Pacer, _say_dead_buses
 
 SETTINGS = CimSettings(cim_path=SAMPLE_GRID)
 
@@ -161,3 +161,46 @@ def test_a_dead_bus_is_said_once():
         warnings.warn(DeadBusWarning("Buses ['bay A', 'bay B', 'bay C'] have no admittance and are pinned to 0 V."))
         warnings.warn(DeadBusWarning("Buses ['bay A'] have no admittance and are pinned to 0 V."))
     assert sent == [("log", "no admittance left at bay A, bay B: held at 0 V"), ("log", "no admittance left at bay C: held at 0 V")]
+
+
+def run_paced(pacer: _Pacer, frames: int, cost, now: float = 0.0) -> tuple[list[float], list[float], list]:
+    """Drive ``pacer`` as the engine's loop does, on a clock of our own: wait, go, then the frame costs
+    ``cost(k)`` seconds. Returns each frame's stamp, when it went, and what was said."""
+    stamps, went, said = [], [], []
+    for k in range(frames):
+        now += pacer.wait(now)
+        stamps.append(pacer.go(now))
+        went.append(now)
+        if (message := pacer.report(now)) is not None:
+            said.append(message)
+        now += cost(k)
+    return stamps, went, said
+
+
+def test_on_time_frames_go_on_the_schedule():
+    stamps, went, said = run_paced(_Pacer(50.0, 1.5, start=0.0), 100, lambda k: 0.005)
+    assert stamps == pytest.approx([0.02 * (k + 1) for k in range(100)])
+    assert went == pytest.approx(stamps)  # it waits for each frame's time
+    assert said == []
+
+
+def test_a_stall_is_made_up_at_the_catch_up_rate_and_nothing_is_dropped():
+    # Frame 10 takes a second and a half (a busy machine, a model built again), the rest 5 ms.
+    stamps, went, said = run_paced(_Pacer(50.0, 1.5, start=0.0), 400, lambda k: 1.5 if k == 10 else 0.005)
+    assert np.diff(stamps) == pytest.approx(0.02)  # no stamp skipped: the simulation's own time
+    gaps = np.diff(went)
+    assert gaps.min() >= 1 / 75 - 1e-9  # never faster than 1.5 times real time
+    caught = next(k for k in range(11, 400) if went[k] <= stamps[k] + 1e-9)
+    assert went[-1] == pytest.approx(stamps[-1])  # on time again, at the end
+    assert 11 < caught < 400 and gaps[caught:] == pytest.approx(0.02)
+    assert [kind for kind, _ in said] == ["warning", "log"]
+    assert "behind real time" in said[0][1] and "caught up" in said[1][1]
+
+
+def test_a_simulation_that_cannot_keep_up_falls_behind_without_dropping_anything():
+    pacer = _Pacer(50.0, 1.5, start=0.0)
+    stamps, went, said = run_paced(pacer, 1500, lambda k: 0.025)  # 25 ms a frame of 20
+    assert np.diff(stamps) == pytest.approx(0.02)
+    assert pacer.lag(went[-1]) == pytest.approx(1499 * 0.005)  # it only grows
+    # 37.5 s of it: a second behind at 5 s, then said again every 10 s (15, 25, 35 s), never caught up.
+    assert [kind for kind, _ in said] == ["warning"] * 4

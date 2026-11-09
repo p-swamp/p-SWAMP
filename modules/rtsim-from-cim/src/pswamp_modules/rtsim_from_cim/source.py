@@ -27,9 +27,11 @@ a second or so of Python, which in the server's process held up the frames on th
 
 **Pacing** is the engine's own: the model is built, stepped and paced in **a process of its own**
 (``process.EngineProcess``), which keeps one frame period of steps per frame period of a monotonic
-clock, stamps each frame with its place in that schedule, and sends its values up. A frame that comes
-late (on Windows a sleep may last 15 ms more than asked) is made up by the next ones; only when it is
-more than ``MAX_LAG`` behind is the lost time dropped. In the server's process, a step's many small
+clock, stamps each frame with its place in that schedule, and sends its values up. The schedule is
+never reset and no time is dropped: a frame that comes late (on Windows a sleep may last 15 ms more
+than asked; a busy machine, a model built again) is made up by the next ones, at up to ``CATCH_UP``
+times real time, so two frames are always one period apart, and a lag past a second is a warning. In
+the server's process, a step's many small
 numpy calls (and the pacing) would each wait their turn for the interpreter behind every other thread
 (four steps of Nordic44 took 4 ms alone and 834 ms next to one busy thread); here the server only
 turns each frame's values into a ``PmuFrame``, and a busy server delays a few frames but loses none.
@@ -77,10 +79,10 @@ from pswamp_models.scada import AnalogReading, DiscreteReading, ScadaScan
 
 from .follow import COMMANDS, Controller, ControllerProcess
 from .pmu import read_measurements
-from .process import MAX_LAG, EngineProcess
+from .process import EngineProcess
 from .protection import ProtectionSettings
 
-__all__ = ["MAX_LAG", "RtsimFromCimSource", "follows_apart"]
+__all__ = ["RtsimFromCimSource", "follows_apart"]
 
 logger = get_logger("pswamp_modules.rtsim_from_cim")
 
@@ -102,6 +104,7 @@ class RtsimFromCimSource(SourceModule):
         EnvSetting("OVERLOAD_PICKUP", "The multiple of a line's permanent limit it trips over", default="1.0", kind="float"),
         EnvSetting("OVERLOAD_TMS", "The overload curve's time multiplier (IEC standard inverse)", default="0.5", kind="float"),
         EnvSetting("SCADA_PERIOD", "Seconds of simulated time between two SCADA scans; 0: none", default="2", kind="float"),
+        EnvSetting("CATCH_UP", "How many times real time a simulation behind its schedule runs to catch up", default="1.5", kind="float"),
     )
 
     def __init__(
@@ -124,6 +127,8 @@ class RtsimFromCimSource(SourceModule):
             raise ValueError("OVERLOAD_PICKUP and OVERLOAD_TMS must be positive")
         if self.settings.scada_period < 0:
             raise ValueError(f"SCADA_PERIOD ({self.settings.scada_period}) is 0 (no scans) or positive")
+        if self.settings.catch_up < 1:
+            raise ValueError(f"CATCH_UP ({self.settings.catch_up}) is 1 (never faster than real time) or more")
         self.protection = ProtectionSettings(
             enabled=self.settings.protection == "on",
             pickup=self.settings.overload_pickup,
@@ -196,6 +201,7 @@ class RtsimFromCimSource(SourceModule):
                 link=controller.link if apart else theirs,
                 scada_period=self.settings.scada_period,
                 events=events,
+                catch_up=self.settings.catch_up,
             )
             theirs = None  # the engine's process took it over
             steering = self._steering = _Steering(controller, graph, ids)
@@ -211,6 +217,8 @@ class RtsimFromCimSource(SourceModule):
                         raise message[0]
                     if kind == "log":
                         logger.info("%s", message[0])
+                    elif kind == "warning":
+                        logger.warning("%s", message[0])
                     elif kind == "header":
                         header = message[0]
                     elif kind == "scan":
