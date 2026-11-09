@@ -99,6 +99,12 @@ def test_the_layout_is_the_substations_lines_and_breakers_with_their_coordinates
         "Beta load LB": (P + "32", P + "09", 400.0, 100.0),
         "Gamma load LC": (P + "33", P + "10", 90.0, 30.0),
     }
+    # and the machines, their power as they generate (the graph counts it into them: -300 MW)
+    generators = {g["name"]: (g["mrid"], g["substation"], g["p_mw"], g["q_mvar"], g["rated_mva"]) for g in layout["generators"]}
+    assert generators == {
+        "Alpha GA": (P + "30", P + "08", 300.0, 0.0, 400.0),
+        "Gamma GC": (P + "31", P + "10", 200.0, 0.0, 300.0),
+    }
 
 
 def test_the_socket_opens_on_the_state_of_the_graph(server):

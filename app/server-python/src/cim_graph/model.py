@@ -38,6 +38,18 @@ class LayoutLoad(BaseModel):
     q_mvar: float | None = Field(description="Its reactive power as the graph had it when the layout was read, Mvar.")
 
 
+class LayoutGenerator(BaseModel):
+    """A machine (a ``SynchronousMachine``), its power as it generates: positive out of it, where the
+    graph (CGMES) counts it into the equipment."""
+
+    mrid: str
+    name: str
+    substation: str = Field(description="mRID of the substation it stands in.")
+    p_mw: float | None = Field(description="Its active power generated, as the graph had it when the layout was read, MW.")
+    q_mvar: float | None = Field(description="Its reactive power generated, as the graph had it when the layout was read, Mvar.")
+    rated_mva: float | None = Field(description="Its rated apparent power, MVA.")
+
+
 class LayoutBranch(BaseModel):
     """A line, or a transformer between two substations."""
 
@@ -68,6 +80,7 @@ class CimLayout(BaseModel):
     branches: list[LayoutBranch]
     breakers: list[LayoutBreaker]
     loads: list[LayoutLoad]
+    generators: list[LayoutGenerator] = Field(default_factory=list)
 
 
 class SwitchBody(BaseModel):

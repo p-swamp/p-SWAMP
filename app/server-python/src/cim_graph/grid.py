@@ -33,7 +33,7 @@ from pswamp_models.scada import ScadaScan
 from rdflib import Graph, Literal, Namespace, URIRef
 from rdflib.namespace import RDF
 
-from .model import CimLayout, LayoutBranch, LayoutBreaker, LayoutLoad, LayoutNode, LayoutSubstation, Point
+from .model import CimLayout, LayoutBranch, LayoutBreaker, LayoutGenerator, LayoutLoad, LayoutNode, LayoutSubstation, Point
 
 __all__ = ["ALLOWED", "GridState", "Writer", "read_layout", "read_state"]
 
@@ -238,7 +238,7 @@ def _number(value) -> float | None:
 def read_layout(repo) -> CimLayout:
     """The substations that have a position (the GL profile: ``xPosition`` is the longitude and
     ``yPosition`` the latitude), with their connectivity nodes, the lines and transformers between
-    them, and the breakers and loads in them. Each line says the one breaker that takes it out on its
+    them, and the breakers, loads and generators in them. Each line says the one breaker that takes it out on its
     own, if it has one."""
     tables = Tables(repo)
     terminals = terminal_table(tables)
@@ -251,6 +251,7 @@ def read_layout(repo) -> CimLayout:
         substation=F.ConnectivityNodeContainer.Substation.mRID,
     )
     loads = tables.query(L.EnergyConsumers).to_dataframe(mRID=F.mRID, name=F.name, p=F.p, q=F.q)
+    machines = tables.query(L.SynchronousMachines).to_dataframe(mRID=F.mRID, name=F.name, p=F.p, q=F.q, rated=F.ratedS)
     names = tables.query(L.Substations).to_dataframe(mRID=F.mRID, name=F.name)
     lines = tables.query(L.ACLineSegments).to_dataframe(mRID=F.mRID, name=F.name)
     trafos = tables.query(L.PowerTransformers).to_dataframe(mRID=F.mRID, name=F.name)
@@ -316,4 +317,28 @@ def read_layout(repo) -> CimLayout:
         for row in loads.itertuples()
         if substations_at.get(row.mRID) and substations_at[row.mRID][0] in positioned
     ]
-    return CimLayout(substations=list(positioned.values()), branches=branches, breakers=placed_breakers, loads=placed_loads)
+    placed_generators = [
+        LayoutGenerator(
+            mrid=row.mRID,
+            name=_text(row.name) or row.mRID,
+            substation=substations_at[row.mRID][0],
+            p_mw=_generated(row.p),
+            q_mvar=_generated(row.q),
+            rated_mva=_number(row.rated),
+        )
+        for row in machines.itertuples()
+        if substations_at.get(row.mRID) and substations_at[row.mRID][0] in positioned
+    ]
+    return CimLayout(
+        substations=list(positioned.values()),
+        branches=branches,
+        breakers=placed_breakers,
+        loads=placed_loads,
+        generators=placed_generators,
+    )
+
+
+def _generated(value) -> float | None:
+    """A machine's power as it generates: CGMES counts it into the equipment, so negated."""
+    number = _number(value)
+    return None if number is None else (-number or 0.0)  # never -0.0
