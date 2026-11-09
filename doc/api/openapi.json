@@ -379,6 +379,13 @@
             "title": "Breakers",
             "type": "array"
           },
+          "generators": {
+            "items": {
+              "$ref": "#/components/schemas/LayoutGenerator"
+            },
+            "title": "Generators",
+            "type": "array"
+          },
           "loads": {
             "items": {
               "$ref": "#/components/schemas/LayoutLoad"
@@ -1268,6 +1275,70 @@
           "substation"
         ],
         "title": "LayoutBreaker",
+        "type": "object"
+      },
+      "LayoutGenerator": {
+        "description": "A machine (a ``SynchronousMachine``), its power as it generates: positive out of it, where the\ngraph (CGMES) counts it into the equipment.",
+        "properties": {
+          "mrid": {
+            "title": "Mrid",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "p_mw": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Its active power generated, as the graph had it when the layout was read, MW.",
+            "title": "P Mw"
+          },
+          "q_mvar": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Its reactive power generated, as the graph had it when the layout was read, Mvar.",
+            "title": "Q Mvar"
+          },
+          "rated_mva": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Its rated apparent power, MVA.",
+            "title": "Rated Mva"
+          },
+          "substation": {
+            "description": "mRID of the substation it stands in.",
+            "title": "Substation",
+            "type": "string"
+          }
+        },
+        "required": [
+          "mrid",
+          "name",
+          "substation",
+          "p_mw",
+          "q_mvar",
+          "rated_mva"
+        ],
+        "title": "LayoutGenerator",
         "type": "object"
       },
       "LayoutLoad": {

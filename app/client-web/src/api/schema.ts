@@ -801,6 +801,8 @@ export interface components {
             branches: components["schemas"]["LayoutBranch"][];
             /** Breakers */
             breakers: components["schemas"]["LayoutBreaker"][];
+            /** Generators */
+            generators?: components["schemas"]["LayoutGenerator"][];
             /** Loads */
             loads: components["schemas"]["LayoutLoad"][];
             /** Substations */
@@ -1246,6 +1248,37 @@ export interface components {
             mrid: string;
             /** Name */
             name: string;
+            /**
+             * Substation
+             * @description mRID of the substation it stands in.
+             */
+            substation: string;
+        };
+        /**
+         * LayoutGenerator
+         * @description A machine (a ``SynchronousMachine``), its power as it generates: positive out of it, where the
+         *     graph (CGMES) counts it into the equipment.
+         */
+        LayoutGenerator: {
+            /** Mrid */
+            mrid: string;
+            /** Name */
+            name: string;
+            /**
+             * P Mw
+             * @description Its active power generated, as the graph had it when the layout was read, MW.
+             */
+            p_mw: number | null;
+            /**
+             * Q Mvar
+             * @description Its reactive power generated, as the graph had it when the layout was read, Mvar.
+             */
+            q_mvar: number | null;
+            /**
+             * Rated Mva
+             * @description Its rated apparent power, MVA.
+             */
+            rated_mva: number | null;
             /**
              * Substation
              * @description mRID of the substation it stands in.
