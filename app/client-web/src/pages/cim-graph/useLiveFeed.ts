@@ -15,6 +15,10 @@ export type LiveScan = Wire['LiveScan']
 export const WINDOW_S = 30
 /** Seconds the received-samples rate is measured over. */
 const RATE_WINDOW_S = 2
+/** Seconds between two frames past which they are not joined: frames are stamped one period apart
+ *  (20 ms), so a larger step is frames that never came (a stream started again, a backlog dropped),
+ *  and a line across it would draw what never happened. */
+export const GAP_S = 0.2
 
 /** The plotted history: one time axis; per station a frequency and a voltage series; per line end a
  *  current and a loading series; per injection a P and a Q series; and the latest SCADA scan, one
@@ -61,7 +65,8 @@ const FIELDS: [Quantity, keyof LiveFeed['samples']][] = [
  * frequency, each line end's current and loading, and each generator's and load's power; and, every
  * couple of seconds, the latest SCADA scan (`buffer.scan`, one value per point of `scada`). The samples go into `buffer` and wake `subscribe`rs (the charts, the map's colours) at
  * most once per animation frame; React renders only when the stations change, and once a second for
- * `samplesPerSecond`, what the page measured arriving.
+ * `samplesPerSecond`, what the page measured arriving, and `lagSeconds`, how far behind real time the
+ * newest frame is by the server's clock. Two frames more than `GAP_S` apart are not joined.
  */
 export function useLiveFeed() {
   const [stations, setStations] = useState<LiveStation[]>([])
@@ -73,6 +78,8 @@ export function useLiveFeed() {
   const listeners = useRef(new Set<() => void>())
   const scheduled = useRef(false)
   const arrivals = useRef<{ at: number; n: number }[]>([])
+  const lag = useRef(0)
+  const [lagSeconds, setLagSeconds] = useState(0)
 
   const notify = useCallback(() => {
     if (scheduled.current) return
@@ -96,7 +103,14 @@ export function useLiveFeed() {
       const buf = buffer.current
       if (feed.scan) buf.scan = feed.scan
       const { t } = feed.samples
+      if (feed.lag_s !== null && feed.lag_s !== undefined) lag.current = feed.lag_s
       for (let i = 0; i < t.length; i++) {
+        const last = buf.t[buf.t.length - 1]
+        if (last !== undefined && t[i] - last > GAP_S) {
+          // A row of nulls between them: uPlot (spanGaps off) breaks every line there.
+          buf.t.push((last + t[i]) / 2)
+          for (const [quantity] of FIELDS) buf[quantity].forEach((series) => series.push(null))
+        }
         buf.t.push(t[i])
         for (const [quantity, field] of FIELDS) {
           const rows = (feed.samples[field] ?? []) as (number | null)[][]
@@ -122,6 +136,7 @@ export function useLiveFeed() {
       const since = performance.now() - RATE_WINDOW_S * 1000
       arrivals.current = arrivals.current.filter((a) => a.at >= since)
       setSamplesPerSecond(arrivals.current.reduce((sum, a) => sum + a.n, 0) / RATE_WINDOW_S)
+      setLagSeconds(lag.current)
     }, 1000)
     return () => clearInterval(timer)
   }, [])
@@ -133,5 +148,5 @@ export function useLiveFeed() {
     }
   }, [])
 
-  return { stations, lineEnds, injections, scada, buffer, subscribe, samplesPerSecond, status, connected }
+  return { stations, lineEnds, injections, scada, buffer, subscribe, samplesPerSecond, lagSeconds, status, connected }
 }
