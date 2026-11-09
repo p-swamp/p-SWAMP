@@ -81,15 +81,33 @@ def test_every_frame_reaches_the_page_at_the_source_rate(server):
     with server.websocket_connect("/api/cim-live/ws?client_id=602") as ws:
         ws.receive_json()  # the layout, once the simulation runs
         t: list[float] = []
+        lags: list[float] = []
         pushes, until = 0, time.monotonic() + WINDOW
         while time.monotonic() < until:
             push = ws.receive_json()
             assert push["layout"] is None  # the stations do not change
             t += push["samples"]["t"]
+            lags.append(push["lag_s"])
             pushes += 1
     rate = len(t) / WINDOW
     steps = [b - a for a, b in zip(t, t[1:])]
-    print(f"\n{rate:.1f} frames/s over {WINDOW:.0f} s, in {pushes} pushes; largest gap {1000 * max(steps):.0f} ms")
+    print(f"\n{rate:.1f} frames/s over {WINDOW:.0f} s, in {pushes} pushes; largest lag {max(lags):.3f} s")
     assert rate >= 45  # 50 Hz, every frame
-    assert all(step > 0 for step in steps)  # in order, none twice
-    assert max(steps) < 0.25  # none lost: a gap is at most the source catching up
+    assert steps == pytest.approx([0.02] * len(steps), abs=1e-3)  # stamped on the schedule: no gap, ever
+    assert all(lag is not None and lag >= 0 for lag in lags)
+
+
+def test_the_lag_is_how_far_behind_the_server_s_clock_the_newest_frame_is():
+    from datetime import datetime, timedelta, timezone
+
+    from cim_live.api import lag_s
+    from pswamp_models.pmu import PmuFrame
+
+    now = datetime(2026, 1, 1, tzinfo=timezone.utc)
+
+    def frame(at: datetime) -> PmuFrame:
+        return PmuFrame.model_construct(timestamp=at)
+
+    assert lag_s([]) is None
+    assert lag_s([frame(now - timedelta(seconds=3)), frame(now - timedelta(seconds=1.25))], now) == 1.25
+    assert lag_s([frame(now + timedelta(seconds=0.01))], now) == 0.0  # never ahead: clocks a hair apart
