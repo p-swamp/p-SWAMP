@@ -750,10 +750,13 @@ The page (`app/client-web/src/pages/cim-graph/`, "Grid") draws that layout with 
 used directly** (react-leaflet's licence fails dependency review) over OpenStreetMap tiles, and
 below it two uPlot charts, every station's frequency and voltage over the last 30 s. **The map
 shows the graph's state only**: a disturbance does not change it. A click on a breaker operates
-it, shown as switching until the graph has it; a click on a line, a substation or a load selects
+it, shown as switching until the graph has it; a click on a line, a substation, a generator or a load selects
 it, and a panel beside the map (`DetailPanel.tsx`) shows what the graph says of it, its live
 values and their last 30 s (PMU), what the latest SCADA scan says of it and when, and operates or
-disturbs it; a right-click (a long press) opens its
+disturbs it. Generators (the layout's `generators`, a circle with a sine) sit above their substation,
+loads (a triangle) below; a substation's panel lists its generation and its load apart, each with
+its total, and reads power as one expects it (a machine's as it generates, a load's as it draws),
+where the simulation, SCADA and the graph sign it into the equipment, as CGMES does. A right-click (a long press) opens its
 disturbances (`DisturbanceMenu.tsx`; both lists are `disturbances.ts`). A transformer carries its
 symbol (two windings), at the middle of its segment, or beside its substation when both its ends
 are in it (the layout then names that substation twice). Lines in service are
