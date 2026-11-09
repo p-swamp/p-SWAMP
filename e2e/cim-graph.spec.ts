@@ -160,6 +160,28 @@ test.describe('CIM graph', () => {
     await expect(scada).toContainText(/Scanned at\s*\d/) // a scan every couple of seconds
   })
 
+  test('a generator has its own symbol, and its panel shows what it generates', async ({ page }) => {
+    await open(page)
+    const generator = page.locator('[data-testid^="generator-"]').first()
+    await expect(generator).toBeAttached()
+    await expect(generator.locator('svg circle')).toBeAttached() // a circle with a sine, not a load's triangle
+    await generator.dispatchEvent('click')
+    const panel = page.getByTestId('detail-panel')
+    await expect(panel).toHaveAttribute('aria-label', /, generator$/)
+    await expect(panel).toContainText(/In the graph\s*-?\d+\.\d MW · -?\d+\.\d Mvar generated/)
+    // SCADA's P, out of the machine: a machine in service generates (a positive number, no sign)
+    await expect(panel.getByTestId('detail-scada')).toContainText(/Generating\s*\d+\.\d MW · -?\d+\.\d Mvar/)
+  })
+
+  test('a substation\'s panel lists its generation and its load apart, each with its total', async ({ page }) => {
+    await open(page)
+    const where = await page.locator('[data-testid^="generator-"]').first().getAttribute('data-substation')
+    await page.getByTestId(`substation-${where}`).dispatchEvent('click')
+    const scada = page.getByTestId('detail-panel').getByTestId('detail-scada')
+    await expect(scada).toContainText(/Generation\s*\d+\.\d MW · -?\d+\.\d Mvar/)
+    await expect(scada).not.toContainText('(generator)') // no tags: the heading says what each is
+  })
+
   test('a line\'s panel shows its ends\' power flows as SCADA last scanned them', async ({ page }) => {
     await open(page)
     await lines(page).first().dispatchEvent('click')

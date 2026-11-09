@@ -81,7 +81,8 @@ export function CimGraphPage() {
         <CardTitle className="text-lg">Grid</CardTitle>
         <span className="text-muted-foreground text-sm">
           The grid as the CIM graph describes it, and its live simulation. Click a breaker to operate it; click
-          a line, a substation or a load to see it and act on it; right-click one to disturb the simulation.
+          a line, a substation, a generator or a load to see it and act on it; right-click one to disturb the
+          simulation.
         </span>
         <CardAction className="flex items-center gap-2 self-center">
           {state && (
@@ -213,6 +214,13 @@ export function CimGraphPage() {
             transformer
           </span>
           <span>
+            <svg className="mr-1 inline-block align-middle" width="12" height="12" viewBox="0 0 14 14" aria-hidden="true">
+              <circle cx="7" cy="7" r="6" fill="none" stroke="#0369a1" strokeWidth="1.5" />
+              <path d="M3.5 7 q1.75 -3.5 3.5 0 t3.5 0" fill="none" stroke="#0369a1" strokeWidth="1.5" strokeLinecap="round" />
+            </svg>
+            generator
+          </span>
+          <span>
             <span
               className="mr-1 inline-block align-middle"
               style={{ borderLeft: '4px solid transparent', borderRight: '4px solid transparent', borderTop: '7px solid #7c3aed' }}
@@ -288,5 +296,14 @@ export function CimGraphPage() {
 /** The mRID of what is selected, which the map draws as such. */
 function selectedMrid(target: MenuTarget | null): string | null {
   if (!target) return null
-  return target.kind === 'branch' ? target.branch.mrid : target.kind === 'substation' ? target.substation.mrid : target.load.mrid
+  switch (target.kind) {
+    case 'branch':
+      return target.branch.mrid
+    case 'substation':
+      return target.substation.mrid
+    case 'generator':
+      return target.generator.mrid
+    case 'load':
+      return target.load.mrid
+  }
 }

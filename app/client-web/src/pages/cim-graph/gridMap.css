@@ -44,6 +44,25 @@
   filter: drop-shadow(0 0 2px #4c1d95);
 }
 
+/* A generator on the grid map: a circle with a sine, above its substation; outlined when selected. */
+.cim-generator {
+  cursor: pointer;
+}
+.cim-generator svg circle {
+  fill: rgba(255, 255, 255, 0.9);
+  stroke: #0369a1;
+  stroke-width: 1.5;
+}
+.cim-generator svg path {
+  fill: none;
+  stroke: #0369a1;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+}
+.cim-generator.cim-selected svg {
+  filter: drop-shadow(0 0 2px #0c4a6e);
+}
+
 /* A transformer's symbol: two overlapping windings, coloured as its branch is (in service, out,
    switching), and outlined when selected. */
 .cim-transformer {
