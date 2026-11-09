@@ -151,7 +151,9 @@ is installed, how a rebuild goes while one "runs", and that a machine's set-poin
 - `PROTECTION`: `on` (the default) or `off`, whether an overloaded line is tripped;
 - `OVERLOAD_PICKUP` (1.0) and `OVERLOAD_TMS` (0.5): the overload relay's pickup, as a multiple of a
   line's permanent limit, and its curve's time multiplier;
-- `SCADA_PERIOD`: seconds of simulated time between two SCADA scans (2); 0 scans nothing.
+- `SCADA_PERIOD`: seconds of simulated time between two SCADA scans (2); 0 scans nothing;
+- `CATCH_UP`: how many times real time a simulation behind its schedule runs to catch up (1.5; 1:
+  never faster than real time).
 
 **The simulation runs in real time in a process of its own** (`process.py`, `EngineProcess`): it is
 built from the model `LiveTops` exported, stepped and paced there, and each frame's values are sent
@@ -162,9 +164,15 @@ thread wants that lock too, so each call waits its turn (on Nordic44, four steps
 834 ms next to one busy thread). The pacing and the frame's values need the lock as often. So in the
 server the source only turns each frame's values into a `PmuFrame`.
 
-- **The schedule is the engine's**: one frame period of steps per frame period of a monotonic clock,
-  each frame stamped with its place in the schedule. A frame that comes late is made up by the next
-  ones; more than `MAX_LAG` (0.25 s) behind, the lost time is dropped.
+- **The schedule is the engine's, and nothing is dropped**: one frame period of steps per frame period
+  of a monotonic clock, each frame stamped with its place in the schedule, which is never reset. So two
+  frames are always one period apart, as the simulation's steps are, and a frame is the simulation's
+  state at its stamp. A frame that comes late (a busy machine, a model built again) goes as soon as it
+  can, but at most `CATCH_UP` times real time, so that catching up does not starve the processes the
+  engine shares the machine with. A lag past a second is a warning, said again every 10 s while it
+  lasts, and its end is logged; a simulation that cannot keep up falls further behind. (It used to
+  drop the time past 0.25 s and stamp by the clock: two frames 0.25 s apart with 20 ms of simulation
+  between them, drawn as a flat line.) The grid page shows the lag (`cim_live`'s `lag_s`).
 - **It sends in batches**: a thread of the engine's process sends whatever waited as one message, so
   a server that is busy for a moment gets the frames it missed in one wake-up, and the engine never
   waits on the pipe. A frame is late then, never lost.
