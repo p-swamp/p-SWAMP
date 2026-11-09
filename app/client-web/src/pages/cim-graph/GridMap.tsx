@@ -23,6 +23,7 @@ export type MenuTarget =
   | { kind: 'branch'; branch: Branch }
   | { kind: 'substation'; substation: CimLayout['substations'][number] }
   | { kind: 'load'; load: CimLayout['loads'][number] }
+  | { kind: 'generator'; generator: NonNullable<CimLayout['generators']>[number] }
 
 /** A right-click on the map: on what, and where in the map's box (pixels). */
 export type MenuRequest = { target: MenuTarget; x: number; y: number }
@@ -39,6 +40,10 @@ function frequencyColor(f: number | null | undefined): string {
 /** A transformer's symbol: two overlapping windings. Its colour is the element's (``.cim-transformer``). */
 const TRANSFORMER_ICON =
   '<svg width="20" height="12" viewBox="0 0 20 12" aria-hidden="true"><circle cx="6" cy="6" r="5" /><circle cx="14" cy="6" r="5" /></svg>'
+
+/** A generator's symbol: a circle with a sine in it. Its colour is the element's (``.cim-generator``). */
+const GENERATOR_ICON =
+  '<svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><circle cx="7" cy="7" r="6" /><path d="M3.5 7 q1.75 -3.5 3.5 0 t3.5 0" /></svg>'
 
 /** The point halfway along ``points``: where a branch's symbol goes. */
 function middle(points: L.LatLng[]): L.LatLng {
@@ -67,12 +72,14 @@ type Layers = {
   breakers: Map<string, L.Marker>
   substations: Map<string, L.CircleMarker>
   loads: Map<string, L.Marker>
+  generators: Map<string, L.Marker>
 }
 
 /**
  * The grid on its geographic layout (the graph's GL profile), on OpenStreetMap: substations, lines,
- * breakers and loads. A line in service is coloured by its loading, when it has a limit. A click on a
- * breaker operates it; a click on a line, a substation or a load selects it (`onSelect`: the page
+ * breakers, generators (above their substation) and loads (below). A line in service is coloured by its
+ * loading, when it has a limit. A click on a breaker operates it; a click on a line, a substation, a
+ * generator or a load selects it (`onSelect`: the page
  * shows it in a panel); a right-click (a long press) on one asks for its disturbances (`onMenu`).
  * Leaflet is driven directly (react-leaflet's licence does not pass dependency review): the layers
  * are built once per layout and restyled in place, from the graph's state (out of service, open,
@@ -151,7 +158,15 @@ export function GridMap({
     // The view first: Leaflet renders a layer only once its map has one, so until then a layer has no
     // element to label (getElement() is undefined) and the labels below would be silently skipped.
     map.fitBounds(L.latLngBounds([...at.values()]), { padding: [24, 24] })
-    const built: Layers = { map, lines: new Map(), breakers: new Map(), substations: new Map(), loads: new Map(), transformers: new Map() }
+    const built: Layers = {
+      map,
+      lines: new Map(),
+      breakers: new Map(),
+      substations: new Map(),
+      loads: new Map(),
+      generators: new Map(),
+      transformers: new Map(),
+    }
 
     const inside = new Map<string, number>() // substation -> transformers drawn beside it so far
     for (const branch of layout.branches) {
@@ -260,6 +275,37 @@ export function GridMap({
       built.loads.set(load.mrid, marker)
     }
 
+    // Generators in a row above their substation, over the transformers drawn inside it. No menu:
+    // the simulation has no disturbance of a machine.
+    const generatorsSeen = new Map<string, number>()
+    for (const generator of layout.generators ?? []) {
+      const centre = at.get(generator.substation)
+      if (!centre) continue
+      const i = generatorsSeen.get(generator.substation) ?? 0
+      generatorsSeen.set(generator.substation, i + 1)
+      const marker = L.marker(centre, {
+        icon: L.divIcon({ className: 'cim-generator', html: GENERATOR_ICON, iconSize: [14, 14], iconAnchor: [7 - 16 * i, 46] }),
+        keyboard: false,
+      })
+        .on('click', (event) => {
+          L.DomEvent.stopPropagation(event)
+          props.current.onSelect({ kind: 'generator', generator })
+        })
+        .on('contextmenu', (event) => {
+          L.DomEvent.stopPropagation(event)
+          L.DomEvent.preventDefault(event.originalEvent)
+        })
+        .addTo(map)
+      const element = marker.getElement()
+      element?.setAttribute('data-testid', `generator-${generator.name}`)
+      if (element) {
+        element.dataset.substation = layout.substations.find((s) => s.mrid === generator.substation)?.name ?? ''
+        const mw = generator.p_mw === null ? '' : `, ${generator.p_mw} MW`
+        element.title = `${generator.name} (generator${mw}): click for its values`
+      }
+      built.generators.set(generator.mrid, marker)
+    }
+
     layers.current = built
     return () => {
       map.remove()
@@ -326,7 +372,7 @@ export function GridMap({
           : `${names.get(branch.from_substation) ?? '?'} to ${names.get(branch.to_substation) ?? '?'}`
       element.title = `${branch.name} (transformer, ${between}): ${isOut ? 'out of service' : 'in service'}${switching ? ' · switching…' : ''}`
     }
-    for (const [mrid, marker] of built.loads) {
+    for (const [mrid, marker] of [...built.loads, ...built.generators]) {
       const element = marker.getElement()
       element?.setAttribute('data-selected', String(mrid === selected))
       element?.classList.toggle('cim-selected', mrid === selected)

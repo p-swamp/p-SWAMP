@@ -18,6 +18,7 @@ const STEPS = [1.2, 1.5, 0.8, 0.5]
 
 /** The disturbances of ``target``, and their undoing: what its menu and its panel offer. */
 export function disturbancesOf(target: MenuTarget, disturb: Disturb): { title: string; items: Item[] } {
+  if (target.kind === 'generator') return { title: target.generator.name, items: [] } // none of a machine, yet
   if (target.kind === 'branch') {
     const { branch } = target
     const items: Item[] = [
