@@ -19,6 +19,9 @@ import { Button } from '@/components/ui/button'
 import { Card, CardAction, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 
 /** The status bar's word for where the graph is. */
+/** Seconds behind real time past which the status bar says so: under it, the way to the page. */
+const LAG_SHOWN_S = 0.5
+
 const GRAPH_STATUS: Record<GraphStatus['kind'], string> = {
   loading: 'loading the grid…',
   ready: 'ready',
@@ -264,6 +267,11 @@ export function CimGraphPage() {
           <span data-testid="samples-per-second">
             Simulation: {live.connected ? `${live.samplesPerSecond.toFixed(0)} samples/s` : 'not connected'}
           </span>
+          {live.connected && live.lagSeconds > LAG_SHOWN_S && (
+            <span className="text-amber-600 dark:text-amber-400" data-testid="simulation-lag">
+              {live.lagSeconds.toFixed(1)} s behind real time, catching up
+            </span>
+          )}
           <SystemTotals scada={live.scada} buffer={live.buffer} subscribe={live.subscribe} />
           <span>Last change: {changedAt ? changedAt.toLocaleTimeString() : 'none since this page opened'}</span>
           <span>
