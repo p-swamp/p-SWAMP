@@ -773,7 +773,8 @@ the next push (`LiveFeed.scan`, one value per `LiveLayout.scada` point: what eac
 measurement is on, line or transformer end, machine, load, switch or voltage level); the page keeps
 it in the same buffer ref. The page keeps the samples in a ref, redraws at most once
 per animation frame, and shows how many samples/s reach it (the Playwright spec wants at least
-40); the panel's values and the totals are written into the DOM four times a second, never through
+40) and, past half a second, how far behind real time they are (`LiveFeed.lag_s`, by the server's
+clock); two frames more than 0.2 s apart are not joined (a row of nulls between them); the panel's values and the totals are written into the DOM four times a second, never through
 React state.
 
 ### The live grid simulation
@@ -825,6 +826,10 @@ up the frames to the pages for ~2.5 s at each edit. So:
   frame with its place in the schedule, computes its values and sends them up in batches by a
   thread of that process; the source only turns them into a `PmuFrame`, and a busy server delays
   frames without losing any (Nordic44 over 20 s: 51.0 frames/s next to an always-busy thread).
+  **The schedule is never reset and no time is dropped** (`process._Pacer`): two frames are always
+  one period apart, and an engine behind it (a busy machine, a rebuild) catches up at most
+  `RTSIM_CATCH_UP` (1.5) times real time, warned past a second. Don't bring back dropping the lost
+  time: stamped by the clock, that drew a flat line across every chart.
 - **Between them, a link** (a duplex pipe): `LiveTops` steers a shadow of the system through a
   stand-in for TOPS's simulator (`runner.RemoteRunner`), which sends each event and each input set
   down, and reads the engine's state, sent up after each frame (the latest only, when the
