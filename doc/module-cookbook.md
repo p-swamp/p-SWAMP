@@ -839,6 +839,63 @@ worker's `PSWAMP_WORKER_MODULES` if a worker should host it, and to the app's
 dependencies (`app/server-python/pyproject.toml`) if the server loads the
 project. `uv run pswamp modules list` shows every name a file can use.
 
+### Trying a module from outside the repo
+
+A module can start life in a project of its own, outside this repo, with the core,
+the models and the sources it needs installed as path dependencies on a checkout.
+There it runs from scripts and tests against simulated frames, as any module does.
+To see it in the full stack before it moves in, point the dev loop at that project:
+
+```
+uv run pswamp dev server --extra-modules ../my-prototype                      # joins pipelines/grid-monitor.toml
+uv run pswamp dev server --extra-modules ../my-prototype --pipeline <app>     # or another pipeline
+```
+
+PATH is one project (a folder with a `pyproject.toml`) or a folder of them. Each
+declares its modules the way a project under `modules/` does, in
+`[project.entry-points."pswamp.modules"]`. For as long as the command runs:
+
+- **The image installs it.** PATH is passed as the `extra-modules` build context,
+  which replaces the Dockerfile's empty stage of that name, and each project in it
+  is installed editable under `/workspace/extra-modules`. The project's own
+  `[tool.uv.sources]` are ignored (`--no-sources`), so its `pswamp-*` dependencies
+  are met by what the image already has. Its third-party dependencies come from the
+  index, and every package the image locked stays at its version: a dependency that
+  needs another version fails the build, naming it. The project's `.dockerignore`
+  applies, so keep its `.venv/` out of it, or every build sends it.
+- **The pipeline lists it.** `<APP>_EXTRA_MODULES` (`GRID_MONITOR_EXTRA_MODULES`)
+  is set on every service, and adds the modules to the file's list wherever it is
+  loaded (`pswamp_core.pipeline_config.extra_modules`). Every check of the file
+  still applies.
+- **A worker of its own hosts it.** `extra-modules-worker`, a copy of
+  `module-worker`, hosts only the extra modules. An edit of a project's `src/` is
+  synced in and restarts it; an edit of its `pyproject.toml` rebuilds the image.
+
+Nothing is written into the repo. The command runs the stack from the resolved
+compose configuration (`docker compose config`, your override included), changed
+as above, in a temporary file. Its results are on the transport like any module's
+(topic `<app>.<model topic>`). No page shows them until the module moves in and a
+page or panel reads them. It needs Docker Compose v2, which knows build contexts.
+
+The project can carry the stack's configuration too, such as the grid it loads,
+in a compose file of its own. Run the command from the project, through the
+checkout's CLI:
+
+```
+uv run --project ../p-swamp pswamp dev server --extra-modules . -f compose.override.yml
+```
+
+`--compose-file`/`-f` adds a file after the repo's own, `docker-compose.override.yml`
+included. Unlike `docker compose -f`, a relative path in it is relative to that
+file's folder, not to the repo. Each added file is first resolved alone, against
+its own folder (`compose config --no-consistency`), and then merged.
+
+A module meant to move in is written to the same rules as one here: it imports
+the core, the models and third-party libraries only, and its messages are
+pydantic `DataModel`s with a pinned `version` (kept beside the module until the
+move, then in `pswamp_models`). Moving it is then a matter of
+`uv run pswamp new module` and putting its code where the generated code is.
+
 ## When it does not work
 
 | Symptom | Likely cause |

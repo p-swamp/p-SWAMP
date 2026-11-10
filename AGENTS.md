@@ -232,6 +232,14 @@ every member's manifest to validate the lock. Two consequences:
   and it is the one dependency fetched from git rather than an index. The
   Dockerfile's `import server` smoke test makes both exclusions checked
   decisions rather than hopeful ones.
+- **The `extra-modules` stage is empty, and is a dev hook.** A named build
+  context of that name (`pswamp dev server --extra-modules PATH`) replaces it,
+  and the projects in it, from outside the repo, are installed into
+  `/workspace/extra-modules` with `--no-sources` and every installed package
+  held at its version (`--constraint`). They are not from the lock, which is why
+  nothing but the dev loop passes that context: CI, minikube and a deployment
+  build the image without it. See "Trying a module from outside the repo" in
+  `doc/module-cookbook.md`.
 
 **What `pswamp check` gates.** `app/`, `models/`, `core/`, `modules/` and
 `tools/` fully (ruff `--select F`, `tsc`, the lockfile check, the pipeline files,
@@ -606,6 +614,11 @@ The rules to keep:
   `{NAME}_{SETTING}` block (`LIVE_PATH`, `REMOTE_URL`). The old
   `<APP>_DATA_CLIENTS` is an error naming its replacement. A new source is
   `uv run pswamp new module <slug> <label> --source [--playable]`.
+  `<APP>_EXTRA_MODULES` (`name,...`) **adds** installed analysis modules to the
+  file's list (never a source, never a name already there). It exists so that a
+  module developed outside the repo can be tried in the stack
+  (`pswamp dev server --extra-modules`); don't use it to configure a module of
+  this repo, which belongs in the file.
 - **A module lives in `modules/<name>/`, its web API in the server.** The module
   and its tests go in its own project and import the core and the models only;
   the app's `api.py` and its page stay under `app/`. A worker runs outside the
@@ -859,7 +872,11 @@ simulation of the grid in the CIM graph, `rtsim`, and the modules analysing it,
   the oldest when the loop is busy (a 10 s backlog), the results on one that drops
   nothing. From them it keeps the measurement window, the latest islanding
   assessment, the alarm list (`pswamp_web.stores.AlarmStore`), the outage log,
-  each module's status (from its results) and the feed's. The panels read that
+  each module's status and the feed's. **A module shows in the Status panel by
+  saying its status**: any result of the pipeline whose body has a
+  `status: AppStatus` (`pswamp_models.common`: `OK`, `Alert`, `Emergency`) is
+  recorded, with no edit here, so a new module (an extra module too) appears by
+  adding that field. One that says none stays off the panel. The panels read that
   state on the loop; an event-driven view wakes on `LIVE.updates(*topics)`, and an
   operator action on an alarm wakes every view (`LIVE.nudge()`). `accept(ws)` is
   how every panel's socket opens: it checks `?client_id=` (1008 without one) and
@@ -1253,6 +1270,8 @@ underlying tech). Start the server first, then the client:
 ```
 uv run pswamp dev server      # state server on 127.0.0.1:8000 (docker compose up --watch --build; streams logs, Ctrl-C stops it)
                                                      # also live-syncs desktop/src/, so desktop-package edits hot-reload too
+uv run pswamp dev server --extra-modules ../my-prototype   # the same, plus the modules of a project outside the repo (doc/module-cookbook.md)
+uv run pswamp dev server -f ../my-prototype/compose.override.yml   # plus a compose file kept elsewhere; its relative paths are its own folder's
 uv run pswamp dev client  # Vite/React web client w/ HMR on http://localhost:5173
 ```
 

@@ -123,6 +123,34 @@ def test_the_outage_log_is_newest_first_and_says_what_is_out_now():
     assert log.app_name == "line-outage" and log.window_length == 0.2
 
 
+def test_any_module_whose_result_says_its_status_shows_in_the_status_panel():
+    """A module the grid monitor knows nothing else of (one added by --extra-modules, say)."""
+    from typing import Literal
+
+    from pydantic import BaseModel
+
+    from grid_monitor.live import LiveGrid
+    from pswamp_models.common import AppStatus, ResultEnvelope
+
+    class WithStatus(BaseModel):
+        status: AppStatus
+
+    class WithStatusResult(ResultEnvelope[WithStatus]):
+        version: Literal["v1"] = "v1"
+
+    class Silent(BaseModel):
+        value: float
+
+    class SilentResult(ResultEnvelope[Silent]):
+        version: Literal["v1"] = "v1"
+
+    grid = LiveGrid()
+    grid.handle(WithStatusResult(timestamp=T0, app=AppIdentity(name="my-module", uuid="app-3"), result=WithStatus(status="Alert")))
+    grid.handle(SilentResult(timestamp=T0, app=AppIdentity(name="silent", uuid="app-4"), result=Silent(value=1.0)))
+    grid.handle(outage([], []))
+    assert [(s.app_name, s.status) for s in grid.statuses()] == [("line-outage", "OK"), ("my-module", "Alert")]
+
+
 def test_a_current_s_branch_is_found_through_its_analog():
     from grid_monitor.live import LiveGrid
     from grid_monitor.topology import Topology

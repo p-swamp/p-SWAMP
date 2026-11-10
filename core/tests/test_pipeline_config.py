@@ -42,6 +42,16 @@ class ReadsMeasurement(Module):
         return None
 
 
+class ReadsFrames(Module):
+    """Reads the frames, publishes nothing: an extra module that fits any pipeline here."""
+
+    name = "reads-frames"
+    inputs = (PmuFrame,)
+
+    def process(self, frame: PmuFrame) -> None:
+        return None
+
+
 class AlsoHalves(Module):
     """Takes the command ``halver`` takes."""
 
@@ -63,10 +73,11 @@ def installed(monkeypatch):
             "ticking-source": "support:TickingSource",
             "reads-measurement": "test_pipeline_config:ReadsMeasurement",
             "also-halves": "test_pipeline_config:AlsoHalves",
+            "reads-frames": "test_pipeline_config:ReadsFrames",
             "misnamed": "test_modules:Halver",
         },
     )
-    for variable in ("APP_SOURCES", "APP_DATA_CLIENTS", "APP_CIM_REFERENCE"):
+    for variable in ("APP_SOURCES", "APP_DATA_CLIENTS", "APP_CIM_REFERENCE", "APP_EXTRA_MODULES"):
         monkeypatch.delenv(variable, raising=False)
 
 
@@ -97,6 +108,25 @@ async def test_the_environment_overrides_the_sources_and_the_cim_reference(tmp_p
     assert sources.sources == ["other", "again"] and sources.live
     sources.switch("again")
     assert (await anext(await sources.consume())).header.cimReferenceId is None
+
+
+def test_the_environment_adds_modules_to_the_file(tmp_path, monkeypatch):
+    """How a module developed outside the repo joins a pipeline (pswamp dev server --extra-module)."""
+    monkeypatch.setenv("APP_EXTRA_MODULES", " reads-measurement-free , ")
+    with pytest.raises(PipelineConfigError, match="no module named 'reads-measurement-free'"):
+        load(tmp_path)
+    monkeypatch.setenv("APP_EXTRA_MODULES", "also-halves")
+    with pytest.raises(PipelineConfigError, match="AlsoHalves and Halver both take HalveCommand"):  # every Pipeline check still runs
+        load(tmp_path)
+    monkeypatch.setenv("APP_EXTRA_MODULES", "reads-frames")
+    assert [m.name for m in load(tmp_path).modules] == ["counter", "halver", "reads-frames"]
+    for doubled in ("counter", "reads-frames,reads-frames"):
+        monkeypatch.setenv("APP_EXTRA_MODULES", doubled)
+        with pytest.raises(PipelineConfigError, match="APP_EXTRA_MODULES: .*listed twice"):
+            load(tmp_path)
+    monkeypatch.setenv("APP_EXTRA_MODULES", "list-source")
+    with pytest.raises(PipelineConfigError, match="is a source"):
+        load(tmp_path)
 
 
 def test_the_retired_data_clients_variable_is_an_error_naming_its_replacement(tmp_path, monkeypatch):

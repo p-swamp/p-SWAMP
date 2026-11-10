@@ -45,6 +45,18 @@ FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim@sha256:e5b65587bce7de595f2998
 COPY modules/ /manifests/modules/
 RUN find /manifests -maxdepth 2 -type f -delete     && find /manifests -mindepth 4 -type f -delete     && find /manifests -type f ! -name pyproject.toml ! -name README.md -delete     && find /manifests -type d -empty -delete
 
+# --- extra modules stage ----------------------------------------------------
+#
+# Empty, and so nothing extra in an image built the ordinary way (CI, minikube,
+# a deployment). It is a hook for trying a module developed OUTSIDE this repo in
+# the full stack: a named build context of the same name replaces this stage
+# (BuildKit's rule: a named context overrides a stage) and is installed below:
+# one project (a folder with a pyproject.toml), or a folder of them.
+# `uv run pswamp dev server --extra-modules PATH` passes one; by hand it is
+#   docker build --build-context extra-modules=<project, or folder of projects> .
+# That context's own .dockerignore applies (keep its .venv out of it).
+FROM scratch AS extra-modules
+
 # --- server stage -----------------------------------------------------------
 #
 # Base: Astral's official uv image (Python 3.12 on Debian 12 "bookworm" slim).
@@ -202,6 +214,28 @@ RUN uv pip install --system --no-deps       $(for manifest in ${REPO_DIR}/module
 # (PSWAMP_WORKER_PIPELINES=pmu-test-streamer.toml). The import check below
 # loads them, so a missing or broken file fails the build.
 COPY pipelines/ ${REPO_DIR}/pipelines/
+
+# The extra modules (the stage above): empty unless a build context replaced it,
+# and then the project at /workspace/extra-modules, or each one in a folder
+# below it, installed editable there, where compose watch syncs edits to.
+#
+# Not from the lock, so outside its guarantees: --no-sources ignores the
+# project's own [tool.uv.sources] (paths to a p-SWAMP checkout, which mean
+# nothing here), so its pswamp-* requirements are met by what is installed
+# above, and --constraint holds every package already installed at its version:
+# an extra module may add third-party packages (fetched from the index, at build
+# time) but never move one the image locked. One it cannot live with fails here,
+# naming it.
+COPY --from=extra-modules / /workspace/extra-modules/
+RUN set -e; \
+    projects=$(for manifest in /workspace/extra-modules/pyproject.toml /workspace/extra-modules/*/pyproject.toml; do \
+        if [ -e "$manifest" ]; then printf -- '-e %s ' "$(dirname "$manifest")"; fi; \
+    done); \
+    if [ -n "$projects" ]; then \
+        uv pip freeze --system --exclude-editable > /tmp/installed.txt \
+        && uv pip install --system --no-sources --constraint /tmp/installed.txt $projects \
+        && rm /tmp/installed.txt; \
+    fi
 
 # Server source last, so editing it doesn't invalidate the dependency layer
 # above. The image mirrors the repo, so server.py and the app packages beside it
