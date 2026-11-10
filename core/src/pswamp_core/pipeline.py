@@ -158,6 +158,9 @@ class Pipeline:
                     f"are both on topic {model.topic}; rename one, or give it a topic of its own (topic: ClassVar[str])"
                 )
         if self.source_models is not None:
+            twice = [model.__name__ for model in self.source_models if model in self.outputs]
+            if twice:
+                raise ValueError(f"{self.app}: {', '.join(twice)} is produced by a source and by a module: one producer per class")
             produced = {*self.source_models, *self.outputs, PlayerStatus, ErrorEvent, PipelineClosed}
             for module in self.modules:
                 for model in module.input_models():
@@ -292,6 +295,8 @@ class PipelineRun:
         self.transport = transport
         self._on_error = on_error
         self.sources = pipeline.sources()
+        for source in self.sources.instances.values():
+            source.bind(transport)
         self.shared = live_source is not None
         if live_source is not None:
             self.sources.switch(live_source)

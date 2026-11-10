@@ -87,7 +87,7 @@ from collections.abc import AsyncIterator, Iterator, Sequence
 from datetime import datetime, timedelta
 from pathlib import Path
 from types import SimpleNamespace
-from typing import Any, ClassVar, Literal
+from typing import TYPE_CHECKING, Any, ClassVar, Literal
 
 from pswamp_models.common import Command, DataModel
 from pswamp_models.pmu import PmuFrame
@@ -97,6 +97,9 @@ from .log import get_logger
 from .modules import Module
 from .settings import Configurable, EnvSetting, MissingSettingError, parse_setting, read_setting
 from .time_range import TimeRange
+
+if TYPE_CHECKING:
+    from .transport import Transport
 
 __all__ = ["YIELD_EVERY", "SourceModule", "SourceSet", "SourceStream"]
 
@@ -250,6 +253,10 @@ class SourceModule(Module, Configurable):
                 if value is not None:
                     settings[keyword] = value
         return cls(name, **settings, **overrides)
+
+    def bind(self, transport: Transport) -> None:
+        """Called by a run with its transport, before it reads. Most sources have
+        no use for one; a relay (``pswamp_core.relay``) reads another pipeline's topics."""
 
     # -- reading -------------------------------------------------------------------
 

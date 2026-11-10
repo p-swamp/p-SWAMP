@@ -156,7 +156,7 @@ def test_the_existing_checks_still_apply(tmp_path):
         (PIPELINE.replace("[enrich]", "[enrich]\ncolour = 1"), "enrich.colour: Extra inputs"),
         (PIPELINE.replace('"list-source"', '"List Source"'), "sources.0.module"),
         (PIPELINE.replace('"list-source"', '"halver"'), "is an analysis module, not a source"),
-        (PIPELINE.replace('module = "list-source"', 'client = "support:ListSource"'), "sources.0.module: Field required"),
+        (PIPELINE.replace('module = "list-source"', 'client = "support:ListSource"'), "sources.0.client: Extra inputs"),
         (PIPELINE.replace('name = "tick"', 'name = "rec"'), "source rec listed twice"),
         ('app = "app"\n', "sources: Field required"),
         ("app = ", "app.toml: "),
