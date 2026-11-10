@@ -34,8 +34,8 @@ In this repo:
   (`pswamp-remote-history`, entry point `remote-history`):
   `modules/remote-history/src/pswamp_modules/remote_history/source.py`;
 - the request and line models: `models/src/pswamp_models/remote_data/`;
-- a stub service: `modules/remote-history/examples/remote_data_stub/`, serving
-  the streamer's sample recording (any history source, by
+- a stub service: `modules/remote-history/examples/remote_data_stub/`, generating
+  two synthetic stations at 50 Hz over a history source's coverage (selected by
   `REMOTE_DATA_STUB_SOURCE=name:entry-point`, `sample:sample-replay` by default).
   Run it with `modules/remote-history/examples` on the `PYTHONPATH`:
   `python -m remote_data_stub` (compose and k8s start it as `remote-data-stub`).
@@ -50,49 +50,65 @@ UTC (`Z`). Ranges are half-open: `[start, end)`.
 
 ### Health
 
-`GET /healthz` returns `200 {"status": "ok"}`.
+`GET /health/live` returns `200 {"status": "ok"}`.
+`GET /health/ready` returns `200 {"status": "ok"}`.
 
 ### Coverage
 
-`GET /v1/coverage?model=pmu.frame` returns:
+`GET /v1/coverage`, `x-request-id: 9f1c….1` returns:
 
 ```json
-{"model": "pmu.frame", "start": "2026-01-01T00:00:00.05Z", "end": "2026-01-01T00:00:03.05Z"}
+{
+  "start": "2026-01-01T00:00:00.05Z",
+  "end": "2026-01-01T00:00:03.05Z",
+  "stations": [
+    {"id": "NO 12345", "name": "NO 12345 stasjon AB3"},
+    {"id": "NO 54321", "name": "NO 54321 stasjon BA1"}
+  ]
+}
 ```
 
 - `start` is the first record's timestamp.
 - `end` is exclusive: where the next record after the last would be.
 - `start: null` means the service holds nothing.
-- An unknown model is `404`.
+- `stations` is the full list of available stations, it is not guarantied that each station starts and ends at `start`/`end`.
 
 ### Query a range
 
-`POST /v1/queries`, `Content-Type: application/json`:
+`POST /v1/queries`, `Content-Type: application/json`, `x-request-id: 9f1c….1`:
 
 ```json
-{"version": "v1", "query_id": "9f1c….1", "model": "pmu.frame",
- "start": "2026-01-01T00:00:01Z", "end": "2026-01-01T00:00:02Z", "limit": 30000}
+{
+  "version": "v1",
+  "stations": ["NO 12345", "NO 54321"],
+  "start": "2026-01-01T00:00:01Z",
+  "end": "2026-01-01T00:00:02Z",
+  "limit": 30000
+}
 ```
 
-- `start` and `end` may be `null`, which means open.
-- `limit` is the most records to send: the first `limit` in `[start, end)`,
-  then the `end` line. `null` or absent means all of them. Send no more than
-  it says; a client stops reading at `limit` and closes the connection.
-- `query_id` is for matching the two sides' logs; it is not echoed.
+- `stations` filters by station ID; omitted or null means all stations.
+  An empty list is rejected with HTTP 422, since it is likely unintentional.
+- `start` and `end` are ISO timestamps; null means the corresponding coverage bound.
+- `limit` is the target number of station records per page. Complete the final
+  timestamp even when this exceeds the limit, so no station is lost on the next page.
+- `x-request-id` optional header is used to match request_id in logs between client and server. Is automatically generated on server if omitted.
 
 ### Pages
 
 The client reads a long range as pages. It asks for `limit` records from
 `start`; when a page holds `limit` of them, it asks again from one
 microsecond after the last one's timestamp, until a page comes back short or
-the range ends. Each page is its own query, with its own `query_id`
+the range ends. Each page is its own query, with its own `x-request-id` header
 (`<id>.<n>`).
 
 - A page is bounded by records, not by time, so a gap of weeks costs one
   query and a range of months is many small ones.
-- **Timestamps are unique per model.** Records sharing the last timestamp of
-  a full page would be lost at the page boundary.
-- An unknown model is `404`, a malformed body `422`. Refuse whatever you can
+- Records are ordered by timestamp then station. All records of one timestamp
+  must stay in the same page. The backend groups consecutive equal `msg.ts`
+  values into one `PmuFrame`, emitting the group when the next timestamp arrives
+  or an `end` line completes the stream. The sampling interval is 20 ms (50 Hz).
+- A malformed body is `422`. Refuse whatever you can
   refuse *before* the first line: once the body starts, the status is sent.
 
 ## The streamed response
@@ -102,9 +118,9 @@ each line ending in `\n`:
 
 | Line | Shape | When |
 |---|---|---|
-| record | `{"kind": "record", "model": "pmu.frame", "record": {…}}` | once per record, in ascending `timestamp` order, all inside `[start, end)` |
-| end | `{"kind": "end", "count": 60}` | exactly once, last, when the query is complete |
-| error | `{"kind": "error", "error": "…"}` | instead of `end`, when the query failed part way |
+| record | `{"kind": "record", "msg": {...}}` | once per station and timestamp, ordered by `msg.ts` then station, inside `[start, end)` |
+| end | `{"kind": "end", "msg": {"count": 60}}` | exactly once, last, when the query is complete |
+| error | `{"kind": "error", "msg": {"message": "..."}}` | instead of `end`, when the query failed part way |
 
 A body that stops without an `end` or `error` line is a broken connection, not
 an empty answer, and the client fails the stream.
@@ -123,30 +139,50 @@ between does not buffer the stream into one blob.
 
 ## The record
 
-`record` is a `pmu.frame` as JSON:
+`record` format `raw` is a `pmu.frame` as JSON as they come from the database:
 
 ```json
 {
-  "version": "v1",
-  "timestamp": "2026-01-01T00:00:01.05Z",
-  "mRID": "n44-sample",
-  "header": {
-    "station": ["3000", "3000", "3000"],
-    "channel": ["V", "V", "f"],
-    "measurement": ["V_Magnitude", "V_Angle", "f"],
-    "units": ["kV", "deg", "Hz"],
-    "data_rate": 20.0
-  },
-  "values": [419.95, -0.0, 49.9999]
+  "mRID": "9f1c….1",
+  "v"   : "v1",
+  "ts"  : "2026-11-03T00:00:01.05Z",
+  "seq" : 1,
+  "kind": "record",
+  "msg" : {
+    "ts"       : "2026-01-01T00:00:01.05Z",
+    "id"       : "NO 12345",
+    "name"     : "NO 12345 stasjon AB3",
+    "frequency": 50.0,
+    "rocof"    : 0.01,
+    "phasors"  : [
+      {"name": "420_da2_U_L1", "station": "da2", "kv": 420, "kind": "U", "phase": "L1", "bank": null, "magnitude": 226382.95, "angle": -85.67},
+      {"name": "420_da2_U_L2", "station": "da2", "kv": 420, "kind": "U", "phase": "L2", "bank": null, "magnitude": 226382.95, "angle":  34.33},
+      {"name": "420_da2_U_L3", "station": "da2", "kv": 420, "kind": "U", "phase": "L3", "bank": null, "magnitude": 226382.95, "angle": 154.33},
+      {"name": "420_da2_I_L1", "station": "da2", "kv": 420, "kind": "I", "phase": "L1", "bank": null, "magnitude":      0.94, "angle": -85.67},
+      {"name": "420_da2_I_L2", "station": "da2", "kv": 420, "kind": "I", "phase": "L2", "bank": null, "magnitude":      0.94, "angle":  34.33},
+      {"name": "420_da2_I_L3", "station": "da2", "kv": 420, "kind": "I", "phase": "L3", "bank": null, "magnitude":      0.94, "angle": 154.33}
+    ]
+  }
 }
 ```
 
-- `values` has one entry per header column; `null` where there is no value.
-- `mRID` identifies the stream.
-- The header rides in every record. Leave `cimReferenceId` out: p-SWAMP's
-  source set sets it.
-- The authoritative schema is `PmuFrame` in the api contract
-  (`doc/api/openapi.json`, `components.schemas`).
+- `mRID` identifies the stream, taken from `x-request-id`.
+- `ts` is the time response chunk was created
+- `seq` is the chunk number
+- `kind` is the type of the `msg` record.
+- `msg.ts` timestamp of the record.
+- `msg.id` station ID, matching the IDs in coverage and the `stations` query filter.
+- `msg.name` station name.
+- `msg.frequency` station frequency.
+- `msg.rocof` station rate of change of frequency.
+- `msg.phasors.x.name` name of phasor, specifies expected voltage, other station, voltage or ampere, and phase.
+- `msg.phasors.x.magnitude` voltage or amps
+- `msg.phasors.x.angle` voltage or amp phase angle
+- The remote schema is `RecordResponse` in `pswamp_models.remote_data`;
+  it is not the downstream `PmuFrame` schema. The backend builds one frame per
+  timestamp, labels columns by station ID, maps frequency/ROCOF to `f`/`df`,
+  converts voltage magnitudes from V to kV, and keeps current in A and angles
+  in degrees. Its stable stream ID is the configured source instance name.
 
 ## The client
 

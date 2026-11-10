@@ -26,22 +26,22 @@ HEADER = PmuHeader(
     channel=["V", "f", "V", "f"],
     measurement=["V_Magnitude", "f", "V_Magnitude", "f"],
     units=["kV", "Hz", "kV", "Hz"],
-    data_rate=20.0,
+    data_rate=50.0,
 )
 FRAMES = [
-    PmuFrame(timestamp=T0 + timedelta(seconds=i / 20), mRID="served", header=HEADER, values=[400.0, 50.0, 400.0, 50.0])
+    PmuFrame(timestamp=T0 + timedelta(milliseconds=20 * i), mRID="remote", header=HEADER, values=[400.0, 50.0, 400.0, 50.0])
     for i in range(20)
 ]
 
 
 class Served(SourceModule):
-    """The history the stub serves: any history source would do."""
+    """The coverage used by the stub's synthetic station stream."""
 
     name = "served-frames"
     kind = "history"
 
     def coverage(self) -> TimeRange:
-        return TimeRange(FRAMES[0].timestamp, FRAMES[-1].timestamp + timedelta(seconds=0.05))
+        return TimeRange(FRAMES[0].timestamp, FRAMES[-1].timestamp + timedelta(milliseconds=20))
 
     def read(self, start=None, end=None):
         for record in FRAMES:
@@ -91,7 +91,7 @@ class TestRemoteHistoryInPages(SourceConformance):
 
 
 class TestTheSampleRecordingFromTheStub(SourceConformance):
-    """The bundled sample (the sample-replay project), served by the stub and read back."""
+    """The stub's synthetic stream over the bundled sample's coverage."""
 
     @pytest.fixture
     def source_under_test(self):
@@ -100,16 +100,21 @@ class TestTheSampleRecordingFromTheStub(SourceConformance):
 
     @pytest.fixture
     def conformance_records(self):
-        return list(pytest.importorskip("pswamp_modules.sample_replay").SampleReplay().recording.frames)
+        coverage = pytest.importorskip("pswamp_modules.sample_replay").SampleReplay().coverage()
+        return [
+            FRAMES[0].model_copy(update={"timestamp": coverage.start + timedelta(milliseconds=20 * i)})
+            for i in range((coverage.end - coverage.start) // timedelta(milliseconds=20))
+        ]
 
 
 def test_a_result_line_has_the_shape_of_its_kind():
-    from pswamp_models.remote_data import RemoteDataResult
+    from pswamp_models.remote_data import RESULT_ADAPTER, RecordResponse
 
-    assert RemoteDataResult.for_record(FRAMES[0]).to_line().endswith(b"\n")
+    line = RecordResponse.test_record("q", T0, 1, "NO 12345").to_line()
+    assert line.endswith(b"\n") and isinstance(RESULT_ADAPTER.validate_json(line), RecordResponse)
     for bad in ({"kind": "record"}, {"kind": "end"}, {"kind": "error"}):
         with pytest.raises(ValidationError):
-            RemoteDataResult(**bad)
+            RESULT_ADAPTER.validate_python({"mrid": "q", "v": "v1", "ts": T0, **bad})
 
 
 def test_it_is_a_playable_history_source_with_a_required_url():
@@ -138,16 +143,19 @@ async def test_coverage_waits_no_longer_than_its_own_timeout():
 
     server = await asyncio.start_server(accept_and_say_nothing, "127.0.0.1", 0)
     port = server.sockets[0].getsockname()[1]
-    source = RemoteHistory("remote", url=f"http://127.0.0.1:{port}", coverage_timeout=0.2)
-    began = asyncio.get_running_loop().time()
-    with pytest.raises(ConnectionError, match="ReadTimeout"):
-        await source.acoverage()
-    assert asyncio.get_running_loop().time() - began < 2
-    for writer in writers:
-        writer.close()
-        await writer.wait_closed()
-    server.close()
-    await server.wait_closed()
+    try:
+        async with httpx.AsyncClient(base_url=f"http://127.0.0.1:{port}") as http:
+            source = RemoteHistory("remote", url=f"http://127.0.0.1:{port}", http_client=http, coverage_timeout=0.2)
+            began = asyncio.get_running_loop().time()
+            with pytest.raises(ConnectionError, match="ReadTimeout"):
+                await source.acoverage()
+            assert asyncio.get_running_loop().time() - began < 2
+    finally:
+        for writer in writers:
+            writer.close()
+            await writer.wait_closed()
+        server.close()
+        await server.wait_closed()
 
 
 async def test_an_unreachable_service_is_named_in_the_error():
@@ -170,10 +178,11 @@ def lines(*parts: bytes):
 
 
 async def test_an_error_line_or_a_missing_end_fails_the_stream():
-    from pswamp_models.remote_data import RemoteDataResult
+    from pswamp_models.remote_data import ErrorMessage, ErrorResponse, RecordResponse
 
-    record = RemoteDataResult.for_record(FRAMES[0]).to_line()
-    failed = over(lines(record, RemoteDataResult(kind="error", error="disk on fire").to_line()))
+    record = RecordResponse.test_record("q", FRAMES[0].timestamp, 1, "NO 12345").to_line()
+    error = ErrorResponse(mrid="q", v="v1", ts=T0, kind="error", msg=ErrorMessage(message="disk on fire"))
+    failed = over(lines(record, error.to_line()))
     with pytest.raises(RuntimeError, match="disk on fire"):
         [r async for r in failed.aread()]
     cut = over(lines(record))
@@ -208,13 +217,16 @@ def serving(frames, *, honour_start=True):
     """A service that ignores ``limit``: every record from the start on, then the end line."""
 
     def handler(request: httpx.Request) -> httpx.Response:
-        from pswamp_models.remote_data import RemoteDataResult
+        from pswamp_models.remote_data import EndMessage, EndResponse, RecordResponse
 
         start = json.loads(request.content)["start"]
         start = None if start is None or not honour_start else datetime.fromisoformat(start)
         sent = [f for f in frames if start is None or f.timestamp >= start]
-        body = b"".join(RemoteDataResult.for_record(f).to_line() for f in sent)
-        return httpx.Response(200, content=body + RemoteDataResult(kind="end", count=len(sent)).to_line())
+        body = b"".join(
+            RecordResponse.test_record("q", f.timestamp, i, "NO 12345").to_line() for i, f in enumerate(sent, 1)
+        )
+        end = EndResponse(mrid="q", v="v1", ts=T0, kind="end", msg=EndMessage(count=len(sent)))
+        return httpx.Response(200, content=body + end.to_line())
 
     return handler
 
@@ -226,7 +238,7 @@ def test_a_page_has_a_positive_size():
     with pytest.raises(ValueError, match="PAGE"):
         RemoteHistory(url="u", page=0)
     with pytest.raises(ValidationError):
-        RemoteDataQuery(query_id="q", model="pmu.frame", limit=0)
+        RemoteDataQuery(limit=0)
 
 
 def test_the_page_size_comes_from_the_environment(monkeypatch):
@@ -239,22 +251,23 @@ async def test_a_range_is_read_in_pages_each_from_after_the_last_record():
     queries: list = []
     got = [f async for f in over(create_app(Served("served")), queries, page=10).aread()]
     assert [f.timestamp for f in got] == [f.timestamp for f in FRAMES]
-    # Twenty records, ten a page: the third query finds none, and that ends it.
-    assert starts(queries) == [None, FRAMES[9].timestamp + MICROSECOND, FRAMES[19].timestamp + MICROSECOND]
-    assert [q["limit"] for q in queries] == [10, 10, 10] and len({q["query_id"] for q in queries}) == 3
+    # Two station records per frame: ten records give five complete timestamps.
+    assert starts(queries) == [None] + [FRAMES[i].timestamp + MICROSECOND for i in (4, 9, 14, 19)]
+    assert [q["limit"] for q in queries] == [10] * 5
+    assert all("query_id" not in q and "model" not in q for q in queries)
 
 
 async def test_a_short_page_is_the_last():
     queries: list = []
     got = [f async for f in over(create_app(Served("served")), queries, page=7).aread()]
-    assert len(got) == 20 and len(queries) == 3  # 7, 7, 6
+    assert len(got) == 20 and len(queries) == 6  # five pages of eight station records, then empty
 
 
 async def test_no_page_is_asked_for_past_the_end_of_the_range():
     queries: list = []
-    end = FRAMES[6].timestamp + MICROSECOND
+    end = FRAMES[3].timestamp + MICROSECOND
     got = [f async for f in over(create_app(Served("served")), queries, page=7).aread(None, end)]
-    assert len(got) == 7 and len(queries) == 1
+    assert len(got) == 4 and len(queries) == 1
 
 
 async def test_a_service_that_ignores_the_limit_is_read_a_page_at_a_time():
@@ -274,9 +287,101 @@ async def test_a_service_that_ignores_the_start_is_caught_not_looped_on():
 
 
 async def test_the_stub_sends_a_page_and_its_end():
-    from pswamp_models.remote_data import RemoteDataResult
+    from pswamp_models.remote_data import RESULT_ADAPTER
 
+    query = {"start": T0.isoformat(), "end": (T0 + timedelta(seconds=1)).isoformat(), "limit": 5}
     async with httpx.AsyncClient(transport=httpx.ASGITransport(app=create_app(Served("served"))), base_url="http://stub") as http:
-        response = await http.post("/v1/queries", json={"query_id": "q", "model": "pmu.frame", "limit": 5})
-    results = [RemoteDataResult.model_validate_json(line) for line in response.text.splitlines()]
-    assert [r.kind for r in results] == ["record"] * 5 + ["end"] and results[-1].count == 5
+        response = await http.post("/v1/queries", json=query)
+    results = [RESULT_ADAPTER.validate_json(line) for line in response.text.splitlines()]
+    assert [r.kind for r in results] == ["record"] * 6 + ["end"] and results[-1].msg.count == 6
+    assert response.headers["content-type"] == "application/x-ndjson"
+    assert [r.msg.ts for r in results[:-1]] == [FRAMES[i // 2].timestamp for i in range(6)]
+    assert [r.msg.id for r in results[:-1]] == ["NO 12345", "NO 54321"] * 3
+
+
+@pytest.mark.parametrize("request_id", ["caller-request.1", None])
+async def test_the_stub_echoes_or_generates_a_request_id(request_id):
+    from uuid import UUID
+
+    from pswamp_models.remote_data import RESULT_ADAPTER
+
+    headers = {} if request_id is None else {"x-request-id": request_id}
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=create_app(Served("served"))), base_url="http://stub"
+    ) as http:
+        response = await http.post("/v1/queries", json={"limit": 1}, headers=headers)
+    assert response.status_code == 200
+    returned_id = response.headers["x-request-id"]
+    if request_id is None:
+        assert str(UUID(returned_id)) == returned_id
+    else:
+        assert returned_id == request_id
+    results = [RESULT_ADAPTER.validate_json(line) for line in response.text.splitlines()]
+    assert [r.kind for r in results] == ["record", "record", "end"]
+    assert all(r.mrid == returned_id for r in results)
+
+
+async def test_the_source_sends_a_distinct_request_id_for_each_page():
+    request_ids: list[str] = []
+
+    async def record(request: httpx.Request) -> None:
+        if request.url.path == "/v1/queries":
+            request_ids.append(request.headers["x-request-id"])
+
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=create_app(Served("served"))),
+        base_url="http://stub", event_hooks={"request": [record]},
+    ) as http:
+        source = RemoteHistory("remote", url="http://stub", http_client=http, page=10)
+        frames = [frame async for frame in source.aread()]
+    assert len(frames) == len(FRAMES)
+    assert len(request_ids) == 5
+    run_id = request_ids[0].rsplit(".", 1)[0]
+    assert run_id
+    assert request_ids == [f"{run_id}.{page}" for page in range(1, 6)]
+
+
+async def test_station_records_become_one_frame_per_timestamp():
+    from pswamp_models.remote_data import RecordResponse
+
+    frames = [f async for f in over(create_app(Served("served")), page=1).aread()]
+    assert [f.timestamp for f in frames] == [f.timestamp for f in FRAMES]
+    assert all(f.header.stations == ["NO 12345", "NO 54321"] for f in frames)
+    assert all(f.header.data_rate == 50.0 and f.header.n_columns == 28 for f in frames)
+    first = RecordResponse.test_record("q", T0, 1, "NO 12345").msg
+    assert frames[0].values[:4] == [
+        first.frequency, first.rocof, first.phasors[0].magnitude / 1000, first.phasors[0].angle,
+    ]
+    assert frames[0].header.measurement[:4] == ["f", "df", "V_Magnitude", "V_Angle"]
+    assert frames[0].header.units[:4] == ["Hz", "Hz/s", "kV", "deg"]
+    assert frames[0].header.units[8:10] == ["A", "deg"]
+
+
+async def test_station_filter_is_applied_before_grouping():
+    source = over(create_app(Served("served")))
+    frames = [f async for f in source.aread(stations=["NO 54321"])]
+    assert len(frames) == len(FRAMES)
+    assert all(f.header.stations == ["NO 54321"] for f in frames)
+
+
+async def test_empty_station_filter_is_rejected():
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=create_app(Served("served"))), base_url="http://stub"
+    ) as http:
+        response = await http.post("/v1/queries", json={"stations": []})
+    assert response.status_code == 422
+    assert any(error["loc"] == ["body", "stations"] for error in response.json()["detail"])
+    with pytest.raises(ValidationError):
+        [f async for f in over(create_app(Served("served"))).aread(stations=[])]
+
+
+async def test_duplicate_stations_and_backwards_timestamps_fail():
+    from pswamp_models.remote_data import EndMessage, EndResponse, RecordResponse
+
+    first = RecordResponse.test_record("q", T0, 1, "NO 12345").to_line()
+    end = EndResponse(mrid="q", v="v1", ts=T0, kind="end", msg=EndMessage(count=2)).to_line()
+    with pytest.raises(RuntimeError, match="duplicate station"):
+        [f async for f in over(lines(first, first, end)).aread()]
+    earlier = RecordResponse.test_record("q", T0 - timedelta(milliseconds=20), 2, "NO 12345").to_line()
+    with pytest.raises(RuntimeError, match="timestamp order"):
+        [f async for f in over(lines(first, earlier, end)).aread()]

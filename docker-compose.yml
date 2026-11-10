@@ -235,7 +235,7 @@ services:
       PYTHONPATH: "/workspace/p-SWAMP/modules/remote-history/examples"
       REMOTE_DATA_STUB_SOURCE: "history:synthetic-history"
     healthcheck:
-      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8100/healthz"]
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8100/health/live"]
       interval: 5s
       timeout: 3s
       retries: 5
