@@ -10,7 +10,7 @@
 # Node and node_modules never ship. Pinned to a digest for reproducible builds
 # (the tag is kept as documentation); this is the multi-arch index digest, so
 # arm64/amd64 both resolve. Resolved 2026-09-01 from tag 24-bookworm-slim.
-FROM node:24-bookworm-slim@sha256:ba849c60be29959425b8734d57b8b4b7d56f98edd9504c9af091d5281095a71e AS web-build
+FROM docker.io/library/node:24-bookworm-slim@sha256:ba849c60be29959425b8734d57b8b4b7d56f98edd9504c9af091d5281095a71e AS web-build
 WORKDIR /web
 # Copy only the manifests first so `npm ci` is cached and re-runs only when the
 # lockfile changes, not on every source edit.
