@@ -173,6 +173,7 @@ class RtsimFromCimSource(SourceModule):
         watch: asyncio.Task | None = None
         engine: EngineProcess | None = None
         ours = theirs = None
+        header = None
 
         try:
             # Starting takes seconds (the graph is read and exported, the load flow solved), and a
@@ -188,6 +189,9 @@ class RtsimFromCimSource(SourceModule):
                 if not starting.done():
                     return
             model, ids, measurements, events = await starting
+            # The engine stamps its frames from when it is built: none can fall in a window closed by now.
+            if end is not None and utcnow() >= end:
+                return
             if not apart:
                 controller = self._controller
             reference = await loop.run_in_executor(graph, self._reference, settings)
@@ -206,10 +210,15 @@ class RtsimFromCimSource(SourceModule):
             theirs = None  # the engine's process took it over
             steering = self._steering = _Steering(controller, graph, ids)
             watch = asyncio.create_task(self._relay(steering) if apart else self._follow(steering, ours))
-            header = None
             meter = RateMeter(self.settings.rate)
             while True:
-                received = await loop.run_in_executor(receive, engine.receive)
+                # Until its header, the engine is building; it stamps from after that, so a window that
+                # closes meanwhile gets nothing from it, and the stream ends rather than wait.
+                building = end is not None and header is None
+                timeout = max(0.0, (end - utcnow()).total_seconds()) if building else None
+                received = await loop.run_in_executor(receive, engine.receive, timeout)
+                if building and not received:
+                    return
                 while not steering.said.empty():
                     yield steering.said.get_nowait()
                 for kind, *message in received:
@@ -243,8 +252,8 @@ class RtsimFromCimSource(SourceModule):
             self._steering = None
             if watch is not None:
                 watch.cancel()
-            if engine is not None:
-                await loop.run_in_executor(None, engine.close)
+            if engine is not None:  # one still building is not waited for: it would not read the stop
+                await loop.run_in_executor(None, engine.close, 5.0 if header is not None else 0.0)
             if isinstance(controller, ControllerProcess):
                 await loop.run_in_executor(None, controller.close)
             for end_ in (ours, theirs):

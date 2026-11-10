@@ -311,13 +311,16 @@ class EngineProcess:
         if link is not None:
             link.close()  # the engine's process has its own
 
-    def receive(self) -> list[tuple]:
+    def receive(self, timeout: float | None = None) -> list[tuple]:
         """What was sent up since the last call, at least one message (blocking: from a thread): each
         ``("header", h)``, ``("frame", t, values)``, ``("scan", t, sim_time, analogs, discretes)``,
         ``("log", text)`` or ``("error", e)``, and
         ``("error", RuntimeError)`` when the process is gone. All at once, so that a busy server pays
-        for one wake-up however many frames came meanwhile."""
+        for one wake-up however many frames came meanwhile. With a ``timeout``, nothing (``[]``) when
+        nothing came within it."""
         try:
+            if timeout is not None and not self._up.poll(timeout):
+                return []
             messages = self._up.recv()
             while self._up.poll():
                 messages += self._up.recv()
@@ -325,12 +328,14 @@ class EngineProcess:
         except (EOFError, OSError):
             return [("error", RuntimeError("the simulation process ended"))]
 
-    def close(self) -> None:
+    def close(self, timeout: float = 5.0) -> None:
+        """Stop the process: told to, then ended if it has not within ``timeout`` seconds. One still
+        building reads nothing until it runs, so a caller that needs nothing from it passes 0."""
         try:
             self._down.send(None)
         except (BrokenPipeError, OSError):
             pass
-        self._process.join(timeout=5)
+        self._process.join(timeout=timeout)
         if self._process.is_alive():
             self._process.terminate()
         self._down.close()

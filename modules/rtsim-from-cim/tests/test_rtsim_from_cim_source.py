@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import asyncio
 import multiprocessing
+import time
 from datetime import timedelta
 from itertools import islice
 
@@ -303,3 +304,61 @@ async def test_a_repository_a_script_hands_over_is_simulated_and_its_edits_follo
         script.commit()
         assert theirs.version() == 0
         await run.until(lambda: np.max(np.abs(angles(run.frames[-1]) - before)) > 0.1, timeout=15)
+
+
+class _Building:
+    """An engine that never gets past building: nothing comes up, and it is closed without a wait."""
+
+    made: list[_Building] = []
+
+    def __init__(self, *args, **kwargs) -> None:
+        self.closed: float | None = None
+        _Building.made.append(self)
+
+    def receive(self, timeout: float | None = None) -> list[tuple]:
+        assert timeout is not None, "a bounded read waits for the engine no longer than its window"
+        time.sleep(timeout)
+        return []
+
+    def close(self, timeout: float = 5.0) -> None:
+        self.closed = timeout
+
+
+class _Idle:
+    """A controller with nothing to say."""
+
+    def receive(self, message) -> None: ...
+
+    def reports(self) -> list:
+        return []
+
+    def changes(self) -> list:
+        return []
+
+
+def _starting(after: float):
+    def start(self, link) -> tuple:
+        time.sleep(after)
+        self._controller = _Idle()
+        return None, {}, [], []
+
+    return start
+
+
+@pytest.mark.parametrize("start_s", [0.05, 0.6], ids=["while-the-engine-builds", "before-the-engine"])
+async def test_a_bounded_read_ends_with_its_window_however_long_the_engine_takes_to_build(monkeypatch, start_s):
+    """A window that closes while the simulation starts ends the stream then: the engine stamps from
+    after its build, so nothing it sends could be in the window (a busy CI runner took over 3 s)."""
+    _Building.made.clear()
+    monkeypatch.setattr(source_module, "EngineProcess", _Building)
+    monkeypatch.setattr(source_module, "follows_apart", lambda settings: False)
+    monkeypatch.setattr(RtsimFromCimSource, "_start", _starting(start_s))
+    monkeypatch.setattr(RtsimFromCimSource, "_reference", lambda self, settings: None)
+    start = utcnow()
+    began = time.monotonic()
+    got = [r async for r in make().aread(start, start + timedelta(seconds=0.3))]
+    assert got == [] and time.monotonic() - began < 1.5
+    if start_s < 0.3:  # started inside the window: the engine was made, and not waited for
+        assert [e.closed for e in _Building.made] == [0.0]
+    else:  # the window closed first: no engine at all
+        assert _Building.made == []
