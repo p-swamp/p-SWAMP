@@ -3,6 +3,30 @@
 
 """The remote data contract's two shapes (doc/remote-data-integration-contract.md)."""
 
-from .messages import RemoteDataQuery, RemoteDataResult
+from .messages import (
+    RemoteDataQuery,
+    RemoteDataResult,
+    ApiModel,
+    RecordResponse,
+    RecordMessage,
+    Phasor,
+    EndResponse,
+    EndMessage,
+    ErrorResponse,
+    ErrorMessage,
+    RESULT_ADAPTER,
+)
 
-__all__ = ["RemoteDataQuery", "RemoteDataResult"]
+__all__ = [
+    "RemoteDataQuery",
+    "RemoteDataResult",
+    "ApiModel",
+    "RecordResponse",
+    "RecordMessage",
+    "Phasor",
+    "EndResponse",
+    "EndMessage",
+    "ErrorResponse",
+    "ErrorMessage",
+    "RESULT_ADAPTER"
+]

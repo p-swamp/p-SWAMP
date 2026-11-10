@@ -321,12 +321,28 @@ spec:
           ports:
             - name: http
               containerPort: 8100
-          readinessProbe:
-            httpGet:
-              path: /healthz
-              port: 8100
-            initialDelaySeconds: 2
+          startupProbe:
             periodSeconds: 5
+            timeoutSeconds: 2
+            failureThreshold: 12
+            httpGet:
+              path: /health/live
+              port: 8100
+          livenessProbe:
+            periodSeconds: 15
+            timeoutSeconds: 2
+            failureThreshold: 3
+            httpGet:
+              path: /health/live
+              port: 8100
+          readinessProbe:
+            periodSeconds: 5
+            timeoutSeconds: 2
+            failureThreshold: 3
+            successThreshold: 1
+            httpGet:
+              path: /health/ready
+              port: 8100
           resources:
             requests:
               cpu: "50m"
