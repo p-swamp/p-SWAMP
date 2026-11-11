@@ -32,12 +32,3 @@ replacements:
           name: p-swamp-hosts
         fieldPaths:
           - data.PSWAMP_REMOTE_DATA_HOST
-  - source:
-      kind: Service
-      name: p-swamp-jena
-    targets:
-      - select:
-          kind: ConfigMap
-          name: p-swamp-hosts
-        fieldPaths:
-          - data.PSWAMP_CIM_STORE_HOST
