@@ -103,6 +103,9 @@ _STATUS_EVERY_S = 2.0
 
 M = TypeVar("M", bound="DataModel")
 
+#: Queued for a tape when the shared run's stream starts over.
+_RESET = object()
+
 
 @dataclass(frozen=True)
 class Pipeline:
@@ -350,6 +353,16 @@ class PipelineRun:
         self._subscriptions: list[TransportSubscription] = []
         self._tasks: list[asyncio.Task] = []
         self._started = False
+        #: The history sources with ``inputs`` whose ``feed`` setting names this shared run's live source
+        #: (a recorder), each with the queue it is fed from. Only a shared run has any.
+        self._tapes: list[tuple[SourceModule, asyncio.Queue]] = [
+            (source, asyncio.Queue())
+            for source in self.sources.instances.values()
+            if live_source is not None
+            and source.kind == "history"
+            and source.input_models()
+            and getattr(source.settings, "feed", None) == live_source
+        ]
 
     # -- the router's sink, and the view ----------------------------------------------
 
@@ -362,6 +375,8 @@ class PipelineRun:
             self._mark = mark
             self._stream += 1
             self.outbox.key = str(self.stream_key)
+            self._feed_tapes(_RESET)
+        self._feed_tapes(message)
         if isinstance(message, PlayerStatus):
             self._follow(message)
         elif message is self.router.last_frame:
@@ -377,6 +392,29 @@ class PipelineRun:
             # What a live source says beside its frames is a report: never dropped for a frame's room.
             said = type(message) in self.pipeline.source_outputs or type(message) in self._said
             self.outbox.publish(message, keep=self.shared and said)
+
+    def _feed_tapes(self, item: object) -> None:
+        for tape, queue in self._tapes:
+            if item is _RESET or isinstance(item, tuple(tape.input_models())):
+                queue.put_nowait(item)
+
+    async def _record(self, tape: SourceModule, queue: asyncio.Queue) -> None:
+        """Feed ``tape`` what the live source publishes, one call at a time; on the way out, what is
+        still queued, then its ``teardown``."""
+
+        async def feed(item: object) -> None:
+            try:
+                await (tape.areset() if item is _RESET else tape.arun(item))  # type: ignore[arg-type]
+            except Exception:
+                logger.exception("%s: %s failed to record", self.key, tape.source)
+
+        try:
+            while True:
+                await feed(await queue.get())
+        finally:
+            while not queue.empty():
+                await feed(queue.get_nowait())
+            await tape.teardown()
 
     def status(self) -> PlayerStatus:
         """The player's status as this run's viewer sees it: its router's,
@@ -525,6 +563,8 @@ class PipelineRun:
         for subscription in self._subscriptions:
             await subscription.ready(_READY_TIMEOUT_S)
         self.outbox.start()
+        for tape, queue in self._tapes:
+            self._tasks.append(asyncio.create_task(self._record(tape, queue), name=f"{self.key}.record.{tape.source}"))
         await self.router.start()
         if self.shared:
             self._tasks.append(asyncio.create_task(self._repeat_status(), name=f"{key}.status"))
