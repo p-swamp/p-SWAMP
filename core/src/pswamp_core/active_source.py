@@ -29,13 +29,18 @@ this is the receiver of the commands that steer it, like any command receiver
 - With ``follow_live``, a live source is not opened here: the router of a
   client's run only reports that it is on the live source, and the run follows
   the shared live run's topics instead (``pswamp_core.pipeline``).
+- A live source's own commands (``SourceModule.commands``) go to it while this
+  router pumps it, which only the source's shared run does; the source
+  validates and answers them while it streams. Anywhere else they are refused:
+  ``<command> is for <source>, which is not running here``.
 
 ``speed`` and ``loop`` belong to the run, not to a source: a speed set on one
 recording carries to the next one switched to, as the single player of old did.
 
 The router publishes into its sink (the run): the frames and ``PlayerStatus``
-of a pumped source, an ``ErrorEvent`` when its stream fails, and, through the
-playable source, the same for a recording. It is named ``player`` in error
+of a pumped source, what a live source says beside its frames
+(``outputs[1:]``) and answers its commands with, an ``ErrorEvent`` when its
+stream fails, and, through the playable source, the same for a recording. It is named ``player`` in error
 reports, which is what a page and the error tray know it by.
 """
 
@@ -58,7 +63,7 @@ from .util.time import utcnow
 if TYPE_CHECKING:
     from datetime import datetime
 
-    from .sources import SourceSet, SourceStream
+    from .sources import SourceModule, SourceSet, SourceStream
     from .subscription import Sink
 
 __all__ = ["ROUTER_COMMANDS", "ActiveSource"]
@@ -163,6 +168,12 @@ class ActiveSource:
             if command.source not in self._sources.sources:
                 raise CommandRefused(f"no source named {command.source!r}; the sources are {self._sources.sources}")
             return
+        owner = self._owner(command)
+        if owner is not None:
+            if owner is not self._sources.active or self._pump is None:
+                raise CommandRefused(f"{command.name} is for {owner.source}, which is not running here")
+            owner.validate(command)
+            return
         if not isinstance(command, PLAYBACK_COMMANDS):
             raise CommandRefused(f"{command.name} is not a player command")
         if self._playable is None:
@@ -182,10 +193,20 @@ class ActiveSource:
             self._sources.switch(command.source)
             await self._activate()
             return
+        if self._owner(command) is not None:
+            for answer in await self._sources.active.arun_command(command):
+                self._sink.publish(answer)
+            return
         assert self._playable is not None  # validate refused otherwise
         await self._playable.ahandle(command)
         if isinstance(command, SpeedCommand):
             self.speed = command.speed
+
+    def _owner(self, command: Command) -> SourceModule | None:
+        """The live source whose own command ``command`` is, if any."""
+        return next(
+            (s for s in self._sources.instances.values() if s.kind == "live" and type(command) in s.commands), None
+        )
 
     # -- the active source -----------------------------------------------------------
 
@@ -232,10 +253,15 @@ class ActiveSource:
         backoff, until the source is switched away from. An outage is
         reported once, when it starts; the feed is back at its next frame."""
         delay, down = _REOPEN_S, False
+        model = self._sources.active.model
         while True:
             opened = time.monotonic()
             try:
                 async for frame in stream:
+                    if type(frame) is not model:
+                        # What the source says beside its frames: published, but no frame.
+                        self._sink.publish(frame)
+                        continue
                     if down:
                         down = False
                         self.error, self.ended, self.paused = None, False, False

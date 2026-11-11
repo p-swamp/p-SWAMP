@@ -238,7 +238,9 @@ class Outbox:
     ``keep_up``. A data message the transport refuses is dropped too.
 
     Control messages (commands, answers to commands, errors and
-    ``PipelineClosed``) are never dropped for room. One the transport refuses
+    ``PipelineClosed``), and a data message published with ``keep=True`` (a
+    report, which a later message does not make stale), are never dropped for
+    room. One the transport refuses
     is published again, with backoff, until ``deadline`` seconds after it was
     queued. Then it is given up, logged, and handed to ``on_undelivered`` with
     the last error (``None`` when it waited in the queue past its deadline and
@@ -264,22 +266,23 @@ class Outbox:
         self.maxsize = maxsize
         self.deadline = deadline
         self.on_undelivered = on_undelivered
-        #: Each queued message, with when (monotonic) it was queued, and its key.
-        self._queue: deque[tuple[DataModel, float, str]] = deque()
+        #: Each queued message, with when (monotonic) it was queued, its key, and whether it is kept
+        #: (never dropped for room, and published again until its deadline).
+        self._queue: deque[tuple[DataModel, float, str, bool]] = deque()
         self._data = 0
         self._wake = asyncio.Event()
         self._task: asyncio.Task | None = None
         self.published = self.failed = self.dropped = self.undelivered = 0
         self.monitor = KeepUpMonitor(app, "cannot publish as fast as it produces", keep_up, label=label)
 
-    def publish(self, message: DataModel, key: str | None = None) -> None:
-        """Queue ``message``, under ``key`` or the outbox's key as it is now.
-        Never blocks."""
-        control = _is_control(message)
-        if not control and self._data >= self.maxsize:
+    def publish(self, message: DataModel, key: str | None = None, *, keep: bool = False) -> None:
+        """Queue ``message``, under ``key`` or the outbox's key as it is now;
+        ``keep``: never drop it for room, as a control message. Never blocks."""
+        kept = keep or _is_control(message)
+        if not kept and self._data >= self.maxsize:
             self._drop_oldest_data()
-        self._queue.append((message, time.monotonic(), self.key if key is None else key))
-        self._data += 0 if control else 1
+        self._queue.append((message, time.monotonic(), self.key if key is None else key, kept))
+        self._data += 0 if kept else 1
         self._wake.set()
 
     def start(self) -> None:
@@ -297,18 +300,18 @@ class Outbox:
                     await self._send(*self._pop())
 
     def _drop_oldest_data(self) -> None:
-        for i, (queued, _, _) in enumerate(self._queue):
-            if not _is_control(queued):
+        for i, (_, _, _, kept) in enumerate(self._queue):
+            if not kept:
                 del self._queue[i]
                 self._data -= 1
                 self.dropped += 1
                 self.monitor.note(self, 1)
                 return
 
-    def _pop(self) -> tuple[DataModel, float, str]:
-        message, queued_at, key = self._queue.popleft()
-        self._data -= 0 if _is_control(message) else 1
-        return message, queued_at, key
+    def _pop(self) -> tuple[DataModel, float, str, bool]:
+        message, queued_at, key, kept = self._queue.popleft()
+        self._data -= 0 if kept else 1
+        return message, queued_at, key, kept
 
     async def _run(self) -> None:
         while True:
@@ -317,8 +320,8 @@ class Outbox:
                 await self._wake.wait()
             await self._send(*self._pop())
 
-    async def _send(self, message: DataModel, queued_at: float, key: str) -> None:
-        if not _is_control(message):
+    async def _send(self, message: DataModel, queued_at: float, key: str, kept: bool) -> None:
+        if not kept:
             with contextlib.suppress(Exception):  # counted and logged by _attempt
                 await self._attempt(message, key)
             return

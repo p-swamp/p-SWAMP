@@ -42,6 +42,7 @@ which every app over a core pipeline uses:
     connected_pipeline    a socket's handshake: its client's run, or a close code
     push_changes          one state message on connect and one per change
     dispatch_command      a POST's command into its client's run: 404, 409 or an ack
+    dispatch_live         a POST's command to an app's live source (``LIVE_RUNS``): 503, 409 or an ack
 """
 
 import asyncio
@@ -55,7 +56,7 @@ from errors import HUB
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel
 
-from pswamp_core.command_routing import CommandRefused
+from pswamp_core.command_routing import CommandRefused, NoReceiver
 from pswamp_core.host import serve_hosts
 from pswamp_core.pipeline import CapacityError, Pipeline, PipelineRegistry, PipelineRun, start_live_runs
 from pswamp_core.subscription import Overflow
@@ -220,6 +221,11 @@ def _to_trays(app: str, registry: PipelineRegistry) -> Callable[[str, ErrorEvent
     return report
 
 
+#: The shared live runs ``serve_pipeline`` started, by app and source: where ``dispatch_live`` sends a
+#: live source's commands, for an app that drives a source without a run of its own (the CIM graph's).
+LIVE_RUNS: dict[tuple[str, str], PipelineRun] = {}
+
+
 @contextlib.asynccontextmanager
 async def serve_pipeline(pipeline: Pipeline, registry: PipelineRegistry) -> AsyncIterator[None]:
     """An app's lifespan. With the in-memory transport, its modules are hosted
@@ -235,11 +241,14 @@ async def serve_pipeline(pipeline: Pipeline, registry: PipelineRegistry) -> Asyn
     for task in tasks:
         task.add_done_callback(_log_a_failure)
     live_runs = await start_live_runs(pipeline, link, on_error=_to_trays(pipeline.app, registry))
+    for run in live_runs:
+        LIVE_RUNS[(pipeline.app, run.sources.source)] = run
     try:
         yield
     finally:
         await registry.stop_all()
         for run in live_runs:
+            LIVE_RUNS.pop((pipeline.app, run.sources.source), None)
             await run.stop("shutdown")
         await cancel_and_wait(*tasks, ignore=(Exception,))
 
@@ -317,6 +326,7 @@ async def push_changes(ws: WebSocket, run: PipelineRun, build: Callable[[], Base
 COMMAND_RESPONSES: dict[int | str, dict] = {
     404: {"description": "The client has no running pipeline: its page is not open."},
     409: {"description": "The command does not apply in the pipeline's current state."},
+    503: {"description": "Nothing in this deployment's pipeline takes the command (its receiver is not configured)."},
 }
 
 
@@ -325,7 +335,8 @@ def dispatch_command(registry: PipelineRegistry, command: Command, log: logging.
 
     404 when the client has no run (a command never builds one); 409 when the
     player refuses it now, or when it is for a module that reads the shared
-    live run the client follows, with the reason as the detail. The ack means
+    live run the client follows, with the reason as the detail; 503 when nothing
+    in the deployment's pipeline takes it (a source that is not configured). The ack means
     *accepted*: the command is queued for its receiver, and its effect arrives
     on the socket, or a refusal or failure on the error tray, carrying the
     ack's ``request_id``. A command the transport does not take within the
@@ -342,5 +353,28 @@ def dispatch_command(registry: PipelineRegistry, command: Command, log: logging.
     except CommandRefused as refused:
         log.info("client %s: %s refused: %s", client_id, command.name, refused)
         raise HTTPException(409, str(refused)) from refused
+    except NoReceiver as missing:
+        log.warning("client %s: %s has no receiver: %s", client_id, command.name, missing)
+        raise HTTPException(503, str(missing)) from missing
     log.info("client %s: %s (request %s)", client_id, command.name, command.request_id)
+    return CommandAck(applied=command.name, request_id=command.request_id)
+
+
+def dispatch_live(app: str, source: str, command: Command, log: logging.Logger) -> CommandAck:
+    """Dispatch ``command`` to the shared run of ``app``'s live source ``source``, and acknowledge it.
+
+    503 when that source does not run in this deployment (not among ``app``'s sources); 409 when it
+    refuses the command now, with the reason. As for ``dispatch_command``, the ack means *accepted*:
+    what the source makes of it comes back on the transport, or a refusal on the error tray."""
+    run = LIVE_RUNS.get((app, source))
+    if run is None:
+        raise HTTPException(503, f"no live source {source!r} runs in {app}: it is not among its sources")
+    try:
+        run.dispatch(command)
+    except CommandRefused as refused:
+        log.info("client %s: %s refused by %s: %s", command.client_id, command.name, source, refused)
+        raise HTTPException(409, str(refused)) from refused
+    except NoReceiver as missing:
+        raise HTTPException(503, str(missing)) from missing
+    log.info("client %s: %s to %s (request %s)", command.client_id, command.name, source, command.request_id)
     return CommandAck(applied=command.name, request_id=command.request_id)

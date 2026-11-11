@@ -19,6 +19,7 @@ members = [
     "pswamp-models",
     "pswamp-range-summary",
     "pswamp-remote-history",
+    "pswamp-rtsim-from-cim",
     "pswamp-sample-replay",
     "pswamp-server",
     "pswamp-synthetic-history",
@@ -619,7 +620,7 @@ wheels = [
 
 [[package]]
 name = "lazycim"
-version = "0.2.2"
+version = "0.3.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "loguru" },
@@ -627,9 +628,9 @@ dependencies = [
     { name = "pydantic" },
     { name = "rdflib" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/47/01/9c9b7072161375212e66df3ff7ca0b652e662039f3cf8521eeefbe353be7/lazycim-0.2.2.tar.gz", hash = "sha256:e20737ae80288a5a4e5470a548b018c61a28f3f38017004d9660129984d1c23b", size = 191934, upload-time = "2026-10-16T12:05:46.668Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/0e/e1/5521f62e0cfb12b7ecae24ab42c7dbd97a2e4493293a5655121e63e281d9/lazycim-0.3.1.tar.gz", hash = "sha256:c67bff43e3fc09765a043bd223a0d56a86c3426f5eb23b9531180124f737ef9e", size = 314666, upload-time = "2026-11-06T18:12:25.557Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/a1/69/e4e287a70c74c8dd1d8dfa8ea80aabe8636b3874e5cf20ffb5d734693041/lazycim-0.2.2-py3-none-any.whl", hash = "sha256:7785d3db4f1e8f9b5f87dbb6ecbd4acbcbf61041332bcc51610d854d4d3944b5", size = 213391, upload-time = "2026-10-16T12:05:45.002Z" },
+    { url = "https://files.pythonhosted.org/packages/7e/42/ccc24fba2bab81c409d87870683bde165e356e06791b4e71bc8991e2520c/lazycim-0.3.1-py3-none-any.whl", hash = "sha256:30ebc359f34fe20c3e678dba274441f4ab9244083d7eb5b4844ffd57ffee222a", size = 357065, upload-time = "2026-11-06T18:12:23.793Z" },
 ]
 
 [package.optional-dependencies]
@@ -1000,6 +1001,18 @@ wheels = [
 ]
 
 [[package]]
+name = "progressbar2"
+version = "4.7.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "python-utils" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/1e/dd/63ac006e821594bf6ec5cd7557f16c44d8c209108578ea01bc1f715baafc/progressbar2-4.7.0.tar.gz", hash = "sha256:f4122439b00dca41424f787ea5148478685d265742078c1c7c3ede31f06bd001", size = 751542, upload-time = "2026-11-05T10:39:31.333Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/3c/91/4e41878c890ff425b33135df7e97a992a55c8e96044a0d931c39d21f30bc/progressbar2-4.7.0-py3-none-any.whl", hash = "sha256:ff929d767c1fd7656bcefa7f2132aa174aa8746d7de580edfcfc1c6a738825da", size = 151038, upload-time = "2026-11-05T10:39:29.234Z" },
+]
+
+[[package]]
 name = "pswamp-core"
 version = "0.1.0"
 source = { editable = "core" }
@@ -1022,8 +1035,8 @@ oxigraph = [
 [package.metadata]
 requires-dist = [
     { name = "aiokafka", marker = "extra == 'kafka'", specifier = ">=0.14,<1" },
-    { name = "lazycim", extras = ["graphdb"], marker = "extra == 'cim'", specifier = "==0.2.2" },
-    { name = "lazycim", extras = ["graphdb", "oxigraph"], marker = "extra == 'oxigraph'", specifier = "==0.2.2" },
+    { name = "lazycim", extras = ["graphdb"], marker = "extra == 'cim'", specifier = "==0.3.1" },
+    { name = "lazycim", extras = ["graphdb", "oxigraph"], marker = "extra == 'oxigraph'", specifier = "==0.3.1" },
     { name = "pswamp-models", editable = "models" },
     { name = "pydantic", specifier = ">=2.12" },
 ]
@@ -1057,14 +1070,22 @@ dependencies = [
 examples = [
     { name = "matplotlib" },
 ]
+rtsim = [
+    { name = "matplotlib" },
+    { name = "pswamp-core", extra = ["oxigraph"] },
+    { name = "pswamp-rtsim-from-cim" },
+]
 
 [package.metadata]
 requires-dist = [
     { name = "matplotlib", marker = "extra == 'examples'", specifier = ">=3.8" },
+    { name = "matplotlib", marker = "extra == 'rtsim'", specifier = ">=3.8" },
     { name = "pswamp-core", editable = "core" },
+    { name = "pswamp-core", extras = ["oxigraph"], marker = "extra == 'rtsim'", editable = "core" },
     { name = "pswamp-models", editable = "models" },
+    { name = "pswamp-rtsim-from-cim", marker = "extra == 'rtsim'", editable = "modules/rtsim-from-cim" },
 ]
-provides-extras = ["examples"]
+provides-extras = ["examples", "rtsim"]
 
 [[package]]
 name = "pswamp-live-synthetic"
@@ -1125,6 +1146,36 @@ requires-dist = [
 ]
 
 [[package]]
+name = "pswamp-rtsim-from-cim"
+version = "0.1.0"
+source = { editable = "modules/rtsim-from-cim" }
+dependencies = [
+    { name = "lazycim", extra = ["graphdb"] },
+    { name = "numpy" },
+    { name = "pswamp-core", extra = ["cim"] },
+    { name = "pswamp-models" },
+    { name = "scipy" },
+    { name = "tops" },
+]
+
+[package.optional-dependencies]
+examples = [
+    { name = "matplotlib" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "lazycim", extras = ["graphdb"], specifier = "==0.3.1" },
+    { name = "matplotlib", marker = "extra == 'examples'", specifier = ">=3.8" },
+    { name = "numpy", specifier = ">=2.0" },
+    { name = "pswamp-core", extras = ["cim"], editable = "core" },
+    { name = "pswamp-models", editable = "models" },
+    { name = "scipy", specifier = ">=1.11" },
+    { name = "tops", specifier = ">=0.6" },
+]
+provides-extras = ["examples"]
+
+[[package]]
 name = "pswamp-sample-replay"
 version = "0.1.0"
 source = { editable = "modules/sample-replay" }
@@ -1162,6 +1213,7 @@ dependencies = [
     { name = "pswamp-models" },
     { name = "pswamp-range-summary" },
     { name = "pswamp-remote-history" },
+    { name = "pswamp-rtsim-from-cim" },
     { name = "pswamp-sample-replay" },
     { name = "pswamp-synthetic-history" },
     { name = "uvicorn", extra = ["standard"] },
@@ -1186,6 +1238,7 @@ requires-dist = [
     { name = "pswamp-models", editable = "models" },
     { name = "pswamp-range-summary", editable = "modules/range-summary" },
     { name = "pswamp-remote-history", editable = "modules/remote-history" },
+    { name = "pswamp-rtsim-from-cim", editable = "modules/rtsim-from-cim" },
     { name = "pswamp-sample-replay", editable = "modules/sample-replay" },
     { name = "pswamp-synthetic-history", editable = "modules/synthetic-history" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.52.4,<0.53" },
@@ -1416,6 +1469,18 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/6a/53/ed9d74092561d4b01a2ef1349d52cdbc135e526c245f366b089cfca6de49/python_dotenv-1.2.3.tar.gz", hash = "sha256:a20a594dabeaa385725aa239d5244871c143ecb356add8a20fcf23773a6c3a35", size = 58945, upload-time = "2026-08-16T16:54:54.067Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/0d/17/c5c6b53ddc18f297992099b3d9ec16c855c0ccc83263a21fe4d1c625ec6c/python_dotenv-1.2.3-py3-none-any.whl", hash = "sha256:904552145e8bfed22162c09dab1c2b9b54fefa7b23ba780f4f26ca0316b0f0d9", size = 22780, upload-time = "2026-08-16T16:54:52.473Z" },
+]
+
+[[package]]
+name = "python-utils"
+version = "4.2.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/86/9b/84f99b984fe17108049d990afb36a594688d50564ea1033dd2e0e65eb175/python_utils-4.2.0.tar.gz", hash = "sha256:f3d53b05640136e5eb2e685840e084071347f127f9bf30ddd05c81a6d00f01ad", size = 85524, upload-time = "2026-11-05T10:38:52.122Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/37/7f/b6889ba3f34913cf283707852d3f205d24c094a6f0ecb41a2edadec5f505/python_utils-4.2.0-py3-none-any.whl", hash = "sha256:8c4754ebcd21b17bf5f07c6e789b3ff4da44708dfe75e095e5604de3fe563e18", size = 51564, upload-time = "2026-11-05T10:38:50.428Z" },
 ]
 
 [[package]]
@@ -1682,6 +1747,22 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/12/64/da524626d3b9cc40c168a13da8335fe1c51be12c0a63685cc6db7308daae/tomli-2.4.1-cp314-cp314t-win_amd64.whl", hash = "sha256:2c1c351919aca02858f740c6d33adea0c5deea37f9ecca1cc1ef9e884a619d26", size = 121196, upload-time = "2026-03-25T20:22:01.169Z" },
     { url = "https://files.pythonhosted.org/packages/5a/cd/e80b62269fc78fc36c9af5a6b89c835baa8af28ff5ad28c7028d60860320/tomli-2.4.1-cp314-cp314t-win_arm64.whl", hash = "sha256:eab21f45c7f66c13f2a9e0e1535309cee140182a9cdae1e041d02e47291e8396", size = 100393, upload-time = "2026-03-25T20:22:02.137Z" },
     { url = "https://files.pythonhosted.org/packages/7b/61/cceae43728b7de99d9b847560c262873a1f6c98202171fd5ed62640b494b/tomli-2.4.1-py3-none-any.whl", hash = "sha256:0d85819802132122da43cb86656f8d1f8c6587d54ae7dcaf30e90533028b49fe", size = 14583, upload-time = "2026-03-25T20:22:03.012Z" },
+]
+
+[[package]]
+name = "tops"
+version = "0.6.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "matplotlib" },
+    { name = "numpy" },
+    { name = "pandas" },
+    { name = "progressbar2" },
+    { name = "scipy" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/33/f4/6fab5e1b743b7c7f602b97f657c291a8716f8514b2d7ed3f5ca3e1115f8d/tops-0.6.1.tar.gz", hash = "sha256:da1d3a02dcab62ec177500af68529a25ec513555c5b4897b808e28ecd4675a8d", size = 55207, upload-time = "2026-11-05T13:33:05.846Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/de/dd/34632610ae717041d64fd0ef7d944e87badb13b32ad0f182169463c6d69e/tops-0.6.1-py3-none-any.whl", hash = "sha256:bd0f73f9a1bad90b085fb04f1c6866abb2764823e1464a618b16d32de4106605", size = 69725, upload-time = "2026-11-05T13:33:04.425Z" },
 ]
 
 [[package]]

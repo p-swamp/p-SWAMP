@@ -4,7 +4,8 @@ the routes and from ``WS_MESSAGE``), so the page's types are generated from thes
 
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pswamp_models.rtsim import SimEvent
+from pydantic import BaseModel, Field, model_validator
 
 
 class Point(BaseModel):
@@ -12,10 +13,41 @@ class Point(BaseModel):
     lat: float = Field(description="Latitude, degrees north (WGS 84).")
 
 
+class LayoutNode(BaseModel):
+    """A connectivity node: where a short circuit can be put (POST /nodes/{mrid}/short-circuit)."""
+
+    mrid: str
+    name: str
+    nominal_kv: float | None = Field(description="Its voltage level's nominal voltage, kV; null: the graph does not say.")
+
+
 class LayoutSubstation(BaseModel):
     mrid: str
     name: str
     position: Point
+    nodes: list[LayoutNode] = Field(description="Its connectivity nodes, highest voltage first.")
+
+
+class LayoutLoad(BaseModel):
+    """A load: what a load step acts on (POST /loads/{mrid}/step)."""
+
+    mrid: str
+    name: str
+    substation: str = Field(description="mRID of the substation it stands in.")
+    p_mw: float | None = Field(description="Its active power as the graph had it when the layout was read, MW.")
+    q_mvar: float | None = Field(description="Its reactive power as the graph had it when the layout was read, Mvar.")
+
+
+class LayoutGenerator(BaseModel):
+    """A machine (a ``SynchronousMachine``), its power as it generates: positive out of it, where the
+    graph (CGMES) counts it into the equipment."""
+
+    mrid: str
+    name: str
+    substation: str = Field(description="mRID of the substation it stands in.")
+    p_mw: float | None = Field(description="Its active power generated, as the graph had it when the layout was read, MW.")
+    q_mvar: float | None = Field(description="Its reactive power generated, as the graph had it when the layout was read, Mvar.")
+    rated_mva: float | None = Field(description="Its rated apparent power, MVA.")
 
 
 class LayoutBranch(BaseModel):
@@ -25,7 +57,9 @@ class LayoutBranch(BaseModel):
     name: str
     kind: Literal["line", "transformer"]
     from_substation: str = Field(description="mRID of the substation at its first end.")
-    to_substation: str = Field(description="mRID of the substation at its second end.")
+    to_substation: str = Field(
+        description="mRID of the substation at its second end; the same as the first for a transformer inside one substation."
+    )
     path: list[Point] = Field(description="Its route; empty: a straight segment between the substations.")
     breaker: str | None = Field(
         description="mRID of the one breaker that takes it out of service on its own (its bay's, at one end); "
@@ -45,10 +79,33 @@ class CimLayout(BaseModel):
     substations: list[LayoutSubstation]
     branches: list[LayoutBranch]
     breakers: list[LayoutBreaker]
+    loads: list[LayoutLoad]
+    generators: list[LayoutGenerator] = Field(default_factory=list)
 
 
 class SwitchBody(BaseModel):
     open: bool = Field(description="True to open the switch (or take the line out of service), false to close it (or bring it back).")
+
+
+class ShortCircuitBody(BaseModel):
+    y: float = Field(default=1e6, gt=0, description="The fault's admittance to ground, per unit; the default is bolted.")
+
+
+class FaultBody(BaseModel):
+    end: Literal[1, 2] = Field(default=1, description="The line end the fault is at.")
+    clear_ms: float = Field(default=100.0, gt=0, description="How long its protection takes to clear it, ms.")
+    y: float = Field(default=1e6, gt=0, description="The fault's admittance to ground, per unit.")
+
+
+class LoadStepBody(BaseModel):
+    p_mw: float | None = Field(default=None, allow_inf_nan=False, description="Its new active power, MW.")
+    q_mvar: float | None = Field(default=None, allow_inf_nan=False, description="Its new reactive power, Mvar.")
+
+    @model_validator(mode="after")
+    def _changes_something(self) -> "LoadStepBody":
+        if self.p_mw is None and self.q_mvar is None:
+            raise ValueError("a load step sets p_mw, q_mvar or both")
+        return self
 
 
 class CimGraphState(BaseModel):
@@ -61,3 +118,8 @@ class CimGraphState(BaseModel):
     switches: dict[str, bool] = Field(description="Every switch (mRID) and whether it is open.")
     out_of_service: list[str] = Field(description="The lines and transformers (mRIDs) out of service, which is what the simulation follows.")
     writable: bool = Field(description="Whether the graph can be edited (the CGMES profiles are in it).")
+    events: list[SimEvent] = Field(
+        default_factory=list,
+        description="What the live simulation announced most recently (disturbances, protection), oldest first: "
+        "never written to the graph, so the only place a person hears of them.",
+    )

@@ -221,6 +221,30 @@ the envelope the host would publish, so `.result` is the body. The generated
 `modules/peak-frequency/examples/run_peak_frequency.py` is the same shape for
 your module. If a module cannot be driven like this, it is doing too much.
 
+**Your example over another module's data: name it, don't import it.** A module
+imports no other module, and its examples are the place that habit is learnt. To
+feed yours from the live grid simulation (or any source, or another module), name
+it by its entry point with `pswamp_core.scripts`, and give your project an extra
+that installs it:
+
+```python
+from pswamp_core.scripts import source
+
+sim = source("rtsim-from-cim", repo=repo)   # kwargs go to the class's constructor
+for frame in sim.read(end=...):
+    peak.run_one(frame)
+```
+
+```toml
+[project.optional-dependencies]
+rtsim = ["matplotlib>=3.8", "pswamp-core[oxigraph]", "pswamp-rtsim-from-cim"]
+```
+
+A source that reads the CIM graph takes the script's own LazyCIM repository
+(`repo=`); `pswamp_core.cim.prepare(repo)` readies it (machine dynamics, PMU
+Analogs). `modules/frame-stats/examples/rtsim_frame_stats.py` does all of it
+over Nordic44 in an embedded Oxigraph store, and edits the graph mid-run.
+
 ### Its pipeline file, and its sources
 
 `pipelines/peak-frequency.toml` is the app's pipeline, as data. It names the
@@ -775,6 +799,15 @@ its entry point.
   refused without it, since its `read` would hold the event loop while it waits.
   `modules/sample-replay/` (history,
   playable) and `modules/live-synthetic/` (live) are the worked examples.
+- **A live source that takes commands:** list them in `commands` (the classes
+  in your producer's package of `pswamp_models`), refuse what does not apply in
+  `validate` (`CommandRefused`, before the command is published: a 409), and
+  apply them in `async def ahandle`, which may return what to announce. Say
+  anything else beside the frames by yielding it from `aread`, a class declared
+  in `outputs` after `PmuFrame`. The commands reach the source's shared run,
+  whichever page sent them, and a source not running refuses them; the web API
+  sends one with `shared.dispatch_live(app, source, command, log)`.
+  `modules/rtsim-from-cim/` is the worked example (ADR-016).
 - **Using it:** it is installed with the workspace (`uv sync`), and a pipeline
   names it, by entry point, in its `[[sources]]`, or `<APP>_SOURCES` replaces the
   list at run time (`PMU_TEST_STREAMER_SOURCES=sample:sample-replay,mine:my-recording`).

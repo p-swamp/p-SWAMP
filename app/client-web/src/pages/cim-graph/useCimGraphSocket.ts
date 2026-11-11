@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import type { Wire } from '@/api/wire'
 import { CommandError, postCommand } from '@/lib/commands'
@@ -9,6 +9,8 @@ import { useServerSocket } from '@/hooks/useServerSocket'
  *  declared in app/server-python/src/cim_graph/model.py, not hand-copies of them. */
 export type CimGraphState = Wire['CimGraphState']
 export type CimLayout = Wire['CimLayout']
+/** Something the live simulation announced: a disturbance injected, a protection operating. */
+export type SimEvent = Wire['SimEvent']
 
 /** Where the graph is: being loaded into its store, there, there but read-only, or not to be had. */
 export type GraphStatus =
@@ -21,6 +23,10 @@ export type GraphStatus =
 type Pending = { want: boolean; line: boolean; sent: number }
 
 const LOADING_RETRY_MS = 1000
+/** A fault's admittance to ground, per unit: bolted. */
+const BOLTED = 1e6
+/** How long a line's protection takes to clear a fault on it, ms. */
+export const CLEAR_MS = 100
 /** A command whose result has not shown by then is given up on: the state on screen is the truth. */
 const PENDING_TIMEOUT_MS = 15_000
 
@@ -119,13 +125,39 @@ export function useCimGraphSocket() {
       ),
     [send],
   )
-  const reset = useCallback(() => {
+  /** A command that is not pending: its result is an announcement (``events``), not a new state. */
+  const fire = useCallback((what: string, command: () => Promise<void>) => {
     setError(null)
-    postCommand(`${CIM_GRAPH_API_PATH}/reset`).catch((e: unknown) => {
-      console.error('cim-graph reset failed', e)
+    command().catch((e: unknown) => {
+      console.error(`cim-graph ${what} failed`, e)
       setError(e instanceof CommandError ? e.detail : String(e))
     })
   }, [])
+  const reset = useCallback(() => fire('reset', () => postCommand(`${CIM_GRAPH_API_PATH}/reset`)), [fire])
+
+  // The disturbances: to the simulation only, so the graph (and the map) never shows them; what the
+  // simulation announces about them, and what its protection does, arrives in `events`.
+  const disturb = useMemo(
+    () => ({
+      trip: (mrid: string) =>
+        fire('trip', () => postCommand(`${CIM_GRAPH_API_PATH}/branches/{mrid}/trip`, { path: { mrid } })),
+      reconnect: (mrid: string) =>
+        fire('reconnect', () => postCommand(`${CIM_GRAPH_API_PATH}/branches/{mrid}/reconnect`, { path: { mrid } })),
+      shortCircuit: (node: string) =>
+        fire('short circuit', () =>
+          postCommand(`${CIM_GRAPH_API_PATH}/nodes/{mrid}/short-circuit`, { path: { mrid: node }, body: { y: BOLTED } }),
+        ),
+      clearShortCircuit: (node: string) =>
+        fire('clear short circuit', () =>
+          postCommand(`${CIM_GRAPH_API_PATH}/nodes/{mrid}/clear-short-circuit`, { path: { mrid: node } }),
+        ),
+      fault: (line: string, end: 1 | 2) =>
+        fire('fault', () => postCommand(`${CIM_GRAPH_API_PATH}/lines/{mrid}/fault`, { path: { mrid: line }, body: { end, clear_ms: CLEAR_MS, y: BOLTED } })),
+      loadStep: (load: string, p_mw: number) =>
+        fire('load step', () => postCommand(`${CIM_GRAPH_API_PATH}/loads/{mrid}/step`, { path: { mrid: load }, body: { p_mw } })),
+    }),
+    [fire],
+  )
 
   const graph: GraphStatus = unavailable
     ? { kind: 'unavailable', reason: unavailable }
@@ -148,5 +180,9 @@ export function useCimGraphSocket() {
     setSwitch,
     setLine,
     reset,
+    disturb,
+    events: message?.events ?? NO_EVENTS,
   }
 }
+
+const NO_EVENTS: SimEvent[] = []

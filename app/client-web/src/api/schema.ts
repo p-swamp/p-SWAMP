@@ -4,6 +4,48 @@
  */
 
 export interface paths {
+    "/api/cim-graph/branches/{mrid}/reconnect": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reconnect Branch
+         * @description A tripped line or transformer comes back. 409 for one the simulation does not have; 503
+         *     without the simulation.
+         */
+        post: operations["cim_graph_reconnect_branch"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/cim-graph/branches/{mrid}/trip": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Trip Branch
+         * @description A line or transformer trips, as no one commanded it. 409 for one the simulation does not have;
+         *     503 without the simulation.
+         */
+        post: operations["cim_graph_trip_branch"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/cim-graph/layout": {
         parameters: {
             query?: never;
@@ -35,11 +77,96 @@ export interface paths {
         put?: never;
         /**
          * Set Line
-         * @description Take a line (or a transformer) out of service (``open: true``) or bring it back: the breakers
-         *     that cut one of its ends off, or, for a line with none, a terminal. 404 for an unknown branch, 409
-         *     when it is already so.
+         * @description Take a line out of service (``open: true``) or bring it back, in the simulation: by the one
+         *     breaker that operates it, or, for a line with none, by its terminal. 404 for an unknown branch,
+         *     409 when the graph says it is already so, or the simulation refuses; 503 without the simulation.
          */
         post: operations["cim_graph_set_line"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/cim-graph/lines/{mrid}/fault": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Fault Line
+         * @description A fault at one end of a line, cleared after ``clear_ms`` by its protection, which opens the
+         *     breakers that isolate the line; those the graph then shows open. 409 for a line the simulation
+         *     does not have; 503 without the simulation.
+         */
+        post: operations["cim_graph_fault_line"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/cim-graph/loads/{mrid}/step": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Load Step
+         * @description A load draws other power, as no one told the graph. 409 for a load the simulation does not
+         *     have; 503 without the simulation.
+         */
+        post: operations["cim_graph_load_step"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/cim-graph/nodes/{mrid}/clear-short-circuit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Clear Short Circuit
+         * @description The short circuit at a connectivity node goes. 409 for a node the simulation does not have;
+         *     503 without the simulation.
+         */
+        post: operations["cim_graph_clear_short_circuit"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/cim-graph/nodes/{mrid}/short-circuit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Short Circuit
+         * @description A short circuit at a connectivity node, until it is cleared. 409 for a node the simulation
+         *     does not have (one cut off from the grid); 503 without the simulation.
+         */
+        post: operations["cim_graph_short_circuit"];
         delete?: never;
         options?: never;
         head?: never;
@@ -57,7 +184,8 @@ export interface paths {
         put?: never;
         /**
          * Reset
-         * @description Put the grid back as it was loaded: every switch as the model has it, every branch in service.
+         * @description Put the grid back as it was loaded: every switch as the model has it, every branch in service;
+         *     and the simulation, when it runs, starts over from it, every disturbance gone.
          */
         post: operations["cim_graph_reset"];
         delete?: never;
@@ -77,7 +205,8 @@ export interface paths {
         put?: never;
         /**
          * Set Switch
-         * @description Open (``open: true``) or close a switch. 404 for an unknown switch, 409 when it is already so.
+         * @description Open (``open: true``) or close a switch, in the simulation. 404 for an unknown switch, 409 when
+         *     the graph says it is already so, or the simulation refuses; 503 without the simulation.
          */
         post: operations["cim_graph_set_switch"];
         delete?: never;
@@ -635,6 +764,11 @@ export interface components {
          */
         CimGraphState: {
             /**
+             * Events
+             * @description What the live simulation announced most recently (disturbances, protection), oldest first: never written to the graph, so the only place a person hears of them.
+             */
+            events?: components["schemas"]["SimEvent"][];
+            /**
              * Out Of Service
              * @description The lines and transformers (mRIDs) out of service, which is what the simulation follows.
              */
@@ -667,6 +801,10 @@ export interface components {
             branches: components["schemas"]["LayoutBranch"][];
             /** Breakers */
             breakers: components["schemas"]["LayoutBreaker"][];
+            /** Generators */
+            generators?: components["schemas"]["LayoutGenerator"][];
+            /** Loads */
+            loads: components["schemas"]["LayoutLoad"][];
             /** Substations */
             substations: components["schemas"]["LayoutSubstation"][];
         };
@@ -813,6 +951,28 @@ export interface components {
              * @constant
              */
             version: "v1";
+        };
+        /** FaultBody */
+        FaultBody: {
+            /**
+             * Clear Ms
+             * @description How long its protection takes to clear it, ms.
+             * @default 100
+             */
+            clear_ms: number;
+            /**
+             * End
+             * @description The line end the fault is at.
+             * @default 1
+             * @enum {integer}
+             */
+            end: 1 | 2;
+            /**
+             * Y
+             * @description The fault's admittance to ground, per unit.
+             * @default 1000000
+             */
+            y: number;
         };
         /**
          * FrameStats
@@ -1078,7 +1238,7 @@ export interface components {
             path: components["schemas"]["Point"][];
             /**
              * To Substation
-             * @description mRID of the substation at its second end.
+             * @description mRID of the substation at its second end; the same as the first for a transformer inside one substation.
              */
             to_substation: string;
         };
@@ -1094,12 +1254,88 @@ export interface components {
              */
             substation: string;
         };
+        /**
+         * LayoutGenerator
+         * @description A machine (a ``SynchronousMachine``), its power as it generates: positive out of it, where the
+         *     graph (CGMES) counts it into the equipment.
+         */
+        LayoutGenerator: {
+            /** Mrid */
+            mrid: string;
+            /** Name */
+            name: string;
+            /**
+             * P Mw
+             * @description Its active power generated, as the graph had it when the layout was read, MW.
+             */
+            p_mw: number | null;
+            /**
+             * Q Mvar
+             * @description Its reactive power generated, as the graph had it when the layout was read, Mvar.
+             */
+            q_mvar: number | null;
+            /**
+             * Rated Mva
+             * @description Its rated apparent power, MVA.
+             */
+            rated_mva: number | null;
+            /**
+             * Substation
+             * @description mRID of the substation it stands in.
+             */
+            substation: string;
+        };
+        /**
+         * LayoutLoad
+         * @description A load: what a load step acts on (POST /loads/{mrid}/step).
+         */
+        LayoutLoad: {
+            /** Mrid */
+            mrid: string;
+            /** Name */
+            name: string;
+            /**
+             * P Mw
+             * @description Its active power as the graph had it when the layout was read, MW.
+             */
+            p_mw: number | null;
+            /**
+             * Q Mvar
+             * @description Its reactive power as the graph had it when the layout was read, Mvar.
+             */
+            q_mvar: number | null;
+            /**
+             * Substation
+             * @description mRID of the substation it stands in.
+             */
+            substation: string;
+        };
+        /**
+         * LayoutNode
+         * @description A connectivity node: where a short circuit can be put (POST /nodes/{mrid}/short-circuit).
+         */
+        LayoutNode: {
+            /** Mrid */
+            mrid: string;
+            /** Name */
+            name: string;
+            /**
+             * Nominal Kv
+             * @description Its voltage level's nominal voltage, kV; null: the graph does not say.
+             */
+            nominal_kv: number | null;
+        };
         /** LayoutSubstation */
         LayoutSubstation: {
             /** Mrid */
             mrid: string;
             /** Name */
             name: string;
+            /**
+             * Nodes
+             * @description Its connectivity nodes, highest voltage first.
+             */
+            nodes: components["schemas"]["LayoutNode"][];
             position: components["schemas"]["Point"];
         };
         /**
@@ -1159,6 +1395,276 @@ export interface components {
              * @default null
              */
             window_length: number | null;
+        };
+        /**
+         * LiveFeed
+         * @description One push: the layout when it is new, and every frame read since the last push.
+         *
+         *     Nothing is merged or skipped: a push carries as many frames as came while the last one was
+         *     being sent, so under load the pushes get fewer and larger, and no frame is lost.
+         */
+        LiveFeed: {
+            /**
+             * Lag S
+             * @description How far behind real time the newest frame is, s, on the server's clock: the simulation catching up, plus the way to the page. None with no frame.
+             * @default null
+             */
+            lag_s: number | null;
+            /**
+             * @description The stations, when they are new.
+             * @default null
+             */
+            layout: components["schemas"]["LiveLayout"] | null;
+            samples: components["schemas"]["LiveSamples"];
+            /**
+             * @description The latest SCADA scan, when it is new (or the layout is).
+             * @default null
+             */
+            scan: components["schemas"]["LiveScan"] | null;
+            /**
+             * Type
+             * @default state
+             * @constant
+             */
+            type: "state";
+        };
+        /**
+         * LiveInjection
+         * @description A generator or a load, whose power a PMU measures.
+         */
+        LiveInjection: {
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "generator" | "load";
+            /**
+             * Mrid
+             * @description mRID of the machine or the load in the CIM graph.
+             */
+            mrid: string;
+            /** Name */
+            name: string;
+            /**
+             * Station
+             * @description The station it is at, '<substation>_<kV>'.
+             */
+            station: string;
+        };
+        /**
+         * LiveLayout
+         * @description The stations, line ends and injections, each in the order every sample lists them. Sent first,
+         *     and again when it changes.
+         */
+        LiveLayout: {
+            /**
+             * Header Id
+             * @description The frames' layout this describes (PmuHeader.header_id).
+             */
+            header_id: string;
+            /** Injections */
+            injections?: components["schemas"]["LiveInjection"][];
+            /** Line Ends */
+            line_ends?: components["schemas"]["LiveLineEnd"][];
+            /**
+             * Scada
+             * @description The grid's SCADA measurements, in the order a scan lists them.
+             */
+            scada?: components["schemas"]["LiveScadaPoint"][];
+            /** Stations */
+            stations: components["schemas"]["LiveStation"][];
+        };
+        /**
+         * LiveLineEnd
+         * @description One end of a line, where a PMU measures its current.
+         */
+        LiveLineEnd: {
+            /**
+             * End
+             * @description Which end: its terminal's sequence number.
+             * @enum {integer}
+             */
+            end: 1 | 2;
+            /**
+             * Limit A
+             * @description The end's permanent current limit, A; null: the graph gives none.
+             */
+            limit_a: number | null;
+            /**
+             * Line
+             * @description mRID of the line in the CIM graph.
+             */
+            line: string;
+            /**
+             * Station
+             * @description The station at that end, '<substation>_<kV>'.
+             */
+            station: string;
+        };
+        /**
+         * LiveSamples
+         * @description Consecutive frames, oldest first: one entry per frame in ``t``, one value per station in each row.
+         */
+        LiveSamples: {
+            /**
+             * Angle Deg
+             * @description Per frame, each station's voltage angle, degrees.
+             */
+            angle_deg: (number | null)[][];
+            /**
+             * F Hz
+             * @description Per frame, each station's frequency, Hz.
+             */
+            f_hz: (number | null)[][];
+            /**
+             * I A
+             * @description Per frame, each line end's current magnitude, A.
+             */
+            i_a?: (number | null)[][];
+            /**
+             * Loading
+             * @description Per frame, each line end's current over its permanent limit (1 is at the limit); null without a limit.
+             */
+            loading?: (number | null)[][];
+            /**
+             * P Mw
+             * @description Per frame, each injection's active power, MW (a load's is what it draws).
+             */
+            p_mw?: (number | null)[][];
+            /**
+             * Q Mvar
+             * @description Per frame, each injection's reactive power, Mvar.
+             */
+            q_mvar?: (number | null)[][];
+            /**
+             * T
+             * @description Each frame's time, seconds since the Unix epoch.
+             */
+            t: number[];
+            /**
+             * V Pu
+             * @description Per frame, each station's voltage magnitude, per unit.
+             */
+            v_pu: (number | null)[][];
+        };
+        /**
+         * LiveScadaPoint
+         * @description One SCADA measurement of the grid (an Analog, or a switch's Discrete), and what it is on.
+         */
+        LiveScadaPoint: {
+            /**
+             * End
+             * @description For a line's or a transformer's end: its terminal's sequence number.
+             * @default null
+             */
+            end: number | null;
+            /**
+             * Equipment
+             * @description mRID of the line, transformer, machine, load or switch; of the node, for a voltage.
+             */
+            equipment: string;
+            /**
+             * Kind
+             * @description What it is on.
+             * @enum {string}
+             */
+            kind: "line" | "transformer" | "generator" | "load" | "switch" | "voltage_level";
+            /**
+             * Kv
+             * @description The nominal voltage where it measures, kV.
+             * @default null
+             */
+            kv: number | null;
+            /**
+             * Mrid
+             * @description mRID of the Analog or the Discrete in the CIM graph.
+             */
+            mrid: string;
+            /**
+             * Name
+             * @description The name of what it is on, as the graph has it.
+             * @default null
+             */
+            name: string | null;
+            /**
+             * Positive Flow In
+             * @description For a power: true when a flow into the equipment is positive (CGMES), so a generator's is negative.
+             * @default null
+             */
+            positive_flow_in: boolean | null;
+            /**
+             * Quantity
+             * @description Active or reactive power, a voltage, a current, a switch's position (1 closed, 0 open).
+             * @enum {string}
+             */
+            quantity: "P" | "Q" | "V" | "I" | "Pos";
+            /**
+             * Substation
+             * @description mRID of the substation its terminal is in.
+             * @default null
+             */
+            substation: string | null;
+            /**
+             * Unit
+             * @description What its values are in: 'MW', 'Mvar', 'kV', 'A'; '' for a position.
+             */
+            unit: string;
+        };
+        /**
+         * LiveScan
+         * @description The latest SCADA scan: one value per SCADA point of the layout, in its order.
+         */
+        LiveScan: {
+            /**
+             * Sim Time
+             * @description When, on the simulation's clock, s.
+             * @default null
+             */
+            sim_time: number | null;
+            /**
+             * T
+             * @description When it was scanned, seconds since the Unix epoch.
+             */
+            t: number;
+            /**
+             * Values
+             * @description Each point's value; null: the scan has none for it.
+             */
+            values: (number | null)[];
+        };
+        /**
+         * LiveStation
+         * @description One PMU station of the stream: a voltage level of a substation.
+         */
+        LiveStation: {
+            /**
+             * Kv
+             * @description Its nominal voltage, kV: what v_pu is per unit of.
+             */
+            kv: number | null;
+            /**
+             * Name
+             * @description The station's label in the frames, '<substation>_<kV>'.
+             */
+            name: string;
+            /**
+             * Substation
+             * @description mRID of its substation in the CIM graph; null when unknown.
+             */
+            substation: string | null;
+        };
+        /** LoadStepBody */
+        LoadStepBody: {
+            /**
+             * P Mw
+             * @description Its new active power, MW.
+             */
+            p_mw?: number | null;
+            /**
+             * Q Mvar
+             * @description Its new reactive power, Mvar.
+             */
+            q_mvar?: number | null;
         };
         /** Phasor */
         Phasor: {
@@ -1546,6 +2052,67 @@ export interface components {
              */
             until?: string | null;
         };
+        /** ShortCircuitBody */
+        ShortCircuitBody: {
+            /**
+             * Y
+             * @description The fault's admittance to ground, per unit; the default is bolted.
+             * @default 1000000
+             */
+            y: number;
+        };
+        /**
+         * SimEvent
+         * @description A disturbance injected, or a protection operating: announced, never written to CIM.
+         */
+        SimEvent: {
+            /**
+             * Cause
+             * @description Why.
+             * @enum {string}
+             */
+            cause: "command" | "disturbance" | "protection";
+            /**
+             * Detail
+             * @description One line for a person, e.g. 'overload 1.3 x limit'.
+             * @default null
+             */
+            detail: string | null;
+            /**
+             * Kind
+             * @description What happened.
+             * @enum {string}
+             */
+            kind: "open" | "close" | "trip" | "reconnect" | "short_circuit" | "clear_short_circuit" | "load_step" | "reset";
+            /**
+             * Mrid
+             * @description The CIM object it happened to.
+             */
+            mRID: string;
+            /**
+             * Request Id
+             * @description The command it answers, if any.
+             * @default null
+             */
+            request_id: string | null;
+            /**
+             * Sim Time
+             * @description When, on the simulation's clock, s.
+             */
+            sim_time: number;
+            /**
+             * Timestamp
+             * Format: date-time
+             * @description When it happened, wall clock.
+             */
+            timestamp: string;
+            /**
+             * Version
+             * @default v1
+             * @constant
+             */
+            version: "v1";
+        };
         /** SourceBody */
         SourceBody: {
             /**
@@ -1669,6 +2236,74 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    cim_graph_reconnect_branch: {
+        parameters: {
+            query: {
+                /** @description The browser's client id -- the same value its WebSockets send, which is what makes a command apply to the pipeline the page is watching. */
+                client_id: string;
+            };
+            header?: never;
+            path: {
+                mrid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandAck"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    cim_graph_trip_branch: {
+        parameters: {
+            query: {
+                /** @description The browser's client id -- the same value its WebSockets send, which is what makes a command apply to the pipeline the page is watching. */
+                client_id: string;
+            };
+            header?: never;
+            path: {
+                mrid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandAck"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     cim_graph_layout: {
         parameters: {
             query?: never;
@@ -1704,6 +2339,154 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["SwitchBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandAck"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    cim_graph_fault_line: {
+        parameters: {
+            query: {
+                /** @description The browser's client id -- the same value its WebSockets send, which is what makes a command apply to the pipeline the page is watching. */
+                client_id: string;
+            };
+            header?: never;
+            path: {
+                mrid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FaultBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandAck"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    cim_graph_load_step: {
+        parameters: {
+            query: {
+                /** @description The browser's client id -- the same value its WebSockets send, which is what makes a command apply to the pipeline the page is watching. */
+                client_id: string;
+            };
+            header?: never;
+            path: {
+                mrid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LoadStepBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandAck"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    cim_graph_clear_short_circuit: {
+        parameters: {
+            query: {
+                /** @description The browser's client id -- the same value its WebSockets send, which is what makes a command apply to the pipeline the page is watching. */
+                client_id: string;
+            };
+            header?: never;
+            path: {
+                mrid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandAck"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    cim_graph_short_circuit: {
+        parameters: {
+            query: {
+                /** @description The browser's client id -- the same value its WebSockets send, which is what makes a command apply to the pipeline the page is watching. */
+                client_id: string;
+            };
+            header?: never;
+            path: {
+                mrid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ShortCircuitBody"];
             };
         };
         responses: {
@@ -1971,6 +2754,13 @@ export interface operations {
                     "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
+            /** @description Nothing in this deployment's pipeline takes the command (its receiver is not configured). */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
         };
     };
     pmu_test_streamer_pause: {
@@ -2017,6 +2807,13 @@ export interface operations {
                     "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
+            /** @description Nothing in this deployment's pipeline takes the command (its receiver is not configured). */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
         };
     };
     pmu_test_streamer_play: {
@@ -2062,6 +2859,13 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
                 };
+            };
+            /** @description Nothing in this deployment's pipeline takes the command (its receiver is not configured). */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
@@ -2113,6 +2917,13 @@ export interface operations {
                     "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
+            /** @description Nothing in this deployment's pipeline takes the command (its receiver is not configured). */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
         };
     };
     pmu_test_streamer_source: {
@@ -2162,6 +2973,13 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
                 };
+            };
+            /** @description Nothing in this deployment's pipeline takes the command (its receiver is not configured). */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
@@ -2213,6 +3031,13 @@ export interface operations {
                     "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
+            /** @description Nothing in this deployment's pipeline takes the command (its receiver is not configured). */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
         };
     };
     pmu_test_streamer_step: {
@@ -2263,6 +3088,13 @@ export interface operations {
                     "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
+            /** @description Nothing in this deployment's pipeline takes the command (its receiver is not configured). */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
         };
     };
     pmu_test_streamer_summary: {
@@ -2312,6 +3144,13 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
                 };
+            };
+            /** @description Nothing in this deployment's pipeline takes the command (its receiver is not configured). */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

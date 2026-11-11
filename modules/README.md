@@ -11,6 +11,7 @@ architecture; `doc/module-cookbook.md` is the recipe for a new module.
 | [`live-synthetic/`](live-synthetic/) | `pswamp-live-synthetic` | source (live, not playable) | — | `PmuFrame` | — |
 | [`range-summary/`](range-summary/) | `pswamp-range-summary` | module | — | `RangeSummaryResult` | `SummarizeRangeCommand` |
 | [`remote-history/`](remote-history/) | `pswamp-remote-history` | source (history, playable) | — | `PmuFrame` | `PlayCommand`, `PauseCommand`, `StepCommand`, `SeekCommand`, `SpeedCommand` |
+| [`rtsim-from-cim/`](rtsim-from-cim/) | `pswamp-rtsim-from-cim` | source (live, not playable) | the CIM graph (outside the transport, `cim = True`) | `PmuFrame`, a column group per PMU Analog of the graph | — |
 | [`sample-replay/`](sample-replay/) | `pswamp-sample-replay` | source (history, playable) | — | `PmuFrame` | `PlayCommand`, `PauseCommand`, `StepCommand`, `SeekCommand`, `SpeedCommand` |
 | [`synthetic-history/`](synthetic-history/) | `pswamp-synthetic-history` | source (history, playable) | — | `PmuFrame` | `PlayCommand`, `PauseCommand`, `StepCommand`, `SeekCommand`, `SpeedCommand` |
 
@@ -26,7 +27,11 @@ by the run's `ActiveSource` router.
 
 **Running one from a script** needs no server and no event loop. The canonical
 example replays the sample recording through `frame-stats` and plots it:
-`sample-replay/examples/replay_stats.py`.
+`sample-replay/examples/replay_stats.py`. An example that wants another module's
+data names it by its entry point (`pswamp_core.scripts.source("rtsim-from-cim")`)
+and installs it through an extra of its own, rather than importing it:
+`frame-stats/examples/rtsim_frame_stats.py` runs `frame-stats` over the live grid
+simulation of Nordic44, in an embedded Oxigraph store of the script's own.
 
 Each module folder holds exactly:
 

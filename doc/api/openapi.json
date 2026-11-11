@@ -318,6 +318,14 @@
       "CimGraphState": {
         "description": "What the graph says is switched off, pushed on connect and whenever it changes.\n\nThe whole state each time, not a delta: it is a few hundred booleans, and a client that missed\na message cannot end up wrong.",
         "properties": {
+          "events": {
+            "description": "What the live simulation announced most recently (disturbances, protection), oldest first: never written to the graph, so the only place a person hears of them.",
+            "items": {
+              "$ref": "#/components/schemas/SimEvent"
+            },
+            "title": "Events",
+            "type": "array"
+          },
           "out_of_service": {
             "description": "The lines and transformers (mRIDs) out of service, which is what the simulation follows.",
             "items": {
@@ -371,6 +379,20 @@
             "title": "Breakers",
             "type": "array"
           },
+          "generators": {
+            "items": {
+              "$ref": "#/components/schemas/LayoutGenerator"
+            },
+            "title": "Generators",
+            "type": "array"
+          },
+          "loads": {
+            "items": {
+              "$ref": "#/components/schemas/LayoutLoad"
+            },
+            "title": "Loads",
+            "type": "array"
+          },
           "substations": {
             "items": {
               "$ref": "#/components/schemas/LayoutSubstation"
@@ -382,7 +404,8 @@
         "required": [
           "substations",
           "branches",
-          "breakers"
+          "breakers",
+          "loads"
         ],
         "title": "CimLayout",
         "type": "object"
@@ -594,6 +617,36 @@
           "result"
         ],
         "title": "ExcursionResult",
+        "type": "object"
+      },
+      "FaultBody": {
+        "properties": {
+          "clear_ms": {
+            "default": 100.0,
+            "description": "How long its protection takes to clear it, ms.",
+            "exclusiveMinimum": 0.0,
+            "title": "Clear Ms",
+            "type": "number"
+          },
+          "end": {
+            "default": 1,
+            "description": "The line end the fault is at.",
+            "enum": [
+              1,
+              2
+            ],
+            "title": "End",
+            "type": "integer"
+          },
+          "y": {
+            "default": 1000000.0,
+            "description": "The fault's admittance to ground, per unit.",
+            "exclusiveMinimum": 0.0,
+            "title": "Y",
+            "type": "number"
+          }
+        },
+        "title": "FaultBody",
         "type": "object"
       },
       "FrameStats": {
@@ -1183,7 +1236,7 @@
             "type": "array"
           },
           "to_substation": {
-            "description": "mRID of the substation at its second end.",
+            "description": "mRID of the substation at its second end; the same as the first for a transformer inside one substation.",
             "title": "To Substation",
             "type": "string"
           }
@@ -1224,6 +1277,153 @@
         "title": "LayoutBreaker",
         "type": "object"
       },
+      "LayoutGenerator": {
+        "description": "A machine (a ``SynchronousMachine``), its power as it generates: positive out of it, where the\ngraph (CGMES) counts it into the equipment.",
+        "properties": {
+          "mrid": {
+            "title": "Mrid",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "p_mw": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Its active power generated, as the graph had it when the layout was read, MW.",
+            "title": "P Mw"
+          },
+          "q_mvar": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Its reactive power generated, as the graph had it when the layout was read, Mvar.",
+            "title": "Q Mvar"
+          },
+          "rated_mva": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Its rated apparent power, MVA.",
+            "title": "Rated Mva"
+          },
+          "substation": {
+            "description": "mRID of the substation it stands in.",
+            "title": "Substation",
+            "type": "string"
+          }
+        },
+        "required": [
+          "mrid",
+          "name",
+          "substation",
+          "p_mw",
+          "q_mvar",
+          "rated_mva"
+        ],
+        "title": "LayoutGenerator",
+        "type": "object"
+      },
+      "LayoutLoad": {
+        "description": "A load: what a load step acts on (POST /loads/{mrid}/step).",
+        "properties": {
+          "mrid": {
+            "title": "Mrid",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "p_mw": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Its active power as the graph had it when the layout was read, MW.",
+            "title": "P Mw"
+          },
+          "q_mvar": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Its reactive power as the graph had it when the layout was read, Mvar.",
+            "title": "Q Mvar"
+          },
+          "substation": {
+            "description": "mRID of the substation it stands in.",
+            "title": "Substation",
+            "type": "string"
+          }
+        },
+        "required": [
+          "mrid",
+          "name",
+          "substation",
+          "p_mw",
+          "q_mvar"
+        ],
+        "title": "LayoutLoad",
+        "type": "object"
+      },
+      "LayoutNode": {
+        "description": "A connectivity node: where a short circuit can be put (POST /nodes/{mrid}/short-circuit).",
+        "properties": {
+          "mrid": {
+            "title": "Mrid",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "nominal_kv": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Its voltage level's nominal voltage, kV; null: the graph does not say.",
+            "title": "Nominal Kv"
+          }
+        },
+        "required": [
+          "mrid",
+          "name",
+          "nominal_kv"
+        ],
+        "title": "LayoutNode",
+        "type": "object"
+      },
       "LayoutSubstation": {
         "properties": {
           "mrid": {
@@ -1234,6 +1434,14 @@
             "title": "Name",
             "type": "string"
           },
+          "nodes": {
+            "description": "Its connectivity nodes, highest voltage first.",
+            "items": {
+              "$ref": "#/components/schemas/LayoutNode"
+            },
+            "title": "Nodes",
+            "type": "array"
+          },
           "position": {
             "$ref": "#/components/schemas/Point"
           }
@@ -1241,7 +1449,8 @@
         "required": [
           "mrid",
           "name",
-          "position"
+          "position",
+          "nodes"
         ],
         "title": "LayoutSubstation",
         "type": "object"
@@ -1350,6 +1559,567 @@
           "events"
         ],
         "title": "LineOutageLog",
+        "type": "object"
+      },
+      "LiveFeed": {
+        "description": "One push: the layout when it is new, and every frame read since the last push.\n\nNothing is merged or skipped: a push carries as many frames as came while the last one was\nbeing sent, so under load the pushes get fewer and larger, and no frame is lost.",
+        "properties": {
+          "lag_s": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "How far behind real time the newest frame is, s, on the server's clock: the simulation catching up, plus the way to the page. None with no frame.",
+            "title": "Lag S"
+          },
+          "layout": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LiveLayout"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "The stations, when they are new."
+          },
+          "samples": {
+            "$ref": "#/components/schemas/LiveSamples"
+          },
+          "scan": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LiveScan"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "The latest SCADA scan, when it is new (or the layout is)."
+          },
+          "type": {
+            "const": "state",
+            "default": "state",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "samples"
+        ],
+        "title": "LiveFeed",
+        "type": "object"
+      },
+      "LiveInjection": {
+        "description": "A generator or a load, whose power a PMU measures.",
+        "properties": {
+          "kind": {
+            "enum": [
+              "generator",
+              "load"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "mrid": {
+            "description": "mRID of the machine or the load in the CIM graph.",
+            "title": "Mrid",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "station": {
+            "description": "The station it is at, '<substation>_<kV>'.",
+            "title": "Station",
+            "type": "string"
+          }
+        },
+        "required": [
+          "mrid",
+          "name",
+          "kind",
+          "station"
+        ],
+        "title": "LiveInjection",
+        "type": "object"
+      },
+      "LiveLayout": {
+        "description": "The stations, line ends and injections, each in the order every sample lists them. Sent first,\nand again when it changes.",
+        "properties": {
+          "header_id": {
+            "description": "The frames' layout this describes (PmuHeader.header_id).",
+            "title": "Header Id",
+            "type": "string"
+          },
+          "injections": {
+            "items": {
+              "$ref": "#/components/schemas/LiveInjection"
+            },
+            "title": "Injections",
+            "type": "array"
+          },
+          "line_ends": {
+            "items": {
+              "$ref": "#/components/schemas/LiveLineEnd"
+            },
+            "title": "Line Ends",
+            "type": "array"
+          },
+          "scada": {
+            "description": "The grid's SCADA measurements, in the order a scan lists them.",
+            "items": {
+              "$ref": "#/components/schemas/LiveScadaPoint"
+            },
+            "title": "Scada",
+            "type": "array"
+          },
+          "stations": {
+            "items": {
+              "$ref": "#/components/schemas/LiveStation"
+            },
+            "title": "Stations",
+            "type": "array"
+          }
+        },
+        "required": [
+          "header_id",
+          "stations"
+        ],
+        "title": "LiveLayout",
+        "type": "object"
+      },
+      "LiveLineEnd": {
+        "description": "One end of a line, where a PMU measures its current.",
+        "properties": {
+          "end": {
+            "description": "Which end: its terminal's sequence number.",
+            "enum": [
+              1,
+              2
+            ],
+            "title": "End",
+            "type": "integer"
+          },
+          "limit_a": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The end's permanent current limit, A; null: the graph gives none.",
+            "title": "Limit A"
+          },
+          "line": {
+            "description": "mRID of the line in the CIM graph.",
+            "title": "Line",
+            "type": "string"
+          },
+          "station": {
+            "description": "The station at that end, '<substation>_<kV>'.",
+            "title": "Station",
+            "type": "string"
+          }
+        },
+        "required": [
+          "line",
+          "end",
+          "station",
+          "limit_a"
+        ],
+        "title": "LiveLineEnd",
+        "type": "object"
+      },
+      "LiveSamples": {
+        "description": "Consecutive frames, oldest first: one entry per frame in ``t``, one value per station in each row.",
+        "properties": {
+          "angle_deg": {
+            "description": "Per frame, each station's voltage angle, degrees.",
+            "items": {
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "type": "array"
+            },
+            "title": "Angle Deg",
+            "type": "array"
+          },
+          "f_hz": {
+            "description": "Per frame, each station's frequency, Hz.",
+            "items": {
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "type": "array"
+            },
+            "title": "F Hz",
+            "type": "array"
+          },
+          "i_a": {
+            "description": "Per frame, each line end's current magnitude, A.",
+            "items": {
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "type": "array"
+            },
+            "title": "I A",
+            "type": "array"
+          },
+          "loading": {
+            "description": "Per frame, each line end's current over its permanent limit (1 is at the limit); null without a limit.",
+            "items": {
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "type": "array"
+            },
+            "title": "Loading",
+            "type": "array"
+          },
+          "p_mw": {
+            "description": "Per frame, each injection's active power, MW (a load's is what it draws).",
+            "items": {
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "type": "array"
+            },
+            "title": "P Mw",
+            "type": "array"
+          },
+          "q_mvar": {
+            "description": "Per frame, each injection's reactive power, Mvar.",
+            "items": {
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "type": "array"
+            },
+            "title": "Q Mvar",
+            "type": "array"
+          },
+          "t": {
+            "description": "Each frame's time, seconds since the Unix epoch.",
+            "items": {
+              "type": "number"
+            },
+            "title": "T",
+            "type": "array"
+          },
+          "v_pu": {
+            "description": "Per frame, each station's voltage magnitude, per unit.",
+            "items": {
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "type": "array"
+            },
+            "title": "V Pu",
+            "type": "array"
+          }
+        },
+        "required": [
+          "t",
+          "v_pu",
+          "angle_deg",
+          "f_hz"
+        ],
+        "title": "LiveSamples",
+        "type": "object"
+      },
+      "LiveScadaPoint": {
+        "description": "One SCADA measurement of the grid (an Analog, or a switch's Discrete), and what it is on.",
+        "properties": {
+          "end": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "For a line's or a transformer's end: its terminal's sequence number.",
+            "title": "End"
+          },
+          "equipment": {
+            "description": "mRID of the line, transformer, machine, load or switch; of the node, for a voltage.",
+            "title": "Equipment",
+            "type": "string"
+          },
+          "kind": {
+            "description": "What it is on.",
+            "enum": [
+              "line",
+              "transformer",
+              "generator",
+              "load",
+              "switch",
+              "voltage_level"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "kv": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "The nominal voltage where it measures, kV.",
+            "title": "Kv"
+          },
+          "mrid": {
+            "description": "mRID of the Analog or the Discrete in the CIM graph.",
+            "title": "Mrid",
+            "type": "string"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "The name of what it is on, as the graph has it.",
+            "title": "Name"
+          },
+          "positive_flow_in": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "For a power: true when a flow into the equipment is positive (CGMES), so a generator's is negative.",
+            "title": "Positive Flow In"
+          },
+          "quantity": {
+            "description": "Active or reactive power, a voltage, a current, a switch's position (1 closed, 0 open).",
+            "enum": [
+              "P",
+              "Q",
+              "V",
+              "I",
+              "Pos"
+            ],
+            "title": "Quantity",
+            "type": "string"
+          },
+          "substation": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "mRID of the substation its terminal is in.",
+            "title": "Substation"
+          },
+          "unit": {
+            "description": "What its values are in: 'MW', 'Mvar', 'kV', 'A'; '' for a position.",
+            "title": "Unit",
+            "type": "string"
+          }
+        },
+        "required": [
+          "mrid",
+          "quantity",
+          "unit",
+          "kind",
+          "equipment"
+        ],
+        "title": "LiveScadaPoint",
+        "type": "object"
+      },
+      "LiveScan": {
+        "description": "The latest SCADA scan: one value per SCADA point of the layout, in its order.",
+        "properties": {
+          "sim_time": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "When, on the simulation's clock, s.",
+            "title": "Sim Time"
+          },
+          "t": {
+            "description": "When it was scanned, seconds since the Unix epoch.",
+            "title": "T",
+            "type": "number"
+          },
+          "values": {
+            "description": "Each point's value; null: the scan has none for it.",
+            "items": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "title": "Values",
+            "type": "array"
+          }
+        },
+        "required": [
+          "t",
+          "values"
+        ],
+        "title": "LiveScan",
+        "type": "object"
+      },
+      "LiveStation": {
+        "description": "One PMU station of the stream: a voltage level of a substation.",
+        "properties": {
+          "kv": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Its nominal voltage, kV: what v_pu is per unit of.",
+            "title": "Kv"
+          },
+          "name": {
+            "description": "The station's label in the frames, '<substation>_<kV>'.",
+            "title": "Name",
+            "type": "string"
+          },
+          "substation": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "mRID of its substation in the CIM graph; null when unknown.",
+            "title": "Substation"
+          }
+        },
+        "required": [
+          "name",
+          "substation",
+          "kv"
+        ],
+        "title": "LiveStation",
+        "type": "object"
+      },
+      "LoadStepBody": {
+        "properties": {
+          "p_mw": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Its new active power, MW.",
+            "title": "P Mw"
+          },
+          "q_mvar": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Its new reactive power, Mvar.",
+            "title": "Q Mvar"
+          }
+        },
+        "title": "LoadStepBody",
         "type": "object"
       },
       "Phasor": {
@@ -2081,6 +2851,106 @@
         "title": "SeekBody",
         "type": "object"
       },
+      "ShortCircuitBody": {
+        "properties": {
+          "y": {
+            "default": 1000000.0,
+            "description": "The fault's admittance to ground, per unit; the default is bolted.",
+            "exclusiveMinimum": 0.0,
+            "title": "Y",
+            "type": "number"
+          }
+        },
+        "title": "ShortCircuitBody",
+        "type": "object"
+      },
+      "SimEvent": {
+        "description": "A disturbance injected, or a protection operating: announced, never written to CIM.",
+        "properties": {
+          "cause": {
+            "description": "Why.",
+            "enum": [
+              "command",
+              "disturbance",
+              "protection"
+            ],
+            "title": "Cause",
+            "type": "string"
+          },
+          "detail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "One line for a person, e.g. 'overload 1.3 x limit'.",
+            "title": "Detail"
+          },
+          "kind": {
+            "description": "What happened.",
+            "enum": [
+              "open",
+              "close",
+              "trip",
+              "reconnect",
+              "short_circuit",
+              "clear_short_circuit",
+              "load_step",
+              "reset"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "mRID": {
+            "description": "The CIM object it happened to.",
+            "title": "Mrid",
+            "type": "string"
+          },
+          "request_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "The command it answers, if any.",
+            "title": "Request Id"
+          },
+          "sim_time": {
+            "description": "When, on the simulation's clock, s.",
+            "title": "Sim Time",
+            "type": "number"
+          },
+          "timestamp": {
+            "description": "When it happened, wall clock.",
+            "format": "date-time",
+            "title": "Timestamp",
+            "type": "string"
+          },
+          "version": {
+            "const": "v1",
+            "default": "v1",
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "mRID",
+          "timestamp",
+          "kind",
+          "cause",
+          "sim_time"
+        ],
+        "title": "SimEvent",
+        "type": "object"
+      },
       "SourceBody": {
         "properties": {
           "name": {
@@ -2317,6 +3187,116 @@
   },
   "openapi": "3.1.0",
   "paths": {
+    "/api/cim-graph/branches/{mrid}/reconnect": {
+      "post": {
+        "description": "A tripped line or transformer comes back. 409 for one the simulation does not have; 503\nwithout the simulation.",
+        "operationId": "cim_graph_reconnect_branch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "mrid",
+            "required": true,
+            "schema": {
+              "title": "Mrid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "The browser's client id -- the same value its WebSockets send, which is what makes a command apply to the pipeline the page is watching.",
+            "in": "query",
+            "name": "client_id",
+            "required": true,
+            "schema": {
+              "description": "The browser's client id -- the same value its WebSockets send, which is what makes a command apply to the pipeline the page is watching.",
+              "pattern": "^\\d{1,20}$",
+              "title": "Client Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandAck"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Reconnect Branch",
+        "tags": [
+          "cim-graph"
+        ]
+      }
+    },
+    "/api/cim-graph/branches/{mrid}/trip": {
+      "post": {
+        "description": "A line or transformer trips, as no one commanded it. 409 for one the simulation does not have;\n503 without the simulation.",
+        "operationId": "cim_graph_trip_branch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "mrid",
+            "required": true,
+            "schema": {
+              "title": "Mrid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "The browser's client id -- the same value its WebSockets send, which is what makes a command apply to the pipeline the page is watching.",
+            "in": "query",
+            "name": "client_id",
+            "required": true,
+            "schema": {
+              "description": "The browser's client id -- the same value its WebSockets send, which is what makes a command apply to the pipeline the page is watching.",
+              "pattern": "^\\d{1,20}$",
+              "title": "Client Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandAck"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Trip Branch",
+        "tags": [
+          "cim-graph"
+        ]
+      }
+    },
     "/api/cim-graph/layout": {
       "get": {
         "description": "Where the substations, lines and breakers are, from the graph's GL profile.",
@@ -2341,7 +3321,7 @@
     },
     "/api/cim-graph/lines/{mrid}": {
       "post": {
-        "description": "Take a line (or a transformer) out of service (``open: true``) or bring it back: the breakers\nthat cut one of its ends off, or, for a line with none, a terminal. 404 for an unknown branch, 409\nwhen it is already so.",
+        "description": "Take a line out of service (``open: true``) or bring it back, in the simulation: by the one\nbreaker that operates it, or, for a line with none, by its terminal. 404 for an unknown branch,\n409 when the graph says it is already so, or the simulation refuses; 503 without the simulation.",
         "operationId": "cim_graph_set_line",
         "parameters": [
           {
@@ -2404,9 +3384,259 @@
         ]
       }
     },
+    "/api/cim-graph/lines/{mrid}/fault": {
+      "post": {
+        "description": "A fault at one end of a line, cleared after ``clear_ms`` by its protection, which opens the\nbreakers that isolate the line; those the graph then shows open. 409 for a line the simulation\ndoes not have; 503 without the simulation.",
+        "operationId": "cim_graph_fault_line",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "mrid",
+            "required": true,
+            "schema": {
+              "title": "Mrid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "The browser's client id -- the same value its WebSockets send, which is what makes a command apply to the pipeline the page is watching.",
+            "in": "query",
+            "name": "client_id",
+            "required": true,
+            "schema": {
+              "description": "The browser's client id -- the same value its WebSockets send, which is what makes a command apply to the pipeline the page is watching.",
+              "pattern": "^\\d{1,20}$",
+              "title": "Client Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FaultBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandAck"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Fault Line",
+        "tags": [
+          "cim-graph"
+        ]
+      }
+    },
+    "/api/cim-graph/loads/{mrid}/step": {
+      "post": {
+        "description": "A load draws other power, as no one told the graph. 409 for a load the simulation does not\nhave; 503 without the simulation.",
+        "operationId": "cim_graph_load_step",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "mrid",
+            "required": true,
+            "schema": {
+              "title": "Mrid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "The browser's client id -- the same value its WebSockets send, which is what makes a command apply to the pipeline the page is watching.",
+            "in": "query",
+            "name": "client_id",
+            "required": true,
+            "schema": {
+              "description": "The browser's client id -- the same value its WebSockets send, which is what makes a command apply to the pipeline the page is watching.",
+              "pattern": "^\\d{1,20}$",
+              "title": "Client Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoadStepBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandAck"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Load Step",
+        "tags": [
+          "cim-graph"
+        ]
+      }
+    },
+    "/api/cim-graph/nodes/{mrid}/clear-short-circuit": {
+      "post": {
+        "description": "The short circuit at a connectivity node goes. 409 for a node the simulation does not have;\n503 without the simulation.",
+        "operationId": "cim_graph_clear_short_circuit",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "mrid",
+            "required": true,
+            "schema": {
+              "title": "Mrid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "The browser's client id -- the same value its WebSockets send, which is what makes a command apply to the pipeline the page is watching.",
+            "in": "query",
+            "name": "client_id",
+            "required": true,
+            "schema": {
+              "description": "The browser's client id -- the same value its WebSockets send, which is what makes a command apply to the pipeline the page is watching.",
+              "pattern": "^\\d{1,20}$",
+              "title": "Client Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandAck"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Clear Short Circuit",
+        "tags": [
+          "cim-graph"
+        ]
+      }
+    },
+    "/api/cim-graph/nodes/{mrid}/short-circuit": {
+      "post": {
+        "description": "A short circuit at a connectivity node, until it is cleared. 409 for a node the simulation\ndoes not have (one cut off from the grid); 503 without the simulation.",
+        "operationId": "cim_graph_short_circuit",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "mrid",
+            "required": true,
+            "schema": {
+              "title": "Mrid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "The browser's client id -- the same value its WebSockets send, which is what makes a command apply to the pipeline the page is watching.",
+            "in": "query",
+            "name": "client_id",
+            "required": true,
+            "schema": {
+              "description": "The browser's client id -- the same value its WebSockets send, which is what makes a command apply to the pipeline the page is watching.",
+              "pattern": "^\\d{1,20}$",
+              "title": "Client Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ShortCircuitBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandAck"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Short Circuit",
+        "tags": [
+          "cim-graph"
+        ]
+      }
+    },
     "/api/cim-graph/reset": {
       "post": {
-        "description": "Put the grid back as it was loaded: every switch as the model has it, every branch in service.",
+        "description": "Put the grid back as it was loaded: every switch as the model has it, every branch in service;\nand the simulation, when it runs, starts over from it, every disturbance gone.",
         "operationId": "cim_graph_reset",
         "parameters": [
           {
@@ -2452,7 +3682,7 @@
     },
     "/api/cim-graph/switches/{mrid}": {
       "post": {
-        "description": "Open (``open: true``) or close a switch. 404 for an unknown switch, 409 when it is already so.",
+        "description": "Open (``open: true``) or close a switch, in the simulation. 404 for an unknown switch, 409 when\nthe graph says it is already so, or the simulation refuses; 503 without the simulation.",
         "operationId": "cim_graph_set_switch",
         "parameters": [
           {
@@ -2766,6 +3996,9 @@
               }
             },
             "description": "Validation Error"
+          },
+          "503": {
+            "description": "Nothing in this deployment's pipeline takes the command (its receiver is not configured)."
           }
         },
         "summary": "Auto Pause",
@@ -2818,6 +4051,9 @@
               }
             },
             "description": "Validation Error"
+          },
+          "503": {
+            "description": "Nothing in this deployment's pipeline takes the command (its receiver is not configured)."
           }
         },
         "summary": "Pause",
@@ -2870,6 +4106,9 @@
               }
             },
             "description": "Validation Error"
+          },
+          "503": {
+            "description": "Nothing in this deployment's pipeline takes the command (its receiver is not configured)."
           }
         },
         "summary": "Play",
@@ -2932,6 +4171,9 @@
               }
             },
             "description": "Validation Error"
+          },
+          "503": {
+            "description": "Nothing in this deployment's pipeline takes the command (its receiver is not configured)."
           }
         },
         "summary": "Seek",
@@ -2994,6 +4236,9 @@
               }
             },
             "description": "Validation Error"
+          },
+          "503": {
+            "description": "Nothing in this deployment's pipeline takes the command (its receiver is not configured)."
           }
         },
         "summary": "Source",
@@ -3056,6 +4301,9 @@
               }
             },
             "description": "Validation Error"
+          },
+          "503": {
+            "description": "Nothing in this deployment's pipeline takes the command (its receiver is not configured)."
           }
         },
         "summary": "Speed",
@@ -3118,6 +4366,9 @@
               }
             },
             "description": "Validation Error"
+          },
+          "503": {
+            "description": "Nothing in this deployment's pipeline takes the command (its receiver is not configured)."
           }
         },
         "summary": "Step",
@@ -3180,6 +4431,9 @@
               }
             },
             "description": "Validation Error"
+          },
+          "503": {
+            "description": "Nothing in this deployment's pipeline takes the command (its receiver is not configured)."
           }
         },
         "summary": "Summary",
@@ -3464,6 +4718,10 @@
     {
       "description": "CIM graph.",
       "name": "cim-graph"
+    },
+    {
+      "description": "The live grid simulation's frames, as each station's voltage and frequency, every frame.",
+      "name": "cim-live"
     }
   ],
   "x-websocket-channels": [
@@ -3538,6 +4796,14 @@
         "$ref": "#/components/schemas/CimGraphState"
       },
       "path": "/api/cim-graph/ws"
+    },
+    {
+      "app": "cim-live",
+      "direction": "server-to-client",
+      "message": {
+        "$ref": "#/components/schemas/LiveFeed"
+      },
+      "path": "/api/cim-live/ws"
     }
   ]
 }

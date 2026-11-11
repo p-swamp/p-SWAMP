@@ -24,7 +24,7 @@ from pswamp_core.cim import (  # noqa: E402
     SAMPLE_GRID,
     CimSettings,
     GraphVersion,
-    analog_index,
+    measurement_table,
     connect_reader,
     model_id,
     refresh_expired,
@@ -52,14 +52,14 @@ def store():
     return remote
 
 
-def test_a_reader_sees_the_grid_and_its_analogs(store):
+def test_a_reader_sees_the_grid_and_its_measurements(store):
     reader = connect_reader(store=store)
     assert model_id(store) == "3f5e0000-0000-4000-8000-000000000001"
-    analog_index(reader)
+    measurement_table(reader)
     started = time.perf_counter()
     with reader.measure() as work:
-        assert len(analog_index(reader)) == 14
-    print(f"analog index: {work.queries} queries, {1000 * (time.perf_counter() - started):.1f} ms")
+        assert len(measurement_table(reader)) == 58
+    print(f"measurement table: {work.queries} queries, {1000 * (time.perf_counter() - started):.1f} ms")
 
 
 def test_one_writer_one_update_and_a_reader_sees_it_once_the_stamp_moved(store):
@@ -86,3 +86,21 @@ def test_one_writer_one_update_and_a_reader_sees_it_once_the_stamp_moved(store):
     assert watch.changed() is True
     refresh_expired(reader)
     assert reader.from_mRID(COUPLER).open is False
+
+
+def test_the_latest_scada_values_are_one_update_that_does_not_move_the_stamp(store):
+    from rdflib import Graph, Literal, URIRef
+
+    from pswamp_core.cim.store import MEASUREMENTS_GRAPH
+
+    def latest() -> list[str]:
+        found = store.backend.execute(f"SELECT ?v WHERE {{ GRAPH <{MEASUREMENTS_GRAPH}> {{ ?s ?p ?v }} }}")
+        return [row["v"]["value"] for row in found["results"]["bindings"]]
+
+    values = Graph()
+    values.add((URIRef("urn:uuid:v"), URIRef("http://iec.ch/TC57/CIM100#AnalogValue.value"), Literal(1.5)))
+    watch, scans = GraphVersion(store), store.scans()
+    store.put_measurements(values)
+    assert latest() == ["1.5"] and store.scans() == scans + 1 and watch.changed() is False
+    store.reset()
+    assert latest() == []

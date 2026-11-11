@@ -108,6 +108,22 @@ async def test_a_full_outbox_never_drops_an_answer_to_a_command():
     assert [(r.result.value, r.request_id) for _, r in got] == [(0, "asked"), (3, None), (4, None)]
 
 
+async def test_a_full_outbox_never_drops_what_it_is_asked_to_keep():
+    # A report (what a live source says beside its frames) is data, but it is not a sample: a later one
+    # does not make it stale, so it is kept, like a command.
+    broker = InMemoryTransport()
+    outbox = Outbox(broker, app="a", key="k", maxsize=2)
+    with broker.subscribe(Measurement, app="a", overflow=Overflow.GROW) as feed:
+        outbox.publish(measurement(0), keep=True)
+        for i in range(1, 5):
+            outbox.publish(measurement(i))  # not started: everything waits
+        outbox.start()
+        got = await take(feed, 3)
+        await outbox.close()
+    assert [m.mRID for _, m in got] == ["m0", "m3", "m4"]
+    assert outbox.dropped == 2
+
+
 async def test_closing_the_outbox_flushes_it():
     broker = InMemoryTransport()
     outbox = Outbox(broker, app="a", key="k")

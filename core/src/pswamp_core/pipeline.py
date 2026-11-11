@@ -29,6 +29,7 @@ the run and the hosts meet only on the transport::
     DATA DOWN    active source → run.publish → topic <app>.pmu.frame, key → module (hosted)
                  run.latest ← topic <app>.<result>, key ← module
     COMMANDS UP  run.dispatch(cmd) → topic <app>.<command>, key → router → active source | module
+                 a live source's own command → key live.<source> → its shared run's router → the source
 
 The run keeps the newest message of each class (``latest``) and wakes readers
 on every change (``changes()``). That is what the web API builds its socket
@@ -56,7 +57,7 @@ import contextlib
 import os
 import time
 from collections.abc import AsyncIterator, Callable, Collection
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Generic, TypeVar
 
 from pswamp_models.common import Command, ErrorEvent, ModuleStarted, PipelineClosed
@@ -126,6 +127,10 @@ class Pipeline:
     #: What the sources serve. When given (``Pipeline.load`` always gives it),
     #: every class a module reads must have a producer in the pipeline.
     source_models: tuple[type[DataModel], ...] | None = None
+    #: The commands the live sources take, each with the source that takes it.
+    source_commands: dict[type[Command], str] = field(init=False, default_factory=dict, compare=False)
+    #: What the live sources publish beside their frames (``outputs[1:]``).
+    source_outputs: tuple[type[DataModel], ...] = field(init=False, default=(), compare=False)
 
     @classmethod
     def load(cls, path: str | os.PathLike[str]) -> Pipeline:
@@ -140,6 +145,14 @@ class Pipeline:
             if issubclass(module, SourceModule):
                 raise ValueError(f"{self.app}: {module.__name__} is a source: list it under [[sources]], not modules")
         taken: dict[type[Command], str] = {command: "the player" for command in ROUTER_COMMANDS}
+        live = _live_source_classes(self.sources)
+        for name, source in live:
+            for command in concrete_commands(source.__name__, source.commands):
+                if command in taken:
+                    raise ValueError(f"{self.app}: source {name} and {taken[command]} both take {command.__name__}")
+                taken[command] = f"source {name}"
+                self.source_commands[command] = name
+        object.__setattr__(self, "source_outputs", tuple(dict.fromkeys(o for _, s in live for o in s.outputs[1:])))
         for module in self.modules:
             for command in concrete_commands(module.__name__, module.commands):
                 if command in taken:
@@ -150,7 +163,7 @@ class Pipeline:
                 if issubclass(model, Command) and model not in taken:
                     raise ValueError(f"{self.app}: {module.__name__} sends {model.__name__}, which nothing in the pipeline takes")
         on_topic: dict[str, type[DataModel]] = {}
-        for model in (ErrorEvent, PipelineClosed, ModuleStarted, *taken, *self.inputs, *self.outputs):
+        for model in (ErrorEvent, PipelineClosed, ModuleStarted, *taken, *self.source_outputs, *self.inputs, *self.outputs):
             other = on_topic.setdefault(model.topic, model)
             if other is not model:
                 raise ValueError(
@@ -161,7 +174,7 @@ class Pipeline:
             twice = [model.__name__ for model in self.source_models if model in self.outputs]
             if twice:
                 raise ValueError(f"{self.app}: {', '.join(twice)} is produced by a source and by a module: one producer per class")
-            produced = {*self.source_models, *self.outputs, PlayerStatus, ErrorEvent, PipelineClosed}
+            produced = {*self.source_models, *self.source_outputs, *self.outputs, PlayerStatus, ErrorEvent, PipelineClosed}
             for module in self.modules:
                 for model in module.input_models():
                     if model not in produced:
@@ -207,6 +220,14 @@ class Pipeline:
 
 def _names(models: Collection[type]) -> str:
     return ", ".join(model.__name__ for model in models) or "nothing"
+
+
+def _live_source_classes(sources: Callable[[], SourceSet]) -> list[tuple[str, type[SourceModule]]]:
+    """``(name, class)`` of each live source: from a pipeline file's sources without
+    building one (``source_classes``), else from a set built for the purpose."""
+    classes = getattr(sources, "source_classes", None)
+    named = classes() if callable(classes) else [(name, type(s)) for name, s in sources().instances.items()]
+    return [(name, cls) for name, cls in named if cls.kind == "live"]
 
 
 def live_key(source: str) -> str:
@@ -300,6 +321,11 @@ class PipelineRun:
         self.shared = live_source is not None
         if live_source is not None:
             self.sources.switch(live_source)
+        #: A shared run's source's own commands, which it takes even when the pipeline was read
+        #: before that source was configured (``<APP>_SOURCES`` adds it from the environment).
+        self._own: tuple[type[Command], ...] = tuple(self.sources.active.commands) if self.shared else ()
+        #: Likewise what it says beside its frames, which it publishes.
+        self._said: frozenset[type[DataModel]] = frozenset(self.sources.active.outputs[1:]) if self.shared else frozenset()
         self.latest = NewestByClass()
         self.outbox = Outbox(
             transport,
@@ -329,8 +355,8 @@ class PipelineRun:
 
     def publish(self, message: DataModel) -> None:
         """What the active source publishes: remembered here, and put on the transport
-        when a module reads it, it is an error, or it is a shared run's frame or
-        status."""
+        when a module reads it, it is an error, or it is a shared run's frame,
+        status, or what its live source says beside its frames."""
         mark = self.router.stream_mark
         if mark != self._mark:
             self._mark = mark
@@ -341,9 +367,16 @@ class PipelineRun:
         elif message is self.router.last_frame:
             self.frame = message
         self._remember(message)
-        shared = self.shared and (message is self.router.last_frame or isinstance(message, PlayerStatus))
+        shared = self.shared and (
+            message is self.router.last_frame
+            or isinstance(message, PlayerStatus)
+            or type(message) in self.pipeline.source_outputs
+            or type(message) in self._said
+        )
         if shared or type(message) in self.pipeline.inputs or isinstance(message, ErrorEvent):
-            self.outbox.publish(message)
+            # What a live source says beside its frames is a report: never dropped for a frame's room.
+            said = type(message) in self.pipeline.source_outputs or type(message) in self._said
+            self.outbox.publish(message, keep=self.shared and said)
 
     def status(self) -> PlayerStatus:
         """The player's status as this run's viewer sees it: its router's,
@@ -387,9 +420,12 @@ class PipelineRun:
         if key is None:
             return
         model = self.sources.active.model
+        # What the followed source says beside its frames, even if it was configured after the
+        # pipeline was read.
+        said = dict.fromkeys((*self.pipeline.source_outputs, *self.sources.active.outputs[1:]))
         self.frame = None
         self._following = self.transport.subscribe(
-            model, PlayerStatus, *self.pipeline.results, app=self.pipeline.app, key=key
+            model, PlayerStatus, *self.pipeline.results, *said, app=self.pipeline.app, key=key
         )
         self._tasks.append(asyncio.create_task(self._receive_followed(self._following, model), name=f"{self.key}.follow"))
 
@@ -433,7 +469,22 @@ class PipelineRun:
         follows a shared live run, a command for a module that reads the
         stream raises ``CommandRefused``: its instance for this view is the
         live run's. A command nothing takes raises ``NoReceiver``.
+
+        A live source's own command goes to that source's shared run: on the
+        shared run itself it is validated first, as a player command is; from a
+        client's run it is published under the shared run's key, and refused
+        there, as an ``ErrorEvent`` under that key, if it does not apply.
         """
+        source = self.pipeline.source_commands.get(type(command))
+        if source is None and type(command) in self._own:
+            source = self.sources.source
+        if source is not None:
+            if self.shared and self.sources.source == source:
+                self.router.validate(command)
+                self.outbox.publish(command)
+            else:
+                self.outbox.publish(command, key=live_key(source))
+            return
         if type(command) in ROUTER_COMMANDS:
             self.router.validate(command)
         else:
@@ -459,7 +510,8 @@ class PipelineRun:
         await self.transport.open()
         # The router takes its commands off their topics, so a module can
         # command it exactly as the web API does.
-        commands = subscribe(*ROUTER_COMMANDS, app=app, key=key, overflow=Overflow.GROW)
+        own = (*self.pipeline.source_commands, *(c for c in self._own if c not in self.pipeline.source_commands))
+        commands = subscribe(*ROUTER_COMMANDS, *own, app=app, key=key, overflow=Overflow.GROW)
         self._subscriptions.append(commands)
         if self.pipeline.results:
             results = subscribe(*self.pipeline.results, app=app, key=key)

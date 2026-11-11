@@ -1,0 +1,85 @@
+/* The breakers on the grid map: a small square, filled when closed, outlined when open, amber while switching. */
+.cim-breaker {
+  border: 2px solid #16a34a;
+  background: #16a34a;
+  cursor: pointer;
+}
+.cim-breaker-open {
+  border-color: #ef4444;
+  background: #ffffff;
+}
+.cim-breaker-pending {
+  border-color: #f59e0b;
+  background: #fde68a;
+  animation: cim-breaker-pulse 0.8s ease-in-out infinite alternate;
+}
+@keyframes cim-breaker-pulse {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0.45;
+  }
+}
+
+/* A breaker whose position in the latest SCADA scan is not the graph's: ringed in violet. */
+.cim-breaker-mismatch {
+  outline: 2px dashed #7c3aed;
+  outline-offset: 2px;
+}
+
+/* A load on the grid map: a small triangle pointing down, below its substation. */
+.cim-load {
+  width: 0 !important;
+  height: 0 !important;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-top: 10px solid #7c3aed;
+  cursor: context-menu;
+}
+
+/* The selected load: outlined, so it stands out from its neighbours. */
+.cim-load.cim-selected {
+  border-top-color: #4c1d95;
+  filter: drop-shadow(0 0 2px #4c1d95);
+}
+
+/* A generator on the grid map: a circle with a sine, above its substation; outlined when selected. */
+.cim-generator {
+  cursor: pointer;
+}
+.cim-generator svg circle {
+  fill: rgba(255, 255, 255, 0.9);
+  stroke: #0369a1;
+  stroke-width: 1.5;
+}
+.cim-generator svg path {
+  fill: none;
+  stroke: #0369a1;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+}
+.cim-generator.cim-selected svg {
+  filter: drop-shadow(0 0 2px #0c4a6e);
+}
+
+/* A transformer's symbol: two overlapping windings, coloured as its branch is (in service, out,
+   switching), and outlined when selected. */
+.cim-transformer {
+  cursor: pointer;
+}
+.cim-transformer svg circle {
+  fill: rgba(255, 255, 255, 0.85);
+  stroke: #16a34a;
+  stroke-width: 2;
+}
+.cim-transformer-out svg circle {
+  stroke: #ef4444;
+  stroke-dasharray: 3 2;
+}
+.cim-transformer-pending svg circle {
+  stroke: #f59e0b;
+}
+.cim-transformer.cim-selected svg {
+  filter: drop-shadow(0 0 2px #0f172a);
+}

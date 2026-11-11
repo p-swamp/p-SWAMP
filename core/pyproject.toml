@@ -29,8 +29,8 @@ dependencies = ["pydantic>=2.12", "pswamp-models"]
 
 [project.optional-dependencies]
 kafka = ["aiokafka>=0.14,<1"]
-cim = ["lazycim[graphdb]==0.2.2"]
-oxigraph = ["lazycim[graphdb,oxigraph]==0.2.2"]
+cim = ["lazycim[graphdb]==0.3.1"]
+oxigraph = ["lazycim[graphdb,oxigraph]==0.3.1"]
 
 [tool.uv.sources]
 pswamp-models = { workspace = true }
