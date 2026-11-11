@@ -19,6 +19,7 @@ pytestmark = pytest.mark.skipif(
 )
 
 IMAGE = "registry.example.com/p-swamp:main-0000000"
+EXTERNAL_CIM_STORE_HOST = "fuseki.jena.svc.cluster.local"
 
 
 @pytest.fixture(scope="module")
@@ -48,9 +49,18 @@ images:
         encoding="utf-8",
     )
     (final / "kustomization.yaml").write_text(
-        """
+        f"""
 resources: [../test-renamed]
 components: [../../components/hosts]
+# No components/embedded-jena: this overlay models an outside overlay that
+# points at an external CIM store instead (see "The CIM store" in
+# k8s/README.md) — a literal value, unaffected by the rename above.
+patches:
+  - target: {{kind: ConfigMap, name: p-swamp-hosts}}
+    patch: |
+      - op: replace
+        path: /data/PSWAMP_CIM_STORE_HOST
+        value: {EXTERNAL_CIM_STORE_HOST}
 """,
         encoding="utf-8",
     )
@@ -83,11 +93,15 @@ def test_every_object_is_renamed(rendered):
 
 
 def test_hosts_name_the_renamed_services(rendered):
+    """PSWAMP_KAFKA_HOST and PSWAMP_REMOTE_DATA_HOST always name a bundled Service;
+    PSWAMP_CIM_STORE_HOST may instead be an external store's address (this fixture's
+    overlay sets one, in place of components/embedded-jena: see k8s/README.md)."""
     services = _of(rendered, "Service")
     hosts = _of(rendered, "ConfigMap")["p-swamp-hosts-a"]["data"]
     assert hosts, "p-swamp-hosts is empty"
-    for var, host in hosts.items():
-        assert host in services, f"{var}={host} is no Service in the render"
+    for var in ("PSWAMP_KAFKA_HOST", "PSWAMP_REMOTE_DATA_HOST"):
+        assert hosts[var] in services, f"{var}={hosts[var]} is no Service in the render"
+    assert hosts["PSWAMP_CIM_STORE_HOST"] == EXTERNAL_CIM_STORE_HOST
 
 
 def test_no_service_name_written_out(rendered):
@@ -169,3 +183,35 @@ def test_server_is_reachable_by_port_name(rendered):
     )
     assert server["spec"]["replicas"] == 1
     assert server["spec"]["strategy"]["type"] == "Recreate"
+
+
+@pytest.fixture(scope="module")
+def rendered_with_embedded_jena(tmp_path_factory):
+    """The base plus components/embedded-jena, unrenamed: what k8s/overlays/minikube is."""
+    k8s = tmp_path_factory.mktemp("tree") / "k8s"
+    shutil.copytree(repo_root() / "k8s", k8s)
+    overlay = k8s / "overlays" / "test-embedded-jena"
+    overlay.mkdir()
+    (overlay / "kustomization.yaml").write_text(
+        """
+resources: [../../base]
+components: [../../components/embedded-jena]
+""",
+        encoding="utf-8",
+    )
+    result = subprocess.run(
+        ["kubectl", "kustomize", str(overlay)],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr
+    return [doc for doc in yaml.safe_load_all(result.stdout) if doc]
+
+
+def test_embedded_jena_names_its_own_service(rendered_with_embedded_jena):
+    """components/embedded-jena writes its own Service's name into PSWAMP_CIM_STORE_HOST."""
+    services = _of(rendered_with_embedded_jena, "Service")
+    hosts = _of(rendered_with_embedded_jena, "ConfigMap")["p-swamp-hosts"]["data"]
+    assert hosts["PSWAMP_CIM_STORE_HOST"] == "p-swamp-jena"
+    assert "p-swamp-jena" in services

@@ -10,7 +10,8 @@ k8s/
     p-swamp.yaml        the manifests; the header says what each object is
     kustomization.yaml  lists them and generates the live feed's ConfigMap
   components/hosts/     a helper for overlays that rename the stack
-  overlays/minikube/    the base plus a NodePort: `uv run pswamp deploy minikube`
+  components/embedded-jena/  a bundled Jena/Fuseki CIM store, for a cluster that has no other
+  overlays/minikube/    the base plus embedded-jena plus a NodePort: `uv run pswamp deploy minikube`
 ```
 
 ## Why a base and overlays
@@ -62,6 +63,27 @@ env:
   - name: KAFKA_BOOTSTRAP_SERVERS
     value: $(PSWAMP_KAFKA_HOST):9092
 ```
+
+### The CIM store: bundled or external
+
+`PSWAMP_CIM_STORE_HOST` has **no default** in `base/`: the base does not bundle
+a CIM store, because not every cluster needs the same one. A cluster uses one
+of:
+
+- **`components/embedded-jena`**: a Jena/Fuseki Deployment+Service the base
+  doesn't otherwise have, loaded fresh by the server on every start (no
+  persistence). `overlays/minikube` includes it, since minikube has nothing
+  else to point at. Include it one layer above a rename, same as
+  `components/hosts` (see the comment in its `kustomization.yaml`).
+- **An external store**: an overlay that already has a CIM store elsewhere
+  (e.g. a platform-level shared one) sets `PSWAMP_CIM_STORE_HOST` directly with
+  a `patches` entry on the `p-swamp-hosts` ConfigMap, and does not include
+  `embedded-jena` at all.
+
+Neither is enforced at render time: an overlay that does neither renders a
+valid-looking `PSWAMP_CIM_URL: http://:3030/ds` that only fails once a pod
+tries to connect. `kubectl kustomize` the overlay and check
+`PSWAMP_CIM_STORE_HOST` isn't empty before applying it for the first time.
 
 ## Kustomize cheat-sheet
 

@@ -242,7 +242,7 @@ services:
     restart: unless-stopped
 
   # The CIM graph's store: Jena/Fuseki, same image and assembler config as the
-  # minikube deployment (k8s/jena/docker/, k8s/base/fuseki-config.ttl) — one
+  # minikube deployment (k8s/jena/docker/, k8s/components/embedded-jena/fuseki-config.ttl) — one
   # Dockerfile, every deployment path builds from it. No volume: the server
   # loads the grid into the empty store when it starts, so a restart puts
   # every edit back, like the rest of the stack. The assembler config sets
@@ -260,7 +260,7 @@ services:
       JAVA_OPTIONS: "-Xmx512m -Xms256m"
     command: ["--conf=/fuseki/config.ttl"]
     volumes:
-      - ./k8s/base/fuseki-config.ttl:/fuseki/config.ttl:ro
+      - ./k8s/components/embedded-jena/fuseki-config.ttl:/fuseki/config.ttl:ro
     ports:
       - "3030:3030"
     healthcheck:

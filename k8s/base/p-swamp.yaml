@@ -466,6 +466,10 @@ spec:
 # Overlays: the only place a Service's name is written as a value. A new entry
 # also needs a replacement in k8s/components/hosts. See "Environment variables"
 # in k8s/README.md.
+#
+# PSWAMP_CIM_STORE_HOST has no default: this base does not bundle a CIM store.
+# A cluster that needs one includes k8s/components/embedded-jena, which fills
+# it in; a cluster with its own store (e.g. a shared one) sets it directly.
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -473,102 +477,4 @@ metadata:
 data:
   PSWAMP_KAFKA_HOST: p-swamp-kafka
   PSWAMP_REMOTE_DATA_HOST: p-swamp-remote-data-stub
-  PSWAMP_CIM_STORE_HOST: p-swamp-jena
----
-# Jena/Fuseki, TDB2 in an emptyDir (no PVC): the store of the CIM graph. No
-# volume that survives a restart: the server loads the grid into the empty
-# store when it starts, so a restart puts every edit back, like the rest of
-# the stack. Plain SPARQL 1.1 at /ds/query and /ds/update; the assembler
-# config (jena-config below) sets tdb2:unionDefaultGraph true, merging the
-# named graphs (one per CGMES profile) into the default one, and names the
-# Graph Store Protocol endpoint "store" to match what LazyCIM's
-# OxigraphServerBackend expects.
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: p-swamp-jena
-  labels:
-    app: p-swamp-jena
-spec:
-  replicas: 1
-  strategy:
-    type: Recreate
-  selector:
-    matchLabels:
-      app: p-swamp-jena
-  template:
-    metadata:
-      labels:
-        app: p-swamp-jena
-    spec:
-      securityContext:
-        runAsNonRoot: true
-        runAsUser: 1000
-        runAsGroup: 1000
-        fsGroup: 1000
-        seccompProfile:
-          type: RuntimeDefault
-      containers:
-        - name: fuseki
-          image: jena-fuseki:6.2.0
-          imagePullPolicy: Never
-          securityContext:
-            allowPrivilegeEscalation: false
-            privileged: false
-            capabilities:
-              drop: [ALL]
-          args:
-            - --conf=/fuseki/config.ttl
-          env:
-            - name: JAVA_OPTIONS
-              value: "-Xmx512m -Xms256m"
-          ports:
-            - name: http
-              containerPort: 3030
-          readinessProbe:
-            httpGet:
-              path: /$/ping
-              port: http
-            initialDelaySeconds: 3
-            periodSeconds: 2
-          livenessProbe:
-            httpGet:
-              path: /$/ping
-              port: http
-            initialDelaySeconds: 10
-            periodSeconds: 10
-          resources:
-            requests:
-              cpu: "100m"
-              memory: "256Mi"
-            limits:
-              cpu: "2"
-              memory: "1Gi"
-          volumeMounts:
-            - name: tdb-data
-              mountPath: /fuseki/databases
-            - name: jena-config
-              mountPath: /fuseki/config.ttl
-              subPath: fuseki-config.ttl
-      volumes:
-        - name: tdb-data
-          emptyDir: {}
-        - name: jena-config
-          configMap:
-            name: p-swamp-jena-config
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: p-swamp-jena
-  labels:
-    app: p-swamp-jena
-spec:
-  type: ClusterIP
-  selector:
-    app: p-swamp-jena
-  ports:
-    - name: http
-      protocol: TCP
-      port: 3030
-      targetPort: 3030
+  PSWAMP_CIM_STORE_HOST: ""

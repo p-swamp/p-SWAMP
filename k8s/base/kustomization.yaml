@@ -9,6 +9,3 @@ configMapGenerator:
   - name: p-swamp-pmu-data
     files:
       - deployment_pmu_data_file_example.txt
-  - name: p-swamp-jena-config
-    files:
-      - fuseki-config.ttl
