@@ -5,7 +5,7 @@
 
 The graph says what its SCADA measures (``pswamp_core.cim.measurement_table``, source ``SCADA``),
 and a scan reads each of those off the simulation (``Flows``), in the units and with the sign the
-measurement declares (ADR-016):
+measurement declares (ADR-017):
 
 - ``P`` (MW) and ``Q`` (Mvar) at a terminal of a line, a transformer, a machine or a load: the power
   flowing into the equipment there, as CGMES signs it (``positiveFlowIn``; a measurement that says

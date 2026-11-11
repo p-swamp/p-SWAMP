@@ -8,9 +8,9 @@ LazyCIM's ``LiveTops`` (TOPS 0.6), and runs the simulation **in real time**: one
 simulated time per frame period of the clock. It publishes ``PmuFrame``: one column per PMU
 measurement of the graph, each column carrying its own Analog (``pmu``), ``RATE`` frames per second;
 and, every ``SCADA_PERIOD`` seconds of the simulation's clock, a ``ScadaScan``: the value of every SCADA
-measurement of the graph (``scada``), which the graph's one writer keeps as the latest (ADR-016).
+measurement of the graph (``scada``), which the graph's one writer keeps as the latest (ADR-017).
 
-**It takes commands** (ADR-015, ``follow.COMMANDS``): an operation (a switch, the terminal of a line
+**It takes commands** (ADR-016, ``follow.COMMANDS``): an operation (a switch, the terminal of a line
 that has no breaker) or a disturbance (a branch tripped or reconnected, a short circuit, a load
 step), or a reset. Each is announced as a ``SimEvent``; an operation, once the engine has applied
 it, is also said as ``CimEdits`` for the graph's one writer; a disturbance never is. **It also

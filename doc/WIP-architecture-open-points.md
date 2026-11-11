@@ -276,7 +276,7 @@ class with inputs and no `process` is refused.
 **8. A source's outputs past the first are half supported.**
 - The class check and `SourceConformance` allow them.
 - ~~`ConfiguredSources.source_models` counted only `cls.model` as produced~~:
-  it counts every output now (ADR-015), and the live pump (`ActiveSource._run_pump`)
+  it counts every output now (ADR-016), and the live pump (`ActiveSource._run_pump`)
   takes only the primary class as the frame at the cursor.
 - `Playable` still treats every record as the frame at the cursor, and a
   follower of a live run subscribes to the primary output only

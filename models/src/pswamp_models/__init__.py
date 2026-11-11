@@ -12,10 +12,10 @@ and the package is the namespace to import it from.
 - ``pmu``: ``PmuFrame`` and its ``PmuHeader``, what every PMU source publishes.
 - ``remote_data``: the request and response lines of the remote data contract.
 - ``cim``: ``CimEdits``, what a producer proposes the CIM graph's one writer
-  should write (ADR-015).
+  should write (ADR-016).
 - ``rtsim``: the live grid simulation's commands and its ``SimEvent``.
 - ``scada``: ``ScadaScan``, the latest value of every SCADA measurement, at once
-  (ADR-016).
+  (ADR-017).
 - ``frame_stats``, ``excursion``, ``range_summary``: what each of those modules
   publishes, and the commands it takes. A module's code imports its messages
   from here, and so does everyone else: nobody imports a module for its data.

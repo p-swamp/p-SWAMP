@@ -1,4 +1,4 @@
-# ADR-015: Command the live simulation, and let it report what it did to the CIM graph
+# ADR-016: Command the live simulation, and let it report what it did to the CIM graph
 
 - Status: Proposed
 - Date: 2026-11-03

@@ -807,7 +807,7 @@ its entry point.
   in `outputs` after `PmuFrame`. The commands reach the source's shared run,
   whichever page sent them, and a source not running refuses them; the web API
   sends one with `shared.dispatch_live(app, source, command, log)`.
-  `modules/rtsim-from-cim/` is the worked example (ADR-015).
+  `modules/rtsim-from-cim/` is the worked example (ADR-016).
 - **Using it:** it is installed with the workspace (`uv sync`), and a pipeline
   names it, by entry point, in its `[[sources]]`, or `<APP>_SOURCES` replaces the
   list at run time (`PMU_TEST_STREAMER_SOURCES=sample:sample-replay,mine:my-recording`).

@@ -3,15 +3,15 @@ where it all is on the map.
 
 **This is the only code that writes the CIM graph** (``Writer``). The store (``pswamp_core.cim``) is
 filled by it when the server starts, and edited by it when a producer reports what the graph should
-now hold (``apply``: the live simulation's ``CimEdits``, ADR-015), for the properties ``ALLOWED``
+now hold (``apply``: the live simulation's ``CimEdits``, ADR-016), for the properties ``ALLOWED``
 that producer; it also keeps the latest SCADA values, in a graph of their own that does not move the
-version stamp (``write_scan``, ADR-016). Every other process and module only reads it. So the state the page shows changes only when this writes, and the
+version stamp (``write_scan``, ADR-017). Every other process and module only reads it. So the state the page shows changes only when this writes, and the
 writer's own repository, which nothing else changes behind its back, is always right: it is read
 after each write, from its cache, and pushed.
 
 The layout says, for each line, the one breaker that operates it (``_bays``: from an end, across
 closed disconnectors, up to the first breakers, when nothing but the line is in between); a line
-with none is operated by its terminal. Operating it is the simulation's (ADR-015), which reports
+with none is operated by its terminal. Operating it is the simulation's (ADR-016), which reports
 what it did for ``apply`` to write. Everything here is synchronous and slow (HTTP, or rdflib), and
 runs on the app's one thread.
 """
@@ -146,7 +146,7 @@ class Writer:
         return read_state(self.tables)
 
     def apply(self, edits: CimEdits) -> list[str]:
-        """Write what a producer reports (ADR-015), all or nothing, in one update. ``PermissionError``
+        """Write what a producer reports (ADR-016), all or nothing, in one update. ``PermissionError``
         for a producer, or a property, not in ``ALLOWED``; ``LookupError`` for an object that does not
         have the property."""
         allowed = ALLOWED.get(edits.producer)
@@ -177,7 +177,7 @@ class Writer:
         self.repo.expire(profile="SSH")
 
     def write_scan(self, scan: ScadaScan) -> tuple[int, int]:
-        """Write a SCADA scan's values as the latest (ADR-016): one ``AnalogValue`` or ``DiscreteValue``
+        """Write a SCADA scan's values as the latest (ADR-017): one ``AnalogValue`` or ``DiscreteValue``
         per measurement, from the ``SCADA`` source, stamped with the scan's time, in the store's graph of
         latest values (``urn:pswamp:measurements``), which it replaces whole, in one update. The version
         stamp does not move, so no reader of the grid reads it again for a measurement. A value for a

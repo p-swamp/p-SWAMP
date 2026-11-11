@@ -18,7 +18,7 @@ column carries (``PmuHeader.analog``; ``pswamp_core.cim.measurement_table``), re
 may measure no power (Nordic44's do not): its machines and loads are then in no frame.
 
 **The latest SCADA scan goes with the frames.** The RT sim scans the grid's SCADA measurements every
-couple of seconds (``ScadaScan``, ADR-016); the socket keeps the latest, and sends it with the next push
+couple of seconds (``ScadaScan``, ADR-017); the socket keeps the latest, and sends it with the next push
 once (again with a new layout), as one value per SCADA point of the layout (``LiveLayout.scada``: what
 each measures, on which line end, transformer end, machine, load, switch or voltage level).
 """

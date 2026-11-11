@@ -1,4 +1,4 @@
-"""Commands to the simulation (ADR-015): an operation goes to the engine and, once it has happened, is
+"""Commands to the simulation (ADR-016): an operation goes to the engine and, once it has happened, is
 reported to the CIM graph as ``CimEdits``; a disturbance goes to the engine only, and is announced as a
 ``SimEvent``, never written to the graph."""
 

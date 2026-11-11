@@ -14,7 +14,7 @@ and, only when it moved, marks the profiles that change stale (SSH and SV) and h
 follow the graph (LazyCIM's ``refresh``, which reads those again and nothing else). When the stamp
 has not moved it reads nothing else.
 
-``command()`` applies one of the source's commands (ADR-015). An operation (a switch; the terminal
+``command()`` applies one of the source's commands (ADR-016). An operation (a switch; the terminal
 of a line that has no breaker) goes to the engine, and once a frame has run since, ``reports()``
 gives it as ``CimEdits``: what the graph's one writer should now write. A disturbance (a branch
 tripped or reconnected, a short circuit, a load step) goes to the engine only. Both are announced,

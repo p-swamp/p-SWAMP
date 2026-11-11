@@ -1,4 +1,4 @@
-"""A live source that takes commands, and publishes more than its frames (ADR-015)."""
+"""A live source that takes commands, and publishes more than its frames (ADR-016)."""
 
 from __future__ import annotations
 

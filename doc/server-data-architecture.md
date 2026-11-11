@@ -537,7 +537,7 @@ playback command goes to the active source when it is `Playable`, and is
 refused (`<command> does not apply to a live source`) when it is not. A source
 that is not playable is pumped: its frames go out as they arrive.
 
-**A live source may take commands of its own** (`commands`, ADR-015): the grid
+**A live source may take commands of its own** (`commands`, ADR-016): the grid
 simulation takes operations (a breaker) and disturbances (a line trip). Each
 class has one receiver in a pipeline, like a module's (`Pipeline.source_commands`).
 A command is published under the source's shared run's key (`live.<source>`),

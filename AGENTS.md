@@ -94,7 +94,7 @@ one **Oxigraph** store (`oxigraph` in compose, `p-swamp-oxigraph` in k8s,
 either: the server loads the grid into the empty store when it starts, so a
 restart puts every edit back. It is *shared state*, unlike everything else here,
 with **one writer**: the server's CIM graph app, which writes what the live simulation reports it
-did (ADR-015). Everything else reads it, each through a repository of its own that refuses to
+did (ADR-016). Everything else reads it, each through a repository of its own that refuses to
 commit — see "The CIM graph".
 Only SPARQL 1.1 is used (queries at `/query`, updates at `/update`), so another
 store can stand in; with `PSWAMP_CIM_URL` unset each process has an in-process
@@ -661,7 +661,7 @@ The rules to keep:
 - **What is loaded** (`grid.stage`): each CGMES profile into `cgmes:model:<KW>` and each
   vocabulary into `cgmes:schema:<KW>`, completed in a private copy first, with Nordic44
   dynamics for every machine without any (`cgmes:model:DY`) and, when its Operation profile
-  has none, its **measurements** (`cgmes:model:OP`, `cim/measurements.py`, ADR-016). Each line end's permanent current limit is
+  has none, its **measurements** (`cgmes:model:OP`, `cim/measurements.py`, ADR-017). Each line end's permanent current limit is
   `current_limits(repo)` (`cim/limits.py`, LazyCIM's `permanent_limit`: what protection uses). The grid is
   `PSWAMP_CIM_PATH` (a folder of `*_<PROFILE>.xml` files; the core ships
   `cim/sample_grid/`), or Nordic44, which LazyCIM downloads on first use (CC BY-NC-SA,
@@ -722,7 +722,7 @@ The rules to keep:
   a grid). Keep it that way; a deployment uses Oxigraph.
 
 The web side is the **CIM graph app** (`app/server-python/src/cim_graph/`, page
-`/cim-graph`), the graph's only writer (ADR-015):
+`/cim-graph`), the graph's only writer (ADR-016):
 
 - **An operation is a command to the live simulation, not an edit.** A breaker
   (`POST /switches/{mrid}`), or a line (`POST /lines/{mrid}`: the one breaker of its bay the layout
@@ -738,7 +738,7 @@ The web side is the **CIM graph app** (`app/server-python/src/cim_graph/`, page
   for the properties `grid.ALLOWED` that producer (rtsim: `Switch.open`, `ACDCTerminal.connected`).
   It subscribes to `SimEvent` too, and keeps the last 50 in the state it pushes (`events`): the
   only place a person hears of a disturbance. And to `ScadaScan`: the latest scan's values go to
-  `urn:pswamp:measurements`, unstamped (above; ADR-016).
+  `urn:pswamp:measurements`, unstamped (above; ADR-017).
 - It loads the grid **when the server starts**, in the background (503 "the grid is loading" until
   then, and the socket waits; 503 with the reason, and a 1013 close, when it cannot be had). After
   each write it pushes the state read from its own repository (an edit is 0 queries and 1 update).
@@ -789,8 +789,8 @@ voltage's magnitude and angle, `f` and `df` (ROCOF), per branch end the current'
 angle, and power only where the grid's PMUs measure it), each column carrying its own Analog; and,
 every `RTSIM_SCADA_PERIOD` s of its clock (2; 0: none), a `ScadaScan` of every SCADA measurement,
 computed in the engine's process (`scada.py`, `SimEngine.flows`) and published beside the frames
-(ADR-016). **It is steered by commands, and follows the graph**
-(ADR-015): an operation (a switch; the terminal of a line with no
+(ADR-017). **It is steered by commands, and follows the graph**
+(ADR-016): an operation (a switch; the terminal of a line with no
 breaker) is applied, then said as `CimEdits` for the graph's one writer; a disturbance (a trip, a
 fault, a load step) stays in the simulation, announced as a `SimEvent` and seen only in the frames.
 A live source's commands go to its shared run (`pswamp_core`: `Pipeline.source_commands`); what it

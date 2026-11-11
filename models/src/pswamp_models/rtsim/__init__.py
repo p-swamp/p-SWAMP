@@ -6,7 +6,7 @@
 Operations (a breaker, the terminal of a line without one) are commands whose
 result the simulation reports to the CIM graph as ``CimEdits``; disturbances
 (a line trip, a fault, a load step) stay in the simulation, announced as a
-``SimEvent`` and seen only in the measurements (ADR-015).
+``SimEvent`` and seen only in the measurements (ADR-016).
 """
 
 from .commands import (

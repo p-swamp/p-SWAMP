@@ -5,7 +5,7 @@
 
 A **live source**: a TOPS dynamic simulation of the grid in the **CIM graph**, run in real time.
 The graph is the one copy of what is *known* of the grid (`pswamp_core.cim`, ADR-014); the
-simulation is what *is* (ADR-015). It is steered by **commands**, and it also follows the graph:
+simulation is what *is* (ADR-016). It is steered by **commands**, and it also follows the graph:
 whoever edits the graph (the web backend's CIM graph app, its only writer) steers it too. Not
 playable: a run follows the source as it goes.
 
@@ -13,7 +13,7 @@ playable: a run follows the source as it goes.
 |---|---|---|---|
 | Reads | nothing on the transport (the CIM graph, through its own repository: `cim = True`) | | |
 | Emits | `PmuFrame` (mRID `rtsim-from-cim`): one column per PMU measurement of the graph, each column carrying its own Analog (`header.analog`) | `pmu.frame` | `pswamp_models.pmu` |
-| Emits | `ScadaScan` (source `rtsim-from-cim`): every `SCADA_PERIOD` s of its clock, the value of every SCADA measurement of the graph, for the graph's one writer to keep as the latest (ADR-016) | `scada.scan` | `pswamp_models.scada` |
+| Emits | `ScadaScan` (source `rtsim-from-cim`): every `SCADA_PERIOD` s of its clock, the value of every SCADA measurement of the graph, for the graph's one writer to keep as the latest (ADR-017) | `scada.scan` | `pswamp_models.scada` |
 | Emits | `SimEvent`: every command applied, announced at once | `sim.event` | `pswamp_models.rtsim` |
 | Emits | `CimEdits` (producer `rtsim`): an operation, once the engine applied it, for the graph's one writer | `cim.edits` | `pswamp_models.cim` |
 | Accepts | `OperateSwitchCommand`, `OperateLineCommand` (operations); `TripBranchCommand`, `ReconnectBranchCommand`, `ShortCircuitCommand`, `ClearShortCircuitCommand`, `FaultAndClearCommand`, `LoadStepCommand` (disturbances); `ResetSimulationCommand` | `<app>.<command>`, under its shared run's key | `pswamp_models.rtsim` |
@@ -51,7 +51,7 @@ The controller runs it on the engine's state each time it looks at the graph (`p
 
 ## What it measures
 
-The graph's measurements (`pswamp_core.cim.measurement_table`, ADR-016): those of the grid's own
+The graph's measurements (`pswamp_core.cim.measurement_table`, ADR-017): those of the grid's own
 Operation profile (`Analog`s and `Discrete`s whose values come from the `PMU` or the `SCADA`
 `MeasurementValueSource`), or, for a grid that has none, those the core gives it when it loads it.
 
@@ -83,7 +83,7 @@ declares:
 A measurement of a part the model left out has no value and is not in the scan; one of a part that
 is de-energised reads what TOPS gives. The scan says the grid's model id (`cimReferenceId`) and its
 time on the simulation's clock. The web backend's CIM graph app writes each scan's values as the
-latest, in a graph of their own that does not move the version stamp (ADR-016).
+latest, in a graph of their own that does not move the version stamp (ADR-017).
 
 ## How it follows the graph
 

@@ -1,11 +1,11 @@
-# ADR-016: Take the measurements from the grid's Operation profile, and keep SCADA scans beside the graph's version
+# ADR-017: Take the measurements from the grid's Operation profile, and keep SCADA scans beside the graph's version
 
 - Status: Proposed
 - Date: 2026-11-06
 
 ## Context
 
-[ADR-015](015-command-the-live-simulation-and-let-it-report-cim-edits.md) made everything observable a
+[ADR-016](016-command-the-live-simulation-and-let-it-report-cim-edits.md) made everything observable a
 measurement: the page and any detection module see the simulated grid only through `PmuFrame` columns
 tied to CIM Analogs. Those Analogs were p-SWAMP's own: the core generated one per place a PMU could
 observe (`PMU_<substation>_<kV>_<V|F|I|P|Q>`), one Analog per phasor, whatever grid it loaded.
@@ -58,7 +58,7 @@ not move the version stamp; it moves a counter of its own (`<urn:pswamp:measurem
   never reads the steady-state hypothesis again because of a scan. A reader that wants the latest
   values asks for them: the graph of latest values, or the scans themselves on the transport.
 - The graph now knows two states of a switch: its `Switch.open`, which only reported operations
-  change (ADR-015), and its latest scanned position, which follows the simulation within a scan. They
+  change (ADR-016), and its latest scanned position, which follows the simulation within a scan. They
   can disagree, after a disturbance protection did not report or between two scans; the grid page
   marks a breaker where they do.
 - The grid's static `AnalogValue.value`s (a profile's snapshot) stay in the Operation profile; the

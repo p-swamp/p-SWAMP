@@ -1,6 +1,6 @@
 """The CIM graph app's web API: the layout, the socket that shows the graph, and the operations, with
 the whole server in-process over the three-substation sample grid in an in-process store and the
-grid simulation running (ADR-015): an operation is a command to the simulation, which reports what it
+grid simulation running (ADR-016): an operation is a command to the simulation, which reports what it
 did; this app, the graph's only writer, writes that in one update and pushes the state it leads to
 to every open socket. Edits need LazyCIM's CGMES vocabularies (cached, or downloadable) and are
 skipped without them."""

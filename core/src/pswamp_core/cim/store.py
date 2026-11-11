@@ -21,7 +21,7 @@ this itself: the core does it for its repository before each call (``watch``).
 own (``MEASUREMENTS_GRAPH``), replaced whole at each scan in one update
 (``Store.put_measurements``), with a counter of their own (``Store.scans``), so a reader of the
 steady-state hypothesis is not sent to read it again every couple of seconds for a measurement
-(ADR-016). A reset empties it.
+(ADR-017). A reset empties it.
 
 The store is an **Oxigraph** server (``PSWAMP_CIM_URL``), spoken to through LazyCIM's
 ``OxigraphServerBackend`` (SPARQL 1.1 queries and updates, and the graph store to fill it), or, when that is unset, a ``LocalStore`` in the process: the same

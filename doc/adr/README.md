@@ -35,5 +35,5 @@ team's own code do not need one.
 | [013](013-put-a-cim-reference-id-on-each-frame.md) | Put a CIM reference id on each frame, never grid data |
 | [014](014-keep-the-cim-graph-in-one-oxigraph-store-with-one-writer.md) | Keep the CIM graph in one Oxigraph store, with one writer, readable by every module |
 | [015](015-relay-another-pipelines-live-run.md) | Let a pipeline relay another pipeline's live run instead of starting the feed again |
-| [015](015-command-the-live-simulation-and-let-it-report-cim-edits.md) | Command the live simulation, and let it report what it did to the CIM graph |
-| [016](016-take-measurements-from-the-grid-and-keep-scada-scans-unstamped.md) | Take the measurements from the grid's Operation profile, and keep SCADA scans beside the graph's version |
+| [016](016-command-the-live-simulation-and-let-it-report-cim-edits.md) | Command the live simulation, and let it report what it did to the CIM graph |
+| [017](017-take-measurements-from-the-grid-and-keep-scada-scans-unstamped.md) | Take the measurements from the grid's Operation profile, and keep SCADA scans beside the graph's version |

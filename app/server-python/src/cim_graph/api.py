@@ -3,9 +3,9 @@ graph that every module reads and the grid simulation follows (``pswamp_core.cim
 
 **This app is the graph's only writer** (``grid.Writer``). It fills the store when the server starts,
 in the background, and writes what the live simulation reports it did (``CimEdits`` from its shared
-run, ADR-015): a breaker it opened, the terminal of a line it took out. Nothing else writes it. It also
+run, ADR-016): a breaker it opened, the terminal of a line it took out. Nothing else writes it. It also
 keeps the latest SCADA values the simulation scans (``ScadaScan``), each scan replacing the last, in a
-graph of their own that does not move the version stamp (ADR-016); a reset forgets them.
+graph of their own that does not move the version stamp (ADR-017); a reset forgets them.
 
 **A visitor operates the grid through the simulation**, not the graph: a breaker or a line is a
 command to it (``shared.dispatch_live``), and the graph shows the result once the simulation has
@@ -306,7 +306,7 @@ async def set_line(mrid: str, body: SwitchBody, client_id: ClientId) -> CommandA
 
 # --- disturbances ---------------------------------------------------------------------
 #
-# Each goes to the simulation only (ADR-015): the graph never hears of it, and the frames show it. What
+# Each goes to the simulation only (ADR-016): the graph never hears of it, and the frames show it. What
 # protection does about one (a breaker it opens) is reported like any operation, and written. The
 # simulation knows its objects, so it is the one that refuses an object it does not have (409).
 

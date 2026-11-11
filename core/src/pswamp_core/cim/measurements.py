@@ -6,7 +6,7 @@
 A measurement is p-SWAMP's when a value of it (an ``AnalogValue``, a ``DiscreteValue``) comes from
 one of the two ``MeasurementValueSource``s, named ``PMU`` and ``SCADA`` (``SOURCES``). A grid that
 brings its own Operation profile brings its measurements, and they are used as they are: their
-mRIDs are what a PMU frame's columns and a SCADA scan's values point at (ADR-016). A grid that has
+mRIDs are what a PMU frame's columns and a SCADA scan's values point at (ADR-017). A grid that has
 none is given them when it is loaded (``add_measurements``), by the conventions such a profile
 follows:
 

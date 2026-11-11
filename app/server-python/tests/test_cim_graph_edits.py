@@ -1,4 +1,4 @@
-"""The CIM graph app writes what a producer reports (ADR-015): the live simulation's ``CimEdits``,
+"""The CIM graph app writes what a producer reports (ADR-016): the live simulation's ``CimEdits``,
 for the properties it is allowed, in one update, and the state they lead to is pushed to every socket.
 Over the three-substation sample grid, in an in-process store."""
 

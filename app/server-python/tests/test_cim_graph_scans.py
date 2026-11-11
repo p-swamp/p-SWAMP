@@ -1,4 +1,4 @@
-"""The CIM graph app keeps the latest SCADA scan in the graph (ADR-016): one update per scan, replacing
+"""The CIM graph app keeps the latest SCADA scan in the graph (ADR-017): one update per scan, replacing
 the last, in a graph of its own that does not move the version stamp. Over the three-substation
 sample grid, in an in-process store."""
 

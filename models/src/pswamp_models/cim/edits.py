@@ -7,7 +7,7 @@ The graph has one writer, the web backend's CIM graph app (ADR-014). Anyone
 else who learns something the graph should know proposes it as a ``CimEdits``
 message, and the writer applies the edits it allows that producer: the live
 simulation reports a breaker it opened, and a topology-detection module will
-report a line it found out of service (ADR-015).
+report a line it found out of service (ADR-016).
 
 An edit names a property as CIM does, ``<Class>.<attribute>`` (``Switch.open``,
 ``ACDCTerminal.connected``), the shape of LazyCIM's ``ChangeStatus.modified``.
