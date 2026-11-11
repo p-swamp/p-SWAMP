@@ -225,7 +225,7 @@ RUN cd ${SERVER_DIR}/src && python -c "import server" && echo "import graph OK"
 COPY --from=web-build /web/dist ${SERVER_DIR}/src/static
 
 # Run as a non-root user (k8s-friendly). /data/recordings is where the opt-in
-# recorder keeps its files (ADR-015); it is empty and unused unless a volume is
+# recorder keeps its files (ADR-018); it is empty and unused unless a volume is
 # mounted there, and owned by `app` so that a fresh volume is writable.
 RUN useradd --create-home --uid 10001 app \
     && mkdir -p /data/recordings && chown app /data/recordings

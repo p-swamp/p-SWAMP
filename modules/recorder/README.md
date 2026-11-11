@@ -43,7 +43,7 @@ writer's open file. `coverage` and `read` span every segment, in time order.
 
 It is opt-in, because it needs a place to write. Name it like any source, in
 `PMU_TEST_STREAMER_SOURCES` (`recorded:recorder`), with its settings.
-`docker-compose.recording.yml` does that, and mounts the volume (ADR-015):
+`docker-compose.recording.yml` does that, and mounts the volume (ADR-018):
 
     docker compose -f docker-compose.yml -f docker-compose.recording.yml up --build
 

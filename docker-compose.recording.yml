@@ -1,4 +1,4 @@
-# Opt-in recording (ADR-015): add the recorder as a source of the PMU test streamer,
+# Opt-in recording (ADR-018): add the recorder as a source of the PMU test streamer,
 # recording the synthetic live feed into a named volume. Without this file the stack
 # keeps nothing, as before.
 #

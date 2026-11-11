@@ -37,3 +37,4 @@ team's own code do not need one.
 | [015](015-relay-another-pipelines-live-run.md) | Let a pipeline relay another pipeline's live run instead of starting the feed again |
 | [016](016-command-the-live-simulation-and-let-it-report-cim-edits.md) | Command the live simulation, and let it report what it did to the CIM graph |
 | [017](017-take-measurements-from-the-grid-and-keep-scada-scans-unstamped.md) | Take the measurements from the grid's Operation profile, and keep SCADA scans beside the graph's version |
+| [018](018-record-live-feeds-to-an-opt-in-duckdb-volume.md) | Record a live feed into an opt-in DuckDB volume, played back as a source |
