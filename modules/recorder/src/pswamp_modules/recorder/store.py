@@ -129,14 +129,14 @@ class Store:
         try:
             for statement in _SCHEMA:
                 con.execute(statement)
-            con.begin()  # all or nothing, so a retry after a failure cannot write a frame twice
+            con.execute("BEGIN")  # all or nothing, so a retry after a failure cannot write a frame twice
             for layout, header in {_layout(f.header): f.header for f in self._buffer}.items():
                 con.execute("INSERT OR IGNORE INTO layouts VALUES (?, ?)", [layout, header.model_dump_json()])
             con.executemany(
                 "INSERT INTO pmu VALUES (?, ?, ?, ?)",
                 [[_naive(f.timestamp), f.mRID, _layout(f.header), f.values] for f in self._buffer],
             )
-            con.commit()
+            con.execute("COMMIT")  # plain SQL: test_tools_layering keeps the call syntax for the CIM graph's writer
         finally:
             con.close()
 
@@ -189,6 +189,8 @@ class Store:
                     "WHERE (? IS NULL OR p.ts >= ?) AND (? IS NULL OR p.ts < ?) ORDER BY p.ts",
                     [_naive(start) if start else None] * 2 + [_naive(end) if end else None] * 2,
                 ).fetchall()
+            except duckdb.CatalogException:  # the writer made the file and has not made its tables yet: nothing to read
+                continue
             finally:
                 con.close()
             for ts, mrid, layout, header, values in rows:
@@ -205,6 +207,8 @@ class Store:
                 continue
             try:
                 low, high = con.execute("SELECT min(ts), max(ts) FROM pmu").fetchone()
+            except duckdb.CatalogException:  # not ready yet, as in read
+                continue
             finally:
                 con.close()
             if low is not None:

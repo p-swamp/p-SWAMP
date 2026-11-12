@@ -227,3 +227,11 @@ def test_over_max_bytes_the_segment_written_longest_ago_goes_first(tmp_path):
 def test_a_naive_timestamp_is_taken_as_utc():
     assert store_module._naive(datetime(2026, 1, 1, 12)) == datetime(2026, 1, 1, 12)
     assert store_module._naive(datetime(2026, 1, 1, 12, tzinfo=UTC)) == datetime(2026, 1, 1, 12)
+
+
+def test_a_segment_the_writer_has_made_but_not_filled_is_read_as_empty(tmp_path):
+    """A reader meeting the file in the instant after it is created, before its tables are."""
+    store_module.duckdb.connect(str(tmp_path / "20260314T130500.000000.duckdb")).close()
+    reader = Recorder(dir=tmp_path)
+    assert list(reader.read()) == []
+    assert reader.coverage() is None
