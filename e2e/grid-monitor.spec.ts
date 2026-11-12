@@ -143,11 +143,14 @@ test.describe('Grid monitor', () => {
         await expect.poll(() => litPixels(page)).toBeGreaterThan(1000)
         const everything = await litPixels(page)
 
+        // The country outlines: the layer with the most pixels on any grid they are
+        // drawn for. The sample grid's four short branches are a few percent of
+        // the picture, too little to tell from the rest.
         await view.getByRole('button', { name: 'Layers' }).click()
-        await view.getByRole('checkbox', { name: 'Lines', exact: true }).uncheck()
+        await view.getByRole('checkbox', { name: 'Countries', exact: true }).uncheck()
         await expect.poll(() => litPixels(page)).toBeLessThan(everything * 0.6)
 
-        await view.getByRole('checkbox', { name: 'Lines', exact: true }).check()
+        await view.getByRole('checkbox', { name: 'Countries', exact: true }).check()
         await expect.poll(() => litPixels(page)).toBeGreaterThan(everything * 0.8)
     })
 
@@ -209,13 +212,14 @@ test.describe('Grid monitor', () => {
         await page.goto('/')
         await islandGamma(page)
 
+        // Wait for this split to be detected first: the alarm list is everyone's and
+        // outlives a test, so an earlier test's alarm may already be listed.
+        await expect(page.getByRole('region', { name: 'Grid view' }).getByText(/\d+ islands?/)).toBeVisible({ timeout: 90_000 })
         const alarm = page
             .getByRole('region', { name: 'Alarms' })
             .getByRole('row', { name: /islanding-detection/ })
             .first()
-        await expect(alarm).toBeVisible({ timeout: 90_000 })
-        // The same event, seen by the grid view: it reports the split.
-        await expect(page.getByRole('region', { name: 'Grid view' }).getByText(/\d+ islands?/)).toBeVisible()
+        await expect(alarm).toBeVisible()
 
         await alarm.click()
         const details = page.getByRole('region', { name: 'Alarm details' })
