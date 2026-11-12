@@ -224,8 +224,9 @@ export interface paths {
         };
         /**
          * Grid Model
-         * @description The static Nordic 44 topology: buses, branches, PMU sites and a bounding
-         *     box. Fetched once per page mount and cacheable, as above.
+         * @description The grid in the CIM graph: a bus per voltage level of each substation (the live stream's
+         *     stations), the lines and transformers between them, and where to draw them. 503 when the grid
+         *     cannot be read.
          */
         get: operations["grid_model"];
         put?: never;
@@ -269,9 +270,8 @@ export interface paths {
          * Annotate
          * @description Attach a free-text operator note to an alarm.
          *
-         *     The Qt dialogue's "Annotate" button. Upstream records this as a
-         *     ``user_message`` event on the alarm rather than as a state change, so the
-         *     same event type is used here and the two agree on the wire.
+         *     The Qt dialogue's "Annotate" button. The desktop records this as a ``user_message`` event on the
+         *     alarm rather than as a state change, so the same event type is used here.
          */
         post: operations["islanding_annotate"];
         delete?: never;
@@ -511,8 +511,8 @@ export interface paths {
         };
         /**
          * List Channels
-         * @description Every selectable channel, for the picker. Static for the process, so it is
-         *     a plain GET rather than part of the socket protocol.
+         * @description Every selectable channel: every column of the live stream. Waits for the first frame; 503 when
+         *     none comes.
          */
         get: operations["time_window_channels"];
         put?: never;
@@ -534,10 +534,8 @@ export interface paths {
         put?: never;
         /**
          * Resync
-         * @description Ask for the whole window again rather than the next delta.
-         *
-         *     The escape hatch for a client whose buffer no longer matches what the server
-         *     thinks it has -- a dropped append, a chart remounted mid-stream.
+         * @description Ask for the whole window again rather than the next delta: for a view whose buffer no longer
+         *     matches what the server thinks it has.
          */
         post: operations["time_window_resync"];
         delete?: never;
@@ -601,7 +599,7 @@ export interface components {
             /** App Uuid */
             app_uuid: string;
             /** Events */
-            events: components["schemas"]["AlarmEvent"][];
+            events: components["schemas"]["pswamp_web__wire__AlarmEvent"][];
             /**
              * Status
              * @enum {string}
@@ -616,18 +614,6 @@ export interface components {
             t_start: number;
             /** Uuid */
             uuid: string;
-        };
-        /** AlarmEvent */
-        AlarmEvent: {
-            /** Message */
-            message: string;
-            /** T */
-            t: number;
-            /**
-             * Type
-             * @enum {string}
-             */
-            type: "init" | "not_critical" | "acknowledge" | "silence" | "user_message";
         };
         /** AlarmList */
         AlarmList: {
@@ -689,7 +675,7 @@ export interface components {
         AppStatusTable: {
             /** Apps */
             apps: components["schemas"]["AppStatus"][];
-            replay: components["schemas"]["ReplayStatus"];
+            feed: components["schemas"]["FeedStatus"];
             /** Server Time */
             server_time: number;
             /**
@@ -975,6 +961,43 @@ export interface components {
             y: number;
         };
         /**
+         * FeedStatus
+         * @description The PMU stream feeding every application: the live grid simulation.
+         */
+        FeedStatus: {
+            /**
+             * Data Rate
+             * @description Frames per second, as the stream declares it; 0 before the first.
+             */
+            data_rate: number;
+            /**
+             * Error
+             * @description Why the feed is down, while it is.
+             * @default null
+             */
+            error: string | null;
+            /**
+             * Frames
+             * @description Frames received since the server started.
+             */
+            frames: number;
+            /**
+             * N Channels
+             * @description Columns per frame; 0 before the first.
+             */
+            n_channels: number;
+            /**
+             * Source
+             * @description The source's name in its pipeline file.
+             */
+            source: string;
+            /**
+             * Streaming
+             * @description A frame arrived in the last couple of seconds.
+             */
+            streaming: boolean;
+        };
+        /**
          * FrameStats
          * @description The statistics of one instant.
          */
@@ -1150,6 +1173,73 @@ export interface components {
             mean_freq: number | null;
             /** Stations */
             stations: string[];
+        };
+        /** IslandingDetectionBody */
+        IslandingDetectionBody: {
+            /**
+             * Islands
+             * @description The groups of stations separated from the main system, largest first, by station name; empty when the grid is whole.
+             */
+            islands: string[][];
+            /**
+             * Status
+             * @description 'Emergency' when there is an island, 'OK' when there is none.
+             * @enum {string}
+             */
+            status: "OK" | "Alert" | "Emergency";
+        };
+        /** IslandingDetectionResult */
+        IslandingDetectionResult: {
+            app: components["schemas"]["AppIdentity"];
+            /**
+             * Mrid
+             * @default null
+             */
+            mRID: string | null;
+            /**
+             * Parameters
+             * @description The module's settings.
+             */
+            parameters?: {
+                [key: string]: unknown;
+            };
+            /**
+             * Request Id
+             * @description Set when this result answers a command.
+             * @default null
+             */
+            request_id: string | null;
+            result: components["schemas"]["IslandingDetectionBody"];
+            /**
+             * Timestamp
+             * Format: date-time
+             * @description The instant the result is about.
+             */
+            timestamp: string;
+            /**
+             * Version
+             * @default v1
+             * @constant
+             */
+            version: "v1";
+        };
+        /**
+         * IslandingDetectionState
+         * @description Pushed on connect and after every change.
+         */
+        IslandingDetectionState: {
+            /** @description The module's latest alarm event; null until the first. */
+            alarm: components["schemas"]["pswamp_models__common__alarms__AlarmEvent"] | null;
+            /** @description Which source is open, and where it is. */
+            player: components["schemas"]["PlayerStatus"];
+            /** @description The module's latest result; null until the first. */
+            result: components["schemas"]["IslandingDetectionResult"] | null;
+            /**
+             * Type
+             * @default state
+             * @constant
+             */
+            type: "state";
         };
         /** IslandingParameters */
         IslandingParameters: {
@@ -1342,12 +1432,19 @@ export interface components {
          * LineOutageEvent
          * @description One branch changing connection state, as the detector reports it.
          *
-         *     ``stations`` and ``measurements`` come straight from the time window's
-         *     header for the channels that flipped, so a single physical line trip
-         *     normally appears with the station at each end -- the current on that branch
-         *     goes to zero as seen from both.
+         *     ``stations`` and ``measurements`` are the stream's own, for the current
+         *     channels that flipped, so a single physical line trip normally appears with
+         *     the station at each end -- the current on that branch goes to zero as seen
+         *     from both. ``branches`` is what that adds up to: each branch once, by its
+         *     ``GridBranch.name``.
          */
         LineOutageEvent: {
+            /**
+             * Branches
+             * @description The branches concerned, each once, by GridBranch.name.
+             * @default []
+             */
+            branches: string[];
             /**
              * Kind
              * @enum {string}
@@ -2010,28 +2107,6 @@ export interface components {
              */
             type: "state";
         };
-        /**
-         * ReplayStatus
-         * @description State of the PMU source feeding every application.
-         */
-        ReplayStatus: {
-            /** Cursor */
-            cursor: number;
-            /** Data Rate */
-            data_rate: number;
-            /** Duration */
-            duration: number;
-            /** N Channels */
-            n_channels: number;
-            /** N Samples */
-            n_samples: number;
-            /** Playing */
-            playing: boolean;
-            /** Position */
-            position: number;
-            /** Source */
-            source: string;
-        };
         /** SeekBody */
         SeekBody: {
             /**
@@ -2226,6 +2301,65 @@ export interface components {
             msg: string;
             /** Error Type */
             type: string;
+        };
+        /**
+         * AlarmEvent
+         * @description One step in an alarm's life, as the module that raised it sees it.
+         */
+        pswamp_models__common__alarms__AlarmEvent: {
+            /**
+             * Alarm Uuid
+             * @description The alarm this event belongs to: every event of one alarm shares it.
+             */
+            alarm_uuid: string;
+            /** @description The module instance that raised the alarm. */
+            app: components["schemas"]["AppIdentity"];
+            /**
+             * Mrid
+             * @default null
+             */
+            mRID: string | null;
+            /**
+             * Message
+             * @description One line for a person.
+             */
+            message: string;
+            /**
+             * Status
+             * @description The module's status when the event was raised.
+             * @enum {string}
+             */
+            status: "OK" | "Alert" | "Emergency";
+            /**
+             * Timestamp
+             * Format: date-time
+             * @description The assessment the event comes from, in message time.
+             */
+            timestamp: string;
+            /**
+             * Type
+             * @description 'init' when the alarm is issued; 'not_critical' when its condition has cleared.
+             * @enum {string}
+             */
+            type: "init" | "not_critical";
+            /**
+             * Version
+             * @default v1
+             * @constant
+             */
+            version: "v1";
+        };
+        /** AlarmEvent */
+        pswamp_web__wire__AlarmEvent: {
+            /** Message */
+            message: string;
+            /** T */
+            t: number;
+            /**
+             * Type
+             * @enum {string}
+             */
+            type: "init" | "not_critical" | "acknowledge" | "silence" | "user_message";
         };
     };
     responses: never;

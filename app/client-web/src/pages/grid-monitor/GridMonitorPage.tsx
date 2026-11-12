@@ -25,9 +25,10 @@ import { TimeWindowData } from './time-window/TimeWindowData'
  * second a layer only.
  *
  * These are not loosely related pages: they are views of a *single* server-side
- * timeline. One replay of the recording drives one measurement window and one
- * islanding detector, so every dock here is showing the same instant — and the
- * thing worth watching is a disturbance arriving in all of them at once.
+ * timeline. One simulation of the grid drives one measurement window and one
+ * islanding detector, for every viewer, so every dock here is showing the same
+ * instant — and the thing worth watching is a disturbance arriving in all of
+ * them at once.
  *
  * Five sockets feed it, each at its own natural rate — the measurement window
  * at 10 Hz, phasors at 5 Hz, islanding and line outages on events, status at

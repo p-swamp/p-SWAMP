@@ -152,7 +152,7 @@ export function createGridRenderer(
     container.append(layer)
   }
   canvas.setAttribute('role', 'img')
-  canvas.setAttribute('aria-label', 'Nordic 44 grid, coloured by detected island')
+  canvas.setAttribute('aria-label', 'The grid, coloured by detected island')
   overlay.style.pointerEvents = 'none'
   overlay.setAttribute('aria-hidden', 'true')
   const context = overlay.getContext('2d')

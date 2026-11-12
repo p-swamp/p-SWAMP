@@ -8,8 +8,8 @@ import type { Wire } from '@/api/wire'
 export type AppStatusRow = Wire['AppStatus']
 export type AppStatusValue = AppStatusRow['status']
 
-/** State of the PMU replay feeding this client's applications. */
-export type ReplayState = Wire['ReplayStatus']
+/** The PMU stream every application reads: the live grid simulation. */
+export type FeedState = Wire['FeedStatus']
 
 export function useAppStatusSocket() {
   const { message, status, connected } =
