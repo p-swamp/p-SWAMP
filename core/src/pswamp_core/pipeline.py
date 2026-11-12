@@ -105,6 +105,9 @@ M = TypeVar("M", bound="DataModel")
 
 #: Queued for a tape when the shared run's stream starts over.
 _RESET = object()
+#: Messages a tape may have waiting; past it the newest are dropped (and logged), so a recorder that
+#: cannot keep up cannot grow the server's memory without end.
+_TAPE_QUEUE = 10_000
 
 
 @dataclass(frozen=True)
@@ -355,8 +358,9 @@ class PipelineRun:
         self._started = False
         #: The history sources with ``inputs`` whose ``feed`` setting names this shared run's live source
         #: (a recorder), each with the queue it is fed from. Only a shared run has any.
+        self._tape_full: set[str] = set()
         self._tapes: list[tuple[SourceModule, asyncio.Queue]] = [
-            (source, asyncio.Queue())
+            (source, asyncio.Queue(maxsize=_TAPE_QUEUE))
             for source in self.sources.instances.values()
             if live_source is not None
             and source.kind == "history"
@@ -396,7 +400,16 @@ class PipelineRun:
     def _feed_tapes(self, item: object) -> None:
         for tape, queue in self._tapes:
             if item is _RESET or isinstance(item, tuple(tape.input_models())):
-                queue.put_nowait(item)
+                try:
+                    queue.put_nowait(item)
+                except asyncio.QueueFull:
+                    if item is _RESET:
+                        # A start-over must not be lost: make room for it.
+                        queue.get_nowait()
+                        queue.put_nowait(item)
+                    elif tape.source not in self._tape_full:
+                        self._tape_full.add(tape.source)
+                        logger.error("%s: %s cannot keep up; dropping what it is fed", self.key, tape.source)
 
     async def _record(self, tape: SourceModule, queue: asyncio.Queue) -> None:
         """Feed ``tape`` what the live source publishes, one call at a time; on the way out, what is
@@ -408,9 +421,20 @@ class PipelineRun:
             except Exception:
                 logger.exception("%s: %s failed to record", self.key, tape.source)
 
+        # A tape that buffers (a recorder) says how long a silent feed may leave frames unwritten.
+        idle = getattr(tape, "idle_flush_seconds", None)
+
         try:
             while True:
-                await feed(await queue.get())
+                try:
+                    item = await asyncio.wait_for(queue.get(), idle)
+                except TimeoutError:
+                    try:
+                        await asyncio.to_thread(tape.flush)  # type: ignore[attr-defined]
+                    except Exception:
+                        logger.exception("%s: %s failed to flush", self.key, tape.source)
+                    continue
+                await feed(item)
         finally:
             while not queue.empty():
                 await feed(queue.get_nowait())

@@ -56,6 +56,11 @@ class Recorder(Playable, SourceModule):
     def flush(self) -> None:
         self.store.flush()
 
+    @property
+    def idle_flush_seconds(self) -> float:
+        """How long a quiet feed may leave frames buffered: the run flushes the recorder after this much silence."""
+        return max(self.store.flush_every.total_seconds(), 0.05)
+
     def read(self, start: datetime | None = None, end: datetime | None = None) -> Iterator[PmuFrame]:
         return self.store.read(start, end)
 
