@@ -19,12 +19,21 @@ frame it publishes (`PipelineRun._tapes` in `pswamp_core.pipeline`); a client's
 run never does. The recorder keeps them under `DIR/<source name>/` as DuckDB
 files, one per **segment**:
 
-- a segment holds frames of one layout (`PmuHeader.header_id`); a new layout,
-  a restart of the stream (`reset`), or `ROLL_HOURS` of frames starts a new one;
+- a segment holds frames of one layout under one grid (`PmuHeader.header_id` and
+  `cimReferenceId`); a new layout or grid, a restart of the stream (`reset`), or
+  `ROLL_HOURS` of frames starts a new one. A segment is always a new file: a stream
+  that starts again at the same instant gets a `_1` suffix rather than appending to
+  the old one. A read plays the segments in the order of their names, one after the
+  other, so segments from overlapping spans of time are not interleaved;
 - `pmu(ts, mRID, layout, vals DOUBLE[])` holds the frames, `layouts` each header once;
-- frames are buffered and written every `FLUSH_SECONDS`, and on `teardown`;
-  a crash loses at most that much;
-- over `MAX_BYTES` the oldest closed segment is deleted, never the open one.
+- frames are buffered and written every `FLUSH_SECONDS`, on `teardown`, and by the
+  run after that long without a frame, so a quiet feed does not hold them in memory.
+  A crash loses at most that much. A write is one transaction;
+- a write the disk refuses is logged and retried at the next flush. Meanwhile at most
+  100 000 frames are held (the oldest are dropped past it), and the run's queue for
+  the recorder holds 10 000 messages (the newest are dropped past it);
+- over `MAX_BYTES` (write-ahead logs counted) the segment written longest ago is
+  deleted, never the open one, so a single open segment can exceed it until it rolls.
 
 A connection is opened per write and per read, so a reader never meets a
 writer's open file. `coverage` and `read` span every segment, in time order.
