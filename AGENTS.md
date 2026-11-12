@@ -89,7 +89,7 @@ not storage it writes to.) Kafka, in compose and k8s, is a transport between
 processes, not a store: its topics keep about a minute and have no volume.
 
 **The one database is the CIM graph's.** Every module can read the grid, held in
-one **Oxigraph** store (`oxigraph` in compose, `p-swamp-oxigraph` in k8s,
+one **Jena/Fuseki** store (`jena` in compose, `p-swamp-jena` in k8s,
 `PSWAMP_CIM_URL`; ADR-014), one named graph per CGMES profile. It has no volume
 either: the server loads the grid into the empty store when it starts, so a
 restart puts every edit back. It is *shared state*, unlike everything else here,
@@ -651,9 +651,12 @@ The rules to keep:
 `core/src/pswamp_core/cim/` (the core's `[cim]` extra, LazyCIM `0.3.0`) is the grid every module can read (ADR-014). The rules:
 
 - **One store, many readers, one writer.** `open_store()` is the process's handle on
-  Oxigraph (`PSWAMP_CIM_URL`, through LazyCIM's `OxigraphServerBackend`, imported from
-  `lazycim.backends.oxigraph_server` so that it needs `requests` alone, not `pyoxigraph`;
-  a fill goes through its graph store, one request per graph) or, unset, on an in-process `LocalStore` (the same named
+  the deployed Jena/Fuseki store (`PSWAMP_CIM_URL`, through LazyCIM's
+  `OxigraphServerBackend` — its name is LazyCIM's own, from when Oxigraph was
+  the backend; the class speaks plain SPARQL 1.1 HTTP and works against Fuseki
+  unchanged, imported from `lazycim.backends.oxigraph_server` so that it needs
+  `requests` alone, not `pyoxigraph`; a fill goes through its graph store, one
+  request per graph) or, unset, on an in-process `LocalStore` (the same named
   graphs and SPARQL over rdflib). **Only `app/server-python/src/cim_graph/grid.py`
   (`Writer`) commits**, beside the core's staging of the grid and its test helper
   (`pswamp_core.cim.testing`, for a test's or a script's own store);
@@ -719,7 +722,7 @@ The rules to keep:
   embedded pyoxigraph store, for scripts; the image does not take it.
 - `LocalStore` drops `FROM` clauses (rdflib copies each named graph into a new default
   graph on every query) and is filled by adding graphs, not by parsing updates (minutes for
-  a grid). Keep it that way; a deployment uses Oxigraph.
+  a grid). Keep it that way; a deployment uses Jena/Fuseki.
 
 The web side is the **CIM graph app** (`app/server-python/src/cim_graph/`, page
 `/cim-graph`), the graph's only writer (ADR-016):
