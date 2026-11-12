@@ -1,0 +1,21 @@
+# Opt-in recording (ADR-018): add the recorder as a source of the PMU test streamer,
+# recording the synthetic live feed into a named volume. Without this file the stack
+# keeps nothing, as before.
+#
+#   docker compose -f docker-compose.yml -f docker-compose.recording.yml up --build
+#
+# Pick `recorded` in the streamer's source list to play back what it holds. The
+# volume survives `down`; `docker compose ... down -v` deletes the recordings.
+services:
+  server:
+    environment:
+      PMU_TEST_STREAMER_SOURCES: "sample:sample-replay,live:live-synthetic,remote:remote-history,recorded:recorder"
+      RECORDED_DIR: "/data/recordings"
+      RECORDED_FEED: "live"
+      # Bytes kept before the oldest segment goes (default 5 GiB).
+      RECORDED_MAX_BYTES: "1073741824"
+    volumes:
+      - recordings:/data/recordings
+
+volumes:
+  recordings:

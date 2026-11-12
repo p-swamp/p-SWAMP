@@ -196,6 +196,8 @@ class Playable:
         #: Seconds between frames, from the last frame's header.
         self._pl_interval: float | None = None
         self._pl_played_since_open = False
+        #: The grid ids already reported as not this run's (once each per run).
+        self._pl_grids_reported: set[str] = set()
         self._pl_queue: deque[tuple[Command, asyncio.Future]] = deque()
         self._pl_wake = asyncio.Event()
         await self._pl_open()
@@ -427,9 +429,31 @@ class Playable:
         header = getattr(frame, "header", None)
         if header is not None:
             self._pl_interval = 1.0 / header.data_rate
+            self._pl_check_grid(header.cimReferenceId)
         self.cursor = frame.timestamp
         self.last_frame = frame
         self._pl_sink.publish(frame)
+
+    def _pl_check_grid(self, recorded: str | None) -> None:
+        """Report, once per id, a frame tied to another grid than this run's. Enrichment leaves a
+        reference a frame already has, so a recording keeps the grid it was made under; the run's
+        own (an enricher's ``reference``) is what it is compared with, once it has one."""
+        if recorded is None or recorded in self._pl_grids_reported:
+            return
+        current = next((ref for e in self._pl_enrichers if (ref := getattr(e, "reference", None))), None)
+        if current is None:
+            return
+        self._pl_grids_reported.add(recorded)
+        if recorded != current:
+            logger.warning("%s: frames are tied to grid %s, this run to %s", self.source, recorded, current)
+            self._pl_sink.publish(
+                ErrorEvent(
+                    timestamp=utcnow(),
+                    source="player",
+                    message=f"{self.source} was recorded under another grid than this run's",
+                    detail=f"its frames are tied to grid {recorded}; this run is tied to grid {current}. Playback goes on.",
+                )
+            )
 
     # -- gaps ----------------------------------------------------------------------
 

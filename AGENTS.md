@@ -87,6 +87,11 @@ ask. (The Nordic 44 grid model *is* a sqlite file, and the replayed PMU stream
 *is* a committed `.npz` — but both are read-only sample data the server opens,
 not storage it writes to.) Kafka, in compose and k8s, is a transport between
 processes, not a store: its topics keep about a minute and have no volume.
+**The one exception is opt-in: the recorder** (`modules/recorder/`, ADR-018) keeps
+a live feed's `PmuFrame`s as DuckDB files under its `DIR`, which a deployment
+asks for by naming it in `<APP>_SOURCES` and mounting a volume
+(`docker-compose.recording.yml`; `k8s/base` still has none). Nothing else may
+write there, and nothing depends on the volume being present.
 
 **The one database is the CIM graph's.** Every module can read the grid, held in
 one **Oxigraph** store (`oxigraph` in compose, `p-swamp-oxigraph` in k8s,
@@ -178,7 +183,10 @@ under "The server data architecture"):
   that mixes in `Playable` can be replayed paced and sought). They have no
   inputs and produce `PmuFrame`, and are found by their entry point like any
   module. What sets them apart is where they run: in their run's process,
-  never in a `ModuleHost` (ADR-006).
+  never in a `ModuleHost` (ADR-006). **One source has an input: `recorder`**
+  (ADR-018). A history source may declare `inputs` and a `FEED` setting naming
+  a live source; that live source's shared run feeds it each frame it publishes
+  (`PipelineRun._tapes`), and no client's run does.
 - **`pipelines/<app>.toml` is one file per app**: data, not code, and not a
   project. It names the app's modules and sources by their `pswamp.modules`
   entry points, and its enrichment. `uv run pswamp pipelines validate` checks
