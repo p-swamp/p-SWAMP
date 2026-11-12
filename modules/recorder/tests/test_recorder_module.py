@@ -1,12 +1,15 @@
 """The Recorder: what it is fed, it holds, and reads back."""
 
 import asyncio
+import os
 from datetime import UTC, datetime, timedelta
 
 import pytest
 from pswamp_core.testing import SourceConformance
 from pswamp_models.pmu import PmuFrame, PmuHeader
 from pswamp_modules.recorder import Recorder
+from pswamp_modules.recorder import store as store_module
+from pswamp_modules.recorder.store import Store
 
 T0 = datetime(2026, 3, 14, 13, 5, tzinfo=UTC)
 HEADER = PmuHeader(
@@ -136,3 +139,91 @@ def test_what_is_recorded_is_read_back_in_order(tmp_path):
         assert recorder.run(each) == []  # it records; it publishes nothing
     recorder.flush()
     assert list(Recorder(dir=tmp_path).read()) == frames
+
+
+def test_a_stream_that_starts_again_at_the_same_instant_is_a_segment_of_its_own(tmp_path):
+    first = [frame(0), frame(1)]
+    feed(Recorder(dir=tmp_path), first)
+    second = [PmuFrame(timestamp=f.timestamp, mRID="test", header=HEADER, values=[1.0, 2.0]) for f in first]
+    feed(Recorder(dir=tmp_path), second)  # a restarted process, a stream with the same first timestamp
+    reader = Recorder(dir=tmp_path)
+    assert len(reader.store.segments()) == 2
+    assert list(reader.read()) == first + second  # nothing appended to the old segment, nothing lost
+
+
+def test_a_write_the_disk_refuses_is_retried_and_no_frame_is_written_twice(tmp_path, monkeypatch):
+    frames = [frame(i) for i in range(5)]
+    real = store_module.duckdb.connect
+    refuse = {"on": True}
+
+    def connect(*args, **kwargs):
+        if refuse["on"]:
+            raise OSError("disk full")
+        return real(*args, **kwargs)
+
+    monkeypatch.setattr(store_module.duckdb, "connect", connect)
+    recorder = Recorder(dir=tmp_path, flush_seconds=3600)
+    for each in frames:
+        recorder.run(each)
+    recorder.flush()  # refused: logged, not raised
+    assert len(recorder.store._buffer) == 5
+    refuse["on"] = False
+    recorder.flush()
+    assert list(Recorder(dir=tmp_path).read()) == frames
+
+
+def test_a_failed_write_is_all_or_nothing(tmp_path, monkeypatch):
+    frames = [frame(i) for i in range(5)]
+    recorder = Recorder(dir=tmp_path, flush_seconds=3600)
+    for each in frames:
+        recorder.run(each)
+    real = store_module._naive
+    calls = {"n": 0}
+
+    def flaky(moment):
+        calls["n"] += 1
+        if calls["n"] == 3:
+            raise OSError("mid-write")
+        return real(moment)
+
+    monkeypatch.setattr(store_module, "_naive", flaky)
+    recorder.flush()  # fails part-way through building the rows; the buffer is kept
+    monkeypatch.setattr(store_module, "_naive", real)
+    recorder.flush()
+    assert list(Recorder(dir=tmp_path).read()) == frames
+
+
+def test_what_a_failing_disk_cannot_take_is_bounded_in_memory(tmp_path):
+    store = Store(tmp_path, flush_every=timedelta(hours=1), max_buffer=3)
+    frames = [frame(i) for i in range(10)]
+    for each in frames:
+        store.append(each)
+    assert len(store._buffer) == 3
+    store.flush()
+    assert list(Store(tmp_path).read()) == frames[-3:]  # the newest are kept
+
+
+def test_over_max_bytes_the_segment_written_longest_ago_goes_first(tmp_path):
+    def run(i, count=3):
+        return [frame(i + k) for k in range(count)]
+
+    later_in_time = [PmuFrame(timestamp=f.timestamp + timedelta(hours=1), mRID="test", header=HEADER, values=[1.0, 2.0]) for f in run(0)]
+    recorder = Recorder(dir=tmp_path)
+    feed(recorder, later_in_time)  # written first, named last
+    recorder.reset()
+    feed(recorder, run(10))  # written second, named first
+    recorder.reset()
+    feed(recorder, run(20))  # the open one
+    named = sorted(recorder.store.segments())
+    oldest_written = named[-1]  # the one named last was written first
+    os.utime(oldest_written, (1, 1))
+    os.utime(named[0], (2_000_000_000, 2_000_000_000))
+    recorder.store.max_bytes = sum(p.stat().st_size for p in named) - 1  # room to delete one
+    recorder.store._sweep()
+    assert not oldest_written.exists()
+    assert len(recorder.store.segments()) == 2
+
+
+def test_a_naive_timestamp_is_taken_as_utc():
+    assert store_module._naive(datetime(2026, 1, 1, 12)) == datetime(2026, 1, 1, 12)
+    assert store_module._naive(datetime(2026, 1, 1, 12, tzinfo=UTC)) == datetime(2026, 1, 1, 12)
