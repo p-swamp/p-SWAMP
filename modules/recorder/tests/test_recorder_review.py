@@ -49,7 +49,6 @@ def test_a_frame_appended_while_a_flush_is_writing_is_not_lost(tmp_path):
     assert list(Store(tmp_path).read()) == [frame(0), late]
 
 
-@pytest.mark.xfail(strict=True, reason="finding 2: read() fetches a whole segment into memory")
 def test_reading_the_first_frame_does_not_load_the_whole_segment(tmp_path):
     store = Store(tmp_path, flush_every=timedelta(hours=1), roll=timedelta(days=1))
     for i in range(20_000):

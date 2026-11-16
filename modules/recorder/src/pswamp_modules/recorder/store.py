@@ -26,6 +26,10 @@ _SCHEMA = (
 )
 
 
+#: Rows a read takes from a segment at a time.
+_READ_BATCH = 2000
+
+
 def _naive(moment: datetime) -> datetime:
     """UTC without its tzinfo, what the ``ts`` column holds; a naive ``moment`` is taken to be UTC already."""
     if moment.tzinfo is None:
@@ -191,19 +195,23 @@ class Store:
             if con is None:
                 continue
             try:
-                rows = con.execute(
-                    "SELECT p.ts, p.mRID, p.layout, l.header, p.vals FROM pmu p JOIN layouts l ON l.id = p.layout "
-                    "WHERE (? IS NULL OR p.ts >= ?) AND (? IS NULL OR p.ts < ?) ORDER BY p.ts",
-                    [_naive(start) if start else None] * 2 + [_naive(end) if end else None] * 2,
-                ).fetchall()
-            except duckdb.CatalogException:  # the writer made the file and has not made its tables yet: nothing to read
-                continue
+                try:
+                    for layout, header in con.execute("SELECT id, header FROM layouts").fetchall():
+                        if layout not in headers:
+                            headers[layout] = PmuHeader.model_validate_json(header)
+                    cursor = con.execute(
+                        "SELECT ts, mRID, layout, vals FROM pmu "
+                        "WHERE (? IS NULL OR ts >= ?) AND (? IS NULL OR ts < ?) ORDER BY ts",
+                        [_naive(start) if start else None] * 2 + [_naive(end) if end else None] * 2,
+                    )
+                except duckdb.CatalogException:  # the writer made the file and has not made its tables yet: nothing to read
+                    continue
+                # A batch at a time: a segment holds hours of frames, and a reader may want the first few.
+                while rows := cursor.fetchmany(_READ_BATCH):
+                    for ts, mrid, layout, values in rows:
+                        yield PmuFrame(timestamp=ts.replace(tzinfo=UTC), mRID=mrid, header=headers[layout], values=values)
             finally:
                 con.close()
-            for ts, mrid, layout, header, values in rows:
-                if layout not in headers:
-                    headers[layout] = PmuHeader.model_validate_json(header)
-                yield PmuFrame(timestamp=ts.replace(tzinfo=UTC), mRID=mrid, header=headers[layout], values=values)
 
     def bounds(self) -> tuple[datetime, datetime] | None:
         """The first and last instants held, or ``None``."""
