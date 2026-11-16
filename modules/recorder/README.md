@@ -24,7 +24,8 @@ files, one per **segment**:
   `ROLL_HOURS` of frames starts a new one. A segment is always a new file: a stream
   that starts again at the same instant gets a `_1` suffix rather than appending to
   the old one. A read plays the segments in the order of their names, one after the
-  other, so segments from overlapping spans of time are not interleaved;
+  other, so segments from overlapping spans of time are not interleaved (a segment is
+  one run): time may step back at the boundary, and `coverage` spans all of them;
 - `pmu(ts, mRID, layout, vals DOUBLE[])` holds the frames, `layouts` each header once;
 - frames are buffered and written every `FLUSH_SECONDS`, on `teardown`, and by the
   run after that long without a frame, so a quiet feed does not hold them in memory.

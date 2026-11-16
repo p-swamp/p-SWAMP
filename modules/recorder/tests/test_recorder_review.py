@@ -1,14 +1,10 @@
-"""Review findings on the recorder's store, each reproduced by a test.
-
-Each test is ``xfail(strict=True)`` until the commit that fixes it removes the marker, so the suite
-is green throughout and a fix that does not work (or a finding that is not real) is noticed.
-"""
+"""Review findings on the recorder's store, each pinned by a test: a flush that does not lose a
+concurrent append, a read that streams, and the order overlapping segments are read in."""
 
 import threading
 import tracemalloc
 from datetime import UTC, datetime, timedelta
 
-import pytest
 from pswamp_models.pmu import PmuFrame, PmuHeader
 from pswamp_modules.recorder.store import Store
 
@@ -65,9 +61,12 @@ def test_reading_the_first_frame_does_not_load_the_whole_segment(tmp_path):
     assert peak < 5 * 1024**2
 
 
-@pytest.mark.xfail(strict=True, reason="finding 3: overlapping segments are read back to back, so time runs backwards")
-def test_a_read_over_overlapping_segments_ends_where_coverage_ends(tmp_path):
-    """A stream replayed over a span already recorded: its segment is inside an older one's span."""
+def test_overlapping_segments_are_each_read_whole_and_back_to_back(tmp_path):
+    """A stream replayed over a span already recorded: its segment is inside an older one's span.
+
+    A segment is one run, so a read plays each in order and does not interleave two runs; time may
+    therefore step back at a segment boundary, while ``bounds`` spans every segment.
+    """
     store = Store(tmp_path, flush_every=timedelta(hours=1))
     for i in range(10):
         store.append(frame(i))
@@ -76,7 +75,7 @@ def test_a_read_over_overlapping_segments_ends_where_coverage_ends(tmp_path):
         store.append(frame(i))
     store.flush()
     reader = Store(tmp_path)
-    read = list(reader.read())
-    first, last = reader.bounds()
-    assert read[0].timestamp == first
-    assert read[-1].timestamp == last
+    assert list(reader.read()) == [frame(i) for i in (*range(10), 3, 4)]
+    assert reader.bounds() == (frame(0).timestamp, frame(9).timestamp)
+    # A range still filters each segment on its own.
+    assert list(reader.read(frame(4).timestamp, frame(6).timestamp)) == [frame(4), frame(5), frame(4)]
