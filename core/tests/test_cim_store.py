@@ -299,11 +299,13 @@ THEIRS = CimSettings(backend=_their_store)
 
 def test_a_backend_s_store_is_read_and_never_loaded_reset_or_written(grid):
     store = open_store(THEIRS)
-    assert not store.owned and store.version() == 0
+    assert not store.owned and not store.managed and store.version() == 0
     reader = connect_reader(THEIRS, timeout=5)
-    assert len(measurement_table(reader)) > 0
-    for doing in (store.fill, store.reset, store.writer_backend):
-        with pytest.raises(PermissionError, match="did not load"):
+    assert len(analog_table(reader)) > 0
+    with pytest.raises(PermissionError, match="did not load"):
+        store.writer_backend()
+    for doing in (store.fill, store.reset):
+        with pytest.raises(PermissionError, match="does not manage"):
             doing()
 
 
@@ -364,3 +366,43 @@ def test_a_backend_factory_opens_its_store_in_a_child_process(grid):
 
     with multiprocessing.get_context("spawn").Pool(1) as pool:
         assert pool.apply(_model_of, (THEIRS,)) == EQ_MODEL
+
+
+# PATCH, pending a redesign (see the team's CIM-store-role discussion): a ``url`` store this
+# deployment writes to but does not manage (RNDP's shared Jena) — unlike THEIRS above, writes
+# still work; unlike the default, fill/reset do not, and ``loaded`` does not require p-SWAMP's own
+# named-graph convention.
+
+
+def test_settings_read_managed_from_the_environment(monkeypatch):
+    assert CimSettings.from_env().managed is True
+    monkeypatch.setenv("PSWAMP_CIM_MANAGED", "false")
+    assert CimSettings.from_env().managed is False
+
+
+def test_a_managed_store_is_unaffected(store):
+    assert store.owned and store.managed
+
+
+def test_an_unmanaged_store_still_allows_writes_but_not_fill_or_reset(store):
+    unmanaged = Store(store.settings, store.backend, managed=False)
+    assert unmanaged.owned and not unmanaged.managed
+    unmanaged.writer_backend()  # does not raise
+    for doing in (unmanaged.fill, unmanaged.reset):
+        with pytest.raises(PermissionError, match="does not manage"):
+            doing()
+
+
+def test_an_unmanaged_store_s_loaded_check_does_not_need_p_swamp_s_own_graph_names():
+    """Data under a graph name no p-SWAMP convention names (e.g. seeded by someone else) is
+    invisible to the strict (managed) check, and found by the broad (unmanaged) one."""
+    from rdflib import Graph, Literal, URIRef
+
+    elsewhere = Graph()
+    elsewhere.add((URIRef("urn:example:a"), URIRef("urn:example:b"), Literal("c")))
+    backend = LocalStore("elsewhere")
+    backend.put("urn:uuid:not-cgmes-model-eq", elsewhere)
+    managed = Store(SETTINGS, backend)
+    unmanaged = Store(SETTINGS, backend, managed=False)
+    assert not managed.loaded()
+    assert unmanaged.loaded()

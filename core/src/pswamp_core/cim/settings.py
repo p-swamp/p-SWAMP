@@ -40,10 +40,16 @@ class CimSettings:
     #: Whether another process reaches the same data through ``backend`` (a server, a file on
     #: disk), so a reader may follow it from a process of its own. An in-memory store is not.
     shared: bool = False
+    #: PATCH, pending a redesign (see the team's CIM-store-role discussion): whether a ``url``
+    #: store is this deployment's own to fill, reset and stamp (``True``, unchanged default) or
+    #: one it only sends operational writes to, owned and loaded by someone else (``False`` — RNDP's
+    #: shared Jena). Has no effect on ``backend``, already always read-only.
+    managed: bool = True
 
     @classmethod
     def from_env(cls) -> CimSettings:
-        """``PSWAMP_CIM_URL``, ``PSWAMP_CIM_PATH``."""
+        """``PSWAMP_CIM_URL``, ``PSWAMP_CIM_PATH``, ``PSWAMP_CIM_MANAGED``."""
         path = os.environ.get("PSWAMP_CIM_PATH", "").strip()
         url = os.environ.get("PSWAMP_CIM_URL", "").strip().rstrip("/") or None
-        return cls(url, Path(path) if path else None)
+        managed = os.environ.get("PSWAMP_CIM_MANAGED", "").strip().lower() not in ("false", "0", "no")
+        return cls(url, Path(path) if path else None, managed=managed)
