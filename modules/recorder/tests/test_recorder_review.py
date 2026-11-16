@@ -28,7 +28,6 @@ def frame(i: int) -> PmuFrame:
     )
 
 
-@pytest.mark.xfail(strict=True, reason="finding 1: flush and append share the buffer without a lock")
 def test_a_frame_appended_while_a_flush_is_writing_is_not_lost(tmp_path):
     """The run flushes a quiet recorder from a worker thread while ``process`` may append from another."""
     store = Store(tmp_path, flush_every=timedelta(hours=1))

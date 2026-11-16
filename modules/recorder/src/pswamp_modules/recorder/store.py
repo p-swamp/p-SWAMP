@@ -7,6 +7,7 @@ writer's open file, in this process or another.
 from __future__ import annotations
 
 import logging
+import threading
 import time
 from collections.abc import Iterator
 from datetime import UTC, datetime, timedelta
@@ -74,6 +75,9 @@ class Store:
         #: Frames kept in memory while the disk refuses them; past it the oldest are dropped.
         self.max_buffer = max_buffer
         self._failing = False
+        #: Held by whatever touches the buffer or the open segment: the run's worker thread appends
+        #: (``process``) while another flushes a quiet feed, and a reader flushes before it reads.
+        self._lock = threading.RLock()
         self._buffer: list[PmuFrame] = []
         self._segment: Path | None = None
         #: The layout and first instant of the segment being written.
@@ -84,42 +88,45 @@ class Store:
     def append(self, frame: PmuFrame) -> None:
         """Buffer ``frame``; a new layout, or a segment as old as ``roll`` (by frame time), starts a new segment."""
         layout = _layout(frame.header)
-        if self._layout is not None and (layout != self._layout or frame.timestamp - self._start >= self.roll):
-            self.roll_over()
-        if self._layout is None:
-            self._layout, self._start = layout, frame.timestamp
-        self._buffer.append(frame)
-        if len(self._buffer) > self.max_buffer:
-            dropped = len(self._buffer) - self.max_buffer
-            del self._buffer[:dropped]
-            logger.error("recorder %s: the disk is not taking frames; dropped the %d oldest buffered", self.folder, dropped)
-        if time.monotonic() - self._flushed >= self.flush_every.total_seconds():
-            self.flush()
+        with self._lock:
+            if self._layout is not None and (layout != self._layout or frame.timestamp - self._start >= self.roll):
+                self.roll_over()
+            if self._layout is None:
+                self._layout, self._start = layout, frame.timestamp
+            self._buffer.append(frame)
+            if len(self._buffer) > self.max_buffer:
+                dropped = len(self._buffer) - self.max_buffer
+                del self._buffer[:dropped]
+                logger.error("recorder %s: the disk is not taking frames; dropped the %d oldest buffered", self.folder, dropped)
+            if time.monotonic() - self._flushed >= self.flush_every.total_seconds():
+                self.flush()
 
     def roll_over(self) -> None:
         """Write what is buffered; the next frame opens a new segment."""
-        self.flush()
-        if self._buffer:
-            # The write failed: these belong to the segment that is closing, and must not open the next one.
-            logger.error("recorder %s: dropped %d frames that could not be written", self.folder, len(self._buffer))
-            self._buffer.clear()
-        self._segment = self._layout = self._start = None
+        with self._lock:
+            self.flush()
+            if self._buffer:
+                # The write failed: these belong to the segment that is closing, and must not open the next one.
+                logger.error("recorder %s: dropped %d frames that could not be written", self.folder, len(self._buffer))
+                self._buffer.clear()
+            self._segment = self._layout = self._start = None
 
     def flush(self) -> None:
         """Write what is buffered. A write the disk refuses is logged and retried at the next flush."""
-        self._flushed = time.monotonic()
-        if not self._buffer:
-            return
-        try:
-            self._write()
-        except (duckdb.Error, OSError):
-            if not self._failing:
-                logger.exception("recorder %s: cannot write %d buffered frames; will retry", self.folder, len(self._buffer))
-            self._failing = True
-            return
-        self._failing = False
-        self._buffer.clear()
-        self._sweep()
+        with self._lock:
+            self._flushed = time.monotonic()
+            if not self._buffer:
+                return
+            try:
+                self._write()
+            except (duckdb.Error, OSError):
+                if not self._failing:
+                    logger.exception("recorder %s: cannot write %d buffered frames; will retry", self.folder, len(self._buffer))
+                self._failing = True
+                return
+            self._failing = False
+            self._buffer.clear()
+            self._sweep()
 
     def _write(self) -> None:
         if self._segment is None:
