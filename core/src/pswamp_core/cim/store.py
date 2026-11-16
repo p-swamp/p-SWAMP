@@ -143,14 +143,25 @@ class ReadOnlyRepository(CIMRepository):
 class Store:
     """The graph's store, as one process sees it: ``backend``, and what is loaded into it.
 
-    ``owned`` says whether p-SWAMP loads it (an in-process store, the deployment's Oxigraph): only
-    such a store is filled, reset and stamped. Any other (``CimSettings.backend``, or a script's
-    repository, ``Store.of``) was filled by its owner, and is only read."""
+    ``owned`` says whether this process may write to it at all; ``managed`` (PATCH, pending a
+    redesign — see the team's CIM-store-role discussion) says whether it may also fill, reset and
+    stamp it, narrower than ``owned`` and defaulting to it. Only ``CimSettings.url``, with
+    ``managed=False`` (RNDP's shared Jena), tells these apart today: every other store is either
+    fully its own (``owned`` and ``managed``, the default) or fully someone else's
+    (``CimSettings.backend``, or a script's repository, ``Store.of``: neither)."""
 
-    def __init__(self, settings: CimSettings, backend: SparqlProtocolBackend, *, owned: bool = True) -> None:
+    def __init__(
+        self,
+        settings: CimSettings,
+        backend: SparqlProtocolBackend,
+        *,
+        owned: bool = True,
+        managed: bool | None = None,
+    ) -> None:
         self.settings = settings
         self.backend = backend
         self.owned = owned
+        self.managed = owned if managed is None else managed
 
     @classmethod
     def of(cls, repo: CIMRepository) -> Store:
@@ -160,6 +171,12 @@ class Store:
     def _check_owned(self, doing: str) -> None:
         if not self.owned:
             raise PermissionError(f"cannot {doing} {self.backend.name}: p-SWAMP reads a store it did not load")
+
+    def _check_managed(self, doing: str) -> None:
+        if not self.managed:
+            raise PermissionError(
+                f"cannot {doing} {self.backend.name}: this deployment does not manage this store's lifecycle"
+            )
 
     @property
     def grid(self) -> Grid:
@@ -189,9 +206,9 @@ class Store:
         return int(bindings[0]["v"]["value"]) if bindings else 0
 
     def loaded(self) -> bool:
-        """Whether the store holds a grid (its EQ graph has anything in it; for a store p-SWAMP did
-        not load, which may keep everything in one graph, anything at all)."""
-        where = f"GRAPH <{model_graph('EQ')}> {{ ?s ?p ?o }}" if self.owned else "?s ?p ?o"
+        """Whether the store holds a grid (its EQ graph has anything in it; for a store p-SWAMP does
+        not manage, which may keep everything in one graph, anything at all)."""
+        where = f"GRAPH <{model_graph('EQ')}> {{ ?s ?p ?o }}" if self.managed else "?s ?p ?o"
         found = self.backend.execute(f"SELECT ?s WHERE {{ {where} }} LIMIT 1")
         return bool(found["results"]["bindings"])
 
@@ -206,7 +223,7 @@ class Store:
     def fill(self, timeout: float = 120.0) -> bool:
         """Write the grid into an empty store; leave a filled one alone. Whether it wrote. Waits up to
         ``timeout`` seconds for a store that does not answer yet."""
-        self._check_owned("fill")
+        self._check_managed("fill")
         deadline, pause = time.monotonic() + timeout, 0.1
         while not self.reachable():
             if time.monotonic() > deadline:
@@ -228,7 +245,7 @@ class Store:
     def reset(self) -> None:
         """Put the steady-state hypothesis back as it was loaded (every switch, terminal and set
         point the grid has been operated through), in one update."""
-        self._check_owned("reset")
+        self._check_managed("reset")
         name = model_graph("SSH")
         self._put(name, self.grid.graphs.get(name, Graph()), replace=True)
 
@@ -282,7 +299,7 @@ def open_store(settings: CimSettings | None = None) -> Store:
                 store = Store(settings, LocalStore())
                 store.fill()
             else:
-                store = Store(settings, _remote(settings.url))
+                store = Store(settings, _remote(settings.url), managed=settings.managed)
             _stores[settings] = store
         return store
 

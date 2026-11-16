@@ -107,16 +107,31 @@ def _operating_breaker(ends: list[list[str]]) -> str | None:
 
 
 class Writer:
-    """The one writer of the CIM graph: it fills the store, and edits it. For one thread."""
+    """The one writer of the CIM graph: it fills the store, and edits it. For one thread.
+
+    PATCH, pending a redesign (see the team's CIM-store-role discussion): when the store is not
+    ``managed`` (RNDP's shared Jena), this never fills, never stages a local grid (no network
+    dependency), and reads its layout the same way ``connect_reader`` does (``graphs="discover"``).
+    Operational writes (switches, lines) still work; ``reset`` does not (see ``Store.reset``)."""
 
     def __init__(self, settings: CimSettings | None = None) -> None:
         self.store: Store = open_store(settings)
-        self.store.fill()
-        self.writable = self.store.grid.writable
+        self.managed = self.store.managed
+        if self.managed:
+            self.store.fill()
+            self.writable = self.store.grid.writable
+            graphs = self.store.layout if self.writable else "discover"
+        else:
+            self.store.wait_loaded()
+            # Toggling an existing switch is a write to a known predicate on an already-typed
+            # object, not a new object needing the locally-staged CGMES vocabulary to validate —
+            # unverified against a live shared store beyond this, see the redesign discussion.
+            self.writable = True
+            graphs = "discover"
         self.repo = CIMRepository(
             self.store.writer_backend(),  # every commit also moves the version stamp
             default_namespace=CIM100,
-            graphs=self.store.layout if self.writable else "discover",
+            graphs=graphs,
             namespace_aliases=NAMESPACE_ALIASES,
         )
         #: The tables the state is read from, kept: refreshed from the repository's own cache, which its

@@ -187,3 +187,30 @@ def test_a_socket_opened_while_the_grid_loads_gets_the_state_once_it_is_loaded(m
 
     with TestClient(server_module.app) as client, client.websocket_connect("/api/cim-graph/ws?client_id=211") as ws:
         assert ws.receive_json()["type"] == "state"  # no 1013 for a grid that is on its way
+
+
+# PATCH, pending a redesign (see the team's CIM-store-role discussion): a store this deployment
+# writes to but does not manage (RNDP's shared Jena). Needs no CGMES vocabularies (no
+# ``needs_profiles``, no network at all) — that is the point of this path.
+
+
+def test_reset_is_refused_for_an_unmanaged_store_but_switches_still_work(monkeypatch):
+    from pswamp_core.cim import LocalStore, Store
+
+    import cim_graph.grid as grid_module
+
+    monkeypatch.delenv("PSWAMP_CIM_URL", raising=False)
+    backend = LocalStore("shared-demo")
+    Store(SETTINGS, backend).fill()  # seeded as someone else would have, before this process starts
+    shared = Store(SETTINGS, backend, managed=False)
+    monkeypatch.setattr(grid_module, "open_store", lambda settings=None: shared)
+    from fastapi.testclient import TestClient
+
+    import server as server_module
+
+    with TestClient(server_module.app) as client:
+        ready(client)
+        opened = client.post(f"/api/cim-graph/switches/{COUPLER}?client_id=301", json={"open": True})
+        assert opened.json()["applied"] == "open switch"
+        refused = client.post("/api/cim-graph/reset?client_id=301")
+        assert refused.status_code == 409 and "does not manage" in refused.json()["detail"]

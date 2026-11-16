@@ -164,6 +164,12 @@ async def _writable() -> None:
         raise HTTPException(409, "the graph is read-only: the CGMES profiles are not loaded")
 
 
+async def _managed() -> None:
+    writer = await graph.ready()
+    if not writer.managed:
+        raise HTTPException(409, "reset is unavailable: this instance does not manage the CIM store's lifecycle")
+
+
 @router.post("/switches/{mrid}", operation_id="cim_graph_set_switch")
 async def set_switch(mrid: str, body: SwitchBody, client_id: ClientId) -> CommandAck:
     """Open (``open: true``) or close a switch. 404 for an unknown switch, 409 when it is already so."""
@@ -197,7 +203,7 @@ async def set_line(mrid: str, body: SwitchBody, client_id: ClientId) -> CommandA
 @router.post("/reset", operation_id="cim_graph_reset")
 async def reset(client_id: ClientId) -> CommandAck:
     """Put the grid back as it was loaded: every switch as the model has it, every branch in service."""
-    await graph.ready()
+    await _managed()
     await graph.write(Writer.reset)
     logger.info("client %s: the grid was reset", client_id)
     return CommandAck(applied="reset")
