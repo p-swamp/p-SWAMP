@@ -4,13 +4,16 @@ from __future__ import annotations
 
 import asyncio
 
-from support import TickingSource
+from support import Number, NumberResult, TickingSource
 from test_pipeline import until
 
+from pswamp_core.inputs import on
 from pswamp_core.pipeline import Pipeline, PipelineRun, start_live_runs
 from pswamp_core.settings import EnvSetting
 from pswamp_core.sources import SourceModule, SourceSet
 from pswamp_core.transport import InMemoryTransport
+from pswamp_models.common import AppIdentity
+from pswamp_core.util.time import utcnow
 from pswamp_models.pmu import PmuFrame
 
 
@@ -72,4 +75,43 @@ async def test_a_tape_whose_feed_is_another_source_is_not_fed():
     (live,) = await start_live_runs(pipeline(feed="elsewhere"), transport)
     await asyncio.sleep(0.2)
     assert live.sources.instances["tape"].got == []
+    await live.stop()
+
+
+class ResultTape(Tape):
+    """A tape that also keeps a module's results."""
+
+    name = "result-tape"
+    inputs = (PmuFrame, NumberResult)
+
+    def __init__(self, source: str = "tape", **settings) -> None:
+        super().__init__(source, **settings)
+        self.results: list[NumberResult] = []
+
+    @on(NumberResult)
+    def keep_result(self, result: NumberResult) -> None:
+        self.results.append(result)
+
+    @on(PmuFrame)
+    def keep_frame(self, frame: PmuFrame) -> None:
+        self.got.append(frame)
+
+
+def number(value: float) -> NumberResult:
+    return NumberResult(
+        timestamp=utcnow(), app=AppIdentity(name="m", uuid="u"), result=Number(value=value)
+    )
+
+
+async def test_a_tape_is_fed_the_module_results_of_its_live_run_and_no_other():
+    transport = InMemoryTransport()
+    app = Pipeline("app", lambda: SourceSet([TickingSource("tick"), ResultTape(feed="tick")]))
+    (live,) = await start_live_runs(app, transport)
+    tape = live.sources.instances["tape"]
+    await transport.publish(number(1.0), app="app", key=str(live.stream_key))
+    await transport.publish(number(2.0), app="app", key="live.other")
+    await transport.publish(number(3.0), app="app", key=f"{live.key}#{live.run_id + 1}.0")  # an earlier or later run's
+    await until(lambda: len(tape.results) >= 1 and len(tape.got) >= 1, timeout=2)
+    await asyncio.sleep(0.1)
+    assert [r.result.value for r in tape.results] == [1.0]
     await live.stop()

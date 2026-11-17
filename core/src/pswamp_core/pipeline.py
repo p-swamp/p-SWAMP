@@ -400,16 +400,32 @@ class PipelineRun:
     def _feed_tapes(self, item: object) -> None:
         for tape, queue in self._tapes:
             if item is _RESET or isinstance(item, tuple(tape.input_models())):
-                try:
-                    queue.put_nowait(item)
-                except asyncio.QueueFull:
-                    if item is _RESET:
-                        # A start-over must not be lost: make room for it.
-                        queue.get_nowait()
-                        queue.put_nowait(item)
-                    elif tape.source not in self._tape_full:
-                        self._tape_full.add(tape.source)
-                        logger.error("%s: %s cannot keep up; dropping what it is fed", self.key, tape.source)
+                self._offer(tape, queue, item)
+
+    def _offer(self, tape: SourceModule, queue: asyncio.Queue, item: object) -> None:
+        try:
+            queue.put_nowait(item)
+        except asyncio.QueueFull:
+            if item is _RESET:
+                # A start-over must not be lost: make room for it.
+                queue.get_nowait()
+                queue.put_nowait(item)
+            elif tape.source not in self._tape_full:
+                self._tape_full.add(tape.source)
+                logger.error("%s: %s cannot keep up; dropping what it is fed", self.key, tape.source)
+
+    def _tap_classes(self, tape: SourceModule) -> tuple[type[DataModel], ...]:
+        """What ``tape`` reads that its live source does not publish: the output of a module, which reaches
+        this run over the transport, from wherever the module runs."""
+        live = self.sources.instances.get(getattr(tape.settings, "feed", None) or "")
+        made = set(live.outputs) if live is not None else set()
+        return tuple(model for model in tape.input_models() if model not in made)
+
+    async def _tap(self, messages: TransportSubscription, tape: SourceModule, queue: asyncio.Queue) -> None:
+        """Feed ``tape`` the module outputs it reads, as they are published under this run's key."""
+        async for key, message in messages:
+            if self._ours(key):
+                self._offer(tape, queue, message)
 
     async def _record(self, tape: SourceModule, queue: asyncio.Queue) -> None:
         """Feed ``tape`` what the live source publishes, one call at a time; on the way out, what is
@@ -583,6 +599,11 @@ class PipelineRun:
             started = subscribe(ModuleStarted, app=app, key=key, overflow=Overflow.GROW)
             self._subscriptions.append(started)
             self._tasks.append(asyncio.create_task(self._resend_settings(started), name=f"{app}@{key}.started"))
+        for tape, queue in self._tapes:
+            if taken := self._tap_classes(tape):
+                tap = subscribe(*taken, app=app, key=key)
+                self._subscriptions.append(tap)
+                self._tasks.append(asyncio.create_task(self._tap(tap, tape, queue), name=f"{key}.tap.{tape.source}"))
         # A command dispatched once start() returns must find its topic received.
         for subscription in self._subscriptions:
             await subscription.ready(_READY_TIMEOUT_S)
