@@ -65,9 +65,13 @@ class Codec(Generic[M]):
         """Insert ``entries``, inside the caller's transaction."""
         raise NotImplementedError
 
-    def read(self, con: duckdb.DuckDBPyConnection, start: datetime | None, end: datetime | None) -> Iterator[M]:
-        """The segment's messages with ``start <= time < end``, in time order, a batch at a time."""
+    def read_entries(self, con: duckdb.DuckDBPyConnection, start: datetime | None, end: datetime | None) -> Iterator[Entry[M]]:
+        """The segment's messages with ``start <= ts < end``, in ``ts`` order, a batch at a time."""
         raise NotImplementedError
+
+    def read(self, con: duckdb.DuckDBPyConnection, start: datetime | None, end: datetime | None) -> Iterator[M]:
+        """``read_entries``, the messages alone."""
+        return (entry.message for entry in self.read_entries(con, start, end))
 
     def bounds(self, con: duckdb.DuckDBPyConnection) -> tuple[datetime, datetime] | None:
         """The first and last instants the segment holds of this class, or ``None``."""
@@ -99,7 +103,9 @@ class FrameCodec(Codec[PmuFrame]):
             [[naive(e.ts), e.message.mRID, self.segment_key(e.message), e.message.values] for e in entries],
         )
 
-    def read(self, con: duckdb.DuckDBPyConnection, start: datetime | None, end: datetime | None) -> Iterator[PmuFrame]:
+    def read_entries(
+        self, con: duckdb.DuckDBPyConnection, start: datetime | None, end: datetime | None
+    ) -> Iterator[Entry[PmuFrame]]:
         headers: dict[str, PmuHeader] = {}
         try:
             for layout, header in con.execute("SELECT id, header FROM layouts").fetchall():
@@ -114,7 +120,9 @@ class FrameCodec(Codec[PmuFrame]):
         # A batch at a time: a segment holds hours of frames, and a reader may want the first few.
         while rows := cursor.fetchmany(READ_BATCH):
             for ts, mrid, layout, values in rows:
-                yield PmuFrame(timestamp=ts.replace(tzinfo=UTC), mRID=mrid, header=headers[layout], values=values)
+                moment = ts.replace(tzinfo=UTC)
+                frame = PmuFrame(timestamp=moment, mRID=mrid, header=headers[layout], values=values)
+                yield Entry(frame, moment, moment)  # a frame is stamped: its arrival is not kept
 
     def bounds(self, con: duckdb.DuckDBPyConnection) -> tuple[datetime, datetime] | None:
         try:

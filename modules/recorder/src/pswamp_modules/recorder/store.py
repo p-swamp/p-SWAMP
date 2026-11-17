@@ -6,6 +6,7 @@ writer's open file, in this process or another.
 
 from __future__ import annotations
 
+import heapq
 import logging
 import threading
 import time
@@ -195,6 +196,26 @@ class Store:
                 continue
             try:
                 yield from codec.read(con, start, end)
+            finally:
+                con.close()
+
+    def read_messages(
+        self, start: datetime | None = None, end: datetime | None = None, topics: Sequence[str] | None = None
+    ) -> Iterator[DataModel]:
+        """The messages of ``topics`` (all the store holds when ``None``) with ``start <= ts < end``: segment by
+        segment as ``read``, and inside a segment merged by ``ts``, so the topics interleave as they happened."""
+        self.flush()
+        chosen = [c for c in self.codecs.values() if topics is None or c.model.topic_name() in topics]
+        unknown = set(topics or ()) - {c.model.topic_name() for c in self.codecs.values()}
+        if unknown:
+            raise ValueError(f"recorder {self.folder}: nothing is recorded as {sorted(unknown)}; has {sorted(c.model.topic_name() for c in self.codecs.values())}")
+        for segment in self.segments():
+            con = self._open(segment)
+            if con is None:
+                continue
+            try:
+                for entry in heapq.merge(*(c.read_entries(con, start, end) for c in chosen), key=lambda e: e.ts):
+                    yield entry.message
             finally:
                 con.close()
 

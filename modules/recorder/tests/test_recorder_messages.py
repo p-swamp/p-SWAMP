@@ -51,3 +51,19 @@ def test_a_message_other_than_the_chosen_is_refused(tmp_path):
     recorder = Recorder(dir=tmp_path, messages="ScadaScan")
     with pytest.raises(TypeError):
         recorder.run(PmuFrame(timestamp=T0, mRID="t", header=HEADER, values=[50.0]))
+
+
+def test_messages_are_read_back_by_topic_and_time_in_the_order_they_happened(tmp_path):
+    recorder = Recorder(dir=tmp_path, messages="PmuFrame,ScadaScan")
+    frames = [PmuFrame(timestamp=T0 + timedelta(milliseconds=500 * i), mRID="t", header=HEADER, values=[50.0]) for i in range(5)]
+    scans = [scan(1), scan(2)]
+    for each in (*frames, *scans):
+        recorder.run(each)
+    recorder.flush()
+    got = list(recorder.read_messages())
+    assert [m.timestamp for m in got] == sorted(m.timestamp for m in got) and len(got) == 7
+    assert list(recorder.read_messages(topics=["scada.scan"])) == scans
+    assert list(recorder.read_messages(T0 + timedelta(seconds=2), topics=["scada.scan"])) == [scans[1]]
+    assert list(recorder.read_messages(topics=["pmu.frame"])) == frames == list(recorder.read())
+    with pytest.raises(ValueError, match="nothing is recorded as"):
+        list(recorder.read_messages(topics=["sim.event"]))

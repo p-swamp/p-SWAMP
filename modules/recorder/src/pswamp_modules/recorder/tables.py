@@ -141,7 +141,7 @@ class ModelCodec(Codec[M]):
         ]
         con.executemany(f'INSERT INTO "{self.table}" VALUES ({marks})', rows)
 
-    def read(self, con: duckdb.DuckDBPyConnection, start: datetime | None, end: datetime | None) -> Iterator[M]:
+    def read_entries(self, con: duckdb.DuckDBPyConnection, start: datetime | None, end: datetime | None) -> Iterator[Entry[M]]:
         try:
             stored = {row[0] for row in con.execute(f'DESCRIBE "{self.table}"').fetchall()}
         except duckdb.CatalogException:  # nothing of this class in the segment, or not made yet
@@ -149,15 +149,16 @@ class ModelCodec(Codec[M]):
         names = [name for name in self.fields if name in stored]  # a model that gained a field still reads an older segment
         selected = ", ".join(f'"{name}"' for name in names)
         cursor = con.execute(
-            f'SELECT {selected} FROM "{self.table}" '
+            f'SELECT ts, arrived, {selected} FROM "{self.table}" '
             "WHERE (? IS NULL OR ts >= ?) AND (? IS NULL OR ts < ?) ORDER BY ts",
             [naive(start) if start else None] * 2 + [naive(end) if end else None] * 2,
         )
         skipped = 0
         while rows := cursor.fetchmany(READ_BATCH):
-            for row in rows:
+            for ts, arrived, *row in rows:
                 try:
-                    yield self.model.model_validate({n: _decode(self.fields[n], v) for n, v in zip(names, row)})
+                    message = self.model.model_validate({n: _decode(self.fields[n], v) for n, v in zip(names, row)})
+                    yield Entry(message, ts.replace(tzinfo=UTC), arrived.replace(tzinfo=UTC))
                 except ValidationError:  # written by a model that no longer reads it
                     skipped += 1
         if skipped:

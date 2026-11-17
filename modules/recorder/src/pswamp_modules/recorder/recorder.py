@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import asyncio
-from collections.abc import Iterator
+from collections.abc import Iterator, Sequence
 from datetime import datetime, timedelta
 from typing import Any
 
@@ -99,6 +99,13 @@ class Recorder(Playable, SourceModule):
 
     def read(self, start: datetime | None = None, end: datetime | None = None) -> Iterator[PmuFrame]:
         return self.store.read(start, end)
+
+    def read_messages(
+        self, start: datetime | None = None, end: datetime | None = None, topics: Sequence[str] | None = None
+    ) -> Iterator[DataModel]:
+        """What was kept of ``topics`` (every recorded one when ``None``) between ``start`` and ``end``, in time
+        order: for a script, whatever the player's ``read`` (frames only) leaves out."""
+        return self.store.read_messages(start, end, topics)
 
     def coverage(self) -> TimeRange | None:
         self.store.flush()
