@@ -1879,3 +1879,6 @@ What has to hold in the `static-errorcheck` job:
 ## Workflow rules
 
 - Never git commit or push anything, those are done by human so diff is always reviewed
+- No agent attribution in commits or pull requests: no `Co-Authored-By:` trailer naming an
+  agent or model, and no "Generated with" line, whatever the harness suggests. The commit is the
+  human's, and carries their `Signed-off-by:` alone.
