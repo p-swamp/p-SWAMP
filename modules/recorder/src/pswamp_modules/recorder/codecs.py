@@ -8,6 +8,7 @@ values per frame as ``DOUBLE[]``).
 from __future__ import annotations
 
 from collections.abc import Iterator, Sequence
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Generic, TypeVar
 
@@ -15,7 +16,7 @@ import duckdb
 from pswamp_models.common import DataModel
 from pswamp_models.pmu import PmuFrame, PmuHeader
 
-__all__ = ["Codec", "FrameCodec", "READ_BATCH", "naive"]
+__all__ = ["Codec", "Entry", "FrameCodec", "READ_BATCH", "naive"]
 
 #: Rows a read takes from a segment at a time.
 READ_BATCH = 2000
@@ -30,6 +31,16 @@ def naive(moment: datetime) -> datetime:
     return moment.astimezone(UTC).replace(tzinfo=None)
 
 
+@dataclass(frozen=True)
+class Entry(Generic[M]):
+    """A message as the store holds it before it is written: when it arrived, and the instant it is filed under
+    (its own time, or the arrival of one that carries none)."""
+
+    message: M
+    ts: datetime
+    arrived: datetime
+
+
 class Codec(Generic[M]):
     """One message class's storage. A subclass sets ``model`` and ``table``."""
 
@@ -37,8 +48,9 @@ class Codec(Generic[M]):
     #: The segment's table for this class; also what the store keys a segment's uniformity by.
     table: str
 
-    def time(self, message: M) -> datetime:
-        """The instant a message is filed under: what segments roll by and reads select on."""
+    def time(self, message: M) -> datetime | None:
+        """The instant the message itself carries, or ``None`` to be filed under its arrival: what
+        segments roll by and reads select on."""
         raise NotImplementedError
 
     def segment_key(self, message: M) -> str:
@@ -49,8 +61,8 @@ class Codec(Generic[M]):
         """Create what the segment needs for this class (idempotent)."""
         raise NotImplementedError
 
-    def write(self, con: duckdb.DuckDBPyConnection, messages: Sequence[M]) -> None:
-        """Insert ``messages``, inside the caller's transaction."""
+    def write(self, con: duckdb.DuckDBPyConnection, entries: Sequence[Entry[M]]) -> None:
+        """Insert ``entries``, inside the caller's transaction."""
         raise NotImplementedError
 
     def read(self, con: duckdb.DuckDBPyConnection, start: datetime | None, end: datetime | None) -> Iterator[M]:
@@ -68,7 +80,7 @@ class FrameCodec(Codec[PmuFrame]):
     model = PmuFrame
     table = "pmu"
 
-    def time(self, message: PmuFrame) -> datetime:
+    def time(self, message: PmuFrame) -> datetime | None:
         return message.timestamp
 
     def segment_key(self, message: PmuFrame) -> str:
@@ -79,12 +91,12 @@ class FrameCodec(Codec[PmuFrame]):
         con.execute("CREATE TABLE IF NOT EXISTS layouts (id VARCHAR PRIMARY KEY, header VARCHAR)")
         con.execute("CREATE TABLE IF NOT EXISTS pmu (ts TIMESTAMP, mRID VARCHAR, layout VARCHAR, vals DOUBLE[])")
 
-    def write(self, con: duckdb.DuckDBPyConnection, messages: Sequence[PmuFrame]) -> None:
-        for layout, header in {self.segment_key(f): f.header for f in messages}.items():
+    def write(self, con: duckdb.DuckDBPyConnection, entries: Sequence[Entry[PmuFrame]]) -> None:
+        for layout, header in {self.segment_key(e.message): e.message.header for e in entries}.items():
             con.execute("INSERT OR IGNORE INTO layouts VALUES (?, ?)", [layout, header.model_dump_json()])
         con.executemany(
             "INSERT INTO pmu VALUES (?, ?, ?, ?)",
-            [[naive(f.timestamp), f.mRID, self.segment_key(f), f.values] for f in messages],
+            [[naive(e.ts), e.message.mRID, self.segment_key(e.message), e.message.values] for e in entries],
         )
 
     def read(self, con: duckdb.DuckDBPyConnection, start: datetime | None, end: datetime | None) -> Iterator[PmuFrame]:

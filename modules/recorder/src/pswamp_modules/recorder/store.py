@@ -10,7 +10,7 @@ import logging
 import threading
 import time
 from collections.abc import Iterator, Sequence
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import duckdb
@@ -18,7 +18,7 @@ from pswamp_models.common import DataModel
 from pswamp_models.pmu import PmuFrame
 
 from . import codecs
-from .codecs import Codec, FrameCodec
+from .codecs import Codec, Entry, FrameCodec
 
 __all__ = ["Store"]
 
@@ -68,7 +68,7 @@ class Store:
         #: Held by whatever touches the buffer or the open segment: the run's worker thread appends
         #: (``process``) while another flushes a quiet feed, and a reader flushes before it reads.
         self._lock = threading.RLock()
-        self._buffer: list[DataModel] = []
+        self._buffer: list[Entry] = []
         self._segment: Path | None = None
         #: What the segment being written holds one of, per codec (its ``segment_key``), and its first instant.
         self._keys: dict[str, str] = {}
@@ -85,14 +85,15 @@ class Store:
         """Buffer ``message``; one whose segment key differs, or a segment as old as ``roll`` (by message
         time), starts a new segment."""
         codec = self._codec(message)
-        key, moment = codec.segment_key(message), codec.time(message)
+        arrived = datetime.now(UTC)
+        key, moment = codec.segment_key(message), codec.time(message) or arrived
         with self._lock:
             if self._start is not None and (self._keys.get(codec.table, key) != key or moment - self._start >= self.roll):
                 self.roll_over()
             if self._start is None:
                 self._start = moment
             self._keys.setdefault(codec.table, key)
-            self._buffer.append(message)
+            self._buffer.append(Entry(message, moment, arrived))
             if len(self._buffer) > self.max_buffer:
                 dropped = len(self._buffer) - self.max_buffer
                 del self._buffer[:dropped]
@@ -131,17 +132,17 @@ class Store:
     def _write(self) -> None:
         if self._segment is None:
             self.folder.mkdir(parents=True, exist_ok=True)
-            self._segment = self._free_segment(self._codec(self._buffer[0]).time(self._buffer[0]))
-        groups: dict[Codec, list[DataModel]] = {}
-        for message in self._buffer:
-            groups.setdefault(self._codec(message), []).append(message)
+            self._segment = self._free_segment(self._buffer[0].ts)
+        groups: dict[Codec, list[Entry]] = {}
+        for entry in self._buffer:
+            groups.setdefault(self._codec(entry.message), []).append(entry)
         con = duckdb.connect(str(self._segment))
         try:
             for codec in groups:
                 codec.ensure(con)
             con.execute("BEGIN")  # all or nothing, so a retry after a failure cannot write a message twice
-            for codec, messages in groups.items():
-                codec.write(con, messages)
+            for codec, entries in groups.items():
+                codec.write(con, entries)
             con.execute("COMMIT")  # plain SQL: test_tools_layering keeps the call syntax for the CIM graph's writer
         finally:
             con.close()
