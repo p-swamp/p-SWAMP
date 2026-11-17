@@ -16,7 +16,7 @@ convention as a model.
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Any, Generic, Literal, TypeVar
+from typing import Any, ClassVar, Generic, Literal, TypeVar
 
 from pydantic import BaseModel, Field
 
@@ -38,6 +38,7 @@ T = TypeVar("T", bound=BaseModel)
 class ResultEnvelope(DataModel, Generic[T]):
     """A module's result body, with where and when it came from."""
 
+    recordable: ClassVar[bool] = True
     version: Literal["v1"] = "v1"
     timestamp: datetime = Field(description="The instant the result is about.")
     app: AppIdentity

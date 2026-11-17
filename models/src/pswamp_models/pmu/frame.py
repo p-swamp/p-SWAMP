@@ -22,7 +22,7 @@ from __future__ import annotations
 import hashlib
 from datetime import datetime
 from functools import cached_property
-from typing import Literal
+from typing import ClassVar, Literal
 
 from pydantic import BaseModel, Field, computed_field, model_validator
 
@@ -108,6 +108,7 @@ class PmuHeader(BaseModel):
 class PmuFrame(DataModel):
     """One instant of every channel in a stream."""
 
+    recordable: ClassVar[bool] = True
     version: Literal["v1"] = "v1"
     timestamp: datetime = Field(description="The PMU time of this instant.")
     mRID: str = Field(description="The stream (a PDC, a recording).")
