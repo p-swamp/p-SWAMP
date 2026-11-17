@@ -8,6 +8,7 @@ import pytest
 from pswamp_core.testing import SourceConformance
 from pswamp_models.pmu import PmuFrame, PmuHeader
 from pswamp_modules.recorder import Recorder
+from pswamp_modules.recorder import codecs as codecs_module
 from pswamp_modules.recorder import store as store_module
 from pswamp_modules.recorder.store import Store
 
@@ -177,7 +178,7 @@ def test_a_failed_write_is_all_or_nothing(tmp_path, monkeypatch):
     recorder = Recorder(dir=tmp_path, flush_seconds=3600)
     for each in frames:
         recorder.run(each)
-    real = store_module._naive
+    real = codecs_module.naive
     calls = {"n": 0}
 
     def flaky(moment):
@@ -186,9 +187,9 @@ def test_a_failed_write_is_all_or_nothing(tmp_path, monkeypatch):
             raise OSError("mid-write")
         return real(moment)
 
-    monkeypatch.setattr(store_module, "_naive", flaky)
+    monkeypatch.setattr(codecs_module, "naive", flaky)
     recorder.flush()  # fails part-way through building the rows; the buffer is kept
-    monkeypatch.setattr(store_module, "_naive", real)
+    monkeypatch.setattr(codecs_module, "naive", real)
     recorder.flush()
     assert list(Recorder(dir=tmp_path).read()) == frames
 
@@ -225,8 +226,8 @@ def test_over_max_bytes_the_segment_written_longest_ago_goes_first(tmp_path):
 
 
 def test_a_naive_timestamp_is_taken_as_utc():
-    assert store_module._naive(datetime(2026, 1, 1, 12)) == datetime(2026, 1, 1, 12)
-    assert store_module._naive(datetime(2026, 1, 1, 12, tzinfo=UTC)) == datetime(2026, 1, 1, 12)
+    assert codecs_module.naive(datetime(2026, 1, 1, 12)) == datetime(2026, 1, 1, 12)
+    assert codecs_module.naive(datetime(2026, 1, 1, 12, tzinfo=UTC)) == datetime(2026, 1, 1, 12)
 
 
 def test_a_segment_the_writer_has_made_but_not_filled_is_read_as_empty(tmp_path):

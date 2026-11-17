@@ -9,32 +9,20 @@ from __future__ import annotations
 import logging
 import threading
 import time
-from collections.abc import Iterator
-from datetime import UTC, datetime, timedelta
+from collections.abc import Iterator, Sequence
+from datetime import datetime, timedelta
 from pathlib import Path
 
 import duckdb
-from pswamp_models.pmu import PmuFrame, PmuHeader
+from pswamp_models.common import DataModel
+from pswamp_models.pmu import PmuFrame
+
+from . import codecs
+from .codecs import Codec, FrameCodec
 
 __all__ = ["Store"]
 
 logger = logging.getLogger(__name__)
-
-_SCHEMA = (
-    "CREATE TABLE IF NOT EXISTS layouts (id VARCHAR PRIMARY KEY, header VARCHAR)",
-    "CREATE TABLE IF NOT EXISTS pmu (ts TIMESTAMP, mRID VARCHAR, layout VARCHAR, vals DOUBLE[])",
-)
-
-
-#: Rows a read takes from a segment at a time.
-_READ_BATCH = 2000
-
-
-def _naive(moment: datetime) -> datetime:
-    """UTC without its tzinfo, what the ``ts`` column holds; a naive ``moment`` is taken to be UTC already."""
-    if moment.tzinfo is None:
-        return moment
-    return moment.astimezone(UTC).replace(tzinfo=None)
 
 
 def _size(path: Path) -> int:
@@ -55,13 +43,8 @@ def _mtime(path: Path) -> int:
         return 0
 
 
-def _layout(header: PmuHeader) -> str:
-    """What a segment holds one of: a layout under one grid (``header_id`` leaves the grid out)."""
-    return f"{header.header_id}:{header.cimReferenceId}"
-
-
 class Store:
-    """Frames buffered by ``append``, written by ``flush``, read back by ``read``."""
+    """Messages buffered by ``append``, written by ``flush`` through their class's codec, read back by ``read``."""
 
     def __init__(
         self,
@@ -71,8 +54,11 @@ class Store:
         flush_every: timedelta = timedelta(seconds=1),
         max_bytes: int = 5 * 1024**3,
         max_buffer: int = 100_000,
+        codecs: Sequence[Codec] = (FrameCodec(),),
     ) -> None:
         self.folder = folder
+        #: What may be appended, by message class.
+        self.codecs: dict[type[DataModel], Codec] = {codec.model: codec for codec in codecs}
         self.roll = roll
         self.max_bytes = max_bytes
         self.flush_every = flush_every
@@ -82,22 +68,31 @@ class Store:
         #: Held by whatever touches the buffer or the open segment: the run's worker thread appends
         #: (``process``) while another flushes a quiet feed, and a reader flushes before it reads.
         self._lock = threading.RLock()
-        self._buffer: list[PmuFrame] = []
+        self._buffer: list[DataModel] = []
         self._segment: Path | None = None
-        #: The layout and first instant of the segment being written.
-        self._layout: str | None = None
+        #: What the segment being written holds one of, per codec (its ``segment_key``), and its first instant.
+        self._keys: dict[str, str] = {}
         self._start: datetime | None = None
         self._flushed = time.monotonic()
 
-    def append(self, frame: PmuFrame) -> None:
-        """Buffer ``frame``; a new layout, or a segment as old as ``roll`` (by frame time), starts a new segment."""
-        layout = _layout(frame.header)
+    def _codec(self, message: DataModel) -> Codec:
+        try:
+            return self.codecs[type(message)]
+        except KeyError:
+            raise TypeError(f"recorder {self.folder}: no codec for {type(message).__name__}") from None
+
+    def append(self, message: DataModel) -> None:
+        """Buffer ``message``; one whose segment key differs, or a segment as old as ``roll`` (by message
+        time), starts a new segment."""
+        codec = self._codec(message)
+        key, moment = codec.segment_key(message), codec.time(message)
         with self._lock:
-            if self._layout is not None and (layout != self._layout or frame.timestamp - self._start >= self.roll):
+            if self._start is not None and (self._keys.get(codec.table, key) != key or moment - self._start >= self.roll):
                 self.roll_over()
-            if self._layout is None:
-                self._layout, self._start = layout, frame.timestamp
-            self._buffer.append(frame)
+            if self._start is None:
+                self._start = moment
+            self._keys.setdefault(codec.table, key)
+            self._buffer.append(message)
             if len(self._buffer) > self.max_buffer:
                 dropped = len(self._buffer) - self.max_buffer
                 del self._buffer[:dropped]
@@ -113,7 +108,8 @@ class Store:
                 # The write failed: these belong to the segment that is closing, and must not open the next one.
                 logger.error("recorder %s: dropped %d frames that could not be written", self.folder, len(self._buffer))
                 self._buffer.clear()
-            self._segment = self._layout = self._start = None
+            self._segment = self._start = None
+            self._keys = {}
 
     def flush(self) -> None:
         """Write what is buffered. A write the disk refuses is logged and retried at the next flush."""
@@ -135,25 +131,24 @@ class Store:
     def _write(self) -> None:
         if self._segment is None:
             self.folder.mkdir(parents=True, exist_ok=True)
-            self._segment = self._free_segment(self._buffer[0].timestamp)
+            self._segment = self._free_segment(self._codec(self._buffer[0]).time(self._buffer[0]))
+        groups: dict[Codec, list[DataModel]] = {}
+        for message in self._buffer:
+            groups.setdefault(self._codec(message), []).append(message)
         con = duckdb.connect(str(self._segment))
         try:
-            for statement in _SCHEMA:
-                con.execute(statement)
-            con.execute("BEGIN")  # all or nothing, so a retry after a failure cannot write a frame twice
-            for layout, header in {_layout(f.header): f.header for f in self._buffer}.items():
-                con.execute("INSERT OR IGNORE INTO layouts VALUES (?, ?)", [layout, header.model_dump_json()])
-            con.executemany(
-                "INSERT INTO pmu VALUES (?, ?, ?, ?)",
-                [[_naive(f.timestamp), f.mRID, _layout(f.header), f.values] for f in self._buffer],
-            )
+            for codec in groups:
+                codec.ensure(con)
+            con.execute("BEGIN")  # all or nothing, so a retry after a failure cannot write a message twice
+            for codec, messages in groups.items():
+                codec.write(con, messages)
             con.execute("COMMIT")  # plain SQL: test_tools_layering keeps the call syntax for the CIM graph's writer
         finally:
             con.close()
 
     def _free_segment(self, first: datetime) -> Path:
         """A segment is always a new file: a stream that starts again at the same instant must not append to the old one."""
-        name = f"{_naive(first):%Y%m%dT%H%M%S.%f}"
+        name = f"{codecs.naive(first):%Y%m%dT%H%M%S.%f}"
         path, n = self.folder / f"{name}.duckdb", 0
         while path.exists():
             n += 1
@@ -188,46 +183,34 @@ class Store:
             return None
 
     def read(self, start: datetime | None = None, end: datetime | None = None) -> Iterator[PmuFrame]:
+        """The frames with ``start <= timestamp < end``, segment by segment (see the README on their order)."""
         self.flush()
-        headers: dict[str, PmuHeader] = {}
+        codec = self.codecs.get(PmuFrame)
+        if codec is None:
+            return
         for segment in self.segments():
             con = self._open(segment)
             if con is None:
                 continue
             try:
-                try:
-                    for layout, header in con.execute("SELECT id, header FROM layouts").fetchall():
-                        if layout not in headers:
-                            headers[layout] = PmuHeader.model_validate_json(header)
-                    cursor = con.execute(
-                        "SELECT ts, mRID, layout, vals FROM pmu "
-                        "WHERE (? IS NULL OR ts >= ?) AND (? IS NULL OR ts < ?) ORDER BY ts",
-                        [_naive(start) if start else None] * 2 + [_naive(end) if end else None] * 2,
-                    )
-                except duckdb.CatalogException:  # the writer made the file and has not made its tables yet: nothing to read
-                    continue
-                # A batch at a time: a segment holds hours of frames, and a reader may want the first few.
-                while rows := cursor.fetchmany(_READ_BATCH):
-                    for ts, mrid, layout, values in rows:
-                        yield PmuFrame(timestamp=ts.replace(tzinfo=UTC), mRID=mrid, header=headers[layout], values=values)
+                yield from codec.read(con, start, end)
             finally:
                 con.close()
 
     def bounds(self) -> tuple[datetime, datetime] | None:
-        """The first and last instants held, or ``None``."""
+        """The first and last instants of frames held, or ``None``."""
+        codec = self.codecs.get(PmuFrame)
         first = last = None
-        for segment in self.segments():
+        for segment in self.segments() if codec else ():
             con = self._open(segment)
             if con is None:
                 continue
             try:
-                low, high = con.execute("SELECT min(ts), max(ts) FROM pmu").fetchone()
-            except duckdb.CatalogException:  # not ready yet, as in read
-                continue
+                found = codec.bounds(con)
             finally:
                 con.close()
-            if low is not None:
-                low, high = low.replace(tzinfo=UTC), high.replace(tzinfo=UTC)
+            if found is not None:
+                low, high = found
                 first = low if first is None else min(first, low)
                 last = high if last is None else max(last, high)
         return None if first is None else (first, last)
