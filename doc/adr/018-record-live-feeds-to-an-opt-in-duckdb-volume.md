@@ -45,8 +45,21 @@ source and is, at the same time, a playable history source over what it holds.
   compares each id it meets with the run's own (its enricher's `reference`) and
   puts one `ErrorEvent` on the tray per other grid; playback goes on. A change of
   grid in the middle of a recording starts a new segment.
-- Only `PmuFrame` is recorded. `ScadaScan`, `SimEvent` and the like need a
-  model-level opt-in flag and a generic table.
+- What is recorded is chosen per recorder (`MESSAGES`, default `PmuFrame`) among
+  the messages whose class says `recordable = True` (`pswamp_models.common.recordable_models()`):
+  a producer opts its message in, and nothing is listed elsewhere. Every
+  recordable message has a typed table of its own, derived from its pydantic
+  model (`t_<topic>`: `ts`, `arrived`, a column per field, DuckDB `STRUCT`/list
+  types, `JSON` for the rest); `PmuFrame` keeps its tailored `pmu` + `layouts`
+  tables behind the same codec interface. A segment's `meta` table keeps each
+  topic's version and column signature, so an older segment is read by the model
+  as it is now, skipping rows that no longer validate. `read_messages(start, end,
+  topics)` returns them merged by `ts`; the player's `read` is still frames only.
+- A message reaches the recorder from the live source's shared run (what it
+  publishes) or, for a module's output (results, alarms), from a transport
+  subscription under the run's key, so a module in a worker is recorded too.
+  The two arrive in the order the run saw them, not by message time; `arrived`
+  and `ts` are both kept.
 - A crash loses up to `FLUSH_SECONDS` of frames; a shutdown loses none.
 - The core gains a small, specific hook; a history source with `inputs` is a new
   kind of thing that only the shared run of a live source feeds.

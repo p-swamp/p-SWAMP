@@ -3,14 +3,44 @@
 `pswamp-recorder`, package `pswamp_modules.recorder`, class `Recorder`,
 entry point `recorder` (group `pswamp.modules`).
 
-Records the `PmuFrame`s of a live source to disk, and plays them back as a
-history source: paced, seekable, with the player's usual controls. One class,
+Records the messages of a live source to disk (`PmuFrame` by default, any other
+recordable message by `MESSAGES`), and plays the frames back as a history source:
+paced, seekable, with the player's usual controls. One class,
 `Recorder(Playable, SourceModule)`: a source that also has an input.
 
 | | Message | Topic | Defined in |
 |---|---|---|---|
-| Reads | `PmuFrame`, from the live source named by `FEED` | `pmu.frame` | `pswamp_models.pmu` |
+| Reads | what `MESSAGES` names (default `PmuFrame`), from the live source named by `FEED` or, for a module's output, from its run's transport | `pmu.frame`, `scada.scan`, ... | `pswamp_models` |
 | Emits | `PmuFrame` (what it holds, when played back) | `pmu.frame` | `pswamp_models.pmu` |
+
+## What can be recorded
+
+A message is recordable when its class says `recordable = True` (a producer's
+decision, in `pswamp_models`; inherited, so every module result is).
+`pswamp_models.common.recordable_models()` lists them by topic. `MESSAGES` is a
+comma separated list of topics or class names; an unknown one is an error that
+names the valid topics. The live source's own messages (`ScadaScan`, `SimEvent`,
+`CimEdits`) come from its shared run; a module's output (a result, an alarm)
+comes from a transport subscription under that run's key, so a module in a
+worker is recorded as well. Replay puts frames back on the run; the others are
+read from a script: `recorder.read_messages(start, end, topics)`, in time order.
+
+## Tables
+
+Segments are plain DuckDB files, so they can be queried from the DuckDB CLI or a
+notebook. Each recordable message but the frame has a table of its own, derived
+from its model, `t_<topic with _ for .>`:
+
+- `ts` is the message's `timestamp`, or its arrival when it has none (a
+  `ScadaScan`); `arrived` is always the arrival. Rows are written in `ts` order,
+  so a time range reads few row groups;
+- one column per field except `version`: `datetime` as `TIMESTAMP` (UTC), `float`
+  `DOUBLE`, `int` `BIGINT`, `bool`, `str` and enums `VARCHAR`, `list[X]` `X[]`, a
+  nested model `STRUCT(...)`, anything else (a `dict`, a union) `JSON`. A result's
+  body is the `result` struct: `SELECT ts, "result".f_mean FROM t_frame_stats_result`;
+- `meta(topic, tbl, version, signature)` says what wrote the segment. A model that
+  has changed since still reads it (a new field takes its default), and a row that
+  no longer validates is skipped with a warning.
 
 ## How it records
 
@@ -26,7 +56,7 @@ files, one per **segment**:
   the old one. A read plays the segments in the order of their names, one after the
   other, so segments from overlapping spans of time are not interleaved (a segment is
   one run): time may step back at the boundary, and `coverage` spans all of them;
-- `pmu(ts, mRID, layout, vals DOUBLE[])` holds the frames, `layouts` each header once;
+- `pmu(ts, mRID, layout, vals DOUBLE[])` holds the frames, `layouts` each header once (see "Tables" for the rest);
 - frames are buffered and written every `FLUSH_SECONDS`, on `teardown`, and by the
   run after that long without a frame, so a quiet feed does not hold them in memory.
   A crash loses at most that much. A write is one transaction;
@@ -44,6 +74,7 @@ writer's open file. `coverage` and `read` span every segment, in time order.
 | Setting | Meaning | Default |
 |---|---|---|
 | `DIR` | The folder recordings are kept in (required) | |
+| `MESSAGES` | The messages it keeps, by topic or class name | `PmuFrame` |
 | `FEED` | The live source it records; unset, it only plays back | |
 | `ROLL_HOURS` | Hours of frames after which a new segment starts | 6 |
 | `FLUSH_SECONDS` | Seconds between writes to disk | 1 |
@@ -69,7 +100,7 @@ half-open range: no server, no event loop.
 
 ## Not in v1
 
-Other models (`ScadaScan`, `SimEvent`), a recordings page, an age limit.
+Replaying messages other than frames onto a run, a recordings page, an age limit.
 
 ## Grids
 

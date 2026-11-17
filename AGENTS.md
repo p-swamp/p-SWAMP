@@ -88,7 +88,8 @@ ask. (The Nordic 44 grid model *is* a sqlite file, and the replayed PMU stream
 not storage it writes to.) Kafka, in compose and k8s, is a transport between
 processes, not a store: its topics keep about a minute and have no volume.
 **The one exception is opt-in: the recorder** (`modules/recorder/`, ADR-018) keeps
-a live feed's `PmuFrame`s as DuckDB files under its `DIR`, which a deployment
+a live feed's messages (`PmuFrame` by default; any message whose class is
+`recordable`, chosen by `MESSAGES`) as DuckDB files under its `DIR`, which a deployment
 asks for by naming it in `<APP>_SOURCES` and mounting a volume
 (`docker-compose.recording.yml`; `k8s/base` still has none). Nothing else may
 write there, and nothing depends on the volume being present.

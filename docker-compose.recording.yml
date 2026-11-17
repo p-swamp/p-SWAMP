@@ -12,6 +12,8 @@ services:
       PMU_TEST_STREAMER_SOURCES: "sample:sample-replay,live:live-synthetic,remote:remote-history,recorded:recorder"
       RECORDED_DIR: "/data/recordings"
       RECORDED_FEED: "live"
+      # What it keeps, by topic or class name (any `recordable` message of pswamp_models).
+      RECORDED_MESSAGES: "PmuFrame"
       # Bytes kept before the oldest segment goes (default 5 GiB).
       RECORDED_MAX_BYTES: "1073741824"
     volumes:
