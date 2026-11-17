@@ -5,7 +5,7 @@
 
 from __future__ import annotations
 
-from typing import Literal
+from typing import ClassVar, Literal
 
 from pydantic import BaseModel, Field
 
@@ -34,6 +34,7 @@ class ScadaScan(DataModel):
     """One scan: every SCADA measurement that has a value, read at one instant. A measurement left
     out has no value now (the part of the grid it is on is not simulated, say)."""
 
+    recordable: ClassVar[bool] = True
     version: Literal["v1"] = "v1"
     source: str = Field(description="Who scanned: a SCADA feed, or the live simulation ('rtsim-from-cim').")
     sim_time: float | None = Field(default=None, description="When, on a simulation's clock, s; null from a real feed.")

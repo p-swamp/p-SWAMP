@@ -6,7 +6,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Literal
+from typing import ClassVar, Literal
 
 from pydantic import Field
 
@@ -18,6 +18,7 @@ __all__ = ["SimEvent"]
 class SimEvent(DataModel):
     """A disturbance injected, or a protection operating: announced, never written to CIM."""
 
+    recordable: ClassVar[bool] = True
     version: Literal["v1"] = "v1"
     timestamp: datetime = Field(description="When it happened, wall clock.")
     mRID: str = Field(description="The CIM object it happened to.")

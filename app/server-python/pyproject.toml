@@ -29,6 +29,7 @@ dependencies = [
     "pswamp-synthetic-history",
     # The live grid simulation, which follows the CIM graph (the CIM graph app edits that graph).
     "pswamp-rtsim-from-cim",
+    "pswamp-recorder",
     # The message models (models/): the server imports them directly.
     "pswamp-models",
 ]
@@ -73,6 +74,7 @@ pswamp-remote-history = { workspace = true }
 pswamp-rtsim-from-cim = { workspace = true }
 pswamp-tools = { workspace = true }
 pswamp-synthetic-history = { workspace = true }
+pswamp-recorder = { workspace = true }
 
 # Tooling that must never ship in the image — the Dockerfile exports with
 # --no-dev. Declared here so the versions are locked (in the workspace uv.lock)

@@ -66,6 +66,11 @@ class DataModel(BaseModel):
     #: This class's topic. A subclass may override it with a ``ClassVar[str]``.
     topic: ClassVar[_Topic] = _Topic()
 
+    #: Whether a recorder may keep this message: the producer's decision, set on its class
+    #: (and inherited, so every result body of a ``ResultEnvelope`` is). ``recordable_models()``
+    #: lists them.
+    recordable: ClassVar[bool] = False
+
     _sent_at: float | None = PrivateAttr(default=None)
 
     @field_validator("timestamp")

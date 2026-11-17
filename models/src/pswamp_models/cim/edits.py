@@ -15,7 +15,7 @@ An edit names a property as CIM does, ``<Class>.<attribute>`` (``Switch.open``,
 
 from __future__ import annotations
 
-from typing import Literal
+from typing import ClassVar, Literal
 
 from pydantic import BaseModel, Field
 
@@ -39,6 +39,7 @@ class CimEdit(BaseModel):
 class CimEdits(DataModel):
     """Edits a producer proposes, applied together or not at all."""
 
+    recordable: ClassVar[bool] = True
     version: Literal["v1"] = "v1"
     producer: str = Field(description="Who proposes them, e.g. 'rtsim': what the writer's allow-list is keyed by.")
     cause: str = Field(description="Why, in the producer's words: 'command', 'protection', ...")

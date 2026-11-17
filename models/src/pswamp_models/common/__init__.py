@@ -14,6 +14,7 @@ from .command import Command
 from .control import ModuleStarted, PipelineClosed
 from .data_model import DataModel, sent_at, stamp_sent_at, topic_from_name
 from .errors import ErrorEvent
+from .recordable import recordable_models
 from .results import AppIdentity, ResultEnvelope
 
 __all__ = [
@@ -24,6 +25,7 @@ __all__ = [
     "ModuleStarted",
     "PipelineClosed",
     "ResultEnvelope",
+    "recordable_models",
     "sent_at",
     "stamp_sent_at",
     "topic_from_name",

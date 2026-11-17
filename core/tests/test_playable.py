@@ -258,6 +258,39 @@ async def test_frames_pass_through_the_enrichers_given_at_start():
     await player.stop()
 
 
+def made_under(grid: str | None) -> ListSource:
+    """A recording whose frames already carry the id of the grid they were made under."""
+    header = HEADER.model_copy(update={"cimReferenceId": grid})
+    return ListSource(frames=[frame(i / 20, header=header) for i in range(20)])
+
+
+async def test_a_recording_made_under_another_grid_says_so_once_and_plays_on():
+    player, out = await running(made_under("grid-old"), enrichers=[CimReferenceEnricher("grid-new")])
+    await command(player, PlayCommand())
+    await until(lambda: len(out.of(PmuFrame)) >= 5)
+    (report,) = [e for e in out.of(ErrorEvent) if "grid" in e.message]
+    assert "grid-old" in report.detail and "grid-new" in report.detail
+    assert out.of(PmuFrame)[0].header.cimReferenceId == "grid-old"  # the frames keep the id they were made under
+    await player.stop()
+
+
+@pytest.mark.parametrize("grid", ["grid-new", None])
+async def test_a_recording_under_this_grid_or_none_says_nothing(grid):
+    player, out = await running(made_under(grid), enrichers=[CimReferenceEnricher("grid-new")])
+    await command(player, PlayCommand())
+    await until(lambda: len(out.of(PmuFrame)) >= 5)
+    assert [e for e in out.of(ErrorEvent) if "grid" in e.message] == []
+    await player.stop()
+
+
+async def test_a_run_tied_to_no_grid_says_nothing_about_a_recording_made_under_one():
+    player, out = await running(made_under("grid-old"))
+    await command(player, PlayCommand())
+    await until(lambda: len(out.of(PmuFrame)) >= 5)
+    assert out.of(ErrorEvent) == []
+    await player.stop()
+
+
 async def test_the_playable_leaves_its_source_open_for_the_set_to_close():
     source = ListSource()
     player, _ = await running(source)

@@ -147,6 +147,12 @@ viewer's setting must not change what the others see. Sent under the client's
 own key, it would reach an instance that gets no frames, so it would change
 nothing.
 
+*Recording.* A history source with `inputs` and a `FEED` (the recorder, ADR-018)
+is fed by that live run: what the live source publishes, and, from a transport
+subscription under the run's key, the outputs of the modules it selected. What
+it may keep is every message whose class is `recordable` (`pswamp_models`), each
+in a typed table derived from its model.
+
 *Where.* `core/src/pswamp_core/pipeline.py` (`start_live_runs`,
 `PipelineRun._follow`), `active_source.py` (`follow_live`), `shared.serve_pipeline`.
 
