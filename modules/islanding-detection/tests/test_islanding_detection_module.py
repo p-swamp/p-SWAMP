@@ -17,10 +17,10 @@ T0 = datetime(2026, 1, 1, tzinfo=timezone.utc)
 def test_the_core_finds_the_islanded_channels():
     t, freq = islanding_test_case_1()
     window = (t > 30) & (t <= 40)  # well inside the first island
-    _, islands = detect_islands(t[window], freq[window])
-    assert [sorted(island.tolist()) for island in islands] == [[2, 3, 5]]
-    _, islands = detect_islands(t[t <= 10], freq[t <= 10])
-    assert islands == []
+    _, groups, _ = detect_islands(t[window], freq[window])
+    assert [sorted(island.tolist()) for island in groups[1:]] == [[2, 3, 5]]
+    _, groups, _ = detect_islands(t[t <= 10], freq[t <= 10])
+    assert len(groups) == 1
 
 
 def test_the_core_waits_for_a_full_window():
@@ -36,21 +36,27 @@ def steady(offsets: list[float]) -> tuple[np.ndarray, np.ndarray]:
 def test_the_core_puts_a_station_in_one_group_only():
     # Station 2 is within the threshold of both 0 and 3, which are not of each
     # other: it joins the first group, and is not in the island too.
-    _, islands = detect_islands(*steady([0, 0, 0.04, 0.08]))
-    assert [island.tolist() for island in islands] == [[3]]
+    _, groups, _ = detect_islands(*steady([0, 0, 0.04, 0.08]))
+    assert [group.tolist() for group in groups] == [[0, 1, 2], [3]]
 
 
 def test_the_core_groups_every_station():
-    _, islands = detect_islands(*steady([0.1 * i for i in range(14)]))
-    assert len(islands) == 13
-    assert sorted(np.concatenate(islands).tolist()) == list(range(1, 14))
+    _, groups, _ = detect_islands(*steady([0.1 * i for i in range(14)]))
+    assert len(groups) == 14
+    assert sorted(np.concatenate(groups).tolist()) == list(range(14))
 
 
 def test_the_core_leaves_a_station_with_a_gap_out():
     t, freq = steady([0, 0, 0, 0.2])
     freq[100, 0] = np.nan
-    _, islands = detect_islands(t, freq)
-    assert [island.tolist() for island in islands] == [[3]]  # the main group is 1 and 2; 0 is in none
+    _, groups, _ = detect_islands(t, freq)
+    assert [group.tolist() for group in groups] == [[1, 2], [3]]  # 0 is in none
+
+
+def test_the_core_reports_each_groups_mean_frequency():
+    _, groups, means = detect_islands(*steady([0, 0, 0.2, 0.2, 0.2]))
+    assert [group.tolist() for group in groups] == [[2, 3, 4], [0, 1]]
+    assert np.allclose(means, [50.2, 50.0])
 
 
 def frames(freq: np.ndarray) -> list[PmuFrame]:

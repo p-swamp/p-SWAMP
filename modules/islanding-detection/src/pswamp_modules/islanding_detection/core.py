@@ -3,7 +3,8 @@
 The desktop package's ``detect_islands`` (``pswamp.monitoring.islanding``),
 with two fixes: its groups could overlap (a station close to two references
 joined both), and it stopped after ten groups, leaving any further stations in
-none. Here every station with data is in exactly one group.
+none. Here every station with data is in exactly one group, and the largest
+group (the main system) is returned too, with every group's mean frequency.
 """
 
 import numpy as np
@@ -19,10 +20,11 @@ def detect_islands(t, data, threshold=0.05):
     """Group the stations whose smoothed frequencies stay within ``threshold`` (RMS) of each other.
 
     A group is the stations close to its reference, the first station not yet
-    in a group. Returns ``(t[-1], islands)``: every group but the largest,
-    largest first, each an array of column indexes. A column with NaN anywhere
-    in the window is in no group. ``None`` until the window has filled (NaN in
-    ``t``).
+    in a group. Returns ``(t[-1], groups, means)``: every group, largest first
+    (so the first is the main system and the rest are islands), each an array of
+    column indexes, and each group's mean smoothed frequency over the window. A
+    column with NaN anywhere in the window is in no group. ``None`` until the
+    window has filled (NaN in ``t``).
     """
     if np.any(np.isnan(t)):
         return None
@@ -40,4 +42,5 @@ def detect_islands(t, data, threshold=0.05):
         groups.append(np.where(members)[0])
 
     groups.sort(key=len, reverse=True)
-    return t[-1], groups[1:]
+    means = [float(np.mean(freq[:, group])) for group in groups]
+    return t[-1], groups, means

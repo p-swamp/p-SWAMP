@@ -107,7 +107,8 @@ class IslandingDetectionModule(Module):
         found = detect_islands(*self.time_window.get(), threshold=self.mean_threshold)
         if found is None:
             return None  # the window has not filled yet
-        _, islands = found
+        _, groups, _ = found
+        islands = groups[1:]
         self.status = "Emergency" if islands else "OK"
         body = IslandingDetectionBody(
             islands=[[self._stations[i] for i in island] for island in islands], status=self.status
