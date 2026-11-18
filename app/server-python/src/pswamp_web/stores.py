@@ -81,6 +81,23 @@ class AlarmStore:
         if event_type == "not_critical":
             alarm["t_end"] = t
 
+    def retire(self, app_uuid: str, t: float, message: str) -> bool:
+        """Close out every alarm ``app_uuid`` left open: that instance is gone, and will never
+        send their ``not_critical``. Returns whether there was any."""
+        open_ = [a for a in self._alarms.values() if a["app_uuid"] == app_uuid and a["t_end"] is None]
+        for alarm in open_:
+            self.handle(
+                {
+                    "uuid": alarm["uuid"],
+                    "time_stamp": t,
+                    "app": app_uuid,
+                    "app_name": alarm["app_name"],
+                    "type": "not_critical",
+                    "message": message,
+                }
+            )
+        return bool(open_)
+
     def annotate(self, alarm_id: str, event_type: str, message: str) -> bool:
         """Record an operator action. Returns False for an unknown alarm."""
         if alarm_id not in self._alarms:

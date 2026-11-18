@@ -131,6 +131,25 @@ def test_an_assessment_of_another_layout_keeps_the_last_one():
     assert grid.islanding is before
 
 
+def test_an_instance_s_open_alarms_are_cleared_when_its_module_restarts():
+    from grid_monitor.live import LiveGrid
+
+    grid = LiveGrid()
+    alarm = AlarmEvent(timestamp=T0, alarm_uuid="a1", app=APP, type="init", status="Emergency", message="Alarm issued.")
+    grid.handle(alarm)
+    grid.handle(alarm.model_copy(update={"alarm_uuid": "a0", "type": "not_critical", "status": "OK"}))
+    status = lambda: {a.uuid: a.status for a in grid.alarms.list()}  # noqa: E731
+    assert status() == {"a1": "unseen", "a0": "not_critical"}
+    grid.handle(islanding([], [], stations=0))  # the same instance: nothing changes
+    assert status() == {"a1": "unseen", "a0": "not_critical"}
+    restarted = islanding([], [], stations=0).model_copy(update={"app": AppIdentity(name=APP.name, uuid="app-1b")})
+    grid.handle(restarted)
+    assert status() == {"a1": "not_critical", "a0": "not_critical"}
+    a1 = next(a for a in grid.alarms.list() if a.uuid == "a1")
+    assert a1.events[-1].message == "Alarm cleared: the module was restarted."
+    assert len(next(a for a in grid.alarms.list() if a.uuid == "a0").events) == 1  # closed already: untouched
+
+
 def test_the_outage_log_is_newest_first_and_says_what_is_out_now():
     from grid_monitor.live import LiveGrid
 

@@ -101,6 +101,8 @@ class LiveGrid:
         self._last_frame_at: float | None = None
         #: One row per module, by name: a run that starts over gets new instances, which replace the old.
         self._statuses: dict[str, tuple[str, _Status]] = {}
+        #: Each module's current instance (its app uuid), by name.
+        self._instances: dict[str, str] = {}
         self._header = asyncio.Event()
 
     # --- following the run --------------------------------------------------
@@ -131,6 +133,8 @@ class LiveGrid:
                 logger.exception("could not handle %s", type(message).__name__)
 
     def handle(self, message) -> None:
+        if isinstance(message, (IslandingDetectionResult, AlarmMessage, LineOutageResult)):
+            self._instance(message.app.name, message.app.uuid, message.timestamp.timestamp())
         if isinstance(message, PlayerStatus):
             self.feed = message
         elif isinstance(message, IslandingDetectionResult):
@@ -155,6 +159,14 @@ class LiveGrid:
             self._status(message, message.result.status)
             if self._outages(message):
                 self._wake(LINE_OUTAGE)
+
+    def _instance(self, name: str, uuid: str, t: float) -> None:
+        """A module heard from a new instance (its run started over): the old one will never clear
+        the alarms it left open, so they are cleared here, or they would stay active for everyone."""
+        old = self._instances.get(name)
+        self._instances[name] = uuid
+        if old is not None and old != uuid and self.alarms.retire(old, t, "Alarm cleared: the module was restarted."):
+            self._wake(ALARMS)
 
     def _status(self, result, status: str) -> None:
         self._statuses[result.app.name] = (result.app.uuid, _Status(result.app.name, status, result.timestamp.timestamp(), time.time()))
