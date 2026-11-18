@@ -5,8 +5,12 @@ Every frame's frequency columns are appended to a ``TimeWindow`` (the last
 ``window_length_s`` seconds of every station). Every ``1 / eval_freq`` seconds
 of *message* time, never wall-clock time, so a replay behaves as the live feed
 it recorded, the window goes through ``detect_islands`` (``core.py``), and the
-groups of station indexes it returns are reported by station name. Nothing is
-published until the window has filled.
+islands it finds are reported by station name, each with its mean frequency.
+The main system is reported by its mean frequency only, since in a large grid
+it is nearly every station: a reader works its stations out from the frame
+header (``IslandingDetectionBody.main_stations``), which is why the body names
+the stations in no group (``unassigned``) and the layout assessed
+(``header_id``). Nothing is published until the window has filled.
 
 Each assessment also sets the module's ``status``: ``Emergency`` when there is
 an island, ``OK`` when there is none. An ``AlarmRaiser`` turns that into
@@ -18,7 +22,7 @@ it in ``IslandingDetectionResult``. The same module runs hosted, or from a scrip
 
     for frame in frames:
         for result in module.run(frame):
-            result.result.islands
+            result.result.islands   # [IslandGroup(stations=[...], mean_freq=...)]
 
 The window and the active alarm are the module's state: ``reset`` drops both
 when the stream starts over (a seek, a loop), and a frame with a new channel
@@ -30,7 +34,7 @@ import numpy as np
 from pswamp_core.alarms import AlarmRaiser
 from pswamp_core.modules import Module
 from pswamp_models.common import AlarmEvent, AppStatus
-from pswamp_models.islanding_detection import IslandingDetectionBody, IslandingDetectionResult
+from pswamp_models.islanding_detection import IslandGroup, IslandingDetectionBody, IslandingDetectionResult
 from pswamp_models.pmu import PmuFrame
 from pswamp_modules.islanding_detection.core import detect_islands
 from pswamp_modules.islanding_detection.time_window import TimeWindow
@@ -107,10 +111,19 @@ class IslandingDetectionModule(Module):
         found = detect_islands(*self.time_window.get(), threshold=self.mean_threshold)
         if found is None:
             return None  # the window has not filled yet
-        _, groups, _ = found
-        islands = groups[1:]
+        _, groups, means = found
+
+        def group(index: int) -> IslandGroup:
+            return IslandGroup(stations=[self._stations[i] for i in groups[index]], mean_freq=means[index])
+
+        islands = [group(index) for index in range(1, len(groups))]
+        grouped = {int(i) for g in groups for i in g}
         self.status = "Emergency" if islands else "OK"
         body = IslandingDetectionBody(
-            islands=[[self._stations[i] for i in island] for island in islands], status=self.status
+            header_id=self._header_id,
+            islands=islands,
+            main_mean_freq=means[0] if groups else None,
+            unassigned=[station for i, station in enumerate(self._stations) if i not in grouped],
+            status=self.status,
         )
         return [body, self.alarms.update(self.status, frame.timestamp)]

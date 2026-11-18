@@ -22,7 +22,6 @@ from collections.abc import Iterator
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 
-import numpy as np
 from fastapi import WebSocket
 from shared import app_pipeline, get_logger, read_client_id, refuse_socket, transport
 
@@ -136,8 +135,10 @@ class LiveGrid:
             self.feed = message
         elif isinstance(message, IslandingDetectionResult):
             self._status(message, message.result.status)
-            self.islanding = self._islanding(message)
-            self._wake(ISLANDING)
+            assessment = self._islanding(message)
+            if assessment is not None:  # else it was made on another layout: keep the last one
+                self.islanding = assessment
+                self._wake(ISLANDING)
         elif isinstance(message, AlarmMessage):
             self.alarms.handle(
                 {
@@ -158,35 +159,29 @@ class LiveGrid:
     def _status(self, result, status: str) -> None:
         self._statuses[result.app.name] = (result.app.uuid, _Status(result.app.name, status, result.timestamp.timestamp(), time.time()))
 
-    def _islanding(self, result: IslandingDetectionResult) -> IslandingResult:
+    def _islanding(self, result: IslandingDetectionResult) -> IslandingResult | None:
         """The assessment as the panels want it: every group, the main system first, each with its
-        mean frequency over the module's window. The module reports only the islands; the main
-        system is every station with a frequency in that window and in no island."""
+        mean frequency over the module's window. The module lists the islands and the stations in no
+        group; the main system is the rest of the frequency stations of the layout it assessed.
+        ``None`` when that is not the window's layout (the simulation has just rebuilt its model)."""
         body, parameters = result.result, result.parameters
-        window_s = float(parameters.get("window_length_s", 10.0))
-        columns = self.window.columns("f")
-        stations = [self.window.header.station[i] for i in columns] if columns else []
-        with np.errstate(invalid="ignore"), warnings_off():
-            means = np.nanmean(self.window.recent(columns, window_s), axis=0) if columns else np.array([])
-        mean_of = {station: float(m) for station, m in zip(stations, means, strict=True) if np.isfinite(m)}
-        islanded = {station for island in body.islands for station in island}
-        groups = [[s for s in stations if s in mean_of and s not in islanded], *body.islands]
-        self.island_of = {station: index for index, group in enumerate(groups) for station in group}
+        header = self.window.header
+        main = body.main_stations(header) if header is not None else None
+        if main is None:
+            return None
+        groups = [(main, body.main_mean_freq), *((island.stations, island.mean_freq) for island in body.islands)]
+        self.island_of = {station: index for index, (stations, _) in enumerate(groups) for station in stations}
         return IslandingResult(
             t=result.timestamp.timestamp(),
             app_uuid=result.app.uuid,
             app_name=result.app.name,
             status=body.status,
             islands=[
-                Island(
-                    index=index,
-                    stations=group,
-                    mean_freq=sample(np.mean([mean_of[s] for s in group if s in mean_of]) if any(s in mean_of for s in group) else None),
-                )
-                for index, group in enumerate(groups)
+                Island(index=index, stations=stations, mean_freq=sample(mean_freq))
+                for index, (stations, mean_freq) in enumerate(groups)
             ],
             parameters=IslandingParameters(
-                window_length=window_s,
+                window_length=float(parameters.get("window_length_s", 10.0)),
                 mean_threshold=float(parameters.get("mean_threshold", 0.0)),
                 eval_freq=float(parameters.get("eval_freq", 0.0)),
             ),
@@ -287,16 +282,6 @@ class LiveGrid:
         """Wake every open view: something changed that no module published (an operator action)."""
         for queue, _ in self._views:
             offer(queue)
-
-
-@contextlib.contextmanager
-def warnings_off() -> Iterator[None]:
-    """``nanmean`` of a column that is all NaN warns; that is a station with no data, not news."""
-    import warnings
-
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore", RuntimeWarning)
-        yield
 
 
 LIVE = LiveGrid()

@@ -9,6 +9,14 @@ station's frequency in a `TimeWindow` (`time_window.py`), and every
 it: stations whose smoothed frequencies stay within `mean_threshold` (RMS) of
 each other are one group, and every group but the largest is an island.
 
+The result lists each island's stations and mean frequency, but only the main
+system's mean frequency: in a large grid the main system is nearly every
+station, and listing it once a second would make the message grow with the grid
+rather than with the event. Its stations are every frequency station of the
+assessed layout (`header_id`) in no island and not `unassigned` (a missing or
+zero frequency somewhere in the window); `IslandingDetectionBody.main_stations(header)`
+works that out.
+
 Each assessment sets the module's status: `Emergency` when there is an island,
 `OK` when there is none. An `AlarmRaiser` (`pswamp_core.alarms`, the desktop's
 alarm logic) turns that into `AlarmEvent`s: `init` when an emergency begins,
@@ -42,8 +50,11 @@ for frame in frames:
         if isinstance(message, AlarmEvent):
             message.type                   # "init" or "not_critical"
         else:                              # an IslandingDetectionResult
-            message.result.islands         # e.g. [["6500", "6700", "6701"]]
-            message.result.status          # "Emergency" or "OK"
+            body = message.result
+            body.islands                   # e.g. [IslandGroup(stations=["6500", "6700", "6701"], mean_freq=50.12)]
+            body.main_mean_freq            # Hz
+            body.main_stations(frame.header)   # the rest of the stations, but body.unassigned
+            body.status                    # "Emergency" or "OK"
 ```
 
 ## Examples

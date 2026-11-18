@@ -152,7 +152,7 @@ def main() -> None:
             if isinstance(message, AlarmEvent):
                 print(f"{(message.timestamp - T0).total_seconds():5.1f} s: ALARM {message.type}: {message.message}")
                 continue
-            islands = message.result.islands
+            islands = [island.stations for island in message.result.islands]
             # if islands != last:
             t = (frame.timestamp - T0).total_seconds()
             print(f"{t:5.1f} s: islands {islands}")

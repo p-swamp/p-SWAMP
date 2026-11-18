@@ -13,7 +13,7 @@ import pytest
 
 from pswamp_core.cim import SAMPLE_GRID, CimSettings, open_store, stage
 from pswamp_models.common import AlarmEvent, AppIdentity
-from pswamp_models.islanding_detection import IslandingDetectionBody, IslandingDetectionResult
+from pswamp_models.islanding_detection import IslandGroup, IslandingDetectionBody, IslandingDetectionResult
 from pswamp_models.line_outage import LineOutageBody, LineOutageChange, LineOutageResult, MeasuredCurrent
 from pswamp_models.pmu import PmuFrame, PmuHeader
 
@@ -72,12 +72,21 @@ APP = AppIdentity(name="islanding-detection", uuid="app-1")
 OUTAGE_APP = AppIdentity(name="line-outage", uuid="app-2")
 
 
-def islanding(islands: list[list[str]]) -> IslandingDetectionResult:
+def islanding(
+    islands: list[tuple[list[str], float]], unassigned: list[str], *, stations: int, main_mean_freq: float = 50.0
+) -> IslandingDetectionResult:
+    """An assessment made on the layout ``fill`` writes for ``stations`` stations."""
     return IslandingDetectionResult(
         timestamp=T0,
         app=APP,
         parameters={"window_length_s": 10.0, "mean_threshold": 0.05, "eval_freq": 1.0},
-        result=IslandingDetectionBody(islands=islands, status="Emergency" if islands else "OK"),
+        result=IslandingDetectionBody(
+            header_id=header([f"s{i}" for i in range(stations)]).header_id,
+            islands=[IslandGroup(stations=group, mean_freq=f) for group, f in islands],
+            main_mean_freq=main_mean_freq,
+            unassigned=unassigned,
+            status="Emergency" if islands else "OK",
+        ),
     )
 
 
@@ -95,18 +104,31 @@ def outage(changes: list[tuple[str, list[str]]], disconnected: list[str]) -> Lin
     )
 
 
-def test_the_main_system_is_every_station_with_a_frequency_in_no_island():
+def test_the_main_system_is_every_station_in_no_island_that_the_module_assessed():
     from grid_monitor.live import LiveGrid
 
     grid = LiveGrid()
-    fill(grid, [50.0, 50.0, 50.2, None])  # s3 has no frequency: it is in no group
-    grid.handle(islanding([["s2"]]))
+    # s3 had no lock (0 Hz) and s4 a gap: the module left both out, though the server's window
+    # holds a value for each, so they are in no group here either, nor in the main system's mean.
+    fill(grid, [50.0, 50.0, 50.2, 0.0, 50.0])
+    grid.handle(islanding([(["s2"], 50.2)], ["s3", "s4"], stations=5, main_mean_freq=50.01))
     islands = grid.islanding.islands
     assert [(i.index, i.stations) for i in islands] == [(0, ["s0", "s1"]), (1, ["s2"])]
-    assert islands[0].mean_freq == pytest.approx(50.0) and islands[1].mean_freq == pytest.approx(50.2)
+    assert islands[0].mean_freq == pytest.approx(50.01) and islands[1].mean_freq == pytest.approx(50.2)
     assert grid.island_of == {"s0": 0, "s1": 0, "s2": 1}
     assert grid.islanding.status == "Emergency" and grid.islanding.parameters.window_length == 10.0
     assert [(s.app_name, s.status) for s in grid.statuses()] == [("islanding-detection", "Emergency")]
+
+
+def test_an_assessment_of_another_layout_keeps_the_last_one():
+    from grid_monitor.live import LiveGrid
+
+    grid = LiveGrid()
+    fill(grid, [50.0, 50.0])
+    grid.handle(islanding([], [], stations=2))
+    before = grid.islanding
+    grid.handle(islanding([(["s2"], 50.2)], [], stations=3))  # made before the simulation rebuilt
+    assert grid.islanding is before
 
 
 def test_the_outage_log_is_newest_first_and_says_what_is_out_now():

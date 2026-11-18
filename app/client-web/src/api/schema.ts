@@ -1174,19 +1174,47 @@ export interface components {
             /** Stations */
             stations: string[];
         };
+        /** IslandGroup */
+        IslandGroup: {
+            /**
+             * Mean Freq
+             * @description Hz: the group's mean smoothed frequency over the assessed window.
+             */
+            mean_freq: number | null;
+            /**
+             * Stations
+             * @description The group's stations, by name.
+             */
+            stations: string[];
+        };
         /** IslandingDetectionBody */
         IslandingDetectionBody: {
             /**
-             * Islands
-             * @description The groups of stations separated from the main system, largest first, by station name; empty when the grid is whole.
+             * Header Id
+             * @description The `PmuHeader.header_id` of the layout the assessment was made on.
              */
-            islands: string[][];
+            header_id: string;
+            /**
+             * Islands
+             * @description The groups of stations separated from the main system, largest first; empty when the grid is whole.
+             */
+            islands: components["schemas"]["IslandGroup"][];
+            /**
+             * Main Mean Freq
+             * @description Hz: the main system's mean smoothed frequency over the assessed window; null when no station had a full window.
+             */
+            main_mean_freq: number | null;
             /**
              * Status
              * @description 'Emergency' when there is an island, 'OK' when there is none.
              * @enum {string}
              */
             status: "OK" | "Alert" | "Emergency";
+            /**
+             * Unassigned
+             * @description Stations in no group: a missing or zero frequency somewhere in the window.
+             */
+            unassigned: string[];
         };
         /** IslandingDetectionResult */
         IslandingDetectionResult: {
@@ -1218,10 +1246,10 @@ export interface components {
             timestamp: string;
             /**
              * Version
-             * @default v1
+             * @default v2
              * @constant
              */
-            version: "v1";
+            version: "v2";
         };
         /**
          * IslandingDetectionState

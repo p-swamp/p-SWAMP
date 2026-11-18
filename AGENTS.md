@@ -923,10 +923,12 @@ Three things worth knowing before touching it:
 - **The wire is the panels', not the modules'.** A module's message
   (`IslandingDetectionResult`, `LineOutageResult`) is turned into the panel's
   (`IslandingResult`, `LineOutageLog`) in `live.py`, which adds what the panel needs
-  and the module does not report: the main system (every station with a frequency
-  in the module's window and in no island, since the detector reports only the
-  separated groups), each group's mean frequency (from the measurement window),
-  and each outage's branch (through its current's Analog). The simulation's units
+  and the module does not report: the main system's stations (the module reports
+  only the islands and the stations in no group, `unassigned`, so that its message
+  grows with the event and not with the grid; `IslandingDetectionBody.main_stations`
+  takes the rest of the assessed layout, and an assessment of another layout than
+  the window's is not shown) and each outage's branch (through its current's
+  Analog). Each group's mean frequency is the module's, over the window it assessed. The simulation's units
   are converted on the way out: the phasors are sent in volts and radians.
 - **Send deltas, not windows.** `time_window/api.py` sends the window once
   (`mode: "full"`) and then only new samples (`mode: "append"`), counted by the

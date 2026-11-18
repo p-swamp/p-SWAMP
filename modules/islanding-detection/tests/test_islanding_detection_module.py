@@ -75,9 +75,30 @@ def test_the_module_reports_islands_by_station_once_a_second():
     # Nothing until the 10 s window fills, then one result a second.
     assert 34 <= len(published) <= 36
     first, last = published[0].result, published[-1].result
-    assert (first.islands, first.status) == ([], "OK")
-    assert [sorted(island) for island in last.islands] == [["s2", "s3", "s5"]]
+    assert (first.islands, first.unassigned, first.status) == ([], [], "OK")
+    assert [sorted(island.stations) for island in last.islands] == [["s2", "s3", "s5"]]
     assert last.status == "Emergency"
+    header = frames(freq[:1])[0].header
+    assert last.main_stations(header) == [s for s in header.station if s not in ("s2", "s3", "s5")]
+    assert last.main_mean_freq is not None and last.islands[0].mean_freq is not None
+
+
+def test_a_station_with_no_lock_or_a_gap_is_in_no_group():
+    """A 0 Hz reading is a PMU with no lock: that station, and one with a single gap, are
+    ``unassigned``, so a reader leaves them out of the main system too."""
+    _, freq = steady([0, 0, 0, 0, 0.2])
+    freq = np.vstack([freq, freq])  # 20 s: the window fills, then is assessed again each second
+    freq[:, 0] = 0.0
+    freq[-100, 1] = np.nan
+    module = IslandingDetectionModule()
+    stream = frames(freq)
+    body = [m for frame in stream for m in module.run(frame) if isinstance(m, IslandingDetectionResult)][-1].result
+    assert body.unassigned == ["s0", "s1"]
+    assert [island.stations for island in body.islands] == [["s4"]]
+    assert body.main_stations(stream[0].header) == ["s2", "s3"]
+    assert abs(body.main_mean_freq - 50.0) < 1e-9 and abs(body.islands[0].mean_freq - 50.2) < 1e-9
+    other = frames(steady([0, 0, 0])[1][:1])[0].header
+    assert body.main_stations(other) is None  # not the layout assessed
 
 
 def test_reset_forgets_the_window():

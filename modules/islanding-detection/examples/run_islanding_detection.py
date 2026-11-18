@@ -34,7 +34,7 @@ def main() -> None:
             if isinstance(message, AlarmEvent):
                 print(f"{n / 50:6.1f} s: ALARM {message.type}: {message.message}")
             else:
-                print(f"{n / 50:6.1f} s: {message.result.status}, islands {message.result.islands}")
+                print(f"{n / 50:6.1f} s: {message.result.status}, islands {[island.stations for island in message.result.islands]}")
 
 
 if __name__ == "__main__":

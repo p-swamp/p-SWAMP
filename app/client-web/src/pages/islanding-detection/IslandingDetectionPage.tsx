@@ -46,7 +46,10 @@ export function IslandingDetectionPage() {
                 {result.islands.map((island, i) => (
                   <li key={i}>
                     <span className="font-medium">Island {i + 1}:</span>{' '}
-                    <span className="text-gray-500">{island.join(', ')}</span>
+                    <span className="text-gray-500">{island.stations.join(', ')}</span>
+                    {island.mean_freq != null && (
+                      <span className="text-gray-500"> ({island.mean_freq.toFixed(3)} Hz)</span>
+                    )}
                   </li>
                 ))}
               </ul>
@@ -54,6 +57,11 @@ export function IslandingDetectionPage() {
           </div>
         ) : (
           <div className="text-gray-500">Waiting for the first result…</div>
+        )}
+        {result && result.unassigned.length > 0 && (
+          <div className="text-gray-500" data-testid="unassigned">
+            No data: {result.unassigned.join(', ')}
+          </div>
         )}
       </CardContent>
     </Card>

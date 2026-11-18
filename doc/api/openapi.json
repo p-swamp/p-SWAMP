@@ -1107,18 +1107,62 @@
         "title": "Island",
         "type": "object"
       },
+      "IslandGroup": {
+        "properties": {
+          "mean_freq": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Hz: the group's mean smoothed frequency over the assessed window.",
+            "title": "Mean Freq"
+          },
+          "stations": {
+            "description": "The group's stations, by name.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Stations",
+            "type": "array"
+          }
+        },
+        "required": [
+          "stations",
+          "mean_freq"
+        ],
+        "title": "IslandGroup",
+        "type": "object"
+      },
       "IslandingDetectionBody": {
         "properties": {
+          "header_id": {
+            "description": "The `PmuHeader.header_id` of the layout the assessment was made on.",
+            "title": "Header Id",
+            "type": "string"
+          },
           "islands": {
-            "description": "The groups of stations separated from the main system, largest first, by station name; empty when the grid is whole.",
+            "description": "The groups of stations separated from the main system, largest first; empty when the grid is whole.",
             "items": {
-              "items": {
-                "type": "string"
-              },
-              "type": "array"
+              "$ref": "#/components/schemas/IslandGroup"
             },
             "title": "Islands",
             "type": "array"
+          },
+          "main_mean_freq": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Hz: the main system's mean smoothed frequency over the assessed window; null when no station had a full window.",
+            "title": "Main Mean Freq"
           },
           "status": {
             "description": "'Emergency' when there is an island, 'OK' when there is none.",
@@ -1129,10 +1173,21 @@
             ],
             "title": "Status",
             "type": "string"
+          },
+          "unassigned": {
+            "description": "Stations in no group: a missing or zero frequency somewhere in the window.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Unassigned",
+            "type": "array"
           }
         },
         "required": [
+          "header_id",
           "islands",
+          "main_mean_freq",
+          "unassigned",
           "status"
         ],
         "title": "IslandingDetectionBody",
@@ -1184,8 +1239,8 @@
             "type": "string"
           },
           "version": {
-            "const": "v1",
-            "default": "v1",
+            "const": "v2",
+            "default": "v2",
             "title": "Version",
             "type": "string"
           }
