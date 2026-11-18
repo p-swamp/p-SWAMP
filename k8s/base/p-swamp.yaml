@@ -199,9 +199,9 @@ spec:
             - name: KAFKA_BOOTSTRAP_SERVERS
               value: $(PSWAMP_KAFKA_HOST):9092
             - name: PSWAMP_WORKER_PIPELINES
-              value: pmu-test-streamer.toml,grid-monitor.toml
+              value: pmu-test-streamer.toml,grid-monitor.toml,state-estimator.toml
             - name: PSWAMP_WORKER_MODULES
-              value: frame-stats,excursion,islanding-detection,line-outage
+              value: frame-stats,excursion,islanding-detection,line-outage,state-estimator
             # A module that reads the grid (cim = True) reads it here.
             - name: PSWAMP_CIM_URL
               value: http://$(PSWAMP_OXIGRAPH_HOST):7878

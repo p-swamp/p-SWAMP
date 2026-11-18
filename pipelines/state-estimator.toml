@@ -1,0 +1,19 @@
+# The State Estimator pipeline: the state-estimator.* topics, the configured sources,
+# and the module. Loaded by the app's web API and by the module-worker
+# (PSWAMP_WORKER_PIPELINES=...,state-estimator.toml).
+#
+# By default the only source is the synthetic live feed: one shared run
+# feeds the module, and every page shows its results from the start.
+# STATE_ESTIMATOR_SOURCES, when set (name:entry-point,...), replaces the sources.
+
+app = "state-estimator"
+modules = ["state-estimator"]
+
+[[sources]]
+name = "live"
+module = "live-synthetic"
+
+# To tie every frame to the CIM graph (the grid's id, and the Analog each column
+# measures: pswamp_core.cim.CimEnricher):
+# [enrich]
+# cim = true

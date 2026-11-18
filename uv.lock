@@ -24,6 +24,7 @@ members = [
     "pswamp-rtsim-from-cim",
     "pswamp-sample-replay",
     "pswamp-server",
+    "pswamp-state-estimator",
     "pswamp-synthetic-history",
     "pswamp-tools",
 ]
@@ -1253,6 +1254,7 @@ dependencies = [
     { name = "pswamp-remote-history" },
     { name = "pswamp-rtsim-from-cim" },
     { name = "pswamp-sample-replay" },
+    { name = "pswamp-state-estimator" },
     { name = "pswamp-synthetic-history" },
     { name = "uvicorn", extra = ["standard"] },
 ]
@@ -1280,6 +1282,7 @@ requires-dist = [
     { name = "pswamp-remote-history", editable = "modules/remote-history" },
     { name = "pswamp-rtsim-from-cim", editable = "modules/rtsim-from-cim" },
     { name = "pswamp-sample-replay", editable = "modules/sample-replay" },
+    { name = "pswamp-state-estimator", editable = "modules/state-estimator" },
     { name = "pswamp-synthetic-history", editable = "modules/synthetic-history" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.52.4,<0.53" },
 ]
@@ -1290,6 +1293,21 @@ dev = [
     { name = "pytest", specifier = ">=8.0" },
     { name = "pytest-asyncio", specifier = ">=0.24" },
     { name = "ruff", specifier = "==0.16.4" },
+]
+
+[[package]]
+name = "pswamp-state-estimator"
+version = "0.1.0"
+source = { editable = "modules/state-estimator" }
+dependencies = [
+    { name = "pswamp-core" },
+    { name = "pswamp-models" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "pswamp-core", editable = "core" },
+    { name = "pswamp-models", editable = "models" },
 ]
 
 [[package]]

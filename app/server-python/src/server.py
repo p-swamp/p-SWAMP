@@ -47,6 +47,7 @@ import reference_subapp
 import shared
 import cim_graph
 import cim_live
+import state_estimator
 import islanding_detection
 from api_contract import AppEntry
 
@@ -144,11 +145,6 @@ APPS = [
         "cim-live",
         cim_live,
         "The live grid simulation's frames, as each station's voltage and frequency, every frame.",
-    ),
-    AppEntry(
-        "islanding-detection",
-        islanding_detection,
-        "Islanding detection over a time window of the stations' frequencies.",
     ),
 ]
 

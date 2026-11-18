@@ -3153,6 +3153,118 @@
         "title": "SpeedBody",
         "type": "object"
       },
+      "StateEstimatorBody": {
+        "properties": {
+          "frequency_hz": {
+            "description": "Its frequency, in Hz.",
+            "title": "Frequency Hz",
+            "type": "number"
+          },
+          "station": {
+            "description": "The station with the highest frequency in the frame.",
+            "title": "Station",
+            "type": "string"
+          }
+        },
+        "required": [
+          "station",
+          "frequency_hz"
+        ],
+        "title": "StateEstimatorBody",
+        "type": "object"
+      },
+      "StateEstimatorResult": {
+        "properties": {
+          "app": {
+            "$ref": "#/components/schemas/AppIdentity"
+          },
+          "mRID": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Mrid"
+          },
+          "parameters": {
+            "additionalProperties": true,
+            "description": "The module's settings.",
+            "title": "Parameters",
+            "type": "object"
+          },
+          "request_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Set when this result answers a command.",
+            "title": "Request Id"
+          },
+          "result": {
+            "$ref": "#/components/schemas/StateEstimatorBody"
+          },
+          "timestamp": {
+            "description": "The instant the result is about.",
+            "format": "date-time",
+            "title": "Timestamp",
+            "type": "string"
+          },
+          "version": {
+            "const": "v1",
+            "default": "v1",
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "timestamp",
+          "app",
+          "result"
+        ],
+        "title": "StateEstimatorResult",
+        "type": "object"
+      },
+      "StateEstimatorState": {
+        "description": "Pushed on connect and after every change.",
+        "properties": {
+          "player": {
+            "$ref": "#/components/schemas/PlayerStatus",
+            "description": "Which source is open, and where it is."
+          },
+          "result": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/StateEstimatorResult"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The module's latest result; null until the first."
+          },
+          "type": {
+            "const": "state",
+            "default": "state",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "player",
+          "result"
+        ],
+        "title": "StateEstimatorState",
+        "type": "object"
+      },
       "StepBody": {
         "properties": {
           "n": {
@@ -5000,6 +5112,10 @@
     {
       "description": "Islanding detection over a time window of the stations' frequencies.",
       "name": "islanding-detection"
+    },
+    {
+      "description": "State Estimator.",
+      "name": "state-estimator"
     }
   ],
   "x-websocket-channels": [
@@ -5082,14 +5198,6 @@
         "$ref": "#/components/schemas/LiveFeed"
       },
       "path": "/api/cim-live/ws"
-    },
-    {
-      "app": "islanding-detection",
-      "direction": "server-to-client",
-      "message": {
-        "$ref": "#/components/schemas/IslandingDetectionState"
-      },
-      "path": "/api/islanding-detection/ws"
     }
   ]
 }

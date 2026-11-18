@@ -14,6 +14,7 @@ import { PmuTestStreamerPage } from '@/pages/pmu-test-streamer/PmuTestStreamerPa
 import { ReferenceSubappPage } from '@/pages/reference-subapp/ReferenceSubappPage'
 import { CimGraphPage } from '@/pages/cim-graph/CimGraphPage'
 import { IslandingDetectionPage } from '@/pages/islanding-detection/IslandingDetectionPage'
+import { StateEstimatorPage } from '@/pages/state-estimator/StateEstimatorPage'
 
 /**
  * The route table — the one place that knows which apps this client hosts.
@@ -81,7 +82,6 @@ function App() {
 
           <Route path="reference-subapp" element={<ReferenceSubappPage />} />
           <Route path="cim-graph" element={<CimGraphPage />} />
-          <Route path="islanding-detection" element={<IslandingDetectionPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>

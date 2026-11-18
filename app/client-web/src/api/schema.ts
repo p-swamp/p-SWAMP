@@ -2232,6 +2232,70 @@ export interface components {
              */
             speed: number;
         };
+        /** StateEstimatorBody */
+        StateEstimatorBody: {
+            /**
+             * Frequency Hz
+             * @description Its frequency, in Hz.
+             */
+            frequency_hz: number;
+            /**
+             * Station
+             * @description The station with the highest frequency in the frame.
+             */
+            station: string;
+        };
+        /** StateEstimatorResult */
+        StateEstimatorResult: {
+            app: components["schemas"]["AppIdentity"];
+            /**
+             * Mrid
+             * @default null
+             */
+            mRID: string | null;
+            /**
+             * Parameters
+             * @description The module's settings.
+             */
+            parameters?: {
+                [key: string]: unknown;
+            };
+            /**
+             * Request Id
+             * @description Set when this result answers a command.
+             * @default null
+             */
+            request_id: string | null;
+            result: components["schemas"]["StateEstimatorBody"];
+            /**
+             * Timestamp
+             * Format: date-time
+             * @description The instant the result is about.
+             */
+            timestamp: string;
+            /**
+             * Version
+             * @default v1
+             * @constant
+             */
+            version: "v1";
+        };
+        /**
+         * StateEstimatorState
+         * @description Pushed on connect and after every change.
+         */
+        StateEstimatorState: {
+            /** @description Which source is open, and where it is. */
+            player: components["schemas"]["PlayerStatus"];
+            /** @description The module's latest result; null until the first. */
+            result: components["schemas"]["StateEstimatorResult"] | null;
+            /**
+             * Type
+             * @default state
+             * @constant
+             */
+            type: "state";
+        };
         /** StepBody */
         StepBody: {
             /**

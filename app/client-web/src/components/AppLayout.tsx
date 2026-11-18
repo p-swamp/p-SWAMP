@@ -25,6 +25,7 @@ const NAV_ITEMS = [
   { to: '/reference-subapp', label: 'Reference example', end: false },
   { to: '/cim-graph', label: 'CIM graph', end: false },
   { to: '/islanding-detection', label: 'Islanding detection', end: false },
+  { to: '/state-estimator', label: 'State Estimator', end: false },
 ]
 
 function isLocalhost(): boolean {
