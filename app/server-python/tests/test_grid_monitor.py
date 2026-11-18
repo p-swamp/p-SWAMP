@@ -175,6 +175,32 @@ def test_a_current_s_branch_is_found_through_its_analog():
     assert grid.branch_of(MeasuredCurrent(station="s", channel="I_other", analog="unknown")) == "other"
 
 
+async def test_the_grid_is_read_again_when_the_simulation_rebuilds_its_model(monkeypatch):
+    import grid_monitor.live as live
+
+    reads = []
+    monkeypatch.setattr(live, "read_topology", lambda: reads.append(len(reads)) or f"grid {len(reads)}")
+    grid = live.LiveGrid()
+
+    def frame(stations: int) -> PmuFrame:
+        return PmuFrame(mRID="t", timestamp=T0, header=header([f"s{i}" for i in range(stations)]), values=[50.0] * stations)
+
+    grid.on_frame(frame(2))  # the first layout: nothing read yet, nothing to read again
+    assert await grid.grid() == "grid 1"
+    grid.on_frame(frame(2))
+    assert await grid.grid() == "grid 1" and len(reads) == 1  # the same layout: read once
+    grid.on_frame(frame(3))  # rebuilt
+    assert await grid.grid() == "grid 2" and grid.topology == "grid 2"
+
+    # A rebuild during a read: that read may be of the old grid, so it is followed by another.
+    grid._topology = None
+    pending = grid._read()  # read 3, under way
+    grid.on_frame(frame(4))
+    await pending
+    await asyncio.sleep(0)
+    assert await grid.grid() == "grid 4" and grid.topology == "grid 4"
+
+
 async def test_a_view_wakes_on_what_it_listens_for_and_on_every_nudge():
     from grid_monitor.live import ALARMS, LINE_OUTAGE, LiveGrid
 

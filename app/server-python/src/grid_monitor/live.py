@@ -83,6 +83,8 @@ class LiveGrid:
     def __init__(self) -> None:
         self._views: list[tuple[asyncio.Queue, frozenset[str]]] = []
         self._topology: asyncio.Future | None = None
+        #: Whether the grid must be read again once the read under way is done.
+        self._reread = False
         self._cim = ThreadPoolExecutor(1, thread_name_prefix="grid-monitor-cim")
         self.reset()
 
@@ -120,10 +122,26 @@ class LiveGrid:
 
     async def _frames(self, frames) -> None:
         async for _, frame in frames:
-            self.window.append(frame)
-            self.frames += 1
-            self._last_frame_at = time.time()
-            self._header.set()
+            self.on_frame(frame)
+
+    def on_frame(self, frame: PmuFrame) -> None:
+        generation = self.window.generation
+        self.window.append(frame)
+        self.frames += 1
+        self._last_frame_at = time.time()
+        self._header.set()
+        if generation and self.window.generation != generation:
+            self._layout_changed()
+
+    def _layout_changed(self) -> None:
+        """The simulation rebuilt its model: the grid may not be the one read, so read it again."""
+        if self._topology is None:
+            return  # nobody has asked for it yet: the first read will be of the grid as it is now
+        if not self._topology.done():
+            self._reread = True  # it may have read the grid before the change
+            return
+        self._topology = None
+        self._read()
 
     async def _results(self, results) -> None:
         async for _, message in results:
@@ -239,13 +257,30 @@ class LiveGrid:
             await asyncio.wait_for(self._header.wait(), timeout)
         return self._header.is_set()
 
-    async def grid(self) -> Topology:
-        """The grid, read once from the CIM graph (off the loop), however many ask at once."""
+    def _read(self) -> asyncio.Future:
+        """The read of the grid under way or done, starting one when there is none (or it failed)."""
         if self._topology is None or (self._topology.done() and self._topology.exception() is not None):
             loop = asyncio.get_running_loop()
+            self._reread = False
             self._topology = asyncio.ensure_future(loop.run_in_executor(self._cim, read_topology))
-        self.topology = await asyncio.shield(self._topology)
-        return self.topology
+            self._topology.add_done_callback(self._read_done)
+        return self._topology
+
+    def _read_done(self, future: asyncio.Future) -> None:
+        if future is not self._topology or future.cancelled():
+            return
+        if future.exception() is not None:
+            logger.warning("could not read the grid: %s", future.exception())
+            return
+        self.topology = future.result()
+        if self._reread:  # the layout changed while it was read
+            self._topology = None
+            self._read()
+
+    async def grid(self) -> Topology:
+        """The grid, read from the CIM graph (off the loop), however many ask at once; read again
+        when the simulation rebuilds its model."""
+        return await asyncio.shield(self._read())
 
     def statuses(self) -> list[AppStatus]:
         now = time.time()

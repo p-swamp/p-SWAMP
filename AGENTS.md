@@ -874,9 +874,10 @@ simulation of the grid in the CIM graph, `rtsim`, and the modules analysing it,
   frames, one ring buffer for every view. A frame with a new layout (the
   simulation rebuilt its model) starts it over and moves its `generation`, which
   is how a view knows its chosen columns are no longer the same columns.
-- **`topology.py`** — the grid the view draws, `GET /api/grid/model`, read once
+- **`topology.py`** — the grid the view draws, `GET /api/grid/model`, read
   from the CIM graph (through a reader of its own, on a thread: a few dozen
-  queries, which wait for the CIM graph app to load the grid). **A bus is a
+  queries, which wait for the CIM graph app to load the grid), and read again
+  when the frames' layout changes (the simulation rebuilt its model). **A bus is a
   station of the live stream**: one per voltage level of each substation, named
   as the simulation names its PMUs (`<substation>_<kV>`, `Beta_400`), so the
   islanding detector's stations, the phasors and the frequencies are the buses'
