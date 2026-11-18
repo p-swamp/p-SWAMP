@@ -34,7 +34,9 @@ emergency that returns within that time is still the same alarm.
 `mean_threshold` (0.05 Hz), `alarm_hold_s` (15 s), all constructor arguments. Nothing is published
 until the window has filled; a missing or zero frequency is NaN, and a station
 with NaN anywhere in the window is left out of every group. `reset` empties the
-window and forgets the active alarm, and a frame with a new layout replaces it.
+window and forgets the active alarm, which is cleared (`not_critical`) with the
+next frame so that it does not stay active in the alarm list; a frame with a new
+layout replaces the window.
 
 ## From a script
 

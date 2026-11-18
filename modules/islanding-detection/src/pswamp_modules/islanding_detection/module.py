@@ -26,7 +26,8 @@ it in ``IslandingDetectionResult``. The same module runs hosted, or from a scrip
 
 The window and the active alarm are the module's state: ``reset`` drops both
 when the stream starts over (a seek, a loop), and a frame with a new channel
-layout replaces the window.
+layout replaces the window. An alarm active at a reset is cleared
+(``not_critical``) with the next frame, so it does not stay in the alarm list.
 """
 
 import numpy as np
@@ -92,11 +93,15 @@ class IslandingDetectionModule(Module):
         self.time_window = TimeWindow(n_samples=n_samples, n_cols=len(self._columns))
         self._next_eval = None
 
-    def process(self, frame: PmuFrame) -> list[IslandingDetectionBody | AlarmEvent | None] | None:
+    def process(self, frame: PmuFrame) -> list[IslandingDetectionBody | AlarmEvent | None]:
+        cleared = self.alarms.flush(frame.timestamp)  # what a reset left active
+        return cleared + self._assess(frame)
+
+    def _assess(self, frame: PmuFrame) -> list[IslandingDetectionBody | AlarmEvent | None]:
         if frame.header.header_id != self._header_id:
             self._new_window(frame)
         if not self._columns:
-            return None  # no frequency channels in this stream
+            return []  # no frequency channels in this stream
 
         t = frame.timestamp.timestamp()
         # A missing value, or a zero frequency (a PMU with no lock), is NaN.
@@ -105,12 +110,12 @@ class IslandingDetectionModule(Module):
         self.time_window.append(t, values)
 
         if self._next_eval is not None and t < self._next_eval:
-            return None
+            return []
         self._next_eval = t + 1 / self.eval_freq
 
         found = detect_islands(*self.time_window.get(), threshold=self.mean_threshold)
         if found is None:
-            return None  # the window has not filled yet
+            return []  # the window has not filled yet
         _, groups, means = found
 
         def group(index: int) -> IslandGroup:

@@ -48,3 +48,15 @@ def test_reset_forgets_the_active_alarm():
     first = alarms.update("Emergency", at(0))
     alarms.reset()
     assert alarms.update("Emergency", at(1)).alarm_uuid != first.alarm_uuid
+
+
+def test_an_alarm_left_active_by_a_reset_is_cleared_at_the_next_flush():
+    alarms = raiser()
+    assert alarms.flush(at(0)) == []
+    first = alarms.update("Emergency", at(0))
+    alarms.reset()
+    cleared = alarms.flush(at(5))
+    assert [(e.type, e.alarm_uuid, e.timestamp) for e in cleared] == [("not_critical", first.alarm_uuid, at(5))]
+    assert alarms.flush(at(6)) == []  # once
+    alarms.reset()  # nothing active: nothing to clear
+    assert alarms.flush(at(7)) == []

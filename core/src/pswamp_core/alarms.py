@@ -15,6 +15,10 @@ sense, belongs to whatever keeps the alarm list.)
 - Once the status has been out of ``alarm_on`` for more than ``hold_s``
   seconds, the active alarm is cleared (``not_critical``). An emergency that
   flickers on and off within that time stays the same alarm.
+- ``reset`` (the stream started over) forgets the active alarm, but not that it
+  must be cleared: whoever keeps the alarm list would otherwise show it active
+  for ever. The next ``flush`` returns its ``not_critical``; a module calls it
+  with every input and publishes what it returns.
 
 Time is the assessment's timestamp, never the wall clock, so a replay raises
 the alarms the live feed did.
@@ -36,12 +40,29 @@ class AlarmRaiser:
         self.app = app
         self.alarm_on = frozenset(alarm_on)
         self.hold_s = hold_s
+        #: Alarms left active by a ``reset``, which the next ``flush`` clears.
+        self._abandoned: list[str] = []
         self.reset()
 
     def reset(self) -> None:
-        """Forget the active alarm: the stream it came from is gone."""
+        """Forget the active alarm: the stream it came from is gone. It is cleared at the next
+        ``flush``, so that it does not stay active in the alarm list."""
+        if getattr(self, "active", None) is not None:
+            self._abandoned.append(self.active)
         self.active: str | None = None  # the active alarm's uuid
         self._last_critical: datetime | None = None
+
+    def flush(self, timestamp: datetime) -> list[AlarmEvent]:
+        """A ``not_critical`` for each alarm a ``reset`` left active, once; usually none."""
+        events = [
+            AlarmEvent(
+                timestamp=timestamp, alarm_uuid=uuid, app=self.app, type="not_critical", status="OK",
+                message="Alarm cleared: the stream started over.",
+            )
+            for uuid in self._abandoned
+        ]  # fmt: skip
+        self._abandoned.clear()
+        return events
 
     def update(self, status: AppStatus, timestamp: datetime) -> AlarmEvent | None:
         """The event ``status`` at ``timestamp`` raises, or ``None``."""

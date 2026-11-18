@@ -123,3 +123,17 @@ def test_an_island_raises_an_alarm_that_clears_after_the_hold():
     assert 60 + 15 < cleared < 60 + 10 + 15 + 2  # the island leaves the 10 s window, then the hold
     assert first.alarm_uuid == end_of_first.alarm_uuid != second.alarm_uuid
     assert first.app == module.identity
+
+
+def test_an_alarm_active_at_a_reset_is_cleared():
+    """The alarm list is everyone's: an alarm the stream was in when it started over must not
+    stay active there for ever."""
+    _, freq = islanding_test_case_1()
+    module = IslandingDetectionModule()
+    stream = frames(freq[: 50 * 30])  # the island forms at 20 s
+    issued = [m for frame in stream for m in module.run(frame) if isinstance(m, AlarmEvent)]
+    assert [m.type for m in issued] == ["init"]
+    module.reset()
+    cleared = module.run(stream[0])
+    assert [(m.type, m.alarm_uuid) for m in cleared] == [("not_critical", issued[0].alarm_uuid)]
+    assert module.run(stream[1]) == []
