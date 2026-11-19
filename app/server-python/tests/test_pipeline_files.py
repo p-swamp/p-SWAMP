@@ -23,11 +23,18 @@ from pswamp_modules.sample_replay.sample import DEFAULT_PATH, EPOCH
 PIPELINES = Path(__file__).resolve().parents[3] / "pipelines"
 SAMPLE_GRID_MODEL = "3f5e0000-0000-4000-8000-000000000001"
 STREAMER = PIPELINES / "pmu-test-streamer.toml"
+GRID_MONITOR = PIPELINES / "grid-monitor.toml"
+SIMULATION = "rtsim-from-cim"
 
 
 @pytest.fixture(autouse=True)
 def no_overrides(monkeypatch):
-    for variable in ("PMU_TEST_STREAMER_SOURCES", "PMU_TEST_STREAMER_DATA_CLIENTS", "PMU_TEST_STREAMER_CIM_REFERENCE"):
+    for variable in (
+        "PMU_TEST_STREAMER_SOURCES",
+        "PMU_TEST_STREAMER_DATA_CLIENTS",
+        "PMU_TEST_STREAMER_CIM_REFERENCE",
+        "GRID_MONITOR_SOURCES",
+    ):
         monkeypatch.delenv(variable, raising=False)
 
 
@@ -42,6 +49,37 @@ def test_the_streamer_s_modules_and_sources():
     assert [m.name for m in pipeline.modules] == ["frame-stats", "excursion", "range-summary"]
     assert pipeline.sources().sources == ["sample", "live"]
     assert pipeline.live_sources() == ["live"]
+
+
+def test_the_grid_monitor_owns_the_one_simulation():
+    pipeline = Pipeline.load(GRID_MONITOR)
+    assert pipeline.app == "grid-monitor"
+    assert [m.name for m in pipeline.modules] == ["islanding-detection", "line-outage"]
+    assert pipeline.live_sources() == ["rtsim"]
+    assert pipeline.sources().instances["rtsim"].name == SIMULATION
+
+
+# Each pipeline naming a live source starts a shared run of its own: a second TOPS engine,
+# unsynchronised with the first. So no other pipeline names the simulation, in its file...
+@pytest.mark.parametrize("path", sorted(set(PIPELINES.glob("*.toml")) - {GRID_MONITOR}), ids=lambda p: p.name)
+def test_no_other_pipeline_starts_a_second_simulation(path):
+    assert SIMULATION not in [s.name for s in Pipeline.load(path).sources().instances.values()]
+
+
+# ...or in the <APP>_SOURCES a deployment replaces its sources with.
+DEPLOYMENTS = ["docker-compose.yml", *sorted(str(p.relative_to(PIPELINES.parent)) for p in (PIPELINES.parent / "k8s").rglob("*.yaml"))]
+
+
+@pytest.mark.parametrize("deployment", DEPLOYMENTS)
+def test_no_deployment_adds_the_simulation_to_another_pipeline(deployment):
+    text = (PIPELINES.parent / deployment).read_text()
+    lines = text.splitlines()
+    named = [
+        line.strip()
+        for i, line in enumerate(lines)
+        if SIMULATION in line and ("_SOURCES" in line or "_SOURCES" in lines[i - 1])
+    ]
+    assert named == []
 
 
 def test_the_environment_still_names_the_streamer_s_sources(monkeypatch, tmp_path):

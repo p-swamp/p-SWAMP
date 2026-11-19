@@ -1,8 +1,9 @@
 """The live grid feed: every frame of the RT sim, read back off the transport, as compact samples.
 
-The RT sim is a source of the PMU test streamer's pipeline: its shared run ``live.rtsim``
-publishes each ``PmuFrame`` on the transport (``pmu-test-streamer.pmu.frame``), where any module
-reads it. This socket reads it there too, like a module would, and sends the page what it plots:
+The RT sim is the live source of the live grid's pipeline (``pipelines/grid-monitor.toml``, served
+by the islanding detection app): its one shared run, ``live.rtsim``, publishes each ``PmuFrame`` on
+the transport (``grid-monitor.pmu.frame``), where every module of that pipeline reads it. This socket
+reads it there too, like a module would, and sends the page what it plots:
 for each frame, every station's voltage (per unit), angle and frequency, every line end's current
 (A, and its loading against the end's permanent limit) and every generator's and load's power (MW,
 Mvar), with the stations, line ends and injections listed once (``LiveLayout``). About 1.5 kB a frame on Nordic44, against 32 kB for the frame itself.
@@ -34,8 +35,9 @@ from datetime import datetime, timezone
 
 import numpy as np
 from fastapi import APIRouter, WebSocket
-from shared import get_logger, read_client_id, send_state, transport, wait_for_disconnect
+from shared import app_pipeline, get_logger, read_client_id, send_state, transport, wait_for_disconnect
 
+from pswamp_core.pipeline import live_key
 from pswamp_core.subscription import Overflow
 from pswamp_models.pmu import PmuFrame, PmuHeader
 from pswamp_models.scada import ScadaScan
@@ -45,8 +47,13 @@ from .model import LiveFeed, LiveInjection, LiveLayout, LiveLineEnd, LiveSamples
 logger = get_logger("cim-live")
 router = APIRouter()
 
-#: Where the frames are: the streamer's pipeline, the RT sim's shared run.
-APP, KEY = "pmu-test-streamer", "live.rtsim"
+#: The live grid's pipeline, read here only for where its frames are: it is served elsewhere.
+_GRID = app_pipeline("grid-monitor")
+_LIVE = _GRID.live_sources()
+if len(_LIVE) != 1:
+    raise RuntimeError(f"{_GRID.app} must have exactly one live source, the grid's simulation; it has {_LIVE}")
+#: Where the frames are: that pipeline, the simulation's shared run.
+APP, KEY = _GRID.app, live_key(_LIVE[0])
 #: Frames a socket may fall behind by before the oldest are dropped: 10 s at 50 Hz.
 BACKLOG = 500
 

@@ -197,7 +197,7 @@ export function GridViewPanel({
   return (
     <Panel
       title="Grid view"
-      subtitle="The Nordic 44 grid, coloured by island and lifted by frequency"
+      subtitle="The grid in the CIM graph, coloured by island and lifted by frequency"
       status={status}
       ready={ready}
       // The topology is static and fetched over HTTP, independently of the

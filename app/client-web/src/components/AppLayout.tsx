@@ -24,6 +24,7 @@ const NAV_ITEMS = [
   { to: '/pmu-test-streamer', label: 'PMU Test Streamer', end: false },
   { to: '/reference-subapp', label: 'Reference example', end: false },
   { to: '/cim-graph', label: 'CIM graph', end: false },
+  { to: '/islanding-detection', label: 'Islanding detection', end: false },
 ]
 
 function isLocalhost(): boolean {
@@ -102,10 +103,11 @@ export function AppLayout({
         <Outlet />
       </main>
 
-      {/* The client id is worth surfacing now that it decides which server-side
-          PMU stream you are watching: two browsers showing different instants of
-          the recording is correct behaviour, and this is what explains it. Also
-          the thing to quote when a server log line names a client.
+      {/* The client id is worth surfacing: it decides which replay of a recording
+          you are watching (the PMU test streamer's), so two browsers showing
+          different instants of one is correct behaviour, and this is what
+          explains it. Also the thing to quote when a server log line names a
+          client.
 
           Also show what git SHA/version we are running off of, so its easy to see what has been
           deployed to remote env at any time*/}

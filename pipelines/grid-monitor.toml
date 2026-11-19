@@ -1,0 +1,27 @@
+# The live grid's pipeline: the one simulation of the grid in the CIM graph, and
+# every module that analyses it. Loaded by the islanding detection app's web API
+# (app/server-python/src/islanding_detection/api.py), which starts its shared run,
+# by cim_live, which reads that run's frames, and by the module-worker
+# (PSWAMP_WORKER_PIPELINES=...,grid-monitor.toml).
+#
+# **This is the only pipeline that names rtsim-from-cim.** A live source gets one
+# shared run per pipeline that lists it (pswamp_core.pipeline.start_live_runs), and
+# each run is a TOPS engine of its own: a second pipeline naming it would start a
+# second simulation, unsynchronised with this one. A module that analyses the live
+# grid joins this file rather than naming the source again.
+#
+# GRID_MONITOR_SOURCES, when set (name:entry-point,...), replaces the sources.
+
+app = "grid-monitor"
+modules = ["islanding-detection", "line-outage"]
+
+# The simulation, run in real time for every client. Its settings are
+# RTSIM_{SETTING} (RTSIM_RATE, RTSIM_DT, RTSIM_POLL).
+[[sources]]
+name = "rtsim"
+module = "rtsim-from-cim"
+
+# What is added to every frame: the id of the grid in the CIM graph
+# (pswamp_core.cim.CimEnricher). The simulation's columns already carry their Analogs.
+[enrich]
+cim = true

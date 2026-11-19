@@ -53,7 +53,7 @@ defines nothing: it assembles the document and adds the socket half OpenAPI has 
 notion of.
 
 ```
-   src/<app>/  and  src/pswamp_web/<app>/        ← THE DEFINITION. Edit here.
+   src/<app>/  and  src/grid_monitor/<app>/      ← THE DEFINITION. Edit here.
      router       POST paths, operation_id, body models, CommandAck
      WS_MESSAGE   the pydantic model this package pushes
         │
@@ -111,8 +111,9 @@ async def step(client_id: ClientId) -> CommandAck:
   (`time_window_resync`, `reference_subapp_bump`). A generated client calls that
   name, so choose it deliberately — renaming the handler must never rename
   someone's generated method.
-- **Import `ClientId` and `CommandAck`** from `shared` in a standalone app, or from
-  `..wire` inside `pswamp_web/` (which may not import the rest of the backend).
+- **Import `ClientId` and `CommandAck`** from `shared` (they are defined in
+  `pswamp_web/wire.py`, which may not import the rest of the backend, and
+  re-exported there), or from `pswamp_web.wire` directly.
 - **Taking a body?** Declare a pydantic model in the same file and take it as a
   parameter (`body: ChannelSelection`); FastAPI then rejects a malformed command
   with a 422 before your handler runs.
@@ -133,9 +134,9 @@ and `app/client-web/src/api/schema.ts` with the code.
 
 ### I want to add a field to a socket message
 
-Add it to the message model — `pswamp_web/wire.py` for the p-SWAMP apps, the app's
-own `api.py` for a standalone one — and fill it in wherever `state_message()` (or
-the page's push task) builds it.
+Add it to the message model — `pswamp_web/wire.py` for the grid monitor's apps, the
+app's own `api.py` for a standalone one — and fill it in wherever `state_message()`
+(or the page's push task, under `grid_monitor/<app>/`) builds it.
 
 Run `uv run pswamp api generate` and `Wire['<Model>']` carries the field,
 as does the page, which reads the message as the contract types it. There is no
@@ -279,12 +280,14 @@ __all__ = ["WS_MESSAGE", "ReferenceSubappState", "router"]
 ```
 
 An app that also needs startup/shutdown work exports a `lifespan` beside those —
-`pmu_test_streamer` (its pipeline runs and modules) and `pswamp_web` (the pipeline
-registry) do.
+`pmu_test_streamer` (its pipeline runs and modules) does. A package with no url
+surface of its own whose lifespan must be running first is a *service* instead
+(`SERVICES` in `server.py`): `grid_monitor` is one, its lifespan following the
+shared live run every grid-monitor panel reads.
 
 `api_contract.py` walks the same `APPS` list `server.py` mounts and collects
 whatever each package exports under that name. An app with no socket
-(`pswamp_web/grid/`, HTTP only) simply omits it.
+(`grid_monitor/grid/`, HTTP only) simply omits it.
 
 Discovery does not make omissions silent: `check_apps()` runs when `server.py`
 installs the contract and refuses to start if an app serves a WebSocket without
@@ -356,9 +359,11 @@ deep — that file explains why.
 **Client id** — `clientId.ts` resolves one random integer per browser profile,
 persists it in `localStorage`, and every socket and command sends it as
 `?client_id=` (sockets on the WebSocket url, commands via `postCommand`, so no
-caller passes it). That id shards all server state: one id per browser is what makes
-the grid monitor's five sockets show **one** server-side pipeline rather than five.
-It authenticates **nothing** — send someone else's id and you drive their replay.
+caller passes it). That id shards per-client server state — the scaffold demos'
+models, the streamer's runs, the time window's open views. The grid monitor's data is
+not per client at all (every browser sees one live simulation), but its sockets and
+commands carry the id all the same. It authenticates **nothing** — send someone
+else's id and you drive their replay, or change their channel selection.
 
 The same urls work in dev because Vite proxies the whole `/api` prefix — WebSocket
 upgrades included — to the backend on `:8000` (`server.proxy` in `vite.config.ts`).
@@ -378,8 +383,8 @@ connection half for every app. It:
 1. opens one WebSocket to `resolveServerUrl(wsPath) + '?client_id=' + CLIENT_ID`;
 2. reconnects every 2 s while down — **except** after close codes `1008` (the
    server refused this socket: no usable client id, or a path no app serves) and
-   `1013` (server at pipeline capacity). The server meant those, and retrying
-   only makes it worse;
+   `1013` (server at pipeline capacity — the streamer's runs — or a CIM graph that
+   cannot be had). The server meant those, and retrying only makes it worse;
 3. runs each frame through `JSON.parse`, drops anything whose `type` is not
    `"state"`, then stores it (`message`) or hands it to `options.onMessage`;
 4. tracks a `status` — `connecting` / `online` / `offline` — separating "never
@@ -429,42 +434,40 @@ A client id may briefly hold several sockets — a reconnect overlapping the dyi
 — which is why it is a set. `send_to_client` iterates a snapshot and drops any socket
 that fails mid-send, so one dead connection cannot break delivery to the rest.
 
-**The p-SWAMP layer** (`src/pswamp_web/`) is the real one, with a pipeline behind
-it. Every endpoint opens the same way:
+**The grid monitor** (`src/grid_monitor/`) is the real one, with a live simulation
+behind it. Every panel is a view of one thing: `LIVE` (`grid_monitor/live.py`), one
+`LiveGrid` for the whole process, which follows the **shared live run** of the
+`grid-monitor` pipeline (`pipelines/grid-monitor.toml`: the `rtsim-from-cim` source,
+a real-time simulation of the grid in the CIM graph, and the `islanding-detection`
+and `line-outage` modules) off the transport, as `cim_live` does. It is entered as a
+*service* (`SERVICES` in `server.py`), before any app, and keeps one measurement
+window (the last 30 s of every column), the latest islanding assessment, one alarm
+list, the line-outage log, the modules' statuses and the feed's. **Everything the
+grid monitor shows is shared by every client**: there is no pipeline per client, no
+cap and no idle eviction. Every endpoint opens the same way:
 
 ```python
-async with connected_hub(ws) as hub:
-    if hub is None:
-        return
+if not await accept(ws):
+    return
 ```
 
-`connected_hub` (`pswamp_web/hub.py`) parses `?client_id=`, accepts the socket, and
-holds that client's `Hub` for the life of the connection. It refuses in two orders,
-deliberately: given **no usable id** it closes *before* accepting, rejecting the
-handshake; **at capacity** it accepts *first* and then closes with `1013`, because a
-close code only reaches the browser over an established connection — and the client
-treats `1013` as terminal.
-
-A `Hub` holds one client's pipeline: a `RecordingPlayer` over the committed Nordic 44
-recording, three p-SWAMP monitoring applications each with their own reader, and the
-alarm/status/island stores. Only `HubRegistry` constructs one, enforcing three rules:
-one pipeline per client however many sockets (a per-client lock, so the monitor's
-five simultaneous first-connects build one rather than racing to build five); a
-pipeline outlives its sockets by `IDLE_EVICT_SECONDS`, so a reload rejoins the same
-stream; and never more than `MAX_PIPELINES`.
+`accept` (`grid_monitor/live.py`) checks `?client_id=` and accepts the socket, or
+refuses it with `1008` (`refuse_socket`) when the id is unusable. Every client sees
+the same grid, but a socket still says whose it is, as every socket in this backend
+does.
 
 Then each page picks one of **two delivery patterns**:
 
 | pattern | apps | how it works |
 |---|---|---|
-| **Poll the window** | `time_window` (10 Hz), `phasors` (5 Hz), `app_status` (2 Hz) | an `asyncio` task reads the client's window or stores on its own timer and sends |
-| **Subscribe to the bus** | `islanding`, `line_outage` | a listener on `hub.bus` offers into an `asyncio.Queue`; the push task blocks on it |
+| **Poll the window** | `time_window` (10 Hz), `phasors` (5 Hz), `app_status` (2 Hz) | `serve_ticks` reads `LIVE`'s window or stores on its own timer and sends |
+| **Subscribe to updates** | `islanding`, `line_outage` | `LIVE.updates(*topics)` gives an `asyncio.Queue` woken by those results; `serve_updates` blocks on it |
 
 Polling translates directly from what the Qt widgets do, and it keeps a 50 Hz sample
 stream from becoming 50 event-loop callbacks a second. Subscribing suits results and
-events, which arrive about once a second. Both bus-driven pages re-read the payload
-from the hub rather than carrying it on the queue, so a dropped notification costs
-latency and never content.
+events, which arrive about once a second. Both update-driven pages re-read the
+payload from `LIVE` rather than carrying it on the queue, so a dropped notification
+costs latency and never content.
 
 Every page sends through **`send_state()`** (`pswamp_web/wire.py`), never
 `ws.send_json`:
@@ -482,38 +485,28 @@ arrives all-`null` until it fills — normal, not an error. The `wire.py` models
 the schema the Qt front end never needed: its widgets read the very `TimeWindow`
 object the application thread writes into.
 
-The thread seam
---
-
-p-SWAMP's monitoring applications are upstream code, running as daemon threads
-looping on a blocking read. We leave that as it is. They cross into the event loop at
-**exactly two places**:
-
-1. **`Bus.publish_threadsafe()`** (`pswamp_web/bus.py`) → `loop.call_soon_threadsafe`
-   → `_deliver` on the loop → synchronous listeners (the stores) and queued
-   subscriptions (the pages). The bus is **per pipeline**, so a listener only hears
-   its own client's results.
-2. **`CountingTimeWindowLabeled.snapshot()`** (`pswamp_web/replay.py`) — reads the
-   append counter *and* the data under the window's own lock, so the two describe the
-   same instant.
-
-Everything else — WS handlers, push tasks, request handlers — runs cooperatively
-scheduled on the one loop and never truly parallel, so none of it needs a lock. Add
-a third seam and that stops being reviewable.
+There are no threads in the web layer. `LIVE` is filled and read on the one event
+loop, so nothing it holds needs a lock; a blocking CIM read runs in an executor
+thread (the topology is read once, on a thread of its own). An earlier version ran
+the desktop package's monitoring applications in daemon threads, one set per client,
+and crossed into the loop at two named seams; that is gone with them.
 
 The delta protocol
 --
 
 `time_window` is the one page where the naive approach fails. A 30 s window of 8
 channels at 50 Hz holds 12,000 numbers, and re-sending it 10×/s costs roughly
-1.4 MB/s per client. So it sends the window once (`mode: "full"`) and afterwards only
-the rows that are new (`mode: "append"`) — measured at ~5.9 KB/s.
+1.4 MB/s per view. So it sends the window once (`mode: "full"`) and afterwards only
+the rows that are new (`mode: "append"`) — measured at ~5.9 KB/s, over the recorded
+stream the page first ran on.
 
-The window's append counter makes that possible: `new_rows = appended -
-state.last_appended`. Two cases force a full message instead: a fresh selection,
-where the client's traces belong to different channels; and a client that has fallen
-behind by more than the window, where an append would splice unrelated data onto what
-it holds.
+The window's append counter (`MeasurementWindow.appended`, `grid_monitor/window.py`)
+makes that possible: `new_rows = appended - state.last_appended`. Three cases force a
+full message instead: a fresh selection, where the view's traces belong to different
+channels; a view that has fallen behind by more than the window, where an append
+would splice unrelated data onto what it holds; and a new `generation` of the window,
+which moves when the stream's layout changes (the simulation rebuilt its model), and
+puts the view back on its default selection.
 
 
 Upstream: how a command reaches the server
@@ -587,20 +580,23 @@ POST /api/reference-subapp/count/bump?client_id=42
   → 200 CommandAck(applied="bump")
 ```
 
-**2. State in the client's pipeline** — `islanding`. A client id reaches the hub, but
-not the *push task*, which sits blocked on its queue inside a socket handler. So the
-endpoint mutates and then wakes it:
+**2. State shared by everyone** — `islanding`. The alarm list is `LIVE.alarms`, one
+for the process, so an acknowledgement applies for every viewer. The handler can
+reach the list, but not the *push tasks*, which sit blocked on their queues inside
+socket handlers. So the endpoint mutates and then wakes them all:
 
 ```
 POST /api/islanding/alarms/<uuid>/acknowledge?client_id=42
-  → live_hub("42")                       ← 404 if this client has no pipeline
-  → hub.alarms.annotate(uuid, …)         ← False for an unknown alarm → 404
-  → _nudge("42")  → _offer(queue, None) for each of this client's open views
-  → push task wakes, re-reads the hub, send_state()
+  → LIVE.alarms.annotate(uuid, …)        ← False for an unknown alarm → 404
+  → LIVE.nudge()  → offer(queue) for every open view, whoever's it is
+  → each push task wakes, re-reads LIVE, send_state()
   → 200 CommandAck(applied="acknowledge")
 ```
 
-An operator action changes the alarm list, and no application publishes an event for
+The `client_id` is still taken, as on every command: it says whose browser the
+action came from, in the access log, and authenticates nothing.
+
+An operator action changes the alarm list, and no module publishes a result for
 that. Without the nudge, the page would show the change only when the islanding
 detector next produced a result — up to a second later. Measured round trip with it:
 ~1 ms.
@@ -613,8 +609,8 @@ it by client id.
 
 ```
 POST /api/time-window/selection?client_id=42   {"channels": [5, 9]}
-  → live_hub("42")
-  → channels.sanitise(body.channels, tw.n_cols)   ← untrusted input, clamped
+  → SESSIONS.of("42")                             ← 404 if this browser has no open view
+  → sanitise(body.channels, n_columns)            ← untrusted input, clamped
   → for each of this client's open views: selection = …, needs_full = True
   → 200 CommandAck(applied="select_channels (2)")
   → …no push here. The 10 Hz task sees needs_full on its next tick and sends
@@ -629,14 +625,15 @@ Python makes those unhashable.
 Two rules that hold across all three
 --
 
-- **A command never builds a pipeline.** `live_hub(client_id)` peeks; it never calls
-  `REGISTRY.acquire`. Acquiring would spend four threads and ~30 MB against
-  `MAX_PIPELINES` on a replay nobody is watching, and the POST has no socket to
-  deliver to. No pipeline means a 404 — in practice, "you have no page open".
+- **A command never builds a pipeline.** Where a command reaches per-client state
+  that a socket creates — the streamer's run, the time window's open views — it only
+  looks it up, and a missing one is a 404: in practice, "you have no page open".
+  Building it would spend resources on something nobody is watching, and the POST
+  has no socket to deliver to.
 - **A socket that receives nothing still needs its receive loop.** Every WS handler
   ends in `while True: await ws.receive_text()`. Without a pending receive, nothing
   notices a closed socket until the next send, so an idle client lingers
-  indefinitely — holding a pipeline slot, in the `pswamp_web` case.
+  indefinitely — holding a pipeline slot, in the streamer's case.
 
 
 The plain GETs
@@ -645,7 +642,9 @@ The plain GETs
 Two endpoints are neither commands nor pushed state, because what they return never
 changes: the grid topology (`GET /api/grid/model`) and the channel catalogue
 (`GET /api/time-window/channels`). A page fetches each once on mount via
-`resolveApiUrl`, and the browser may cache it. Putting them on a socket would force
+`resolveApiUrl`, and the browser may cache it. The topology is built from the CIM
+graph (`grid_monitor/topology.py`); the catalogue is every column of the live stream,
+so it waits up to 60 s for the first frame and answers `503` when none comes. Putting them on a socket would force
 every consumer's hook to handle a second message shape just to receive something
 static.
 
@@ -659,11 +658,12 @@ Error and refusal semantics
 | malformed command body | `422`, from the pydantic model |
 | unknown sequence name | `422` naming the valid ones |
 | unknown alarm uuid | `404` |
-| command for a client with no pipeline | `404` |
+| command for a client with no pipeline (the streamer) | `404` |
 | command for a client with no open view (`time-window`) | `404` |
 | socket with an unusable client id | accept, then close `1008` — client stops retrying |
 | socket on a path no app serves | accept, then close `1008` — client stops retrying (`unknown_socket` in `server.py`) |
-| socket when every pipeline is in use | accept, then close `1013` — client stops retrying |
+| socket when every pipeline is in use (the streamer) | accept, then close `1013` — client stops retrying |
+| channel catalogue before the live stream's first frame | `503`, after waiting up to 60 s |
 | socket whose pipeline fails to start | accept, then close `1011`; the client retries |
 | plain request for an unknown path under `/api/` | real `404`, never the SPA shell (`SPAStaticFiles._NO_FALLBACK`) |
 
@@ -695,8 +695,9 @@ Where the pieces live
 | `app/client-web/src/lib/servers.ts` | `resolveApiUrl` / `resolveServerUrl` and the path consts |
 | `app/server-python/src/server.py` | Wiring: mounts routers from `APPS`, composes lifespans |
 | `app/server-python/src/shared.py` | `SocketRegistry`, and `ClientId` / `CommandAck` / `read_client_id` re-exported from `pswamp_web/wire.py` |
-| `app/server-python/src/pswamp_web/wire.py` | Every p-SWAMP message model, and `send_state` |
-| `app/server-python/src/pswamp_web/hub.py` | One pipeline per client, and the registry over them |
+| `app/server-python/src/pswamp_web/wire.py` | Every grid-monitor message model, and `send_state` |
+| `app/server-python/src/grid_monitor/live.py` | `LIVE`: the shared live run every grid-monitor panel reads, `accept` |
+| `app/server-python/src/grid_monitor/<app>/` | The grid monitor's page packages, mounted at `/api/<app>` |
 
 
 Implementation notes

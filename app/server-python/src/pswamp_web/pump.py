@@ -3,44 +3,35 @@
 
 """Serving one downstream socket: the part every page endpoint had written out.
 
-A page endpoint is three things — identify the client and get its pipeline, decide
-what to send, and then run the socket. The first is :func:`..hub.connected_hub`.
-This module is the third, so that what is left in a page package is the second,
-which is the only part that differs.
-
-What it replaces: five endpoints that each ended in the same fifteen lines —
-create a pusher task, sit in ``while True: await ws.receive_text()``, swallow the
-disconnect, cancel the task and suppress its ``CancelledError``. Identical in all
-five, which meant a fix to any of it was a fix in five places, and a sixth page
-would have been a sixth copy.
+A page endpoint is three things -- accept the socket, decide what to send, and then
+run it. This module is the third, so that what is left in a page package is the
+second, which is the only part that differs.
 
 Two shapes of page, and both are here:
 
-* **Ticker-driven** — :func:`serve_ticks`. Read the client's window on a timer and
-  send what is there. Used where there is nothing to react to: a measurement
-  stream (``time_window``, ``phasors``) or a table whose interesting case is
-  something *not* arriving (``app_status``, where "stale" is the absence of a
-  report). This is the direct translation of what the Qt widgets do, and it is
+* **Ticker-driven** -- :func:`serve_ticks`. Read the state on a timer and send what
+  is there. Used where there is nothing to react to: a measurement stream
+  (``time_window``, ``phasors``) or a table whose interesting case is something
+  *not* arriving (``app_status``, where "stale" is the absence of a report). It is
   what keeps a 50 Hz sample stream from becoming 50 event-loop callbacks a second.
-* **Event-driven** — :func:`event_queue` + :func:`serve_updates`. Wake on the
-  client's own bus and send when there is something to send. Used for results and
-  alarms (``islanding``, ``line_outage``), which arrive about once a second, or
-  not at all while the grid is healthy.
+* **Event-driven** -- a queue woken with :func:`offer`, then :func:`serve_updates`.
+  Send when there is something to send. Used for results and alarms
+  (``islanding``, ``line_outage``), which arrive about once a second, or not at all
+  while the grid is healthy.
 
 Both end in :func:`wait_for_disconnect`, which the scaffold apps under ``src/``
-use directly through ``shared.py`` — they have no pusher of their own, but they
+use directly through ``shared.py`` -- they have no pusher of their own, but they
 need the same receive loop for the same reason.
 """
 
 import asyncio
 import contextlib
-from collections.abc import Callable, Iterator
+from collections.abc import Callable
 from typing import NamedTuple
 
 from fastapi import WebSocket, WebSocketDisconnect
 from pydantic import BaseModel
 
-from .bus import Bus
 from .log import get_logger
 from .wire import send_state
 
@@ -121,7 +112,7 @@ class Event(NamedTuple):
     on several and they do not all mean the same thing. Both fields are ``None``
     for a nudge from a *command* — an operator action changes what a page shows
     without any application having published anything, so it has no topic and
-    carries no payload (see ``islanding``'s ``_nudge``).
+    carries no payload (see ``grid_monitor.live.LiveGrid.nudge``).
     """
 
     topic: str | None = None
@@ -132,35 +123,11 @@ def offer(queue: asyncio.Queue, event: Event = Event()) -> None:
     """Wake a push task, or drop the notification if it is already behind.
 
     Dropping is safe *because* of how the pages are written: the message is built
-    from the store when the task wakes, never from what is on the queue, so a lost
-    notification costs latency and never content. The one thing carried on the
-    queue is the islanding result, which is re-read the same way on the next
-    wake-up.
+    from the state when the task wakes, never from what is on the queue, so a lost
+    notification costs latency and never content.
     """
     with contextlib.suppress(asyncio.QueueFull):
         queue.put_nowait(event)
-
-
-@contextlib.contextmanager
-def event_queue(bus: Bus, *topics: str, maxsize: int = 64) -> Iterator[asyncio.Queue]:
-    """A queue woken by any of ``topics`` on ``bus``, detached again on exit.
-
-    The bus is the *client's own* (``hub.bus``), so a listener only ever hears
-    about the pipeline its socket is watching.
-    """
-    queue: asyncio.Queue = asyncio.Queue(maxsize=maxsize)
-
-    def listener(topic: str) -> Callable[[object], None]:
-        # A closure per topic, so the notification says which one fired rather
-        # than every listener in the loop reporting the last topic in it.
-        return lambda payload: offer(queue, Event(topic, payload))
-
-    detach = [bus.add_listener(topic, listener(topic)) for topic in topics]
-    try:
-        yield queue
-    finally:
-        for remove in detach:
-            remove()
 
 
 async def serve_updates(

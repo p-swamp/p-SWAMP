@@ -5,9 +5,7 @@ import { AlertTriangleIcon } from 'lucide-react'
  *
  * This page is a rough port of the Qt front end and is not yet something to
  * trust or build on, so it says so where it will actually be read — on the page
- * itself, rather than only in the repo docs. The split matters: the *analysis*
- * below is the long-standing Python in `desktop/src/pswamp/`, reached unchanged; only
- * this presentation layer is new and unreviewed.
+ * itself, rather than only in the repo docs.
  *
  * One line, with the rest behind it: the monitor is a window with the
  * viewport's height, and a banner three lines tall came out of the grid view.
@@ -41,10 +39,10 @@ export function PortCaveat() {
       </summary>
       <p className="mt-1.5 max-w-5xl">
         An exploratory early port of some of the prexisting QT GUI to TS+React,
-        connecting existing pSWAMP models and algorithms. Only the Qt GUI is
-        ported here: the python server process reuses Hallvars existing Python
-        models and algorithms, which still live in <code>/src/pswamp/</code>{' '}
-        (for now).{' '}
+        over the live simulation of the grid in the CIM graph. The analysis runs
+        as modules of the server (<code>modules/islanding-detection/</code>,{' '}
+        <code>modules/line-outage/</code>), ports of the existing p-SWAMP
+        algorithms.{' '}
         <b>
           Note that this web frontend draft currently is largely LLM-generated,
           probably incomplete, may very well have serious flaws, and it needs to

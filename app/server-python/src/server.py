@@ -35,18 +35,19 @@ from starlette.types import Scope
 
 import api_contract
 import errors
+import grid_monitor
+import grid_monitor.app_status
+import grid_monitor.grid
+import grid_monitor.islanding
+import grid_monitor.line_outage
+import grid_monitor.phasors
+import grid_monitor.time_window
 import pmu_test_streamer
-import pswamp_web
 import reference_subapp
 import shared
 import cim_graph
 import cim_live
-import pswamp_web.app_status
-import pswamp_web.grid
-import pswamp_web.islanding
-import pswamp_web.line_outage
-import pswamp_web.phasors
-import pswamp_web.time_window
+import islanding_detection
 from api_contract import AppEntry
 
 logger = shared.get_logger("server")
@@ -57,16 +58,16 @@ logger = shared.get_logger("server")
 # before any app package handles a request. Entered before everything in APPS and
 # exited after it, so a websocket handler can assume its dependencies are up.
 #
-# pswamp_web owns the registry of per-client PMU pipelines that its page
-# packages all draw theirs from. Its lifespan starts no pipeline — those are
-# built on a client's first connect and evicted when idle — it only binds the
-# registry to this event loop and drains it on shutdown.
-#
 # shared owns the process's transport (PSWAMP_TRANSPORT) for the apps over a
 # core pipeline. Entered first and exited last, it closes the transport once
 # they are done with it.
+#
+# grid_monitor follows the live grid (the grid-monitor pipeline's shared run)
+# for every panel of the grid monitor, which its page packages below read. It
+# subscribes before the apps start, so it hears the run from its first frame;
+# the run itself is started by islanding_detection, which serves that pipeline.
 
-SERVICES = [shared, pswamp_web]
+SERVICES = [shared, grid_monitor]
 
 # --- the app registry -------------------------------------------------------
 #
@@ -93,34 +94,34 @@ APPS = [
     ),
     AppEntry(
         "app-status",
-        pswamp_web.app_status,
-        "Health and status of the running p-SWAMP monitoring applications. "
+        grid_monitor.app_status,
+        "The modules analysing the live grid, their status, and the feed they read. "
         "Only downstream status overview, no upstream commands to it yet.",
     ),
     AppEntry(
         "grid",
-        pswamp_web.grid,
-        "The static Nordic 44 topology. HTTP only — no socket.",
+        grid_monitor.grid,
+        "The grid in the CIM graph, as the grid view draws it. HTTP only — no socket.",
     ),
     AppEntry(
         "time-window",
-        pswamp_web.time_window,
-        "The measurement window: channel selection and the sample stream.",
+        grid_monitor.time_window,
+        "The live grid's measurement window: channel selection and the sample stream.",
     ),
     AppEntry(
         "islanding",
-        pswamp_web.islanding,
-        "Islanding detection results and the alarms derived from them.",
+        grid_monitor.islanding,
+        "Islanding detection over the live grid, and the alarms derived from it (shared by every viewer).",
     ),
     AppEntry(
         "line-outage",
-        pswamp_web.line_outage,
+        grid_monitor.line_outage,
         "Detected line disconnect/reconnect events. "
         "Only downstream event log, no upstream commands to it yet.",
     ),
     AppEntry(
         "phasors",
-        pswamp_web.phasors,
+        grid_monitor.phasors,
         "Voltage phasors, referred to a rotating reference. "
         "Only downstream snapshots, no upstream commands to it yet.",
     ),
@@ -143,6 +144,11 @@ APPS = [
         "cim-live",
         cim_live,
         "The live grid simulation's frames, as each station's voltage and frequency, every frame.",
+    ),
+    AppEntry(
+        "islanding-detection",
+        islanding_detection,
+        "Islanding detection over a time window of the stations' frequencies.",
     ),
 ]
 

@@ -1,0 +1,41 @@
+# pswamp-islanding-detection: the Islanding module. One module, one project: its code
+# (src/), its tests (tests/), a README and runnable examples (examples/), and
+# nothing else. See modules/README.md.
+#
+# A member of the uv workspace rooted at the repo root (one uv.lock there). It
+# depends on pswamp-core and pswamp-models and nothing else in this repo. A
+# third-party library the module needs goes in `dependencies` below.
+#
+# The package is a portion of the pswamp_modules namespace (PEP 420): there is
+# no src/pswamp_modules/__init__.py.
+
+[project]
+name = "pswamp-islanding-detection"
+version = "0.1.0"
+description = "The Islanding detection module (islanding-detection)."
+readme = "README.md"
+license = "Apache-2.0"
+requires-python = ">=3.11"
+dependencies = ["pswamp-core", "pswamp-models", "numpy>=2.2.5"]
+
+# How a pipeline finds the module by name: the entry point's name is the
+# module's `name`.
+[project.entry-points."pswamp.modules"]
+islanding-detection = "pswamp_modules.islanding_detection:IslandingDetectionModule"
+
+[tool.uv.sources]
+pswamp-core = { workspace = true }
+pswamp-models = { workspace = true }
+
+[build-system]
+requires = ["uv_build"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-name = "pswamp_modules.islanding_detection"
+
+# Used by `uv run pswamp test module islanding-detection`; `uv run pswamp test server`
+# runs these tests too, with the server's config.
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"

@@ -13,6 +13,7 @@ import { MeasurementsPanel } from '@/pages/grid-monitor/time-window/Measurements
 import { PmuTestStreamerPage } from '@/pages/pmu-test-streamer/PmuTestStreamerPage'
 import { ReferenceSubappPage } from '@/pages/reference-subapp/ReferenceSubappPage'
 import { CimGraphPage } from '@/pages/cim-graph/CimGraphPage'
+import { IslandingDetectionPage } from '@/pages/islanding-detection/IslandingDetectionPage'
 
 /**
  * The route table — the one place that knows which apps this client hosts.
@@ -80,6 +81,7 @@ function App() {
 
           <Route path="reference-subapp" element={<ReferenceSubappPage />} />
           <Route path="cim-graph" element={<CimGraphPage />} />
+          <Route path="islanding-detection" element={<IslandingDetectionPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>
