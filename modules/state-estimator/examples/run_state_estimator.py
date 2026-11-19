@@ -1,28 +1,54 @@
-"""Run the State Estimator module over a few synthetic frames, with no server.
+"""The State Estimator over the live simulation of Nordic44, with no server: a line trips.
 
-``run`` is a plain synchronous call returning what the module would publish
-when hosted (a list: empty when it publishes nothing for a frame). No server,
-no transport, no event loop.
+The grid, the events, the modules and the plot are this script's; the rest (the store, the
+simulation, feeding the modules) is ``pswamp_modules.state_estimator.offline``.
 
-    uv run python modules/state-estimator/examples/run_state_estimator.py
+    uv run --package pswamp-state-estimator --extra rtsim python modules/state-estimator/examples/run_state_estimator.py [--save se.png]
 """
 
-from datetime import datetime, timedelta, timezone
+import argparse
+from pathlib import Path
 
-from pswamp_models.pmu import PmuFrame, PmuHeader
+from pswamp_models.rtsim import TripBranchCommand
 from pswamp_modules.state_estimator import StateEstimatorModule
+from pswamp_modules.state_estimator.offline import Grid, simulate
 
-T0 = datetime(2026, 1, 1, tzinfo=timezone.utc)
-HEADER = PmuHeader(station=["A", "B", "C"], channel=["f"] * 3, measurement=["f"] * 3, units=["Hz"] * 3, data_rate=50.0)
-READINGS = [[50.00, 50.01, 49.99], [49.98, None, 50.02], [None, None, None], [50.03, 50.00, 50.01]]
+GRID = Path("grids/nordic44")  # a folder of CGMES files; None: LazyCIM's Nordic44
+SECONDS = 10.0
+TRIP_AT, TRIP_LINE = 4.0, "300SIMA-BLAFALLI"
 
 
 def main() -> None:
-    module = StateEstimatorModule()
-    for n, values in enumerate(READINGS):
-        frame = PmuFrame(timestamp=T0 + timedelta(seconds=n / 50), mRID="synthetic", header=HEADER, values=values)
-        published = module.run(frame)
-        print(f"frame {n}: {values} -> {[message.result for message in published]}")
+    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser.add_argument("--save", metavar="PATH", help="write the plot to this file instead of showing it")
+    args = parser.parse_args()
+
+    grid = Grid.load(GRID if GRID and GRID.exists() else None)
+    events = [(TRIP_AT, TripBranchCommand(mRID=grid.mrid(TRIP_LINE, "ACLineSegment")))]
+    estimator = StateEstimatorModule(period=0.1)
+    run = simulate(grid, [estimator], SECONDS, events)
+
+    import matplotlib
+
+    if args.save:
+        matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+
+    t, results = run.results(estimator)
+    figure, axes = plt.subplots(figsize=(8, 4))
+    stations = [b.station for b in results[0].buses]
+    v_pu = [[b.v_pu if b.v_pu is not None else float("nan") for b in r.buses] for r in results]
+    axes.plot(t, v_pu, linewidth=0.8)
+    for at, event in run.events:
+        axes.axvline(at, color="grey", linestyle="--")
+        axes.annotate(f"{event.kind} ({event.cause})", (at, 1), xycoords=("data", "axes fraction"), rotation=90, va="top")
+    axes.set(xlabel="simulated time (s)", ylabel="voltage (p.u.)", title=f"Estimated voltage, {len(stations)} stations")
+    figure.tight_layout()
+    if args.save:
+        figure.savefig(args.save, dpi=120)
+        print(f"saved {args.save}")
+    else:
+        plt.show()
 
 
 if __name__ == "__main__":
