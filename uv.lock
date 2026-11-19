@@ -1300,15 +1300,32 @@ name = "pswamp-state-estimator"
 version = "0.1.0"
 source = { editable = "modules/state-estimator" }
 dependencies = [
-    { name = "pswamp-core" },
+    { name = "lazycim", extra = ["graphdb"] },
+    { name = "numpy" },
+    { name = "pandas" },
+    { name = "pswamp-core", extra = ["cim"] },
     { name = "pswamp-models" },
+]
+
+[package.optional-dependencies]
+rtsim = [
+    { name = "matplotlib" },
+    { name = "pswamp-core", extra = ["oxigraph"] },
+    { name = "pswamp-rtsim-from-cim" },
 ]
 
 [package.metadata]
 requires-dist = [
-    { name = "pswamp-core", editable = "core" },
+    { name = "lazycim", extras = ["graphdb"], specifier = "==0.3.1" },
+    { name = "matplotlib", marker = "extra == 'rtsim'", specifier = ">=3.8" },
+    { name = "numpy" },
+    { name = "pandas" },
+    { name = "pswamp-core", extras = ["cim"], editable = "core" },
+    { name = "pswamp-core", extras = ["oxigraph"], marker = "extra == 'rtsim'", editable = "core" },
     { name = "pswamp-models", editable = "models" },
+    { name = "pswamp-rtsim-from-cim", marker = "extra == 'rtsim'", editable = "modules/rtsim-from-cim" },
 ]
+provides-extras = ["rtsim"]
 
 [[package]]
 name = "pswamp-synthetic-history"

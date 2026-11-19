@@ -16,7 +16,14 @@ description = "The State Estimator module (state-estimator)."
 readme = "README.md"
 license = "Apache-2.0"
 requires-python = ">=3.12"
-dependencies = ["pswamp-core", "pswamp-models"]
+dependencies = ["pswamp-core[cim]", "pswamp-models", "lazycim[graphdb]==0.3.1", "numpy", "pandas"]
+
+# Only for examples/, never the module itself (the image does not install it):
+#   uv run --package pswamp-state-estimator --extra rtsim python modules/state-estimator/examples/run_state_estimator.py
+# rtsim: the live grid simulation, which the example names by its entry point and never imports
+# (a module imports no other module), over an embedded Oxigraph store (pyoxigraph).
+[project.optional-dependencies]
+rtsim = ["matplotlib>=3.8", "pswamp-core[oxigraph]", "pswamp-rtsim-from-cim"]
 
 # How a pipeline finds the module by name: the entry point's name is the
 # module's `name`.
@@ -26,6 +33,7 @@ state-estimator = "pswamp_modules.state_estimator:StateEstimatorModule"
 [tool.uv.sources]
 pswamp-core = { workspace = true }
 pswamp-models = { workspace = true }
+pswamp-rtsim-from-cim = { workspace = true }
 
 [build-system]
 requires = ["uv_build"]
