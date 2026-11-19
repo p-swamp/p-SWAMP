@@ -17,7 +17,7 @@ from lazycim import L, F
 import matplotlib.pyplot as plt
 from lazycim.sim.tops_live import LiveTops
 
-from pswamp_core.cim import SAMPLE_GRID, CimSettings, connect_reader
+from pswamp_core.cim import CimSettings, connect_reader
 from pswamp_modules.rtsim_from_cim.engine import EXPORT, SimEngine
 from pswamp_modules.rtsim_from_cim.pmu import pmu_layout, pmu_values, read_measurements
 
