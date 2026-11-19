@@ -14,12 +14,13 @@ from typing import Any
 
 from lazycim import CIMRepository
 from lazycim.demo import CIM100
+from pswamp_models.cim import CimEdits
 
 from .grid import NAMESPACE_ALIASES
 from .settings import CimSettings
 from .store import open_store
 
-__all__ = ["edit", "reset"]
+__all__ = ["apply", "edit", "reset"]
 
 
 def edit(settings: CimSettings, mrid: str, **values: Any) -> None:
@@ -29,6 +30,14 @@ def edit(settings: CimSettings, mrid: str, **values: Any) -> None:
     target = repo.from_mRID(mrid)
     for name, value in values.items():
         setattr(target, name, value)
+    repo.commit()
+
+
+def apply(repo: CIMRepository, edits: CimEdits) -> None:
+    """Write what a producer reports (the simulation's ``CimEdits``) through ``repo``, a repository of
+    a script's own store, all in one commit: the web backend's writer, minus its allow-list."""
+    for change in edits.edits:
+        setattr(repo.from_mRID(change.mRID), change.attribute.partition(".")[2], change.value)
     repo.commit()
 
 
