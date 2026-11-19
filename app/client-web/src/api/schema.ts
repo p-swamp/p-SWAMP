@@ -694,6 +694,59 @@ export interface components {
             enabled: boolean;
         };
         /**
+         * BusEstimate
+         * @description One station (a voltage level of the graph, named as the PMU stream names it,
+         *     ``<substation>_<kV>``). A value nothing tells is null, never a guess.
+         */
+        BusEstimate: {
+            /**
+             * Angle Deg
+             * @description Voltage angle, degrees, as the PMUs measure it (against their common time reference, not against a slack bus).
+             * @default null
+             */
+            angle_deg: number | null;
+            /**
+             * Mrid
+             * @description The VoltageLevel's mRID.
+             */
+            mRID: string;
+            /**
+             * P Mw
+             * @description Net active power the station injects into the branches, MW: its generation less its load. Null when the flow on any of its branches is unknown.
+             * @default null
+             */
+            p_mw: number | null;
+            /**
+             * Q Mvar
+             * @description Net reactive power injected, likewise, Mvar.
+             * @default null
+             */
+            q_mvar: number | null;
+            /**
+             * Source
+             * @description Where the voltage came from.
+             * @enum {string}
+             */
+            source: "measured" | "estimated" | "missing";
+            /**
+             * Station
+             * @description The station's name, as the PMU stream has it: <substation>_<kV>.
+             */
+            station: string;
+            /**
+             * V Kv
+             * @description Voltage magnitude, line-to-line kV.
+             * @default null
+             */
+            v_kv: number | null;
+            /**
+             * V Pu
+             * @description Voltage magnitude, per unit of the nominal voltage.
+             * @default null
+             */
+            v_pu: number | null;
+        };
+        /**
          * Channel
          * @description One column of a labelled time window.
          *
@@ -2232,18 +2285,33 @@ export interface components {
              */
             speed: number;
         };
-        /** StateEstimatorBody */
-        StateEstimatorBody: {
+        /**
+         * StateEstimate
+         * @description The grid's state at one instant: every station's voltage phasor and net injection. Branch flows
+         *     are left out, because they follow from the voltages and the branch parameters in the graph.
+         */
+        StateEstimate: {
             /**
-             * Frequency Hz
-             * @description Its frequency, in Hz.
+             * Buses
+             * @description Every station of the graph.
              */
-            frequency_hz: number;
+            buses?: components["schemas"]["BusEstimate"][];
             /**
-             * Station
-             * @description The station with the highest frequency in the frame.
+             * Cimreferenceid
+             * @description The grid the estimate is of: its EQ model's id.
+             * @default null
              */
-            station: string;
+            cimReferenceId: string | null;
+            /**
+             * Estimated
+             * @description How many have an estimated one.
+             */
+            estimated: number;
+            /**
+             * Measured
+             * @description How many stations have a measured voltage.
+             */
+            measured: number;
         };
         /** StateEstimatorResult */
         StateEstimatorResult: {
@@ -2266,7 +2334,7 @@ export interface components {
              * @default null
              */
             request_id: string | null;
-            result: components["schemas"]["StateEstimatorBody"];
+            result: components["schemas"]["StateEstimate"];
             /**
              * Timestamp
              * Format: date-time

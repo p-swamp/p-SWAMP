@@ -209,6 +209,103 @@
         "title": "AutoPauseBody",
         "type": "object"
       },
+      "BusEstimate": {
+        "description": "One station (a voltage level of the graph, named as the PMU stream names it,\n``<substation>_<kV>``). A value nothing tells is null, never a guess.",
+        "properties": {
+          "angle_deg": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Voltage angle, degrees, as the PMUs measure it (against their common time reference, not against a slack bus).",
+            "title": "Angle Deg"
+          },
+          "mRID": {
+            "description": "The VoltageLevel's mRID.",
+            "title": "Mrid",
+            "type": "string"
+          },
+          "p_mw": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Net active power the station injects into the branches, MW: its generation less its load. Null when the flow on any of its branches is unknown.",
+            "title": "P Mw"
+          },
+          "q_mvar": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Net reactive power injected, likewise, Mvar.",
+            "title": "Q Mvar"
+          },
+          "source": {
+            "description": "Where the voltage came from.",
+            "enum": [
+              "measured",
+              "estimated",
+              "missing"
+            ],
+            "title": "Source",
+            "type": "string"
+          },
+          "station": {
+            "description": "The station's name, as the PMU stream has it: <substation>_<kV>.",
+            "title": "Station",
+            "type": "string"
+          },
+          "v_kv": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Voltage magnitude, line-to-line kV.",
+            "title": "V Kv"
+          },
+          "v_pu": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Voltage magnitude, per unit of the nominal voltage.",
+            "title": "V Pu"
+          }
+        },
+        "required": [
+          "mRID",
+          "station",
+          "source"
+        ],
+        "title": "BusEstimate",
+        "type": "object"
+      },
       "Channel": {
         "description": "One column of a labelled time window.\n\nFlattened from p-SWAMP's three-row header, plus a precomputed display label so\nthe client never has to join the parts itself.",
         "properties": {
@@ -3153,24 +3250,46 @@
         "title": "SpeedBody",
         "type": "object"
       },
-      "StateEstimatorBody": {
+      "StateEstimate": {
+        "description": "The grid's state at one instant: every station's voltage phasor and net injection. Branch flows\nare left out, because they follow from the voltages and the branch parameters in the graph.",
         "properties": {
-          "frequency_hz": {
-            "description": "Its frequency, in Hz.",
-            "title": "Frequency Hz",
-            "type": "number"
+          "buses": {
+            "description": "Every station of the graph.",
+            "items": {
+              "$ref": "#/components/schemas/BusEstimate"
+            },
+            "title": "Buses",
+            "type": "array"
           },
-          "station": {
-            "description": "The station with the highest frequency in the frame.",
-            "title": "Station",
-            "type": "string"
+          "cimReferenceId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "The grid the estimate is of: its EQ model's id.",
+            "title": "Cimreferenceid"
+          },
+          "estimated": {
+            "description": "How many have an estimated one.",
+            "title": "Estimated",
+            "type": "integer"
+          },
+          "measured": {
+            "description": "How many stations have a measured voltage.",
+            "title": "Measured",
+            "type": "integer"
           }
         },
         "required": [
-          "station",
-          "frequency_hz"
+          "measured",
+          "estimated"
         ],
-        "title": "StateEstimatorBody",
+        "title": "StateEstimate",
         "type": "object"
       },
       "StateEstimatorResult": {
@@ -3210,7 +3329,7 @@
             "title": "Request Id"
           },
           "result": {
-            "$ref": "#/components/schemas/StateEstimatorBody"
+            "$ref": "#/components/schemas/StateEstimate"
           },
           "timestamp": {
             "description": "The instant the result is about.",
