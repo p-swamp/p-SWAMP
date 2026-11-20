@@ -25,17 +25,26 @@ part of the source.
 
 ## Recordings in the repository
 
-Three files in the repository hold *simulated* data from a Nordic 44 test
+Two recordings in the repository hold *simulated* data from a Nordic 44 test
 system, produced with the TOPS power system simulator:
 
 | File | What it is |
 |---|---|
 | `app/server-python/src/pswamp_web/data/n44_line_trip_50hz.npz` | The 70-second recording the monitor replays: a line trip and its reconnection. |
-| `app/server-python/src/pswamp_web/data/n44_grid_geometry.json` | Where the monitor draws each station and line of that system. |
 | `modules/sample-replay/src/pswamp_modules/sample_replay/sample_data.txt` | The three-second sample recording (and its copy in `live-synthetic`). |
 
 They are simulations, not measurements of a real grid. Figures and screenshots
 on this site made from them say so in their captions.
+
+## The monitor's map
+
+The monitor draws the grid over country outlines, from
+`app/server-python/src/pswamp_web/data/n44_grid_geometry.json`. That file is
+built (`app/server-python/tools/build_n44_grid_geometry.py`) from two inputs in
+the desktop package: the Nordic 44 single-line diagram
+(`desktop/src/pswamp/test_utils/sample_datasets/n44/sld_geo.dxf`) and a
+shapefile of country outlines
+(`desktop/src/pswamp/visualization/countries_geo_data/`).
 
 ## Map tiles
 

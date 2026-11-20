@@ -40,9 +40,9 @@ experiment freely.
 complete`; the first build is slow. Check that nothing else on your computer
 already uses port 8000.
 
-**The CIM graph page says the grid is loading.** On first use, p-SWAMP
-downloads the Nordic 44 grid model from the internet. Give it a minute; it is
-kept for the next start.
+**The CIM graph page says the grid is loading.** When it starts, p-SWAMP
+downloads the Nordic 44 grid model from the internet. Give it a minute; without
+internet access the page says the grid is not available.
 
 **`pswamp dev server` cannot find Docker or Podman.** Start Docker Desktop or
 Podman Desktop first, then run the command again.
