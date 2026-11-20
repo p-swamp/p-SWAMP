@@ -25,26 +25,22 @@ part of the source.
 
 ## Recordings in the repository
 
-Two recordings in the repository hold *simulated* data from a Nordic 44 test
+One recording in the repository holds *simulated* data from a Nordic 44 test
 system, produced with the TOPS power system simulator:
+`modules/sample-replay/src/pswamp_modules/sample_replay/sample_data.txt`, the
+three-second sample recording (with its copy in `live-synthetic`).
 
-| File | What it is |
-|---|---|
-| `app/server-python/src/pswamp_web/data/n44_line_trip_50hz.npz` | The 70-second recording the monitor replays: a line trip and its reconnection. |
-| `modules/sample-replay/src/pswamp_modules/sample_replay/sample_data.txt` | The three-second sample recording (and its copy in `live-synthetic`). |
-
-They are simulations, not measurements of a real grid. Figures and screenshots
-on this site made from them say so in their captions.
+It is a simulation, not a measurement of a real grid. Figures on this site made
+from it say so in their captions.
 
 ## The monitor's map
 
-The monitor draws the grid over country outlines, from
-`app/server-python/src/pswamp_web/data/n44_grid_geometry.json`. That file is
-built (`app/server-python/tools/build_n44_grid_geometry.py`) from two inputs in
-the desktop package: the Nordic 44 single-line diagram
-(`desktop/src/pswamp/test_utils/sample_datasets/n44/sld_geo.dxf`) and a
-shapefile of country outlines
-(`desktop/src/pswamp/visualization/countries_geo_data/`).
+The monitor draws the grid where the grid model places it (its geographical
+profile), so it shows whatever grid p-SWAMP was started on. Under it, when the
+grid lies inside them, it draws the Nordic coastlines and borders from
+`app/server-python/src/grid_monitor/data/nordic_outlines.json`: the outlines the
+desktop application's grid view draws, from the shapefile in
+`desktop/src/pswamp/visualization/countries_geo_data/`.
 
 ## Map tiles
 

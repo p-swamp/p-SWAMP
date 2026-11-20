@@ -29,8 +29,9 @@ The repository holds two implementations side by side:
 - the **web application** these pages describe: a server and a browser client,
   with the analyses as independent modules.
 
-The web application's monitor runs on the desktop application's analysis
-code, so the two share their monitoring applications.
+The web application's monitor runs the desktop application's monitoring
+algorithms (islanding and line outage detection), ported to modules, over a live
+simulation of the grid.
 
 ## Licence
 

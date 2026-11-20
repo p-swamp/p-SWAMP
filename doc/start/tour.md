@@ -3,25 +3,25 @@
 With p-SWAMP [running](first-run.md), the bar at the top of the page leads to
 each part of it. This page shows what each one is, and what to try.
 
-Everything you do is private to your browser and undone by a restart: each
-browser gets its own replay, starting from the beginning, and nothing is saved.
-The one exception is the grid on the **CIM graph** page, which everyone
-connected to the same server shares.
+There is one simulated grid, shared by everyone connected to the same server:
+what one person does to it on the **CIM graph** page, everyone sees on the
+monitor, and an alarm one person acknowledges is acknowledged for all. Nothing
+is saved: a restart puts the grid back as it was loaded. The PMU test streamer
+is the exception: there each browser gets a replay of its own.
 
 ## The monitor
 
 <figure markdown>
-![The monitor: the Nordic 44 grid drawn in 3D in the middle, with a red "2 islands" badge; on the right, the list of monitoring applications, a frequency chart with a spike, a status table with the islanding application in emergency, and an unseen alarm.](../assets/screenshots/monitor.png)
-<figcaption markdown>The monitor about 40 seconds into the replay, just after
-the line trip: two small islands have separated from the rest of the grid.
-Simulated data from the Nordic 44 test grid; see
-[data licensing](../project/data-licensing.md).</figcaption>
+![The monitor: the sample grid's three substations drawn in 3D over a map of the Nordic countries, marked "Intact"; on the right, the list of monitoring applications, a flat frequency chart at 50 Hz, a status table with both monitoring modules OK and the simulation streaming, and one cleared islanding alarm.](../assets/screenshots/monitor.png)
+<figcaption markdown>The monitor over p-SWAMP's small sample grid, three
+substations in southern Norway, with the grid whole. The alarm listed was raised
+when both lines into one substation were opened, and cleared once the grid was
+put back.</figcaption>
 </figure>
 
-The **Monitor** is the main window. It replays a 70-second recording of the
-Nordic 44 test grid, measured by PMUs at all 44 of its stations, 50 times a
-second, through p-SWAMP's monitoring applications, exactly as if it were
-happening now.
+The **Monitor** is the main window. It shows the simulation of the grid running
+behind the CIM graph page, measured by a PMU at every station 50 times a second,
+and what p-SWAMP's monitoring modules make of it, as it happens.
 
 - **The grid view** in the middle draws the grid over a map of the Nordic
   countries. Each separate part of the grid (an *island*) has its own colour, and
@@ -29,8 +29,9 @@ happening now.
   or switch to **2D**. **Layers** spreads the frequency or the voltage over the
   map as a colour field.
 - **Frequency** plots every station's frequency over the last few seconds.
-- **Status** shows each monitoring application and what it currently reports.
-- **Alarms** lists what the applications raised. Click one to see its details,
+- **Status** shows each monitoring module and what it currently reports, and
+  whether the simulation is streaming.
+- **Alarms** lists what the modules raised. Click one to see its details,
   acknowledge it, and add a note.
 - **Voltage phasors** draws each station's voltage as an arrow: its length is
   the voltage, its angle the phase. When the grid is stressed, the arrows fan
@@ -38,11 +39,11 @@ happening now.
 - **Line outages** lists the lines whose current dropped to zero, and when they
   came back.
 
-**What to watch for.** About half a minute in, a line trips. Several stations
-in the north are cut off from the rest of the grid: the grid view shows them as
-separate islands, the islanding application raises an alarm, and the line
-outage detector lists the lines that went out. Later the line is reconnected and
-the islands rejoin.
+**What to try.** Nothing happens to the grid on its own. On the CIM graph page,
+open every line into one substation: on the monitor, that part of the grid
+becomes an island with a colour of its own, the islanding detector raises an
+alarm, and the line outage detector lists the lines that went out. Close them
+again, or press **Reset grid**, and the island rejoins.
 
 Each panel has an expand button (:material-arrow-expand:) that opens it on a
 page of its own, full size.
@@ -77,7 +78,7 @@ response (open breakers) does change it, as it would in a real control system.
 ## The PMU test streamer
 
 <figure markdown>
-![The PMU test streamer: a table of five stations with voltage, angle and frequency; a choice of source (sample, live, rtsim); the frame statistics, excursion and summary results; and player controls with a timeline.](../assets/screenshots/pmu-test-streamer.png)
+![The PMU test streamer: a table of five stations with voltage, angle and frequency; a choice of source (sample, live); the frame statistics, excursion and summary results; and player controls with a timeline.](../assets/screenshots/pmu-test-streamer.png)
 <figcaption>The PMU test streamer, paused at the start of the sample recording.</figcaption>
 </figure>
 
@@ -86,7 +87,8 @@ than a monitoring screen. It shows one stream of measurements going through a
 chain of [modules](../modules/index.md):
 
 - **The source**: choose between the short sample recording (*sample*), a looping
-  imitation of a live feed (*live*), and the live grid simulation (*rtsim*).
+  imitation of a live feed (*live*), and an installation's measurement archive
+  (*remote*), where one is configured.
 - **The player**: play, pause, step, jump to an instant or change the speed of a
   recording. A live source can only be followed.
 - **The results** of three analysis modules: [frame statistics](../modules/frame-stats/index.md)
@@ -97,6 +99,13 @@ chain of [modules](../modules/index.md):
 
 Developers use it to check that a change to p-SWAMP's core still works end to
 end.
+
+## Islanding detection
+
+The **Islanding detection** page shows the latest result of the
+[islanding detection](../modules/islanding-detection/index.md) module on its
+own: whether the grid is whole, and its alarm while one is active. It is the
+same module the monitor uses, on a page that shows nothing else.
 
 ## The reference example
 

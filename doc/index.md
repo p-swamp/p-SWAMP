@@ -37,10 +37,10 @@ simulated or live data, before they go anywhere near a control room.
 
 ## What you can do with it
 
-**Replay a disturbance and watch it unfold.** p-SWAMP ships with a recording of
-the Nordic 44 test grid during a line trip and its reconnection. The monitor
-replays it in real time: the grid on a map, the frequency of every station, the
-voltage phasors, and the alarms raised when part of the grid is cut off.
+**Watch a grid as an operator would.** The monitor shows a simulation of the
+Nordic 44 test grid as it runs, measured by PMUs at every station: the grid on a
+map, the frequency of every station, the voltage phasors, and the alarms raised
+when part of the grid is cut off or a line stops carrying current.
 
 **Operate a simulated grid.** A real-time simulation of the grid runs behind a
 map. Open a breaker, trip a line or cause a short circuit, and see the

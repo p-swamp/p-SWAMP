@@ -23,8 +23,9 @@ Open <http://127.0.0.1:8000> in your browser. You should see the **Monitor**:
 a map of the Nordic 44 test grid in the middle, and panels beside it for
 frequency, status, alarms, phasors and line outages.
 
-The monitor replays a 70-second recording from the beginning each time you open
-it. About half a minute in, a line trips: watch the map and the alarms.
+The monitor shows a simulation of the grid running in real time. Nothing happens
+to it on its own: to see the monitor react, open the **CIM graph** page in a
+second tab, trip a line or open a breaker there, and watch the monitor.
 
 The [tour](tour.md) explains what each page shows.
 
@@ -40,9 +41,26 @@ experiment freely.
 complete`; the first build is slow. Check that nothing else on your computer
 already uses port 8000.
 
-**The CIM graph page says the grid is loading.** When it starts, p-SWAMP
-downloads the Nordic 44 grid model from the internet. Give it a minute; without
-internet access the page says the grid is not available.
+**The monitor stays empty, or the CIM graph page says the grid is loading.**
+When it starts, p-SWAMP downloads the Nordic 44 grid model from the internet,
+and both pages wait for it. Give it a minute. Without internet access the grid
+is not available; start p-SWAMP on the small sample grid it ships with instead:
+
+=== "Windows (PowerShell)"
+
+    ```powershell
+    $env:PSWAMP_CIM_PATH = "/workspace/p-SWAMP/core/src/pswamp_core/cim/sample_grid"
+    uv run pswamp dev server
+    ```
+
+=== "macOS and Linux"
+
+    ```shell
+    PSWAMP_CIM_PATH=/workspace/p-SWAMP/core/src/pswamp_core/cim/sample_grid uv run pswamp dev server
+    ```
+
+The path is the one inside p-SWAMP's container, so it is the same on every
+computer.
 
 **`pswamp dev server` cannot find Docker or Podman.** Start Docker Desktop or
 Podman Desktop first, then run the command again.

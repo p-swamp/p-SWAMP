@@ -31,7 +31,7 @@ measures the voltages and currents there, together with their *phase*: where
 each one is in its 50 Hz cycle at that instant. Every PMU stamps its
 measurements with the time from GPS, so measurements taken hundreds of
 kilometres apart can be compared at the same instant. A PMU reports many times
-a second (50 times, in p-SWAMP's recordings).
+a second (50 times, in p-SWAMP's grid simulation).
 
 A voltage measured this way is a **phasor**: a size (the voltage) and an angle
 (its phase). Comparing the angles of two stations shows how hard the grid is
