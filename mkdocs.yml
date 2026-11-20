@@ -185,6 +185,7 @@ nav:
       - Web API: reference/web-api.md
   - Project:
       - Contributing: project/contributing.md
+      - About: project/about.md
       - Contributors: project/contributors.md
       - Data licensing: project/data-licensing.md
       - How the core contributors work together: how-the-core-contributors-work-together.md

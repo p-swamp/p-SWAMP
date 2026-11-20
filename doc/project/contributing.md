@@ -71,6 +71,9 @@ hook. To sign off the commits already on your branch:
 - **AGENTS.md is the developer handbook**: the conventions, and the reasons for
   them, for people and coding agents alike. Read the section for the part you
   are changing.
+- **AI coding assistants are welcome**, and AGENTS.md is written for them too.
+  You remain responsible for what you submit: understand it, test it, and sign it
+  off yourself.
 
 ## Adding a module
 
