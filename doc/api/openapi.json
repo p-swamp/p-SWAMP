@@ -5317,6 +5317,14 @@
         "$ref": "#/components/schemas/LiveFeed"
       },
       "path": "/api/cim-live/ws"
+    },
+    {
+      "app": "state-estimator",
+      "direction": "server-to-client",
+      "message": {
+        "$ref": "#/components/schemas/StateEstimatorState"
+      },
+      "path": "/api/state-estimator/ws"
     }
   ]
 }

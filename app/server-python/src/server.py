@@ -146,6 +146,11 @@ APPS = [
         cim_live,
         "The live grid simulation's frames, as each station's voltage and frequency, every frame.",
     ),
+    AppEntry(
+        "state-estimator",
+        state_estimator,
+        "State Estimator.",
+    ),
 ]
 
 
