@@ -152,6 +152,11 @@ plugins:
 
 nav:
   - Home: index.md
+  - Getting started:
+      - What you need: start/what-you-need.md
+      - Start it: start/first-run.md
+      - A tour: start/tour.md
+      - From a script: start/from-a-script.md
   - Concepts:
       - Wide area monitoring: concepts/wampac.md
       - How p-SWAMP works: concepts/how-it-works.md
