@@ -509,4 +509,4 @@ Needed only for the checks and alternative run modes, not the two dev commands a
 How the project/core team collaborates with the wider open source community
 ==
 
-_See `how-the-project-interacts-with-open-source-contributors.md`_
+_See [contributing](project/contributing.md)._

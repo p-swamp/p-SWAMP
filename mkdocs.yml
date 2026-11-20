@@ -184,6 +184,7 @@ nav:
           - Messages: reference/python/models/
       - Web API: reference/web-api.md
   - Project:
+      - Contributing: project/contributing.md
       - Data licensing: project/data-licensing.md
       - How the core contributors work together: how-the-core-contributors-work-together.md
       - Dependency licences: dependency-license-inventory.md
