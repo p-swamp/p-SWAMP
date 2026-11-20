@@ -50,6 +50,14 @@ trip, and plots every station's estimated voltage:
 
     uv run --package pswamp-state-estimator --extra rtsim python modules/state-estimator/examples/run_state_estimator.py
 
+`examples/explore_state_estimate.py` is for prototyping, cell by cell (`# %%`). It loads a grid from a CIM
+folder, trips a line, and runs the module over the frames. Then it explores the `StateEstimate`: the
+envelope, one estimate as a table, the whole run as a table, and the stations that moved most. It also
+runs the module again on the stored frames with one station's PMU taken out, and compares the estimate
+with the measurement:
+
+    uv run --package pswamp-state-estimator --extra rtsim python modules/state-estimator/examples/explore_state_estimate.py
+
 ## Tests
 
 `uv run pswamp test module state-estimator` (also part of `uv run pswamp test server`).
