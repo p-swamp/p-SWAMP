@@ -31,7 +31,6 @@ it, and an API reference generated from its code.
 |---|---|
 | [frame-stats](frame-stats/index.md) | For every snapshot, the average, lowest and highest frequency across the stations, how far apart their voltage angles are, and the average voltage. |
 | [excursion](excursion/index.md) | Watches the average frequency from frame-stats and counts each time it leaves a band around 50 Hz. It can pause a replay at the moment it happens. |
-
 | [range-summary](range-summary/index.md) | Answers a question about a period of time: how many snapshots it holds, and the lowest, highest and average frequency over it. |
 
 ## Writing a module
