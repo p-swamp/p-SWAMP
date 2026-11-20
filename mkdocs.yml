@@ -183,6 +183,7 @@ nav:
       - How the core contributors work together: how-the-core-contributors-work-together.md
       - Dependency licences: dependency-license-inventory.md
       - Licence and vulnerability checks: dependency-license-and-vulnerability-checks.md
+      - How this site is built: project/deploying-docs.md
 
 extra:
   social:
