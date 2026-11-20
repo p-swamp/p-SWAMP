@@ -81,6 +81,20 @@ def _rewrite_text(text: str, page_uri: str, source: str, files) -> str:
     return re.sub(r"\x00(\d+)\x00", lambda m: spans[int(m.group(1))], text)
 
 
+def on_files(files, config):
+    """Keep literate-nav's nav files (SUMMARY.md) off the site.
+
+    ``exclude_docs`` cannot: it is applied before mkdocs-gen-files adds the
+    generated ones. Excluded, they are still read for the nav, but not published.
+    """
+    from mkdocs.structure.files import InclusionLevel
+
+    for file in files:
+        if file.src_uri.rsplit("/", 1)[-1] == "SUMMARY.md":
+            file.inclusion = InclusionLevel.EXCLUDED
+    return files
+
+
 def on_page_markdown(markdown: str, page, config, files) -> str:
     source = layout.source_of(page.file.src_uri)
     if source is None:

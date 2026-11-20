@@ -22,7 +22,9 @@ copyright: >-
 docs_dir: doc
 
 # Kept in the repository, kept off the site: working notes that are meant to be
-# deleted, and the ADR template.
+# deleted, and the ADR template. (The nav files literate-nav reads, SUMMARY.md,
+# are kept off by tools/docs_site/hooks.py: most are generated, after this
+# list is applied.)
 exclude_docs: |
   WIP-*.md
   adr/template.md
@@ -112,12 +114,32 @@ plugins:
   - gen-files:
       scripts:
         - tools/docs_site/gen_pages.py
-  # Lets the nav below name a folder (adr/) and take its pages from that
-  # folder's SUMMARY.md, which gen_pages.py writes.
+  # Lets the nav below name a folder (adr/, modules/) and take its pages from
+  # that folder's SUMMARY.md, which gen_pages.py writes.
   - literate-nav
+  # The API reference, read from the docstrings (statically: nothing is
+  # imported). pswamp_modules is a namespace package spread over every module's
+  # src/, which the glob collects.
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: [core/src, models/src, modules/*/src]
+          options:
+            docstring_style: google
+            show_source: true
+            show_root_heading: false
+            show_root_full_path: false
+            show_symbol_type_heading: true
+            show_symbol_type_toc: true
+            members_order: source
+            separate_signature: true
+            signature_crossrefs: true
+            merge_init_into_class: true
+            filters: ["!^_"]
 
 nav:
   - Home: index.md
+  - Modules: modules/
   - For developers:
       - The client-server rig: client-server-rig.md
       - The server data architecture: server-data-architecture.md
