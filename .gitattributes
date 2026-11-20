@@ -1,0 +1,61 @@
+# Default: normalize all text files to LF
+* text=auto eol=lf
+
+# Shell scripts
+*.sh   text eol=lf
+*.bash text eol=lf
+*.nu   text eol=lf
+
+# Infrastructure as Code
+*.tf     text eol=lf
+*.tfvars text eol=lf
+*.hcl    text eol=lf
+
+# Kubernetes / Helm
+*.yaml text eol=lf
+*.yml  text eol=lf
+*.tpl  text eol=lf
+
+# Config files
+*.json text eol=lf
+*.toml text eol=lf
+*.ini  text eol=lf
+*.conf text eol=lf
+
+# Source code
+*.go   text eol=lf
+*.py   text eol=lf
+*.js   text eol=lf
+*.ts   text eol=lf
+*.java text eol=lf
+*.cs   text eol=lf
+
+# Documentation
+*.md  text eol=lf
+*.txt text eol=lf
+
+# Windows scripts
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+
+# Binary files
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.gif   binary
+*.ico   binary
+*.pdf   binary
+*.zip   binary
+*.gz    binary
+*.tgz   binary
+*.jar   binary
+*.exe   binary
+*.dll   binary
+*.so    binary
+*.dylib binary
+
+# Certificates and keys
+*.pem text eol=lf
+*.crt text eol=lf
+*.key text eol=lf

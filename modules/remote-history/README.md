@@ -26,10 +26,19 @@ named `remote`; a script passes keywords):
 | `page` | `30000` | Records per query; a full page is followed by the next |
 | `gap` | `1` | Seconds without frames that the player crosses at once and reports (every playable source has it) |
 
-`coverage` is `GET /v1/coverage?model=pmu.frame`; `read` is `POST /v1/queries`,
-a page of at most `page` records at a time, whose NDJSON answer is read a line
+`coverage` is `GET /v1/coverage` and returns a `TimeRange` (or `None`);
+`read` is `POST /v1/queries`, whose NDJSON answer is read a line
 at a time, so closing the stream early (a seek) closes the connection, which is
-the service's cue to stop. A full page is followed by a query from one
+the service's cue to stop. Each record describes one station at one timestamp,
+ordered by timestamp then station. Consecutive records with equal `msg.ts` are
+combined into one `PmuFrame`; the last group is emitted on the terminal `end`
+line. Frames use a 20 ms interval (50 Hz), station IDs as labels, frequency and
+ROCOF as `f` and `df`, voltage magnitudes converted from V to kV, current in A,
+and angles in degrees. The frame's stream ID is the source instance name,
+not the request ID.
+
+A page includes every station at its final timestamp, even if this exceeds
+`page`. A full page is followed by a query from one
 microsecond after its last record, so a gap of weeks costs one query. A paused
 replay reads nothing and is not timed out.
 
@@ -58,8 +67,9 @@ its end, so the source holds no connection between reads.
     uv run python modules/remote-history/examples/read_remote.py --url http://127.0.0.1:8100
 
 The remote data stub (`examples/remote_data_stub/`, `python -m remote_data_stub` with
-`examples/` on the `PYTHONPATH`) is a service to try it against: it serves the records of any
-history source, `sample-replay` by default (`REMOTE_DATA_STUB_SOURCE=name:entry-point`).
+`examples/` on the `PYTHONPATH`) is a service to try it against: it generates two
+synthetic stations at 50 Hz over the coverage of a history source,
+`sample-replay` by default (`REMOTE_DATA_STUB_SOURCE=name:entry-point`).
 Compose and k8s run it with `history:synthetic-history`: a year with outages, as
 a long-term store would hold.
 
