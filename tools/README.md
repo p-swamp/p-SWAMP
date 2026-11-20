@@ -6,8 +6,8 @@ of which embedded Python in heredocs and none of which ran on Windows.
 
     uv run pswamp --help
 
-**The help text of every command and group is the documentation** (`uv run pswamp
-<group> --help`); this file is only the map.
+**The help text of every command and group is the documentation**
+(`uv run pswamp <group> --help`); this file is only the map.
 
 | Command | What it does |
 |---|---|

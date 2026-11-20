@@ -98,9 +98,22 @@ hooks:
   # Points each relative link at the page on the site, or at the file on GitHub.
   - tools/docs_site/hooks.py
 
+# Sources outside doc/ that the site is built from, so `pswamp docs serve`
+# rebuilds when one of them changes.
+watch:
+  - tools/docs_site
+  - modules
+  - tools/README.md
+  - k8s/README.md
+
 plugins:
   - search
-  # Lets the nav below name a folder (adr/) and have its pages listed in order.
+  # Publishes the pages that live elsewhere in the repo (tools/docs_site/layout.py).
+  - gen-files:
+      scripts:
+        - tools/docs_site/gen_pages.py
+  # Lets the nav below name a folder (adr/) and take its pages from that
+  # folder's SUMMARY.md, which gen_pages.py writes.
   - literate-nav
 
 nav:
@@ -111,6 +124,9 @@ nav:
       - The module cookbook: module-cookbook.md
       - The client-server API: the-client-server-api.md
       - The remote data contract: remote-data-integration-contract.md
+      - Module projects: developers/module-projects.md
+      - The pswamp command line: developers/cli.md
+      - Deploying on Kubernetes: developers/deploying.md
       - Architecture decisions: adr/
   - Project:
       - How the core contributors work together: how-the-core-contributors-work-together.md
