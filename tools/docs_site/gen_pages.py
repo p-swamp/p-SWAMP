@@ -4,6 +4,7 @@
   the k8s manifests), each published with "Edit this page" pointing at its source;
 * the nav of ``doc/adr/`` (``adr/SUMMARY.md``, read by literate-nav), so the
   ADRs list in order and the template stays off the site;
+* the Contributors page, read from GitHub at build time (``contributors.py``);
 * one section per module (``modules/<name>/``): its README, the pages and files
   of its own ``docs/`` folder if it has one, and its API reference, generated
   from its docstrings and those of its messages. A new module is on the site
@@ -16,6 +17,7 @@ Pages are written verbatim: their relative links are fixed at build time by
 
 from __future__ import annotations
 
+import html
 import json
 import logging
 import re
@@ -27,7 +29,8 @@ import mkdocs_gen_files
 
 sys.path.insert(0, str(Path(__file__).parent))
 
-import layout  # noqa: E402  (found through the line above)
+import contributors  # noqa: E402  (found through the line above)
+import layout  # noqa: E402
 
 # A logger under "mkdocs.", so a warning counts for --strict.
 log = logging.getLogger("mkdocs.plugins.pswamp_docs")
@@ -239,6 +242,40 @@ def web_api_page() -> None:
         page.write("\n".join(lines))
 
 
+def contributors_page() -> None:
+    """Project > Contributors: everyone GitHub lists for the repository, with their avatar."""
+    repo = layout.GITHUB.removeprefix("https://github.com/")
+    people = contributors.fetch(repo)
+    on_github = f"{layout.GITHUB}/graphs/contributors"
+    lines = [
+        "# Contributors",
+        "",
+        "Everyone who has contributed to p-SWAMP's code, as GitHub counts them, most "
+        "contributions first. The list is read from GitHub each time the site is built.",
+        "",
+    ]
+    if people:
+        lines.append('<div class="pswamp-contributors">')
+        for person in people:
+            commits = f"{person.contributions} commit{'s' if person.contributions != 1 else ''}"
+            lines += [
+                f'  <a href="{html.escape(person.profile)}" title="{html.escape(person.login)}: {commits}">',
+                f'    <img src="{html.escape(person.avatar)}&s=128" alt="" loading="lazy" width="64" height="64">',
+                f"    <span>{html.escape(person.name)}</span>",
+                "  </a>",
+            ]
+        lines += ["</div>", ""]
+    else:
+        lines += [f"The list could not be read when this site was built; see it [on GitHub]({on_github}).", ""]
+    lines += [
+        f"GitHub's own view, with each person's activity over time, is [on GitHub]({on_github}). "
+        "To join them, see [Contributing](contributing.md).",
+        "",
+    ]
+    with mkdocs_gen_files.open("project/contributors.md", "w", encoding="utf-8") as page:
+        page.write("\n".join(lines))
+
+
 for repo_path, uri in layout.COLLECTED_READMES.items():
     publish(uri, repo_path)
 adr_nav()
@@ -247,3 +284,4 @@ for module in layout.module_names():
 modules_nav(layout.module_names())
 models_pages()
 web_api_page()
+contributors_page()

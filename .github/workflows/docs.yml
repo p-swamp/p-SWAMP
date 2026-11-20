@@ -45,7 +45,12 @@ jobs:
       - run: uv python install 3.12
 
       # The `docs` dependency group of pswamp-tools is installed by the command.
+      # The token only lifts the GitHub API's rate limit for the Contributors
+      # page (read access to public data); without an answer the page links to
+      # GitHub instead.
       - name: Build the site (--strict)
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: uv run pswamp docs build
 
       - name: Upload the Pages artifact
