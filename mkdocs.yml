@@ -27,6 +27,7 @@ docs_dir: doc
 # list is applied.)
 exclude_docs: |
   WIP-*.md
+  includes/
   adr/template.md
   api/openapi.json
 
@@ -84,7 +85,11 @@ markdown_extensions:
       anchor_linenums: true
       line_spans: __span
   - pymdownx.inlinehilite
-  - pymdownx.snippets
+  # Every page gets the shared abbreviations, so "PMU" explains itself on hover.
+  - pymdownx.snippets:
+      auto_append:
+        - doc/includes/abbreviations.md
+  - pymdownx.keys
   - pymdownx.superfences:
       custom_fences:
         - name: mermaid
@@ -147,6 +152,10 @@ plugins:
 
 nav:
   - Home: index.md
+  - Concepts:
+      - Wide area monitoring: concepts/wampac.md
+      - How p-SWAMP works: concepts/how-it-works.md
+      - Glossary: concepts/glossary.md
   - Modules: modules/
   - For developers:
       - The client-server rig: client-server-rig.md
@@ -170,6 +179,7 @@ nav:
           - Messages: reference/python/models/
       - Web API: reference/web-api.md
   - Project:
+      - Data licensing: project/data-licensing.md
       - How the core contributors work together: how-the-core-contributors-work-together.md
       - Dependency licences: dependency-license-inventory.md
       - Licence and vulnerability checks: dependency-license-and-vulnerability-checks.md
