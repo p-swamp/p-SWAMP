@@ -125,6 +125,10 @@ plugins:
         python:
           paths: [core/src, models/src, modules/*/src]
           options:
+            # RST literal blocks ("Example::" and an indented block) read as
+            # running text in Markdown; this fences them as they load.
+            extensions:
+              - tools/docs_site/rst_literals.py:RstLiterals
             docstring_style: google
             show_source: true
             show_root_heading: false
