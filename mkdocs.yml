@@ -94,6 +94,10 @@ markdown_extensions:
       emoji_index: !!python/name:material.extensions.emoji.twemoji
       emoji_generator: !!python/name:material.extensions.emoji.to_svg
 
+hooks:
+  # Points each relative link at the page on the site, or at the file on GitHub.
+  - tools/docs_site/hooks.py
+
 plugins:
   - search
   # Lets the nav below name a folder (adr/) and have its pages listed in order.
