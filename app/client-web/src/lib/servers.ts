@@ -46,6 +46,7 @@ export const TIME_WINDOW_API_PATH = '/api/time-window'
 export const ISLANDING_API_PATH = '/api/islanding'
 export const REFERENCE_SUBAPP_API_PATH = '/api/reference-subapp'
 export const CIM_GRAPH_API_PATH = '/api/cim-graph'
+export const ISLANDING_DETECTION_API_PATH = '/api/islanding-detection'
 export const STATE_ESTIMATOR_API_PATH = '/api/state-estimator'
 
 // The grid topology is static, so it is fetched over HTTP rather than pushed.

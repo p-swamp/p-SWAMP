@@ -82,6 +82,7 @@ function App() {
 
           <Route path="reference-subapp" element={<ReferenceSubappPage />} />
           <Route path="cim-graph" element={<CimGraphPage />} />
+          <Route path="islanding-detection" element={<IslandingDetectionPage />} />
           <Route path="state-estimator" element={<StateEstimatorPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>

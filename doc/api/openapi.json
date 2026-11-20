@@ -5319,6 +5319,14 @@
       "path": "/api/cim-live/ws"
     },
     {
+      "app": "islanding-detection",
+      "direction": "server-to-client",
+      "message": {
+        "$ref": "#/components/schemas/IslandingDetectionState"
+      },
+      "path": "/api/islanding-detection/ws"
+    },
+    {
       "app": "state-estimator",
       "direction": "server-to-client",
       "message": {
