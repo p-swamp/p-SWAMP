@@ -136,6 +136,10 @@ plugins:
             signature_crossrefs: true
             merge_init_into_class: true
             filters: ["!^_"]
+  # The web api's REST operations, rendered from the committed contract
+  # (doc/api/openapi.json) at build time: static, searchable, no script.
+  - neoteroi.mkdocsoad:
+      use_pymdownx: true
 
 nav:
   - Home: index.md
@@ -150,6 +154,17 @@ nav:
       - The pswamp command line: developers/cli.md
       - Deploying on Kubernetes: developers/deploying.md
       - Architecture decisions: adr/
+  - Reference:
+      - Python API:
+          - reference/python/index.md
+          - Modules: reference/python/core-modules.md
+          - Sources: reference/python/core-sources.md
+          - Pipelines: reference/python/core-pipelines.md
+          - Transport: reference/python/core-transport.md
+          - The CIM graph: reference/python/core-cim.md
+          - Scripts and testing: reference/python/core-scripts-testing.md
+          - Messages: reference/python/models/
+      - Web API: reference/web-api.md
   - Project:
       - How the core contributors work together: how-the-core-contributors-work-together.md
       - Dependency licences: dependency-license-inventory.md

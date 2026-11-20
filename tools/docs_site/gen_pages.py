@@ -16,6 +16,7 @@ Pages are written verbatim: their relative links are fixed at build time by
 
 from __future__ import annotations
 
+import json
 import logging
 import re
 import sys
@@ -145,9 +146,104 @@ def modules_nav(names: list[str]) -> None:
         out.write("\n".join(lines) + "\n")
 
 
+def module_owning_models() -> dict[str, str]:
+    """``pswamp_models.<pkg>`` packages a module publishes: package -> module folder.
+
+    Those are rendered on the module's API page; rendering them twice would give
+    each class two homes, and every cross-reference to it an ambiguous target.
+    """
+    owners = {}
+    for name in layout.module_names():
+        package = manifest(name)["tool"]["uv"]["build-backend"]["module-name"].split(".", 1)[1]
+        if (layout.REPO / "models" / "src" / "pswamp_models" / package).is_dir():
+            owners[package] = name
+    return owners
+
+
+def models_pages() -> None:
+    """The Messages section: an overview of every producer package of pswamp_models,
+    and one page for each that no module owns (a module's own are on its API page)."""
+    root = layout.REPO / "models" / "src" / "pswamp_models"
+    packages = sorted(p.name for p in root.iterdir() if (p / "__init__.py").is_file())
+    owners = module_owning_models()
+    rows, nav = [], ["* [Overview](index.md)"]
+    for package in packages:
+        module = f"pswamp_models.{package}"
+        if package in owners:
+            owner = owners[package]
+            rows.append(f"| `{module}` | the [{owner}](../../../modules/{owner}/api.md) module's API page |")
+            continue
+        uri = f"reference/python/models/{package}.md"
+        lines = [f"# `{module}`", "", f"::: {module}", "    options:", "      show_if_no_docstring: true", ""]
+        with mkdocs_gen_files.open(uri, "w", encoding="utf-8") as page:
+            page.write("\n".join(lines))
+        mkdocs_gen_files.set_edit_path(uri, layout.edit_path(f"models/src/pswamp_models/{package}/__init__.py"))
+        rows.append(f"| `{module}` | [its page]({package}.md) |")
+        nav.append(f"* [{package}]({package}.md)")
+    overview = [
+        "# Messages",
+        "",
+        "Every message that crosses the transport or a socket is a versioned pydantic model in "
+        "`pswamp-models`, in the package of whoever publishes it. The messages a module publishes are "
+        "documented with that module; the others, shared by the core, the sources and the web backend, "
+        "each have a page here.",
+        "",
+        "| Package | Documented on |",
+        "|---|---|",
+        *rows,
+        "",
+    ]
+    with mkdocs_gen_files.open("reference/python/models/index.md", "w", encoding="utf-8") as page:
+        page.write("\n".join(overview))
+    with mkdocs_gen_files.open("reference/python/models/SUMMARY.md", "w", encoding="utf-8") as out:
+        out.write("\n".join(nav) + "\n")
+
+
+def web_api_page() -> None:
+    """The web api: its socket channels as a table (OpenAPI has no notion of a socket),
+    then its REST operations, rendered from the committed contract by neoteroi.
+
+    No "Edit this page": the contract is generated (`pswamp api generate`).
+    """
+    contract = json.loads((layout.REPO / layout.DOCS_DIR / "api" / "openapi.json").read_text(encoding="utf-8"))
+    rows = [
+        f"| `{ch['path']}` | {ch['app']} | `{ch['message']['$ref'].rsplit('/', 1)[-1]}` |"
+        for ch in sorted(contract.get("x-websocket-channels", []), key=lambda ch: ch["path"])
+    ]
+    lines = [
+        "# Web API",
+        "",
+        f"The api between the web client and its server, version {contract['info']['version']}. It is "
+        "generated from the server and committed as `doc/api/openapi.json`; "
+        "[the client-server API](../the-client-server-api.md) explains it.",
+        "",
+        "**Two directions, two transports.** Everything a user triggers goes up as an HTTP `POST` under "
+        "`/api/<app>/`, and is answered with a small `CommandAck`, never with state. Everything the server "
+        "has to say comes down a WebSocket at `/api/<app>/ws`. Every request carries `?client_id=`.",
+        "",
+        "## WebSocket channels",
+        "",
+        "Each channel runs from the server to the client and carries one message, "
+        "described with the other schemas at the end of this page.",
+        "",
+        "| Path | App | Message |",
+        "|---|---|---|",
+        *rows,
+        "",
+        "## Operations",
+        "",
+        "[OAD(./doc/api/openapi.json)]",
+        "",
+    ]
+    with mkdocs_gen_files.open("reference/web-api.md", "w", encoding="utf-8") as page:
+        page.write("\n".join(lines))
+
+
 for repo_path, uri in layout.COLLECTED_READMES.items():
     publish(uri, repo_path)
 adr_nav()
 for module in layout.module_names():
     module_section(module)
 modules_nav(layout.module_names())
+models_pages()
+web_api_page()
