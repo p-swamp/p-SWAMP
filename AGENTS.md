@@ -166,8 +166,9 @@ under "The server data architecture"):
   folder holds **only** `pyproject.toml` (with its entry point in
   `[project.entry-points."pswamp.modules"]`, named after the module's `name`),
   `README.md` (what it reads, emits and accepts; its parameters),
-  `src/pswamp_modules/<pkg>/`, `tests/` and `examples/` (scripts running it with
-  no server). A data file the code reads (`sample_data.txt`) goes under `src/`,
+  `src/pswamp_modules/<pkg>/`, `tests/`, `examples/` (scripts running it with
+  no server) and, optionally, `docs/` (pages of its own on the documentation
+  site, beside its README; see "The documentation site"). A data file the code reads (`sample_data.txt`) goes under `src/`,
   beside that code. **`pswamp_modules` is a PEP 420 namespace**: there is no
   `src/pswamp_modules/__init__.py` anywhere, so each project adds its own
   `pswamp_modules.<pkg>`; `uv_build` builds it with a dotted
@@ -1660,8 +1661,8 @@ mind when editing that command (`tools/src/pswamp_tools/commands/deploy.py`):
   lesson from the old scripts still holds: a check that *silently does nothing* is
   worse than one that fails, so prefer a construct that errors loudly to one that
   degrades.
-- **A module folder holds only `pyproject.toml`, `README.md`, `src/`, `tests/` and
-  `examples/`; its messages live in `pswamp_models`, never in the module; test
+- **A module folder holds only `pyproject.toml`, `README.md`, `src/`, `tests/`,
+  `examples/` and an optional `docs/`; its messages live in `pswamp_models`, never in the module; test
   file basenames are unique repo-wide.** Details under "The Python projects in
   one repo"; all three are enforced by tests, not by good intentions.
 - **A new module or source comes from the generator.** `uv run pswamp new module`
