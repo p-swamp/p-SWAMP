@@ -21,6 +21,7 @@ REGISTRIES = [
     Path("docker-compose.yml"),
     Path("k8s/base/p-swamp.yaml"),
     Path("app/server-python/pyproject.toml"),
+    Path("doc/modules/index.md"),
 ]
 
 
@@ -227,6 +228,21 @@ def test_a_module_is_a_project_and_joins_the_module_worker(tree):
     assert text(tree, "docker-compose.yml").count("zz-mod.toml") == 1
 
 
+@pytest.mark.parametrize(("template_set", "table", "next_heading"), [
+    ("module", "## Analysis modules", "## Writing a module"),
+    ("source", "## Sources", "## Analysis modules"),
+])
+def test_a_module_or_source_gets_a_line_on_the_documentation_s_modules_page(tree, template_set, table, next_heading):
+    # The site's build fails on a module that page does not mention: the generator adds
+    # the line, last in the table of its kind, for its author to reword.
+    generate.apply(generate.plan(tree, "zz-mod", "ZZ Mod", template_set), echo=lambda _: None)
+    page = text(tree, "doc/modules/index.md")
+    row = "| [zz-mod](zz-mod/index.md) | ZZ Mod. Say here, in plain words, what it is for. |"
+    assert page.count(row) == 1
+    section = page[page.index(table) : page.index(next_heading)]
+    assert section.rstrip("\n").endswith(row)
+
+
 def test_a_module_cannot_take_an_app_s_pipeline_file(tree):
     (tree / "pipelines/zz-mod.toml").write_text("", encoding="utf-8")
     with pytest.raises(generate.GenerateError, match="pipelines/zz-mod.toml already exists"):
@@ -285,10 +301,11 @@ def test_a_source_is_a_project_and_a_pipeline_and_nothing_else(tree):
     server = tomllib.loads(text(tree, "app/server-python/pyproject.toml"))
     assert "pswamp-zz-src" in server["project"]["dependencies"]
     assert server["tool"]["uv"]["sources"]["pswamp-zz-src"] == {"workspace": True}
-    # No web api, page, model or worker: those are the module set's.
+    # No web api, page, model or worker: those are the module set's. Only the
+    # server's manifest, and its line on the documentation's Modules page.
     after = snapshot(tree)
     changed = {path for path in before if before[path] != after.get(path)}
-    assert changed == {"app/server-python/pyproject.toml"}
+    assert changed == {"app/server-python/pyproject.toml", "doc/modules/index.md"}
     assert not (tree / "models/src/pswamp_models/zz_src").exists()
     assert not (tree / "app/server-python/src/zz_src").exists()
 
