@@ -166,6 +166,7 @@ nav:
       - The client-server rig: client-server-rig.md
       - The server data architecture: server-data-architecture.md
       - The module cookbook: module-cookbook.md
+      - Keeping a time window in a module: module-time-window-notes.md
       - The client-server API: the-client-server-api.md
       - The remote data contract: remote-data-integration-contract.md
       - Module projects: developers/module-projects.md

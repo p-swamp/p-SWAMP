@@ -12,3 +12,7 @@ and how it is called, in a script, a test, the server or a worker.
 ## Keeping up with a stream
 
 ::: pswamp_core.keep_up
+
+## Raising alarms
+
+::: pswamp_core.alarms

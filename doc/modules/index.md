@@ -32,6 +32,8 @@ it, and an API reference generated from its code.
 | [frame-stats](frame-stats/index.md) | For every snapshot, the average, lowest and highest frequency across the stations, how far apart their voltage angles are, and the average voltage. |
 | [excursion](excursion/index.md) | Watches the average frequency from frame-stats and counts each time it leaves a band around 50 Hz. It can pause a replay at the moment it happens. |
 | [range-summary](range-summary/index.md) | Answers a question about a period of time: how many snapshots it holds, and the lowest, highest and average frequency over it. |
+| [islanding-detection](islanding-detection/index.md) | Finds islands: parts of the grid that have been cut off from the rest and drift to a frequency of their own. It groups the stations whose frequencies move together, and raises an alarm while any part is separated. |
+| [line-outage](line-outage/index.md) | Notices a line or transformer that has stopped carrying current, from the PMUs' current measurements, and says when it went out and when it came back. |
 
 ## Writing a module
 
