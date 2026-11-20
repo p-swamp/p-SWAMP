@@ -1,0 +1,86 @@
+# The documentation site (mkdocs.yml, doc/, every module's README, docs/ and
+# docstrings): built on every pull request, published to GitHub Pages from main.
+# doc/project/deploying-docs.md is the account.
+#
+#   build-docs   — `pswamp docs build`, --strict: a broken link, an unresolved
+#                  reference, or a module doc/modules/index.md does not mention
+#                  fails it. The built site is attached as `site-preview`.
+#   deploy-docs  — on a push to main only: publishes that build to GitHub Pages.
+#
+# Publishing needs Settings → Pages → Source: "GitHub Actions", and the
+# github-pages environment restricted to main. build-docs is not a required
+# check (yet); if it becomes one, it is selected by this job name.
+#
+# No paths filter, on purpose: the site is built from code (docstrings, module
+# READMEs, the api contract) as much as from doc/.
+name: docs
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# A new push to the same branch cancels the previous build.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions: {}
+
+jobs:
+  build-docs:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+      - run: uv python install 3.12
+
+      # The `docs` dependency group of pswamp-tools is installed by the command.
+      # The token only lifts the GitHub API's rate limit for the Contributors
+      # page (read access to public data); without an answer the page links to
+      # GitHub instead.
+      - name: Build the site (--strict)
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: uv run pswamp docs build
+
+      - name: Upload the Pages artifact
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: site
+
+      # Per-pull-request preview URLs would need a second host; a downloadable
+      # copy is enough to review a change to the site.
+      - name: Upload a copy to review
+        uses: actions/upload-artifact@v5
+        with:
+          name: site-preview
+          path: site
+          if-no-files-found: error
+
+  deploy-docs:
+    # Only a merge publishes.
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: build-docs
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5

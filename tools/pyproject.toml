@@ -27,6 +27,19 @@ dependencies = [
 [project.scripts]
 pswamp = "pswamp_tools.main:app"
 
+# What builds the documentation site (mkdocs.yml at the repo root, served and
+# built by `pswamp docs`). A group, not a dependency: `uv sync` leaves it out,
+# and `pswamp docs` asks for it (`uv run --group docs`), so nobody installs
+# MkDocs who does not build the site, and the image never sees it.
+[dependency-groups]
+docs = [
+    "mkdocs-material>=9.5",
+    "mkdocstrings[python]>=0.27",
+    "mkdocs-gen-files>=0.5",
+    "mkdocs-literate-nav>=0.6",
+    "neoteroi-mkdocs>=1.1",
+]
+
 [build-system]
 requires = ["uv_build"]
 build-backend = "uv_build"

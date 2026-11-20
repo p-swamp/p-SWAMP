@@ -51,6 +51,8 @@ models/tests/
 core/tests/
 modules/*/tests/
 modules/*/examples/
+# A module's own documentation pages (modules/<name>/docs/): the site's, not the image's.
+modules/*/docs/
 # ...except the remote data stub, which the remote-data-stub service runs from
 # the image (python -m remote_data_stub, PYTHONPATH on this folder).
 !modules/remote-history/examples/remote_data_stub/

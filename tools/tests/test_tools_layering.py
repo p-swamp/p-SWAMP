@@ -7,8 +7,9 @@ edit here. For each one:
   from a neutral directory with no ``PYTHONPATH`` as a worker is, loads nothing
   from the web backend or the desktop package, and nothing outside the stdlib,
   the core, the models, its own package and its declared dependencies;
-* its folder holds only module code: ``src/``, ``tests/``, ``examples/``,
-  ``README.md`` and ``pyproject.toml``;
+* its folder holds only module code and its documentation: ``src/``,
+  ``tests/``, ``examples/``, ``README.md``, ``pyproject.toml``, and optionally
+  ``docs/`` (pages of its own on the documentation site);
 * its entry point in ``pswamp.modules`` names its own class, under its ``name``.
 
 And the core imports no module. (The models' own rule, pydantic and the stdlib
@@ -31,7 +32,7 @@ ROOT = Path(__file__).resolve().parents[2]
 MODULES = ROOT / "modules"
 PROJECTS = sorted(path.parent for path in MODULES.glob("*/pyproject.toml"))
 
-ALLOWED_ENTRIES = {"src", "tests", "examples", "README.md", "pyproject.toml"}
+ALLOWED_ENTRIES = {"src", "tests", "examples", "docs", "README.md", "pyproject.toml"}
 # Derived, never committed: caches, venvs, build output.
 IGNORED_ENTRIES = {"__pycache__", ".venv", ".pytest_cache", ".ruff_cache", ".mypy_cache", "build", "dist"}
 FORBIDDEN = {"fastapi", "starlette", "uvicorn", "server", "shared", "pswamp_web", "pswamp"}

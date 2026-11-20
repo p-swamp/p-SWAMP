@@ -3,6 +3,9 @@
 A platform for developing and testing WAMPAC applications, originally based on the research
 project [NEWEPS](https://ri.diva-portal.org/smash/record.jsf?pid=diva2%3A1933825&dswid=2773).
 
+**Documentation: <https://p-swamp.github.io/p-SWAMP/>**: what p-SWAMP is, how to try it,
+every module, the API reference, and how to contribute ([CONTRIBUTING.md](CONTRIBUTING.md)).
+
 Repository structure overview:
 
 | Path | What it is                                                                                                                                                                                                                                                                                        |

@@ -1,0 +1,142 @@
+/* p-SWAMP documentation theme, shared with LazyCIM's documentation.
+ *
+ * The palette is read from the official SWAMP artwork published by LF Energy
+ * at artwork.lfenergy.org/projects/swamp/, not sampled or approximated:
+ *
+ *   #00534d  deep teal    white on it 8.96:1
+ *   #083966  navy         white on it 11.75:1
+ *   #0099da  bright blue  white on it 3.20:1 -- large text only
+ *   #ede800 -> #2bcf00    the logo gradient, decorative
+ *
+ * #0099da is the brightest mark in the logo, but at 3.20:1 it fails WCAG AA
+ * for body text on white, so it carries links only in dark mode, where the
+ * background is dark enough. Light mode uses the navy instead.
+ */
+
+:root {
+  --lfe-teal: #00534d;
+  --lfe-teal-dark: #003c37;
+  --lfe-teal-light: #0a6e66;
+  --lfe-navy: #083966;
+  --lfe-blue: #0099da;
+  --lfe-blue-light: #45b6e8;
+  --lfe-green: #2bcf00;
+  --lfe-yellow: #ede800;
+}
+
+/* Header, navigation and other large primary surfaces. */
+[data-md-color-primary="custom"] {
+  --md-primary-fg-color: var(--lfe-teal);
+  --md-primary-fg-color--light: var(--lfe-teal-light);
+  --md-primary-fg-color--dark: var(--lfe-teal-dark);
+  --md-primary-bg-color: #ffffff;
+  --md-primary-bg-color--light: rgba(255, 255, 255, 0.7);
+}
+
+/* Interactive accents: the active nav item, focused fields, buttons. */
+[data-md-color-accent="custom"] {
+  --md-accent-fg-color: var(--lfe-blue);
+  --md-accent-fg-color--transparent: rgba(0, 153, 218, 0.1);
+}
+
+/* Link text has to clear 4.5:1 against the page, so light mode takes the navy. */
+[data-md-color-scheme="default"] {
+  --md-typeset-a-color: var(--lfe-navy);
+}
+
+[data-md-color-scheme="slate"] {
+  --md-typeset-a-color: var(--lfe-blue-light);
+  --md-accent-fg-color: var(--lfe-blue-light);
+}
+
+/* The logo gradient, used as a thin rule under the header. */
+.md-header {
+  border-bottom: 3px solid transparent;
+  border-image: linear-gradient(90deg, var(--lfe-yellow), var(--lfe-green)) 1;
+}
+
+/* Keep the icon legible against the teal header. */
+.md-header__button.md-logo img,
+.md-header__button.md-logo svg {
+  height: 1.6rem;
+  width: auto;
+}
+
+/* Footer attribution block. */
+.pswamp-footer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.8rem;
+  padding: 1.6rem 0.8rem 0.4rem;
+  text-align: center;
+  background-color: var(--md-footer-bg-color);
+  color: var(--md-footer-fg-color--light);
+  font-size: 0.7rem;
+  line-height: 1.5;
+}
+
+.pswamp-footer img {
+  max-width: 260px;
+  width: 60%;
+  height: auto;
+}
+
+.pswamp-footer a {
+  color: var(--md-footer-fg-color);
+  text-decoration: underline;
+}
+
+.pswamp-footer p {
+  margin: 0;
+  max-width: 44rem;
+}
+
+/* Wide tables (a module's reads/emits/accepts, the ADR index) scroll rather
+   than squeeze. */
+.md-typeset__table {
+  min-width: 100%;
+}
+
+/* Mermaid diagrams centre, and inherit the page background in both themes. */
+.mermaid {
+  text-align: center;
+}
+
+/* Screenshots: a hairline frame, so a light screenshot does not melt into a
+   light page, and a caption under it. */
+.md-typeset figure img {
+  border: 1px solid var(--md-default-fg-color--lightest);
+  border-radius: 4px;
+}
+
+/* Project > Contributors: one card per person, avatar over name. */
+.pswamp-contributors {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(7.5rem, 1fr));
+  gap: 1rem;
+  margin: 1.2rem 0;
+}
+
+.md-typeset .pswamp-contributors a {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.8rem 0.4rem;
+  border-radius: 6px;
+  color: var(--md-default-fg-color);
+  text-align: center;
+  font-size: 0.7rem;
+  line-height: 1.3;
+}
+
+.md-typeset .pswamp-contributors a:hover {
+  background-color: var(--md-accent-fg-color--transparent);
+}
+
+.md-typeset .pswamp-contributors img {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+}
