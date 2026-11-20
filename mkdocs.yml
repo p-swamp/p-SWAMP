@@ -1,0 +1,123 @@
+site_name: p-SWAMP
+site_description: >-
+  Power Stability Wide Area Monitoring and Protection: a platform for
+  developing and testing WAMPAC applications on synchrophasor (PMU) data.
+site_author: p-SWAMP contributors
+
+# The address is case-sensitive on GitHub Pages. It affects the canonical links
+# and the sitemap only. doc/project/deploying-docs.md lists every place it is
+# written, which have to change together if it moves.
+site_url: https://p-swamp.github.io/p-SWAMP/
+
+repo_url: https://github.com/p-swamp/p-SWAMP
+repo_name: p-swamp/p-SWAMP
+edit_uri: edit/main/doc/
+
+copyright: >-
+  Apache-2.0. p-SWAMP is hosted by
+  <a href="https://lfenergy.org/">LF Energy</a>.
+
+# The site is built from doc/, the folder the repository's documentation has
+# always lived in, so every path AGENTS.md and the READMEs cite stays valid.
+docs_dir: doc
+
+# Kept in the repository, kept off the site: working notes that are meant to be
+# deleted, and the ADR template.
+exclude_docs: |
+  WIP-*.md
+  adr/template.md
+  api/openapi.json
+
+theme:
+  name: material
+  custom_dir: doc/overrides
+  logo: assets/swamp-icon-color.svg
+  favicon: assets/swamp-icon-color.svg
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.top
+    - navigation.indexes
+    - navigation.tracking
+    - content.code.copy
+    - content.code.annotate
+    - content.tabs.link
+    - content.action.edit
+    - search.suggest
+    - search.highlight
+    - toc.follow
+  icon:
+    repo: fontawesome/brands/github
+
+extra_css:
+  - stylesheets/lfenergy.css
+
+markdown_extensions:
+  - abbr
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+
+plugins:
+  - search
+  # Lets the nav below name a folder (adr/) and have its pages listed in order.
+  - literate-nav
+
+nav:
+  - Home: index.md
+  - For developers:
+      - The client-server rig: client-server-rig.md
+      - The server data architecture: server-data-architecture.md
+      - The module cookbook: module-cookbook.md
+      - The client-server API: the-client-server-api.md
+      - The remote data contract: remote-data-integration-contract.md
+      - Architecture decisions: adr/
+  - Project:
+      - How the core contributors work together: how-the-core-contributors-work-together.md
+      - Dependency licences: dependency-license-inventory.md
+      - Licence and vulnerability checks: dependency-license-and-vulnerability-checks.md
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/p-swamp/p-SWAMP
+      name: p-SWAMP on GitHub
+    - icon: fontawesome/solid/bolt
+      link: https://lfenergy.org/
+      name: LF Energy

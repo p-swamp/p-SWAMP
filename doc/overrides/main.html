@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{#
+  Adds the project attribution above Material's own footer, as LazyCIM's
+  documentation does. The SWAMP lockup is the project's own mark; LF Energy is
+  referenced as a plain text link, unrestyled, per their trademark guidance.
+#}
+{% block footer %}
+  <div class="pswamp-footer">
+    <img
+      src="{{ 'assets/swamp-horizontal-color.svg' | url }}"
+      alt="p-SWAMP"
+      loading="lazy"
+    />
+    <p>
+      <strong>p-SWAMP</strong> is hosted by
+      <a href="https://lfenergy.org/">LF Energy</a>.
+    </p>
+    <p>
+      Contributors follow the
+      <a href="https://lfprojects.org/policies/code-of-conduct/">LF Code of Conduct</a>.
+      See also the LF Projects
+      <a href="https://lfprojects.org/policies/">policies</a> and
+      <a href="https://lfprojects.org/policies/trademark-policy/">trademark policy</a>.
+    </p>
+  </div>
+  {{ super() }}
+{% endblock %}
