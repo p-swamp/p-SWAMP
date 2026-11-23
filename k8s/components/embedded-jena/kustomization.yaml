@@ -1,0 +1,31 @@
+# Optional: a bundled Jena/Fuseki (jena.yaml) as the CIM store, for a cluster
+# that has nothing else to point PSWAMP_CIM_STORE_HOST at (e.g. minikube).
+# TDB2 in an emptyDir, loaded fresh by the server on every start: see jena.yaml.
+#
+# A cluster with its own CIM store (e.g. a shared platform-level one) does not
+# include this component; it sets PSWAMP_CIM_STORE_HOST itself instead. See
+# "Environment variables" in k8s/README.md.
+#
+# Include it ONE LAYER ABOVE a rename, same as k8s/components/hosts — and in
+# the same layer as that component, if also used, so both stay in sync. See
+# k8s/components/hosts for why (a rename changes the Service's name but not
+# the name written inside PSWAMP_CIM_STORE_HOST, unless the replacement reruns
+# after it).
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+resources:
+  - jena.yaml
+configMapGenerator:
+  - name: p-swamp-jena-config
+    files:
+      - fuseki-config.ttl
+replacements:
+  - source:
+      kind: Service
+      name: p-swamp-jena
+    targets:
+      - select:
+          kind: ConfigMap
+          name: p-swamp-hosts
+        fieldPaths:
+          - data.PSWAMP_CIM_STORE_HOST

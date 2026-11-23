@@ -45,7 +45,10 @@ logger = get_logger("pswamp_core.cim")
 SAMPLE_GRID = Path(__file__).parent / "sample_grid"
 
 #: Nordic44's data says CIM100-EuropeanExtension where the CGMES vocabularies say CIM100-European.
-NAMESPACE_ALIASES = {"http://iec.ch/TC57/CIM100-EuropeanExtension/1/0#": "http://iec.ch/TC57/CIM100-European#"}
+NAMESPACE_ALIASES = {
+    "http://iec.ch/TC57/CIM100-EuropeanExtension/1/0#": "http://iec.ch/TC57/CIM100-European#",
+    "https://cim.ucaiug.io/ns#": "http://iec.ch/TC57/CIM100#",
+}
 
 _FULL_MODEL = URIRef("http://iec.ch/TC57/61970-552/ModelDescription/1#FullModel")
 

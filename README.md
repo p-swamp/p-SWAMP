@@ -55,5 +55,24 @@ To add to it: `uv run pswamp new module <slug> "<Label>"` (an analysis module an
 page), `... --source` (a data source), or `uv run pswamp new subapp <slug> "<Label>"`
 (a page and its api). See [`doc/module-cookbook.md`](doc/module-cookbook.md) for more details on how to develop and test wampac modules.
 
+### Building behind corporate proxy
+
+If you experience a self-signed-certificate error while **building the Jena
+image**, or `p-swamp` logs `CERTIFICATE_VERIFY_FAILED` / the grid never loads
+at **runtime** (check `GET /api/cim-graph/layout`), the containers don't trust
+your proxy provider's CA. Both the Jena image and the root `p-swamp` image need
+it added — the Jena build fails immediately, while the root image builds fine
+but fails later, when the running server tries to download the Nordic44 grid
+model.
+
+1. Add your `ca-certificates.crt` file to the `k8s/jena/docker/` folder.
+2. Uncomment the `COPY`/`RUN update-ca-certificates` lines in both:
+   - `k8s/jena/docker/Dockerfile` — `COPY <your-corporate-ca>.crt /usr/local/share/ca-certificates/corporate.crt`
+   - `Dockerfile` — `COPY k8s/jena/docker/<your-corporate-ca>.crt /usr/local/share/ca-certificates/corporate.crt`
+     (note the extra `k8s/jena/docker/` prefix here: this Dockerfile's build
+     context is the repo root, not that folder)
+
+Don't commit your own CA certificate.
+
 **NOTE:** This code is being developed as part of ongoing research, and thus
 contains experimental features. Use at your own risk!

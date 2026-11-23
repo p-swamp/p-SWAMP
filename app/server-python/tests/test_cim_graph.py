@@ -219,3 +219,53 @@ def test_a_socket_opened_while_the_grid_loads_gets_the_state_once_it_is_loaded(m
 
     with TestClient(server_module.app) as client, client.websocket_connect("/api/cim-graph/ws?client_id=211") as ws:
         assert ws.receive_json()["type"] == "state"  # no 1013 for a grid that is on its way
+
+
+# PATCH, pending a redesign (see the team's CIM-store-role discussion): a store this deployment
+# writes to but does not manage (RNDP's shared Jena). Needs no CGMES vocabularies (no
+# ``needs_profiles``, no network at all) — that is the point of this path.
+
+
+def test_reset_is_refused_for_an_unmanaged_store_but_writes_still_work(monkeypatch):
+    """At the Writer level, not through the REST/simulation stack (ADR-016): operating a switch over
+    REST now dispatches a command to the live simulation, which this test does not set up — what is
+    under test here is ``Store``/``Writer``'s own ``managed`` gating, not the simulation."""
+    from pswamp_core.cim import LocalStore, Store
+    from pswamp_models.cim import CimEdit, CimEdits
+
+    import cim_graph.grid as grid_module
+
+    monkeypatch.delenv("PSWAMP_CIM_URL", raising=False)
+    backend = LocalStore("shared-demo")
+    Store(SETTINGS, backend).fill()  # seeded as someone else would have, before this process starts
+    shared = Store(SETTINGS, backend, managed=False)
+    monkeypatch.setattr(grid_module, "open_store", lambda settings=None: shared)
+
+    writer = grid_module.Writer()
+    assert writer.managed is False
+    edits = CimEdits(
+        producer="rtsim", cause="command", edits=[CimEdit(mRID=COUPLER, attribute="Switch.open", value=True)]
+    )
+    assert writer.apply(edits) == [f"{COUPLER} Switch.open = True"]
+    assert writer.state().switches[COUPLER] is True
+    with pytest.raises(PermissionError, match="does not manage"):
+        writer.reset()
+
+
+def test_reset_is_a_409_over_rest_for_an_unmanaged_store(monkeypatch):
+    """The REST-level ``_managed()`` guard on ``/reset`` (api.py), not re-exercised by the Writer-level
+    test above. No live simulation needed: ``/reset`` does not depend on one (see cim_graph/api.py's
+    module docstring), so this uses the simpler, non-simulated server setup."""
+    from pswamp_core.cim import LocalStore, Store
+
+    import cim_graph.grid as grid_module
+
+    backend = LocalStore("shared-demo-2")
+    Store(SETTINGS, backend).fill()
+    shared = Store(SETTINGS, backend, managed=False)
+    monkeypatch.setattr(grid_module, "open_store", lambda settings=None: shared)
+
+    with start(monkeypatch, simulated=False) as client:
+        ready(client)
+        refused = client.post("/api/cim-graph/reset?client_id=302")
+        assert refused.status_code == 409 and "does not manage" in refused.json()["detail"]
