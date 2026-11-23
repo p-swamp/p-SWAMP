@@ -49,7 +49,7 @@ export function PmuTestStreamerPage() {
   const summary = state?.summary?.result
 
   return (
-    <Card className="w-full max-w-3xl gap-0">
+    <Card className="w-full max-w-3xl gap-0 overflow-visible">
       <CardHeader className="border-b">
         <CardTitle className="text-lg">PMU Test Streamer</CardTitle>
         <div className="text-gray-500">
