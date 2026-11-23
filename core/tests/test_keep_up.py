@@ -108,7 +108,8 @@ async def test_the_outbox_report_says_where_its_time_goes():
         _, report = await asyncio.wait_for(errors.get(), 5)
         await outbox.close()
     assert re.fullmatch(
-        r"1 dropped, last 3 sends took \d+ ms median, \d+ ms p95, \d+ ms max \(ack 20\.0/21\.0 ms median/p95\); "
+        r"1 dropped, last 3 sends took \d+ ms median, \d+ ms p95, \d+ ms max to be acknowledged "
+        r"\(ack 20\.0/21\.0 ms median/p95\); 0 of 64 in flight; "
         r"event loop lag \d+ ms median, \d+ ms p95, \d+ ms max",
         report.detail,
     )

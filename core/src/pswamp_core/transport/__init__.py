@@ -72,16 +72,17 @@ TRANSPORT_VARIABLE = "PSWAMP_TRANSPORT"
 logger = get_logger("pswamp_core.transport")
 
 
-def _percentiles(seconds: Iterable[float]) -> tuple[float, float, float]:
-    """The median, the 95th percentile and the maximum of ``seconds``, in milliseconds."""
-    ordered = sorted(seconds)
+def _percentiles(values: Iterable[float], scale: float = 1000.0) -> tuple[float, float, float]:
+    """The median, the 95th percentile and the maximum of ``values``, times ``scale``
+    (the default turns seconds into milliseconds)."""
+    ordered = sorted(values)
     if not ordered:
         return 0.0, 0.0, 0.0
 
     def at(fraction: float) -> float:
-        return ordered[min(len(ordered) - 1, int(fraction * len(ordered)))] * 1000
+        return ordered[min(len(ordered) - 1, int(fraction * len(ordered)))] * scale
 
-    return at(0.5), at(0.95), ordered[-1] * 1000
+    return at(0.5), at(0.95), ordered[-1] * scale
 
 
 class TransportSubscription(Subscription):
@@ -154,6 +155,18 @@ class Transport(Configurable, ABC):
     def timing(self) -> str | None:
         """Where the last publishes spent their time, if this transport keeps track:
         the outbox adds it to its drop report."""
+        return None
+
+    async def send(self, message: DataModel, *, app: str, key: str) -> asyncio.Future[None] | None:
+        """Hand ``message`` over to be published, and return once it has been taken,
+        without waiting for it to be delivered. The result is a future that resolves
+        when it is delivered, or raises why it was not; ``None`` when it already is.
+        Messages handed over in order are delivered in order.
+
+        This lets a caller keep several messages in flight instead of waiting for each
+        acknowledgement. The default publishes and waits; a transport that can overlap
+        deliveries overrides it."""
+        await self.publish(message, app=app, key=key)
         return None
 
     def subscribe(
@@ -242,6 +255,10 @@ _MAX_RETRY_S = 2.0
 #: How many of the latest send times an outbox keeps, for its drop report.
 _TIMED_SENDS = 512
 
+#: How many data messages an outbox keeps handed over but not yet acknowledged. Past
+#: it the outbox waits, its queue fills and drops its oldest, as before.
+_MAX_IN_FLIGHT = 64
+
 #: How often an outbox checks how late the event loop wakes it.
 _LAG_PROBE_S = 0.05
 
@@ -258,7 +275,10 @@ class Outbox:
     ``publish`` queues and returns; a task sends in order. When more than
     ``maxsize`` data messages wait, the oldest is dropped (a live stream would
     rather lose a stale frame than fall further behind), and reported under
-    ``keep_up``. A data message the transport refuses is dropped too.
+    ``keep_up``. Data messages are handed to the transport without waiting for
+    each to be acknowledged, up to ``_MAX_IN_FLIGHT`` at once, so a broker's round
+    trip does not cap the rate. A data message the transport refuses, or fails to
+    deliver, is dropped too.
 
     Control messages (commands, answers to commands, errors and
     ``PipelineClosed``), and a data message published with ``keep=True`` (a
@@ -297,7 +317,11 @@ class Outbox:
         self._task: asyncio.Task | None = None
         self._probe: asyncio.Task | None = None
         self.published = self.failed = self.dropped = self.undelivered = 0
-        #: How long the transport took over each of the last sends (seconds).
+        #: Data messages handed over and not yet acknowledged, and the room left for more.
+        self._in_flight: set[asyncio.Future] = set()
+        self._slots = asyncio.Semaphore(_MAX_IN_FLIGHT)
+        #: How long each of the last data messages took from being handed over to
+        #: being acknowledged (seconds).
         self._send_times: deque[float] = deque(maxlen=_TIMED_SENDS)
         #: How late the event loop woke the probe each time (seconds).
         self._lags: deque[float] = deque(maxlen=_TIMED_SENDS)
@@ -306,19 +330,24 @@ class Outbox:
         )
 
     def _timing(self) -> str | None:
-        """Where the time goes, for a drop report: how long the last sends took (the outbox
-        sends one message at a time, so its rate cannot exceed one per send time), the
-        transport's own steps, and how late the event loop runs what it is asked to."""
+        """Where the time goes, for a drop report: how long the last messages took to be
+        acknowledged, the transport's own steps, how many are in flight (at
+        ``_MAX_IN_FLIGHT`` the outbox waits), and how late the event loop runs what it is
+        asked to."""
         parts = []
         if self._send_times:
             median, p95, worst = _percentiles(self._send_times)
-            sends = f"last {len(self._send_times)} sends took {median:.0f} ms median, {p95:.0f} ms p95, {worst:.0f} ms max"
+            sends = (
+                f"last {len(self._send_times)} sends took {median:.0f} ms median, {p95:.0f} ms p95, "
+                f"{worst:.0f} ms max to be acknowledged"
+            )
             steps = self.transport.timing()
             parts.append(f"{sends} ({steps})" if steps else sends)
+        parts.append(f"{len(self._in_flight)} of {_MAX_IN_FLIGHT} in flight")
         if self._lags:
             median, p95, worst = _percentiles(self._lags)
             parts.append(f"event loop lag {median:.0f} ms median, {p95:.0f} ms p95, {worst:.0f} ms max")
-        return "; ".join(parts) or None
+        return "; ".join(parts)
 
     async def _watch_loop(self) -> None:
         """Note how late the event loop wakes this task: what a busy loop does to every send."""
@@ -353,6 +382,8 @@ class Outbox:
             async with asyncio.timeout(timeout):
                 while self._queue:
                     await self._send(*self._pop())
+                if self._in_flight:
+                    await asyncio.wait(list(self._in_flight))
 
     def _drop_oldest_data(self) -> None:
         for i, (_, _, _, kept) in enumerate(self._queue):
@@ -377,8 +408,7 @@ class Outbox:
 
     async def _send(self, message: DataModel, queued_at: float, key: str, kept: bool) -> None:
         if not kept:
-            with contextlib.suppress(Exception):  # counted and logged by _attempt
-                await self._attempt(message, key)
+            await self._send_data(message, key)
             return
         give_up_at, wait, error = queued_at + self.deadline, _RETRY_S, None
         while time.monotonic() < give_up_at:
@@ -391,20 +421,54 @@ class Outbox:
             wait = min(wait * 2, _MAX_RETRY_S)
         self._give_up(message, error)
 
-    async def _attempt(self, message: DataModel, key: str) -> None:
+    async def _send_data(self, message: DataModel, key: str) -> None:
+        """Hand a data message over, and leave its acknowledgement to ``_acknowledged``."""
+        await self._slots.acquire()
         started = time.perf_counter()
+        try:
+            pending = await self.transport.send(message, app=self.app, key=key)
+        except BaseException as error:
+            self._slots.release()
+            if not isinstance(error, Exception):
+                raise
+            self._count_failure(message, key, error)
+            return
+        if pending is None:  # the transport has already delivered it
+            self._slots.release()
+            self._delivered(started)
+            return
+        self._in_flight.add(pending)
+        pending.add_done_callback(lambda done: self._acknowledged(done, message, key, started))
+
+    def _acknowledged(self, done: asyncio.Future, message: DataModel, key: str, started: float) -> None:
+        self._in_flight.discard(done)
+        self._slots.release()
+        if done.cancelled():
+            return
+        if (error := done.exception()) is not None:
+            self._count_failure(message, key, error)
+        else:
+            self._delivered(started)
+
+    def _delivered(self, started: float) -> None:
+        self._send_times.append(time.perf_counter() - started)
+        self.published += 1
+
+    def _count_failure(self, message: DataModel, key: str, error: BaseException) -> None:
+        self.failed += 1
+        if self.failed <= 3 or self.failed % 50 == 0:
+            logger.warning(
+                "%s@%s: could not publish %s (%d failed): %s",
+                self.app, key, type(message).__name__, self.failed, error,
+            )
+
+    async def _attempt(self, message: DataModel, key: str) -> None:
+        """Publish a control message, and wait for the transport to have it."""
         try:
             await self.transport.publish(message, app=self.app, key=key)
         except Exception as error:
-            self.failed += 1
-            if self.failed <= 3 or self.failed % 50 == 0:
-                logger.warning(
-                    "%s@%s: could not publish %s (%d failed): %s",
-                    self.app, key, type(message).__name__, self.failed, error,
-                )
+            self._count_failure(message, key, error)
             raise
-        finally:
-            self._send_times.append(time.perf_counter() - started)
         self.published += 1
 
     def _give_up(self, message: DataModel, error: Exception | None) -> None:
