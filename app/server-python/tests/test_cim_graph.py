@@ -226,8 +226,12 @@ def test_a_socket_opened_while_the_grid_loads_gets_the_state_once_it_is_loaded(m
 # ``needs_profiles``, no network at all) — that is the point of this path.
 
 
-def test_reset_is_refused_for_an_unmanaged_store_but_switches_still_work(monkeypatch):
+def test_reset_is_refused_for_an_unmanaged_store_but_writes_still_work(monkeypatch):
+    """At the Writer level, not through the REST/simulation stack (ADR-016): operating a switch over
+    REST now dispatches a command to the live simulation, which this test does not set up — what is
+    under test here is ``Store``/``Writer``'s own ``managed`` gating, not the simulation."""
     from pswamp_core.cim import LocalStore, Store
+    from pswamp_models.cim import CimEdit, CimEdits
 
     import cim_graph.grid as grid_module
 
@@ -236,13 +240,32 @@ def test_reset_is_refused_for_an_unmanaged_store_but_switches_still_work(monkeyp
     Store(SETTINGS, backend).fill()  # seeded as someone else would have, before this process starts
     shared = Store(SETTINGS, backend, managed=False)
     monkeypatch.setattr(grid_module, "open_store", lambda settings=None: shared)
-    from fastapi.testclient import TestClient
 
-    import server as server_module
+    writer = grid_module.Writer()
+    assert writer.managed is False
+    edits = CimEdits(
+        producer="rtsim", cause="command", edits=[CimEdit(mRID=COUPLER, attribute="Switch.open", value=True)]
+    )
+    assert writer.apply(edits) == [f"{COUPLER} Switch.open = True"]
+    assert writer.state().switches[COUPLER] is True
+    with pytest.raises(PermissionError, match="does not manage"):
+        writer.reset()
 
-    with TestClient(server_module.app) as client:
+
+def test_reset_is_a_409_over_rest_for_an_unmanaged_store(monkeypatch):
+    """The REST-level ``_managed()`` guard on ``/reset`` (api.py), not re-exercised by the Writer-level
+    test above. No live simulation needed: ``/reset`` does not depend on one (see cim_graph/api.py's
+    module docstring), so this uses the simpler, non-simulated server setup."""
+    from pswamp_core.cim import LocalStore, Store
+
+    import cim_graph.grid as grid_module
+
+    backend = LocalStore("shared-demo-2")
+    Store(SETTINGS, backend).fill()
+    shared = Store(SETTINGS, backend, managed=False)
+    monkeypatch.setattr(grid_module, "open_store", lambda settings=None: shared)
+
+    with start(monkeypatch, simulated=False) as client:
         ready(client)
-        opened = client.post(f"/api/cim-graph/switches/{COUPLER}?client_id=301", json={"open": True})
-        assert opened.json()["applied"] == "open switch"
-        refused = client.post("/api/cim-graph/reset?client_id=301")
+        refused = client.post("/api/cim-graph/reset?client_id=302")
         assert refused.status_code == 409 and "does not manage" in refused.json()["detail"]

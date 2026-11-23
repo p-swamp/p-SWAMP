@@ -301,7 +301,7 @@ def test_a_backend_s_store_is_read_and_never_loaded_reset_or_written(grid):
     store = open_store(THEIRS)
     assert not store.owned and not store.managed and store.version() == 0
     reader = connect_reader(THEIRS, timeout=5)
-    assert len(analog_table(reader)) > 0
+    assert len(measurement_table(reader)) > 0
     with pytest.raises(PermissionError, match="did not load"):
         store.writer_backend()
     for doing in (store.fill, store.reset):
