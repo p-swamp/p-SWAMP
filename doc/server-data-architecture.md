@@ -732,7 +732,12 @@ each input had been in flight when read (transports stamp the send time,
 `pswamp_models.common.sent_at`, never on the wire). Past the module's `keep_up` policy (by
 default any drop, or input older than 2 s), it reports once on falling behind,
 at most every 5 s while behind, and once on catching up. A run's outbox does
-the same when it has to drop what it cannot publish.
+the same when it has to drop what it cannot publish, and its report adds where
+the time goes: how long the transport took over its last sends (median, 95th
+percentile, maximum; the outbox sends one message at a time, so that time caps
+its rate), the transport's own steps (Kafka: serialising, handing over to the
+producer, waiting for the acknowledgement), and how late the event loop wakes a
+task that asked for 50 ms.
 
 *Why.* Dropping stale frames is right for a live stream, and silent. Under
 load, that silence hides exactly what an operator needs to know. The reports

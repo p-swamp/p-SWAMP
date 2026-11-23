@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import re
 import time
 from typing import ClassVar
 
@@ -84,3 +85,30 @@ async def test_a_full_outbox_reports_what_it_drops():
         _, report = await asyncio.wait_for(errors.get(), 5)
         await outbox.close()
     assert report.message == "the publisher cannot publish as fast as it produces" and outbox.dropped == 2
+
+
+async def test_the_outbox_report_says_where_its_time_goes():
+    class SlowBroker(InMemoryTransport):
+        async def publish(self, message, *, app, key):
+            await asyncio.sleep(0.02)
+            await super().publish(message, app=app, key=key)
+
+        def timing(self):
+            return "ack 20.0/21.0 ms median/p95"
+
+    broker = SlowBroker()
+    outbox = Outbox(broker, app="a", key="k", maxsize=1, keep_up=KeepUp(), label="the publisher")
+    with broker.subscribe(ErrorEvent, app="a") as errors:
+        outbox.start()
+        for i in range(3):  # sent one at a time, each timed
+            outbox.publish(measurement(i))
+            await asyncio.sleep(0.05)
+        outbox.publish(measurement(3))
+        outbox.publish(measurement(4))  # the queue of one overflows
+        _, report = await asyncio.wait_for(errors.get(), 5)
+        await outbox.close()
+    assert re.fullmatch(
+        r"1 dropped, last 3 sends took \d+ ms median, \d+ ms p95, \d+ ms max \(ack 20\.0/21\.0 ms median/p95\); "
+        r"event loop lag \d+ ms median, \d+ ms p95, \d+ ms max",
+        report.detail,
+    )

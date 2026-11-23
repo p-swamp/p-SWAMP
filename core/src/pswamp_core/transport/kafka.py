@@ -46,6 +46,7 @@ from __future__ import annotations
 import asyncio
 import heapq
 import time
+from collections import deque
 from collections.abc import Sequence
 from typing import TYPE_CHECKING, Any
 
@@ -53,7 +54,7 @@ from pswamp_models.common import Command, stamp_sent_at
 
 from ..log import get_logger
 from ..settings import EnvSetting
-from . import _CONTROL, Transport
+from . import _CONTROL, Transport, _percentiles
 
 if TYPE_CHECKING:
     from pswamp_models.common import DataModel
@@ -79,6 +80,9 @@ _POLL_MS = 200
 _RECONNECT_DELAY, _MAX_RECONNECT_DELAY = 1.0, 30.0
 #: How often the consumer checks that the topics it holds still exist.
 _TOPIC_CHECK_S = 2.0
+
+#: How many publishes' step times the transport keeps, for the outbox's drop report.
+_TIMED_PUBLISHES = 512
 
 
 class KafkaTransport(Transport):
@@ -109,6 +113,10 @@ class KafkaTransport(Transport):
         #: consumer resumes.
         self._resume_at: dict[str, int] = {}
         self._consumer_task: asyncio.Task | None = None
+        #: How long each step of the last publishes took (seconds).
+        self._steps: dict[str, deque[float]] = {
+            name: deque(maxlen=_TIMED_PUBLISHES) for name in ("serialise", "hand over", "ack")
+        }
 
     async def open(self) -> None:
         async with self._open_lock:
@@ -143,10 +151,28 @@ class KafkaTransport(Transport):
         topic = self.topic(type(message), app)
         await self._create(topic)
         try:
-            await self._producer.send_and_wait(topic, value=message.model_dump_json().encode(), key=key.encode())
+            began = time.perf_counter()
+            value = message.model_dump_json().encode()
+            serialised = time.perf_counter()
+            pending = await self._producer.send(topic, value=value, key=key.encode())
+            handed_over = time.perf_counter()
+            await pending  # the broker's acknowledgement
+            acknowledged = time.perf_counter()
         except Exception:
             self._created.discard(topic)  # it may be gone: make it again on the next try
             raise
+        self._steps["serialise"].append(serialised - began)
+        self._steps["hand over"].append(handed_over - serialised)
+        self._steps["ack"].append(acknowledged - handed_over)
+
+    def timing(self) -> str | None:
+        if not self._steps["ack"]:
+            return None
+        steps = []
+        for name, seconds in self._steps.items():
+            median, p95, _ = _percentiles(seconds)
+            steps.append(f"{name} {median:.1f}/{p95:.1f}")
+        return ", ".join(steps) + " ms median/p95"
 
     async def _create(self, topic: str) -> None:
         """Create ``topic`` if the broker lacks it. A refusal is logged and left

@@ -15,6 +15,7 @@ outbox reports the same way when it has to drop what it cannot publish.
 from __future__ import annotations
 
 import time
+from collections.abc import Callable
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
@@ -51,13 +52,24 @@ class KeepUpMonitor:
         what: The report's wording after the label, e.g. "is not keeping up with pmu.frame".
         policy: The thresholds; ``None`` reports nothing.
         label: Who the report names, if not ``source``.
+        describe: Called for each report; what it returns, if anything, is added to the
+            report's detail (the outbox says how long its sends took).
     """
 
-    def __init__(self, source: str, what: str, policy: KeepUp | None, *, label: str | None = None) -> None:
+    def __init__(
+        self,
+        source: str,
+        what: str,
+        policy: KeepUp | None,
+        *,
+        label: str | None = None,
+        describe: Callable[[], str | None] | None = None,
+    ) -> None:
         self.source = source
         self.what = what
         self.policy = policy
         self.label = label or source
+        self.describe = describe
         self.reports = 0
         self.behind = False
         self._dropped_total = 0
@@ -99,6 +111,8 @@ class KeepUpMonitor:
         detail = f"{self._dropped} dropped"
         if self._oldest is not None:
             detail += f", oldest input read {self._oldest:.1f} s after it was sent"
+        if self.describe is not None and (extra := self.describe()):
+            detail += f", {extra}"
         logger.warning("%s: %s", message, detail)
         self.reports += 1
         out.publish(ErrorEvent(timestamp=utcnow(), source=self.source, message=message, detail=detail))

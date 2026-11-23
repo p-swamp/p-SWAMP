@@ -42,7 +42,7 @@ import os
 import time
 from abc import ABC, abstractmethod
 from collections import deque
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
 from typing import TYPE_CHECKING, ClassVar
 
 from pswamp_models.common import Command, ErrorEvent, ModuleStarted, PipelineClosed, ResultEnvelope, stamp_sent_at
@@ -70,6 +70,18 @@ __all__ = [
 TRANSPORT_VARIABLE = "PSWAMP_TRANSPORT"
 
 logger = get_logger("pswamp_core.transport")
+
+
+def _percentiles(seconds: Iterable[float]) -> tuple[float, float, float]:
+    """The median, the 95th percentile and the maximum of ``seconds``, in milliseconds."""
+    ordered = sorted(seconds)
+    if not ordered:
+        return 0.0, 0.0, 0.0
+
+    def at(fraction: float) -> float:
+        return ordered[min(len(ordered) - 1, int(fraction * len(ordered)))] * 1000
+
+    return at(0.5), at(0.95), ordered[-1] * 1000
 
 
 class TransportSubscription(Subscription):
@@ -138,6 +150,11 @@ class Transport(Configurable, ABC):
     async def publish(self, message: DataModel, *, app: str, key: str) -> None:
         """Send ``message`` on its class's topic in ``app``, under ``key``.
         Raises on failure."""
+
+    def timing(self) -> str | None:
+        """Where the last publishes spent their time, if this transport keeps track:
+        the outbox adds it to its drop report."""
+        return None
 
     def subscribe(
         self,
@@ -222,6 +239,12 @@ CONTROL_DEADLINE_S = 10.0
 _RETRY_S = 0.25
 _MAX_RETRY_S = 2.0
 
+#: How many of the latest send times an outbox keeps, for its drop report.
+_TIMED_SENDS = 512
+
+#: How often an outbox checks how late the event loop wakes it.
+_LAG_PROBE_S = 0.05
+
 
 def _is_control(message: DataModel) -> bool:
     """``_CONTROL``, or a result that answers a command: someone asked for it."""
@@ -272,8 +295,38 @@ class Outbox:
         self._data = 0
         self._wake = asyncio.Event()
         self._task: asyncio.Task | None = None
+        self._probe: asyncio.Task | None = None
         self.published = self.failed = self.dropped = self.undelivered = 0
-        self.monitor = KeepUpMonitor(app, "cannot publish as fast as it produces", keep_up, label=label)
+        #: How long the transport took over each of the last sends (seconds).
+        self._send_times: deque[float] = deque(maxlen=_TIMED_SENDS)
+        #: How late the event loop woke the probe each time (seconds).
+        self._lags: deque[float] = deque(maxlen=_TIMED_SENDS)
+        self.monitor = KeepUpMonitor(
+            app, "cannot publish as fast as it produces", keep_up, label=label, describe=self._timing
+        )
+
+    def _timing(self) -> str | None:
+        """Where the time goes, for a drop report: how long the last sends took (the outbox
+        sends one message at a time, so its rate cannot exceed one per send time), the
+        transport's own steps, and how late the event loop runs what it is asked to."""
+        parts = []
+        if self._send_times:
+            median, p95, worst = _percentiles(self._send_times)
+            sends = f"last {len(self._send_times)} sends took {median:.0f} ms median, {p95:.0f} ms p95, {worst:.0f} ms max"
+            steps = self.transport.timing()
+            parts.append(f"{sends} ({steps})" if steps else sends)
+        if self._lags:
+            median, p95, worst = _percentiles(self._lags)
+            parts.append(f"event loop lag {median:.0f} ms median, {p95:.0f} ms p95, {worst:.0f} ms max")
+        return "; ".join(parts) or None
+
+    async def _watch_loop(self) -> None:
+        """Note how late the event loop wakes this task: what a busy loop does to every send."""
+        loop = asyncio.get_running_loop()
+        while True:
+            due = loop.time() + _LAG_PROBE_S
+            await asyncio.sleep(_LAG_PROBE_S)
+            self._lags.append(max(0.0, loop.time() - due))
 
     def publish(self, message: DataModel, key: str | None = None, *, keep: bool = False) -> None:
         """Queue ``message``, under ``key`` or the outbox's key as it is now;
@@ -288,12 +341,14 @@ class Outbox:
     def start(self) -> None:
         if self._task is None:
             self._task = asyncio.create_task(self._run(), name=f"{self.app}@{self.key}.outbox")
+            self._probe = asyncio.create_task(self._watch_loop(), name=f"{self.app}@{self.key}.outbox.lag")
 
     async def close(self, timeout: float = 2.0) -> None:
         """Send what is still queued (a ``PipelineClosed``, say), then stop."""
-        task, self._task = self._task, None
-        if task is not None:
-            await cancel_and_wait(task)
+        tasks = [t for t in (self._task, self._probe) if t is not None]
+        self._task = self._probe = None
+        if tasks:
+            await cancel_and_wait(*tasks)
         with contextlib.suppress(TimeoutError):
             async with asyncio.timeout(timeout):
                 while self._queue:
@@ -337,6 +392,7 @@ class Outbox:
         self._give_up(message, error)
 
     async def _attempt(self, message: DataModel, key: str) -> None:
+        started = time.perf_counter()
         try:
             await self.transport.publish(message, app=self.app, key=key)
         except Exception as error:
@@ -347,6 +403,8 @@ class Outbox:
                     self.app, key, type(message).__name__, self.failed, error,
                 )
             raise
+        finally:
+            self._send_times.append(time.perf_counter() - started)
         self.published += 1
 
     def _give_up(self, message: DataModel, error: Exception | None) -> None:
