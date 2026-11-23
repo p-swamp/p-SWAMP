@@ -35,8 +35,10 @@ calls may run in its own), unless ``http_client`` supplies one, as the tests do.
 from __future__ import annotations
 
 import asyncio
+import cmath
 import contextlib
 import itertools
+import math
 from collections.abc import AsyncIterator, AsyncGenerator
 from datetime import datetime, timedelta
 from typing import Any
@@ -56,6 +58,7 @@ from pswamp_models.remote_data import (
     ErrorResponse,
     ErrorMessage,
     EndResponse,
+    Phasor,
     RecordResponse,
     RecordMessage,
 )
@@ -63,6 +66,102 @@ from pswamp_models.remote_data import (
 __all__ = ["RemoteHistory"]
 
 _MICROSECOND = timedelta(microseconds=1)
+
+#: What each station contributes to a frame: (measurement, unit).
+_STATION_COLUMNS = (
+    ("f", "Hz"),
+    ("df", "Hz/s"),
+    ("P", "MW"),
+    ("Q", "Mvar"),
+    ("v_dev", "%"),
+    ("VUF", "%"),
+)
+
+#: Where each phase's angle sits relative to L1 in the service's data: L2 lags L1 by 120
+#: degrees, L3 leads it by 120 (the usual positive sequence).
+_PHASE_OFFSET_DEG = {"L1": 0.0, "L2": -120.0, "L3": 120.0}
+
+
+def _voltage_groups(phasors: list[Phasor]) -> list[tuple[int, dict[str, Phasor]]]:
+    """The voltage phasors by station, level and bank: ``(kv, {phase: phasor})`` each."""
+    groups: dict[tuple, tuple[int, dict[str, Phasor]]] = {}
+    for phasor in phasors:
+        if phasor.kind == "U":
+            groups.setdefault((phasor.station, phasor.kv, phasor.bank), (phasor.kv, {}))[1][phasor.phase] = phasor
+    return list(groups.values())
+
+
+def _sequences(group: dict[str, Phasor]) -> tuple[complex, complex] | None:
+    """The positive and the negative sequence phasor (V, phase to neutral) of a complete
+    group, with the service's phase rotation as the positive one; ``None`` if a phase is missing."""
+    if group.keys() != _PHASE_OFFSET_DEG.keys():
+        return None
+    positive = negative = 0j
+    for phase, phasor in group.items():
+        voltage = cmath.rect(phasor.magnitude, math.radians(phasor.angle))
+        shift = cmath.rect(1.0, math.radians(_PHASE_OFFSET_DEG[phase]))
+        positive += voltage / shift
+        negative += voltage * shift
+    return positive / 3, negative / 3
+
+
+def _voltage_unbalance(phasors: list[Phasor]) -> float | None:
+    """Percent: negative-sequence over positive-sequence voltage; the worst of the levels."""
+    ratios = []
+    for _, group in _voltage_groups(phasors):
+        sequences = _sequences(group)
+        if sequences is not None and abs(sequences[0]) > 0:
+            ratios.append(abs(sequences[1]) / abs(sequences[0]) * 100)
+    return max(ratios, default=None)
+
+
+def _voltage_deviation(phasors: list[Phasor]) -> float | None:
+    """Percent by which a voltage magnitude (V, phase to neutral) misses the nominal
+    ``kv / sqrt(3)`` of its level; the one furthest off, with its sign."""
+    return max(
+        ((phasor.magnitude / (phasor.kv * 1000 / math.sqrt(3)) - 1) * 100
+         for phasor in phasors if phasor.kind == "U" and phasor.kv > 0),
+        key=abs,
+        default=None,
+    )
+
+
+def _feeder_flows(phasors: list[Phasor]) -> list[tuple[float, float]]:
+    """Three-phase active (MW) and reactive (Mvar) power of each feeder: each of its current
+    phasors with the voltage phasor of the same station, level and phase (the first, if
+    several), ``P = V I cos(a)`` and ``Q = V I sin(a)`` with ``a`` the voltage angle minus
+    the current angle, summed over the phases. A feeder is the current phasors of one station,
+    level and bank whose names differ only by phase."""
+    voltages: dict[tuple, Phasor] = {}
+    for phasor in phasors:
+        if phasor.kind == "U":
+            voltages.setdefault((phasor.station, phasor.kv, phasor.phase), phasor)
+    feeders: dict[tuple, list[float]] = {}
+    for current in phasors:
+        voltage = voltages.get((current.station, current.kv, current.phase)) if current.kind == "I" else None
+        if voltage is None:
+            continue
+        feeder = (current.station, current.kv, current.bank, current.name.removesuffix(f"_{current.phase}"))
+        flow = feeders.setdefault(feeder, [0.0, 0.0])
+        apparent = voltage.magnitude * current.magnitude
+        phi = math.radians(voltage.angle - current.angle)
+        flow[0] += apparent * math.cos(phi)
+        flow[1] += apparent * math.sin(phi)
+    return [(active / 1e6, reactive / 1e6) for active, reactive in feeders.values()]
+
+
+def _through(flows: list[float]) -> float:
+    """What passes a station: the larger of what its feeders bring in and what they take
+    out. Which direction is positive does not matter."""
+    return max(sum(f for f in flows if f > 0), -sum(f for f in flows if f < 0))
+
+
+def _power(phasors: list[Phasor]) -> tuple[float | None, float | None]:
+    """Active (MW) and reactive (Mvar) power through the station; ``None`` without a feeder."""
+    flows = _feeder_flows(phasors)
+    if not flows:
+        return None, None
+    return _through([active for active, _ in flows]), _through([reactive for _, reactive in flows])
 
 
 class RemoteHistory(Playable, SourceModule):
@@ -224,34 +323,35 @@ class RemoteHistory(Playable, SourceModule):
 
 
     def _frame(self, records: list[RecordMessage]) -> PmuFrame:
+        measurements = [m for m, _ in _STATION_COLUMNS]
+        units = [u for _, u in _STATION_COLUMNS]
         station: list[str] = []
-        channel: list[str] = []
-        measurement: list[str] = []
-        units: list[str] = []
         values: list[float | None] = []
         seen: set[str] = set()
         for record in records:
             if record.id in seen:
                 raise RuntimeError(f"{self.source}: duplicate station {record.id!r} at {record.ts}")
             seen.add(record.id)
-            station.extend([record.id, record.id])
-            channel.extend(["f", "df"])
-            measurement.extend(["f", "df"])
-            units.extend(["Hz", "Hz/s"])
-            values.extend([record.frequency, record.rocof])
-            for phasor in record.phasors:
-                voltage = phasor.kind == "U"
-                station.extend([record.id, record.id])
-                channel.extend([phasor.name, phasor.name])
-                measurement.extend([
-                    "V_Magnitude" if voltage else "I_Magnitude",
-                    "V_Angle"     if voltage else "I_Angle",
-                ])
-                units.extend(["kV" if voltage else "A", "deg"])
-                values.extend([phasor.magnitude / 1000 if voltage else phasor.magnitude, phasor.angle])
+            phasors = [phasor for phasor in record.phasors if phasor.magnitude > 0]  # zero is a missing value
+            active, reactive = _power(phasors)
+            station.extend([record.id] * len(_STATION_COLUMNS))
+            values.extend([
+                record.frequency,
+                record.rocof,
+                active,
+                reactive,
+                _voltage_deviation(phasors),
+                _voltage_unbalance(phasors),
+            ])
         return PmuFrame(
             timestamp=ensure_utc(records[0].ts), mRID=self.source,
-            header=PmuHeader(station=station, channel=channel, measurement=measurement, units=units, data_rate=50.0),
+            header=PmuHeader(
+                station=station,
+                channel=measurements * len(records),
+                measurement=measurements * len(records),
+                units=units * len(records),
+                data_rate=50.0,
+            ),
             values=values,
         )
 

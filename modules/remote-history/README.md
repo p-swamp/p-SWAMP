@@ -32,10 +32,19 @@ at a time, so closing the stream early (a seek) closes the connection, which is
 the service's cue to stop. Each record describes one station at one timestamp,
 ordered by timestamp then station. Consecutive records with equal `msg.ts` are
 combined into one `PmuFrame`; the last group is emitted on the terminal `end`
-line. Frames use a 20 ms interval (50 Hz), station IDs as labels, frequency and
-ROCOF as `f` and `df`, voltage magnitudes converted from V to kV, current in A,
-and angles in degrees. The frame's stream ID is the source instance name,
-not the request ID.
+line. Frames use a 20 ms interval (50 Hz) and station IDs as labels. Each station
+contributes six columns, computed here from its record; the individual phasors
+are not passed on:
+
+| Measurement | Unit | From |
+|---|---|---|
+| `f`, `df` | Hz, Hz/s | the record's `frequency` and `rocof` |
+| `P`, `Q` | MW, Mvar | what passes the station: for each feeder (the current phasors of one station, level and bank whose names differ only by phase), `P = V·I·cos(a)` and `Q = V·I·sin(a)` with the voltage of the same station, level and phase and `a` the voltage angle minus the current angle, summed over the phases. The station's value is the larger of the feeders' positive and negative sums, so the direction the current is counted in does not matter. Voltage is phase to neutral. Empty without a feeder |
+| `v_dev` | % | the voltage magnitude furthest from the nominal `kv/√3` of its level, signed |
+| `VUF` | % | voltage unbalance factor: negative-sequence over positive-sequence voltage; the worst of the levels with all three phases |
+
+The sequences assume the usual rotation: L2 lags L1 by 120°, L3 leads it by 120°.
+A phasor with magnitude 0 is taken as missing and left out of every column.
 
 A page includes every station at its final timestamp, even if this exceeds
 `page`. A full page is followed by a query from one

@@ -362,14 +362,106 @@ async def test_station_records_become_one_frame_per_timestamp():
     frames = [f async for f in over(create_app(Served("served")), page=1).aread()]
     assert [f.timestamp for f in frames] == [f.timestamp for f in FRAMES]
     assert all(f.header.stations == ["NO 12345", "NO 54321"] for f in frames)
-    assert all(f.header.data_rate == 50.0 and f.header.n_columns == 28 for f in frames)
+    assert all(f.header.data_rate == 50.0 and f.header.n_columns == 12 for f in frames)
     first = RecordResponse.test_record("q", T0, 1, "NO 12345").msg
-    assert frames[0].values[:4] == [
-        first.frequency, first.rocof, first.phasors[0].magnitude / 1000, first.phasors[0].angle,
+    assert frames[0].values[:2] == [first.frequency, first.rocof]
+    assert frames[0].header.measurement[:6] == ["f", "df", "P", "Q", "v_dev", "VUF"]
+    assert frames[0].header.units[:6] == ["Hz", "Hz/s", "MW", "Mvar", "%", "%"]
+    assert frames[0].header.station[:6] == ["NO 12345"] * 6 and frames[0].header.station[6:] == ["NO 54321"] * 6
+
+
+def voltage_set(kv, magnitudes, angles, *, station="a", kind="U", tag="", phases=("L1", "L2", "L3")):
+    from pswamp_models.remote_data import Phasor
+
+    return [
+        Phasor(
+            name=f"{kv}_{station}_{kind}{tag}_{phase}", station=station, kv=kv, phase=phase, kind=kind,
+            magnitude=magnitudes[phase], angle=angles[phase],
+        )
+        for phase in phases
     ]
-    assert frames[0].header.measurement[:4] == ["f", "df", "V_Magnitude", "V_Angle"]
-    assert frames[0].header.units[:4] == ["Hz", "Hz/s", "kV", "deg"]
-    assert frames[0].header.units[8:10] == ["A", "deg"]
+
+
+def test_a_station_is_summarised_by_power_voltage_deviation_and_unbalance():
+    import math
+
+    from pswamp_models.remote_data import RecordMessage
+
+    nominal = 420_000 / math.sqrt(3)
+    angles = {"L1": 10.0, "L2": -110.0, "L3": 130.0}  # a balanced set: L2 120 behind L1, L3 120 ahead
+    magnitudes = {"L1": nominal, "L2": 1.05 * nominal, "L3": nominal}  # L2 is 5 % high
+    current_angles = {phase: angle - 60 for phase, angle in angles.items()}  # the current lags by 60 degrees
+    phasors = voltage_set(420, magnitudes, angles) + voltage_set(
+        420, dict.fromkeys(angles, 100.0), current_angles, kind="I"
+    )
+    record = RecordMessage(ts=T0, id="S", name="S", frequency=50.0, rocof=0.01, phasors=phasors)
+
+    frame = RemoteHistory(url="u")._frame([record])
+
+    apparent = 100 * sum(magnitudes.values()) / 1e6
+    positive = 1 + 0.05 / 3  # a 5 % error on one phase is a third of it in each sequence
+    assert frame.values == pytest.approx([
+        50.0,
+        0.01,
+        apparent * math.cos(math.radians(60)),
+        apparent * math.sin(math.radians(60)),
+        5.0,
+        (0.05 / 3) / positive * 100,
+    ])
+
+
+def test_power_is_what_passes_the_station_whichever_way_the_current_is_counted():
+    import math
+
+    from pswamp_models.remote_data import RecordMessage
+
+    nominal = 420_000 / math.sqrt(3)
+    angles = {"L1": 0.0, "L2": -120.0, "L3": 120.0}
+    voltages = voltage_set(420, dict.fromkeys(angles, nominal), angles)
+    flowing_in = voltage_set(420, dict.fromkeys(angles, 100.0), angles, kind="I", tag="1")  # in phase: P > 0
+    flowing_out = voltage_set(  # opposite: P < 0, and smaller
+        420, dict.fromkeys(angles, 60.0), {phase: angle + 180 for phase, angle in angles.items()}, kind="I", tag="2"
+    )
+    through = 3 * nominal * 100 / 1e6
+
+    def power(phasors):
+        record = RecordMessage(ts=T0, id="S", name="S", frequency=50.0, rocof=0.0, phasors=phasors)
+        return RemoteHistory(url="u")._frame([record]).values[2:4]
+
+    assert power(voltages + flowing_in + flowing_out) == pytest.approx([through, 0.0], abs=1e-9)
+    assert power(voltages + flowing_out + flowing_in) == pytest.approx([through, 0.0], abs=1e-9)
+
+
+def test_a_phasor_with_magnitude_zero_is_treated_as_missing():
+    import math
+
+    from pswamp_models.remote_data import RecordMessage
+
+    nominal = 420_000 / math.sqrt(3)
+    angles = {"L1": 0.0, "L2": -120.0, "L3": 120.0}
+    magnitudes = {"L1": 0.0, "L2": nominal, "L3": nominal}
+    record = RecordMessage(ts=T0, id="S", name="S", frequency=50.0, rocof=0.0, phasors=voltage_set(420, magnitudes, angles))
+
+    v_dev, vuf = RemoteHistory(url="u")._frame([record]).values[4:6]
+
+    assert v_dev == pytest.approx(0.0, abs=1e-9) and vuf is None  # not -100 %, not a ratio of nothing
+
+
+def test_a_level_missing_a_phase_has_no_unbalance():
+    from pswamp_models.remote_data import RecordMessage
+
+    angles = {"L1": 10.0, "L2": -110.0, "L3": 130.0}
+    incomplete = voltage_set(420, dict.fromkeys(angles, 242_487.0), angles, phases=("L1", "L2"))
+    record = RecordMessage(ts=T0, id="S", name="S", frequency=50.0, rocof=0.0, phasors=incomplete)
+
+    assert RemoteHistory(url="u")._frame([record]).values[5] is None
+
+
+def test_a_station_without_phasors_has_only_its_frequency():
+    from pswamp_models.remote_data import RecordMessage
+
+    record = RecordMessage(ts=T0, id="S", name="S", frequency=50.0, rocof=0.0, phasors=[])
+    assert RemoteHistory(url="u")._frame([record]).values == [50.0, 0.0, None, None, None, None]
 
 
 async def test_station_filter_is_applied_before_grouping():

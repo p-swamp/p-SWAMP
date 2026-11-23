@@ -52,11 +52,21 @@ export function PmuTestStreamerPage() {
     <Card className="w-full max-w-3xl gap-0">
       <CardHeader className="border-b">
         <CardTitle className="text-lg">PMU Test Streamer</CardTitle>
-        <span className="text-gray-500">
+        <div className="text-gray-500">
           A PMU source through the core pipeline: source → frame statistics →
           excursion, with a range summary on request. E2E example and used for integration testing. <em> Do not use this page to do p-SWAMP experiments; use <code>pswamp new subapp</code> to generate a new
           page/subapp instead. 🙂</em>
-        </span>
+          <table className="mt-3 text-sm [&_th]:pr-4 [&_th]:text-left [&_th]:font-medium">
+            <tbody>
+              <tr><th>f</th><td>frequency</td></tr>
+              <tr><th>df</th><td>rate of change of frequency</td></tr>
+              <tr><th>P</th><td>active power</td></tr>
+              <tr><th>Q</th><td>reactive power</td></tr>
+              <tr><th>v_dev</th><td>voltage deviation</td></tr>
+              <tr><th>VUF</th><td>voltage unbalance</td></tr>
+            </tbody>
+          </table>
+        </div>
         <CardAction className="self-center">
           {connected && live ? (
             <Badge className="bg-red-600 text-white" aria-label="Live">

@@ -147,7 +147,7 @@ class RecordResponse(RemoteDataResult):
                         phase = "L2",
                         kind = "U",
                         magnitude = _sine_at(ts, center=240_000.0, amplitude=5_000.0, period_seconds=300.0, phase=0.2 + station_offset),
-                        angle = _normalize_angle(40.0 + _sine_at(ts, center=0.0, amplitude=2.0, period_seconds=600.0, phase=0.3 + station_offset)),
+                        angle = _normalize_angle(160.0 + _sine_at(ts, center=0.0, amplitude=2.0, period_seconds=600.0, phase=0.3 + station_offset)),
                     ),
                     Phasor(
                         name = phasor_name + "_U_L3",
@@ -156,7 +156,7 @@ class RecordResponse(RemoteDataResult):
                         phase = "L3",
                         kind = "U",
                         magnitude = _sine_at(ts, center=240_000.0, amplitude=5_000.0, period_seconds=300.0, phase=0.4 + station_offset),
-                        angle = _normalize_angle(160.0 + _sine_at(ts, center=0.0, amplitude=2.0, period_seconds=600.0, phase=0.5 + station_offset)),
+                        angle = _normalize_angle(40.0 + _sine_at(ts, center=0.0, amplitude=2.0, period_seconds=600.0, phase=0.5 + station_offset)),
                     ),
                     Phasor(
                         name = phasor_name +"_I_L1",
@@ -174,7 +174,7 @@ class RecordResponse(RemoteDataResult):
                         phase = "L2",
                         kind = "I",
                         magnitude = _sine_at(ts, center=1.0, amplitude=0.2, period_seconds=45.0, phase=0.8 + station_offset),
-                        angle = _normalize_angle(40.0 + _sine_at(ts, center=0.0, amplitude=5.0, period_seconds=120.0, phase=0.9 + station_offset)),
+                        angle = _normalize_angle(160.0 + _sine_at(ts, center=0.0, amplitude=5.0, period_seconds=120.0, phase=0.9 + station_offset)),
                     ),
                     Phasor(
                         name = phasor_name + "_I_L3",
@@ -183,7 +183,7 @@ class RecordResponse(RemoteDataResult):
                         phase = "L3",
                         kind = "I",
                         magnitude = _sine_at(ts, center=1.0, amplitude=0.2, period_seconds=45.0, phase=1.0 + station_offset),
-                        angle = _normalize_angle(160.0 + _sine_at(ts, center=0.0, amplitude=5.0, period_seconds=120.0, phase=1.1 + station_offset)),
+                        angle = _normalize_angle(40.0 + _sine_at(ts, center=0.0, amplitude=5.0, period_seconds=120.0, phase=1.1 + station_offset)),
                     ),
                 ],
             ),

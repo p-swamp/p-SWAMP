@@ -156,11 +156,11 @@ between does not buffer the stream into one blob.
     "rocof"    : 0.01,
     "phasors"  : [
       {"name": "420_da2_U_L1", "station": "da2", "kv": 420, "kind": "U", "phase": "L1", "bank": null, "magnitude": 226382.95, "angle": -85.67},
-      {"name": "420_da2_U_L2", "station": "da2", "kv": 420, "kind": "U", "phase": "L2", "bank": null, "magnitude": 226382.95, "angle":  34.33},
-      {"name": "420_da2_U_L3", "station": "da2", "kv": 420, "kind": "U", "phase": "L3", "bank": null, "magnitude": 226382.95, "angle": 154.33},
+      {"name": "420_da2_U_L2", "station": "da2", "kv": 420, "kind": "U", "phase": "L2", "bank": null, "magnitude": 226382.95, "angle": 154.33},
+      {"name": "420_da2_U_L3", "station": "da2", "kv": 420, "kind": "U", "phase": "L3", "bank": null, "magnitude": 226382.95, "angle":  34.33},
       {"name": "420_da2_I_L1", "station": "da2", "kv": 420, "kind": "I", "phase": "L1", "bank": null, "magnitude":      0.94, "angle": -85.67},
-      {"name": "420_da2_I_L2", "station": "da2", "kv": 420, "kind": "I", "phase": "L2", "bank": null, "magnitude":      0.94, "angle":  34.33},
-      {"name": "420_da2_I_L3", "station": "da2", "kv": 420, "kind": "I", "phase": "L3", "bank": null, "magnitude":      0.94, "angle": 154.33}
+      {"name": "420_da2_I_L2", "station": "da2", "kv": 420, "kind": "I", "phase": "L2", "bank": null, "magnitude":      0.94, "angle": 154.33},
+      {"name": "420_da2_I_L3", "station": "da2", "kv": 420, "kind": "I", "phase": "L3", "bank": null, "magnitude":      0.94, "angle":  34.33}
     ]
   }
 }
@@ -181,9 +181,13 @@ between does not buffer the stream into one blob.
 - `msg.phasors.x.angle` voltage or amp phase angle
 - The remote schema is `RecordResponse` in `pswamp_models.remote_data`;
   it is not the downstream `PmuFrame` schema. The backend builds one frame per
-  timestamp, labels columns by station ID, maps frequency/ROCOF to `f`/`df`,
-  converts voltage magnitudes from V to kV, and keeps current in A and angles
-  in degrees. Its stable stream ID is the configured source instance name.
+  timestamp and labels columns by station ID. Each station contributes `f` and
+  `df` (from `frequency` and `rocof`), `P`, `Q` (MW, Mvar, what passes the
+  station: the larger of its feeders' positive and negative sums), `v_dev`
+  (%, against `kv/√3`) and `VUF` (%, negative over positive sequence, with L2
+  lagging L1 by 120°); phasors with magnitude 0 count as missing, and the
+  phasors themselves are not passed on. Its stable stream ID is the configured
+  source instance name.
 
 ## The client
 
