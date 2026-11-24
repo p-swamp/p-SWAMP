@@ -5,7 +5,7 @@
 
     GET  /health/live                     200 {status}
     GET  /health/ready                    200 {status}
-    GET  /v1/coverage                    200 {start, end, stations: [{id, name}]}
+    GET  /v1/coverage                     200 {start, end, stations: [{id, name}]}
     POST /v1/queries   RemoteDataQuery    200 NDJSON: station records, then one end or error line
 
 A client that closes the connection has cancelled: Starlette stops the
