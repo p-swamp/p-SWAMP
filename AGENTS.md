@@ -1279,6 +1279,7 @@ underlying tech). Start the server first, then the client:
 ```
 uv run pswamp dev server      # state server on 127.0.0.1:8000 (docker compose up --watch --build; streams logs, Ctrl-C stops it)
                                                      # also live-syncs desktop/src/, so desktop-package edits hot-reload too
+uv run pswamp dev server -f ../my-prototype/compose.override.yml   # plus a compose file kept elsewhere; its relative paths are its own folder's
 uv run pswamp dev client  # Vite/React web client w/ HMR on http://localhost:5173
 ```
 

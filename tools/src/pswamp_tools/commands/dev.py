@@ -3,10 +3,15 @@
 
 from __future__ import annotations
 
+import json
+import tempfile
 import threading
+from pathlib import Path
+
 import typer
 
 from .. import _net, _ui
+from .._compose_config import ComposeConfigError, repo_compose_files, resolve
 from .._docker import Engine, find_engine
 from .._paths import client_dir, repo_root
 from .._proc import capture, require_tool, run, run_filtered
@@ -31,15 +36,30 @@ def supports_watch(engine: Engine) -> bool:
     return "--watch" in (result.stdout or "") + (result.stderr or "")
 
 
-def server_command(engine: Engine, watch: bool) -> list[str]:
+def server_command(engine: Engine, watch: bool, compose_file: Path | None = None) -> list[str]:
     # --build is not optional: compose builds only when the image is missing, and
     # watch syncs only edits made while it runs, so a change made while the stack
     # was down (a new, renamed or deleted module) would run from a stale image.
-    return engine.compose_cmd("up", "--watch", "--build") if watch else engine.compose_cmd("up", "--build")
+    # A compose_file (the configuration resolved with --compose-file) replaces
+    # the repo's files, from the repo root as ever.
+    files = ("-f", str(compose_file), "--project-directory", str(repo_root())) if compose_file else ()
+    return engine.compose_cmd(*files, "up", *(("--watch",) if watch else ()), "--build")
 
 
 @app.command()
-def server() -> None:
+def server(
+    compose_files: list[Path] = typer.Option(
+        [],
+        "--compose-file",
+        "-f",
+        metavar="PATH",
+        help=(
+            "A compose file to add after the repo's own (docker-compose.override.yml included), e.g. an override "
+            "kept in another project. Unlike `docker compose -f`, its relative paths are relative to its own "
+            "folder. Repeatable."
+        ),
+    ),
+) -> None:
     """Start the state server on 127.0.0.1:8000: `compose up --watch --build`, logs in this terminal.
 
     The FastAPI/uvicorn server runs in its container with hot reload (compose
@@ -56,6 +76,10 @@ def server() -> None:
     restart it after an edit.
 
     NOT hot-reloaded: the api contract (`uv run pswamp api generate`).
+
+    With --compose-file PATH, the stack is configured by that file too, after the
+    repo's own: the grid to load, say, kept in the project you run this from
+    (`uv run --project ../p-swamp pswamp dev server -f compose.override.yml`).
     """
     engine = find_engine()
     _ui.info(f"Container engine: {engine.name}; compose: {' '.join(engine.compose)}")
@@ -66,7 +90,20 @@ def server() -> None:
             "unavailable: starting with `up --build`. Restart this command after an edit, or install the "
             "Docker Compose v2 plugin (podman compose uses it when present)."
         )
-    raise typer.Exit(run_filtered(server_command(engine, watch), drop=HEALTHZ_LINE, cwd=repo_root()))
+    repo = repo_root()
+    if not compose_files:
+        raise typer.Exit(run_filtered(server_command(engine, watch), drop=HEALTHZ_LINE, cwd=repo))
+    with tempfile.TemporaryDirectory(prefix="pswamp-stack-") as folder:
+        try:
+            config = resolve(engine, repo, compose_files, Path(folder))
+        except ComposeConfigError as error:
+            _ui.error(f"compose could not read the configuration:\n{error}")
+            raise typer.Exit(1) from error
+        used = [*repo_compose_files(repo), *(p.expanduser().resolve() for p in compose_files)]
+        _ui.info("Compose files: " + ", ".join(str(p) for p in used))
+        compose_file = Path(folder) / "compose.json"
+        compose_file.write_text(json.dumps(config, indent=1), encoding="utf-8")
+        raise typer.Exit(run_filtered(server_command(engine, watch, compose_file), drop=HEALTHZ_LINE, cwd=repo))
 
 
 @app.command()
