@@ -870,7 +870,11 @@ simulation of the grid in the CIM graph, `rtsim`, and the modules analysing it,
   the oldest when the loop is busy (a 10 s backlog), the results on one that drops
   nothing. From them it keeps the measurement window, the latest islanding
   assessment, the alarm list (`pswamp_web.stores.AlarmStore`), the outage log,
-  each module's status (from its results) and the feed's. The panels read that
+  each module's status and the feed's. **A module shows in the Status panel by
+  saying its status**: any result of the pipeline whose body has a
+  `status: AppStatus` (`pswamp_models.common`: `OK`, `Alert`, `Emergency`) is
+  recorded, with no edit here, so a new module (an extra module too) appears by
+  adding that field. One that says none stays off the panel. The panels read that
   state on the loop; an event-driven view wakes on `LIVE.updates(*topics)`, and an
   operator action on an alarm wakes every view (`LIVE.nudge()`). `accept(ws)` is
   how every panel's socket opens: it checks `?client_id=` (1008 without one) and
