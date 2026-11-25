@@ -21,6 +21,7 @@ import time
 from collections.abc import Iterator
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
+from typing import get_args
 
 from fastapi import WebSocket
 from shared import app_pipeline, get_logger, read_client_id, refuse_socket, transport
@@ -28,6 +29,8 @@ from shared import app_pipeline, get_logger, read_client_id, refuse_socket, tran
 from pswamp_core.pipeline import live_key
 from pswamp_core.subscription import Overflow
 from pswamp_models.common import AlarmEvent as AlarmMessage
+from pswamp_models.common import AppStatus as ModuleStatus
+from pswamp_models.common import ResultEnvelope
 from pswamp_models.islanding_detection import IslandingDetectionResult
 from pswamp_models.line_outage import LineOutageResult, MeasuredCurrent
 from pswamp_models.player import PlayerStatus
@@ -69,6 +72,9 @@ OUTAGE_LOG = 100
 
 # What wakes a view.
 ISLANDING, ALARMS, LINE_OUTAGE = "islanding", "alarms", "line_outage"
+
+#: What a module's result body may say in its ``status`` for the Status panel to show it.
+MODULE_STATUSES = frozenset(get_args(ModuleStatus))
 
 
 @dataclass
@@ -177,6 +183,11 @@ class LiveGrid:
             self._status(message, message.result.status)
             if self._outages(message):
                 self._wake(LINE_OUTAGE)
+        elif isinstance(message, ResultEnvelope) and getattr(message.result, "status", None) in MODULE_STATUSES:
+            # Any other module of the pipeline: one whose result says its status (pswamp_models.common's
+            # AppStatus) shows in the Status panel, with no edit here. One that says none stays off it,
+            # rather than be shown as OK without having said so.
+            self._status(message, message.result.status)
 
     def _instance(self, name: str, uuid: str, t: float) -> None:
         """A module heard from a new instance (its run started over): the old one will never clear

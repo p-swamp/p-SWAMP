@@ -3,11 +3,17 @@
 
 from __future__ import annotations
 
+import json
+import tempfile
 import threading
+from pathlib import Path
+
 import typer
 
 from .. import _net, _ui
+from .._compose_config import ComposeConfigError, repo_compose_files, resolve
 from .._docker import Engine, find_engine
+from .._extra_modules import ExtraModulesError, read_extra_modules, variable_for, with_extra_modules
 from .._paths import client_dir, repo_root
 from .._proc import capture, require_tool, run, run_filtered
 
@@ -31,15 +37,67 @@ def supports_watch(engine: Engine) -> bool:
     return "--watch" in (result.stdout or "") + (result.stderr or "")
 
 
-def server_command(engine: Engine, watch: bool) -> list[str]:
+def server_command(engine: Engine, watch: bool, compose_file: Path | None = None) -> list[str]:
     # --build is not optional: compose builds only when the image is missing, and
     # watch syncs only edits made while it runs, so a change made while the stack
     # was down (a new, renamed or deleted module) would run from a stale image.
-    return engine.compose_cmd("up", "--watch", "--build") if watch else engine.compose_cmd("up", "--build")
+    # A compose_file (the configuration resolved with --extra-modules or
+    # --compose-file) replaces the repo's files, from the repo root as ever.
+    files = ("-f", str(compose_file), "--project-directory", str(repo_root())) if compose_file else ()
+    return engine.compose_cmd(*files, "up", *(("--watch",) if watch else ()), "--build")
+
+
+def extra_modules_config(config: dict, path: Path, pipeline: str) -> dict:
+    """``config`` (the stack's resolved compose configuration), changed to run the modules at
+    ``path`` in ``pipeline``. Exits with a one-line error when it cannot be."""
+    repo = repo_root()
+    try:
+        projects = read_extra_modules(path, repo)
+        context = path.expanduser().resolve()
+        config = with_extra_modules(config, context, projects, pipeline)
+    except ExtraModulesError as error:
+        _ui.error(f"--extra-modules: {error}")
+        raise typer.Exit(2) from error
+    modules = ", ".join(name for p in projects for name in p.modules)
+    _ui.info(
+        f"Extra modules: {modules} (from {context}), in pipelines/{pipeline}.toml through "
+        f"{variable_for(pipeline)}, hosted by the extra-modules-worker"
+    )
+    if (context / ".venv").exists() and not (context / ".dockerignore").exists():
+        _ui.console.print(
+            f"[yellow]note:[/yellow] {context} has a .venv and no .dockerignore: every build sends the .venv to "
+            "the builder. Add a .dockerignore listing .venv/."
+        )
+    return config
 
 
 @app.command()
-def server() -> None:
+def server(
+    extra_modules: Path | None = typer.Option(
+        None,
+        "--extra-modules",
+        metavar="PATH",
+        help=(
+            "Also run the modules of a project outside this repo (a folder with a pyproject.toml declaring "
+            '\\[project.entry-points."pswamp.modules"], or a folder of such projects): installed into the image, '
+            "added to the pipeline, hosted by a worker of their own, restarted on an edit of their src/."
+        ),
+    ),
+    pipeline: str = typer.Option(
+        "grid-monitor", "--pipeline", help="The pipeline (pipelines/<name>.toml) the extra modules join."
+    ),
+    compose_files: list[Path] = typer.Option(
+        [],
+        "--compose-file",
+        "-f",
+        metavar="PATH",
+        help=(
+            "A compose file to add after the repo's own (docker-compose.override.yml included), e.g. an override "
+            "kept in another project. Unlike `docker compose -f`, its relative paths are relative to its own "
+            "folder. Repeatable."
+        ),
+    ),
+) -> None:
     """Start the state server on 127.0.0.1:8000: `compose up --watch --build`, logs in this terminal.
 
     The FastAPI/uvicorn server runs in its container with hot reload (compose
@@ -56,6 +114,15 @@ def server() -> None:
     restart it after an edit.
 
     NOT hot-reloaded: the api contract (`uv run pswamp api generate`).
+
+    With --extra-modules PATH, a module developed outside this repo runs too, in
+    the grid monitor's pipeline unless --pipeline says otherwise: see "Trying a
+    module from outside the repo" in doc/module-cookbook.md. It needs a compose
+    that knows build contexts (Docker Compose v2).
+
+    With --compose-file PATH, the stack is configured by that file too, after the
+    repo's own: the grid to load, say, kept in the project you run this from
+    (`uv run --project ../p-swamp pswamp dev server -f compose.override.yml`).
     """
     engine = find_engine()
     _ui.info(f"Container engine: {engine.name}; compose: {' '.join(engine.compose)}")
@@ -66,7 +133,26 @@ def server() -> None:
             "unavailable: starting with `up --build`. Restart this command after an edit, or install the "
             "Docker Compose v2 plugin (podman compose uses it when present)."
         )
-    raise typer.Exit(run_filtered(server_command(engine, watch), drop=HEALTHZ_LINE, cwd=repo_root()))
+    repo = repo_root()
+    if extra_modules is not None and not (repo / "pipelines" / f"{pipeline}.toml").is_file():
+        _ui.error(f"--pipeline {pipeline}: there is no pipelines/{pipeline}.toml")
+        raise typer.Exit(2)
+    if extra_modules is None and not compose_files:
+        raise typer.Exit(run_filtered(server_command(engine, watch), drop=HEALTHZ_LINE, cwd=repo))
+    with tempfile.TemporaryDirectory(prefix="pswamp-stack-") as folder:
+        try:
+            config = resolve(engine, repo, compose_files, Path(folder))
+        except ComposeConfigError as error:
+            _ui.error(f"compose could not read the configuration:\n{error}")
+            raise typer.Exit(1) from error
+        if compose_files:
+            used = [*repo_compose_files(repo), *(p.expanduser().resolve() for p in compose_files)]
+            _ui.info("Compose files: " + ", ".join(str(p) for p in used))
+        if extra_modules is not None:
+            config = extra_modules_config(config, extra_modules, pipeline)
+        compose_file = Path(folder) / "compose.json"
+        compose_file.write_text(json.dumps(config, indent=1), encoding="utf-8")
+        raise typer.Exit(run_filtered(server_command(engine, watch, compose_file), drop=HEALTHZ_LINE, cwd=repo))
 
 
 @app.command()

@@ -37,6 +37,11 @@
   ``get = ["<live source>", "<module>", ...]`` instead of ``module``, found in
   ``pipelines/<app>.toml`` beside this file (``pswamp_core.relay``). In
   ``<APP>_SOURCES`` it is ``name:@<app>/<live source>+<module>``.
+- **Modules can be added from the environment, not removed.**
+  ``<APP>_EXTRA_MODULES`` (``name,...``) appends installed modules to the
+  file's: how a module developed outside the repo joins a pipeline to be tried
+  in the full stack (``pswamp dev server --extra-modules``). Set it alike for the
+  server and every worker that loads the file, as with ``<APP>_SOURCES``.
 - **Everything ``Pipeline`` checks, plus one thing**: every class a module
   reads has a producer in the pipeline: a source's ``model`` (its primary
   output), a module's output, or the run itself (``PlayerStatus``,
@@ -80,6 +85,7 @@ __all__ = [
     "PipelineConfig",
     "PipelineConfigError",
     "available_modules",
+    "extra_modules",
     "load_pipeline",
     "resolve_entry",
     "resolve_module",
@@ -165,7 +171,8 @@ class PipelineConfig(BaseModel):
         from .pipeline import Pipeline
 
         installed = available_modules()
-        modules = tuple(resolve_module(name, installed) for name in self.modules)
+        names = [*self.modules, *extra_modules(self.app, self.modules)]
+        modules = tuple(resolve_module(name, installed) for name in names)
         sources = ConfiguredSources(
             app=self.app,
             default_sources=",".join(f"{s.name}:{s.spec}" for s in self.sources),
@@ -174,6 +181,19 @@ class PipelineConfig(BaseModel):
             cim=self.enrich.cim,
         )
         return Pipeline(self.app, sources, modules=modules, source_models=sources.source_models())
+
+
+def extra_modules(app: str, listed: Sequence[str] = ()) -> list[str]:
+    """The modules ``<APP>_EXTRA_MODULES`` adds to the app's pipeline file (``listed``: the file's).
+
+    Raises ``PipelineConfigError`` for a name given twice or already in the file: the variable only
+    adds, so a doubled name is a mistake rather than something to merge."""
+    variable = env_key(app, "EXTRA_MODULES")
+    names = [name for name in (item.strip() for item in os.environ.get(variable, "").split(",")) if name]
+    twice = sorted({name for name in names if name in listed or names.count(name) > 1})
+    if twice:
+        raise PipelineConfigError(f"{variable}: {', '.join(twice)} listed twice (or already in the pipeline file)")
+    return names
 
 
 @dataclass(frozen=True)
