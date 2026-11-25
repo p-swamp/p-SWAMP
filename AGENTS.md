@@ -612,6 +612,11 @@ The rules to keep:
   `{NAME}_{SETTING}` block (`LIVE_PATH`, `REMOTE_URL`). The old
   `<APP>_DATA_CLIENTS` is an error naming its replacement. A new source is
   `uv run pswamp new module <slug> <label> --source [--playable]`.
+  `<APP>_EXTRA_MODULES` (`name,...`) **adds** installed analysis modules to the
+  file's list (never a source, never a name already there). It exists so that a
+  module developed outside the repo can be tried in the stack
+  (`pswamp dev server --extra-modules`); don't use it to configure a module of
+  this repo, which belongs in the file.
 - **A module lives in `modules/<name>/`, its web API in the server.** The module
   and its tests go in its own project and import the core and the models only;
   the app's `api.py` and its page stay under `app/`. A worker runs outside the
