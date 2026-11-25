@@ -232,6 +232,14 @@ every member's manifest to validate the lock. Two consequences:
   and it is the one dependency fetched from git rather than an index. The
   Dockerfile's `import server` smoke test makes both exclusions checked
   decisions rather than hopeful ones.
+- **The `extra-modules` stage is empty, and is a dev hook.** A named build
+  context of that name (`pswamp dev server --extra-modules PATH`) replaces it,
+  and the projects in it, from outside the repo, are installed into
+  `/workspace/extra-modules` with `--no-sources` and every installed package
+  held at its version (`--constraint`). They are not from the lock, which is why
+  nothing but the dev loop passes that context: CI, minikube and a deployment
+  build the image without it. See "Trying a module from outside the repo" in
+  `doc/module-cookbook.md`.
 
 **What `pswamp check` gates.** `app/`, `models/`, `core/`, `modules/` and
 `tools/` fully (ruff `--select F`, `tsc`, the lockfile check, the pipeline files,
