@@ -92,3 +92,57 @@ def test_the_job_summary_is_a_markdown_table_with_the_failures():
     assert "| Clients | 8 | 8 |" in text
     assert "| server CPU % | 19 | 19 |" in text and "| server MiB | 131 | 131 |" in text
     assert "| worker CPU % | – | – |" in text and "- 8 clients: no stalls" in text
+
+
+# --- the warm-up's wait for the server's start ----------------------------------------
+
+
+def answering(monkeypatch, answers: dict[str, list[tuple[int, str]]]) -> list[str]:
+    """``http_get`` answering each path in turn from ``answers`` (the last one repeats); the paths asked."""
+    asked: list[str] = []
+
+    def http_get(url, timeout=5.0):
+        path = url.removeprefix("http://server")
+        asked.append(path)
+        queue = answers[path]
+        return queue.pop(0) if len(queue) > 1 else queue[0]
+
+    monkeypatch.setattr(load, "http_get", http_get)
+    monkeypatch.setattr(load.time, "sleep", lambda _: None)
+    return asked
+
+
+LAYOUT, CHANNELS = (path for path, _ in load.STARTED)
+
+
+def test_the_wait_ends_when_the_graph_is_loaded_and_the_live_grid_streams(monkeypatch):
+    asked = answering(monkeypatch, {
+        LAYOUT: [(503, '{"detail": "the grid is loading"}'), (503, '{"detail": "the grid is loading"}'), (200, "{}")],
+        CHANNELS: [(503, '{"detail": "the live grid is not streaming yet"}'), (200, "{}")],
+    })  # fmt: skip
+    assert load.wait_until_started("http://server") == []
+    assert asked == [LAYOUT, LAYOUT, LAYOUT, CHANNELS, CHANNELS]
+
+
+def test_an_app_the_server_does_not_serve_is_not_waited_for(monkeypatch):
+    answering(monkeypatch, {LAYOUT: [(404, '{"detail": "Not Found"}')], CHANNELS: [(200, "{}")]})
+    notes = load.wait_until_started("http://server")
+    assert len(notes) == 1 and "404" in notes[0]
+
+
+def test_a_grid_that_cannot_be_had_ends_the_wait(monkeypatch):
+    asked = answering(monkeypatch, {LAYOUT: [(503, '{"detail": "the grid is not available: no network"}')], CHANNELS: [(200, "{}")]})
+    notes = load.wait_until_started("http://server")
+    assert asked == [LAYOUT] and "no network" in notes[0]
+
+
+def test_the_wait_gives_up_at_its_budget_and_says_what_had_not_started(monkeypatch):
+    answering(monkeypatch, {LAYOUT: [(503, '{"detail": "the grid is loading"}')], CHANNELS: [(200, "{}")]})
+    notes = load.wait_until_started("http://server", budget=0)
+    assert len(notes) == 1 and "the CIM graph is loaded" in notes[0] and "the grid is loading" in notes[0]
+
+
+def test_the_job_summary_carries_the_warm_up_notes():
+    level = {"summary": passing(), "containers": {}, "checks": []}
+    assert "Warm-up" not in load.markdown([level], [])
+    assert "- not started after 180 s" in load.markdown([level], [], ["not started after 180 s: the grid"])

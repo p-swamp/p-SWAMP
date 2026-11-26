@@ -199,6 +199,9 @@ def load(
     speed: float = typer.Option(1.0, "--speed", min=0.1, max=10.0, help="Replay speed every client plays at."),
     source: str = typer.Option("remote", "--source", help="The streamer source every client plays."),
     json_path: Optional[Path] = typer.Option(None, "--json", help="Write every level's and every client's numbers here."),
+    warmup: float = typer.Option(
+        15.0, "--warmup", min=0.0, help="Seconds one unjudged client plays before the first level, once the server has started; 0: no warm-up."
+    ),
 ) -> None:
     """The PMU test streamer under load: N concurrent clients, each with its own run.
 
@@ -214,6 +217,12 @@ def load(
       intervals); frame stats on >= 95% of state messages; switch, play and
       seek within 2 s and a summary within 5 s (slowest client); /healthz p99
       <= 100 ms; nothing but outage notices on the error tray.
+
+    First comes a warm-up, which nothing is judged on: it waits (3 min at
+    most) until the CIM graph is loaded and the live grid is streaming,
+    which the server does in the background after /healthz answers, then one
+    client plays for --warmup seconds, so what a server's first run does once
+    (reading the grid's measurements) stays out of the first level.
 
     Without --url it owns the server like `pswamp test smoke`: every p-swamp
     container is removed (a running dev stack included), the compose stack is
@@ -235,4 +244,7 @@ def load(
     except ValueError as error:
         _ui.error(str(error))
         raise typer.Exit(2) from None
-    raise typer.Exit(load_test.load(url, levels, steady, speed, source, json_path))
+    if 0 < warmup < 5:
+        _ui.error(f"--warmup is 0 (none) or at least 5 seconds, as --steady is, not {warmup:g}")
+        raise typer.Exit(2)
+    raise typer.Exit(load_test.load(url, levels, steady, speed, source, json_path, warmup=warmup))

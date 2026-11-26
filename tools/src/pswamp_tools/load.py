@@ -8,6 +8,12 @@ against ``Thresholds`` and reports. Without a URL it owns the server: every
 p-swamp container is removed, the compose stack built and started with the
 streamer's run cap (``PMU_TEST_STREAMER_MAX_RUNS``) raised to the largest
 level, and taken down on every exit path. With a URL it touches nothing.
+
+Before the first level comes a warm-up (``warm_up``): what the server starts
+in the background (the CIM graph loaded into its store, the live grid
+simulation) and what its first streamer run does once (read the grid's
+measurements, open the remote history) hold its event loop for seconds, so a
+level measured over them fails for reasons that are not load.
 """
 
 from __future__ import annotations
@@ -17,6 +23,7 @@ import os
 import re
 import tempfile
 import threading
+import time
 from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -27,10 +34,19 @@ from . import _ui
 from ._docker import ContainerToolMissing, Engine, find_engine
 from ._paths import repo_root, server_dir
 from ._proc import capture, require_tool, run, uv_server
-from .smoke import DEFAULT_URL, server_logs, teardown, unreachable_hint, wait_for_healthz
+from .smoke import DEFAULT_URL, http_get, server_logs, teardown, unreachable_hint, wait_for_healthz
 
 CAP_VARIABLE = "PMU_TEST_STREAMER_MAX_RUNS"
 DRIVER = "loadtest_pmu_test_streamer.py"
+#: What the server starts in the background, each a GET that answers 503 until it is done, in order.
+STARTED = (
+    ("/api/cim-graph/layout", "the CIM graph is loaded"),
+    ("/api/time-window/channels", "the live grid is streaming"),
+)
+#: How long the warm-up waits for all of ``STARTED``.
+STARTUP_WAIT_S = 180.0
+#: One GET's timeout: the channel list itself waits up to a minute for the live grid's first frame.
+_STARTUP_GET_S = 70.0
 #: The services whose CPU and memory the table shows, when compose runs them, and their labels.
 SHOWN = {"server": "server", "module-worker": "worker"}
 
@@ -276,7 +292,7 @@ def print_table(levels: list[dict]) -> None:
     _ui.info("CPU: % of one core, steady-window mean. MiB: the last reading.")
 
 
-def markdown(levels: list[dict], failures: list[str]) -> str:
+def markdown(levels: list[dict], failures: list[str], warm_notes: tuple[str, ...] | list[str] = ()) -> str:
     head, rows = grid(levels)
     lines = ["## PMU test streamer load test", "", "| " + " | ".join(head) + " |", "|---" + "|--:" * (len(head) - 1) + "|"]
     lines += ["| " + " | ".join(cells) + " |" for cells in rows]
@@ -284,6 +300,8 @@ def markdown(levels: list[dict], failures: list[str]) -> str:
         lines += ["", "**Over a threshold:**", *(f"- {f}" for f in failures)]
     else:
         lines += ["", "Every level within its thresholds."]
+    if warm_notes:
+        lines += ["", "**Warm-up (the first level may include the server's start-up):**", *(f"- {n}" for n in warm_notes)]
     return "\n".join(lines) + "\n"
 
 
@@ -303,6 +321,68 @@ def _engine_if_any() -> Engine | None:
         return None
 
 
+def _reason(body: str) -> str:
+    """A FastAPI error's ``detail``, else the body's start."""
+    try:
+        detail = json.loads(body).get("detail")
+    except (ValueError, AttributeError):
+        detail = None
+    return str(detail) if detail else body.strip()[:120]
+
+
+def wait_until_started(base: str, budget: float = STARTUP_WAIT_S) -> list[str]:
+    """Wait, at most ``budget`` seconds in all, for each of ``STARTED`` to answer 2xx. What
+    was not waited for, and why, as notes: an app the server does not serve (404) is
+    skipped, and a grid that cannot be had (503 "not available") ends the wait, since the
+    live grid then never starts."""
+    deadline = time.monotonic() + budget
+    notes: list[str] = []
+    for path, what in STARTED:
+        waited = False
+        while True:
+            try:
+                status, body = http_get(base + path, timeout=_STARTUP_GET_S)
+            except OSError as error:
+                status, body = 0, str(error)
+            if 200 <= status < 300:
+                if waited:
+                    _ui.console.print()
+                _ui.info(f"Started: {what}.")
+                break
+            reason = _reason(body)
+            if status == 404:
+                notes.append(f"{path} is not served (404): not waited for")
+                break
+            if status == 503 and "not available" in reason:
+                notes.append(f"{path}: {reason}; the live grid will not start, so not waited for")
+                return notes
+            if time.monotonic() >= deadline:
+                if waited:
+                    _ui.console.print()
+                notes.append(f"not started after {budget:.0f} s: {what} ({path}: {status or 'no answer'}, {reason})")
+                return notes
+            _ui.console.print(".", end="")
+            waited = True
+            time.sleep(1)
+    return notes
+
+
+def warm_up(base: str, seconds: float, speed: float, source: str) -> list[str]:
+    """Wait for the server to finish starting, then play one client for ``seconds``,
+    unjudged. Notes on what could not be warmed up; the levels run regardless."""
+    _ui.section(f"Warm-up: the server's start, then 1 client for {seconds:g} s (not judged)")
+    notes = wait_until_started(base)
+    driver = server_dir() / "tools" / DRIVER
+    with tempfile.TemporaryDirectory() as folder:
+        options = ["--clients", "1", "--steady", str(seconds), "--speed", str(speed), "--source", source]
+        code = run(uv_server("python", str(driver), base, *options, "--out", str(Path(folder) / "warm-up.json")), cwd=repo_root())
+    if code != 0:
+        notes.append(f"the warm-up client failed (exit code {code})")
+    for note in notes:
+        _ui.info(f"Note: {note}; the first level may include the server's start-up.")
+    return notes
+
+
 def load(
     url: str | None,
     clients: list[int],
@@ -311,8 +391,9 @@ def load(
     source: str,
     json_path: Path | None,
     limits: Thresholds = Thresholds(),
+    warmup: float = 15.0,
 ) -> int:
-    """Run every level; the exit code."""
+    """Run every level, after ``warm_up`` unless ``warmup`` is 0; the exit code."""
     require_tool("uv", purpose="for the load test's WebSocket clients")
     base = (url or DEFAULT_URL).rstrip("/")
     report = _ui.Report()
@@ -320,6 +401,7 @@ def load(
     started = False
     sampler: StatsSampler | None = None
     levels: list[dict] = []
+    warm_notes: list[str] = []
 
     _ui.section("Server under test")
     try:
@@ -346,6 +428,8 @@ def load(
         if not wait_for_healthz(base):
             _ui.error(unreachable_hint(base, engine))
             return 1
+        if warmup > 0:
+            warm_notes = warm_up(base, warmup, speed, source)
         if engine is not None and _is_compose_url(base):
             sampler = StatsSampler(engine)
             if "server" not in sampler.services.values() or not sampler.start():
@@ -382,13 +466,18 @@ def load(
             print_table(levels)
         if json_path is not None:
             json_path.write_text(
-                json.dumps({"thresholds": asdict(limits), "levels": levels}, indent=1, default=str), encoding="utf-8"
+                json.dumps(
+                    {"thresholds": asdict(limits), "warmup": {"seconds": warmup, "notes": warm_notes}, "levels": levels},
+                    indent=1,
+                    default=str,
+                ),
+                encoding="utf-8",
             )
             _ui.info(f"Every number: {json_path}")
         step_summary = os.environ.get("GITHUB_STEP_SUMMARY")
         if step_summary:
             with open(step_summary, "a", encoding="utf-8") as out:
-                out.write(markdown(levels, report.failures))
+                out.write(markdown(levels, report.failures, warm_notes))
         if report.failures and started and engine is not None:
             server_logs(engine)
         return report.finish(

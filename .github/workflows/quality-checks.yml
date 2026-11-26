@@ -15,7 +15,7 @@
 #   playwright-e2e    — provisional browser tests
 #   windows-checks    — `pswamp check` and `pswamp test server` on Windows, so the
 #                       CLI's "works natively on Windows" promise is enforced
-#   load-test         — `pswamp test load` at 8 and 16 clients on the compose
+#   load-test         — `pswamp test load` at 8 clients on the compose
 #                       stack; runs once every other job has finished
 
 # Making these block a merge is a repo setting: Settings → Branches → protection
@@ -271,7 +271,7 @@ jobs:
   # --- Load test ----------------------------------------------------------------
   #
   # The PMU test streamer under load on the compose stack (server, Kafka, both
-  # workers, the remote data stub): 8, then 16 concurrent clients, each with its
+  # workers, the remote data stub): 8 concurrent clients, each with its
   # own run on the remote history, against the thresholds of `uv run pswamp test
   # load --help`. The table goes to the job summary, every client's numbers to
   # the load-test artifact. Runs last, once every other job has finished,
@@ -286,6 +286,8 @@ jobs:
     env:
       # The run cap, above the largest level, so each level is served whole.
       PMU_TEST_STREAMER_MAX_RUNS: "32"
+      # No PSWAMP_CIM_PATH, unlike the other jobs: the live grid runs on Nordic44 (LazyCIM
+      # downloads it when the server starts), so its cost on the server is part of what is measured.
     steps:
       - uses: actions/checkout@v5
 
@@ -314,8 +316,8 @@ jobs:
         run: docker compose up -d --no-build --wait
 
       # --url: test this stack, don't manage its lifecycle.
-      - name: Load test, 8 and 16 clients
-        run: uv run pswamp test load --url http://127.0.0.1:8000 --clients 8,16 --steady 30 --json load-test.json
+      - name: Load test, 8 clients
+        run: uv run pswamp test load --url http://127.0.0.1:8000 --clients 8 --steady 30 --json load-test.json
 
       - name: Logs
         if: always()
