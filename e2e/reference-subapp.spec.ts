@@ -38,4 +38,29 @@ test.describe('Reference example', () => {
         await expect(count).toHaveText('0')
 
     })
+
+    test('?client_id= makes a tab a client of its own, through a navigation', async ({ context }) => {
+        // The tabs of one context share localStorage, as private windows do.
+        // Fresh ids per run: the server keeps a counter per id for its lifetime.
+        const a = String(Date.now())
+        const b = String(Date.now() + 1)
+        const one = await context.newPage()
+        const two = await context.newPage()
+        await one.goto(`/reference-subapp?client_id=${a}`)
+        await two.goto(`/reference-subapp?client_id=${b}`)
+        await expect(one.locator('footer')).toContainText(`client id: ${a}`)
+        await expect(two.locator('footer')).toContainText(`client id: ${b}`)
+
+        await one.getByRole('button', { name: 'Bump' }).click()
+        await one.getByRole('button', { name: 'Bump' }).click()
+        await expect(one.getByRole('status', { name: 'Bump count' })).toHaveText('2')
+        await expect(two.getByRole('status', { name: 'Bump count' })).toHaveText('0')
+
+        // A navigation drops the query; the tab keeps its id.
+        await one.getByRole('link', { name: 'PMU Test Streamer' }).click()
+        await one.getByRole('link', { name: 'Reference example' }).click()
+        await expect(one).toHaveURL(/\/reference-subapp$/)
+        await expect(one.locator('footer')).toContainText(`client id: ${a}`)
+        await expect(one.getByRole('status', { name: 'Bump count' })).toHaveText('2')
+    })
 })

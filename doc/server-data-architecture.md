@@ -612,8 +612,8 @@ the active source's frames to the modules, and keeps the newest message of each 
 it sees. That view is not a bus: the web API builds its message from current
 state, so however much arrived meanwhile, it sends one. The registry lets a
 run outlive its sockets for five minutes, so a reload rejoins it. At its cap
-(8) it evicts the least recently used idle run, and refuses when every run is
-watched.
+(`<APP>_MAX_RUNS`, default 8) it evicts the least recently used idle run, and
+refuses when every run is watched.
 
 *Where.* `core/src/pswamp_core/pipeline.py`, `worker.py`;
 `core/src/pswamp_core/pipeline_config.py` (`Pipeline.load`: the pipeline file, its schema,
@@ -772,7 +772,7 @@ like anyone else (the range summary).
 
 | Role | Command | Configured by |
 |---|---|---|
-| server | the image's default (`python server.py`) | `PSWAMP_TRANSPORT`, `<APP>_SOURCES` and their `{NAME}_*` blocks |
+| server | the image's default (`python server.py`) | `PSWAMP_TRANSPORT`, `<APP>_SOURCES` and their `{NAME}_*` blocks, `<APP>_MAX_RUNS` |
 | worker | `python -m pswamp_core.worker`, run from `pipelines/` | the same transport, `PSWAMP_WORKER_PIPELINES`, `PSWAMP_WORKER_MODULES`; a module that reads the sources also needs `<APP>_SOURCES` |
 | remote data stub | `python -m remote_data_stub` | `REMOTE_DATA_STUB_SOURCE` (and `modules/remote-history/examples` on `PYTHONPATH`) |
 | broker | `apache/kafka` | one KRaft node, topic auto-creation off, 10 s retention checks |

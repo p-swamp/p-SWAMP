@@ -421,6 +421,9 @@ idle eviction went with the recording.
   (`app/client-web/src/lib/clientId.ts`), so every socket the page opens carries the
   same value. On the grid monitor it no longer chooses the data, but every socket and
   command still carries it, and a socket without a usable one is refused (1008).
+  `?client_id=<digits>` on a page url makes that tab a client of its own (kept in
+  `sessionStorage`, per tab): several clients in one browser, which private
+  windows cannot give, since they share one `localStorage`.
 
 The PMU test streamer is the other way round: each client gets its own run over a
 recording, starting at 0 s, while a live source is one shared run that client runs

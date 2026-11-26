@@ -19,6 +19,7 @@ HELP_PAGES = [
     ["test", "desktop"],
     ["test", "playwright"],
     ["test", "smoke"],
+    ["test", "load"],
     ["modules"],
     ["modules", "list"],
     ["pipelines"],

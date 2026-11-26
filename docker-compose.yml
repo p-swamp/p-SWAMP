@@ -43,6 +43,9 @@ services:
       <<: [*transport, *streamer-sources, *cim]
       HOST: "0.0.0.0"
       PORT: "8000"
+      # The streamer's run cap, from the shell when set (more than 8 clients:
+      # a load test, many browser tabs); 8 otherwise, as in the code.
+      PMU_TEST_STREAMER_MAX_RUNS: "${PMU_TEST_STREAMER_MAX_RUNS:-8}"
       # Compose sync writes may not always emit inotify events in-container;
       # polling keeps reload reliable across host/container boundaries.
       WATCHFILES_FORCE_POLLING: "true"

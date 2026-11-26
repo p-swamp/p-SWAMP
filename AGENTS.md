@@ -378,6 +378,9 @@ Key invariants to preserve:
   rolled per hook, so a page whose several sockets read one per-client run (the
   streamer's) reads one, and a command's `client_id` addresses the views it came
   from.
+  `?client_id=<digits>` on a page url overrides the id for that tab (kept in
+  `sessionStorage`, so a navigation keeps it): the way to be several clients in
+  one browser, since private windows share one `localStorage`.
 - **This currently does not scale past one replica.** Because state is in-process,
   the k8s manifest is `replicas: 1`. A second pod would keep its own
   independent state and the Service would split clients across them. Horizontal
@@ -613,6 +616,8 @@ The rules to keep:
   `{NAME}_{SETTING}` block (`LIVE_PATH`, `REMOTE_URL`). The old
   `<APP>_DATA_CLIENTS` is an error naming its replacement. A new source is
   `uv run pswamp new module <slug> <label> --source [--playable]`.
+  `<APP>_MAX_RUNS` (default 8, `run_registry` in `shared.py`) caps the app's
+  runs; compose passes `PMU_TEST_STREAMER_MAX_RUNS` through from the shell.
 - **A module lives in `modules/<name>/`, its web API in the server.** The module
   and its tests go in its own project and import the core and the models only;
   the app's `api.py` and its page stay under `app/`. A worker runs outside the
@@ -1421,6 +1426,7 @@ uv run pswamp test desktop   # the desktop package's tests (desktop/tests/) in i
 uv run pswamp test smoke | playwright   # the real container: wire-level smoke test, browser specs (need docker or podman)
 uv run pswamp check-generators        # both generators, in a throwaway worktree: their output passes pswamp check, its tests and the docs build
 uv run pswamp docs serve|build        # the documentation site: live preview on :8001; strict build into site/, as CI does
+uv run pswamp test load [--clients 8,16] [--url …]   # N concurrent PMU test streamer clients on the remote history, against thresholds
 uv run pswamp pipelines validate      # load and check every pipelines/*.toml (or the files given), as the server and workers do
 uv run pswamp modules list            # every installed module (pswamp.modules entry points): reads, emits, commands, distribution
 KAFKA_TEST_BOOTSTRAP_SERVERS=127.0.0.1:19092 uv run pswamp test server -k kafka   # the transport suite against the compose broker (docker compose up -d kafka)
@@ -1494,6 +1500,17 @@ things worth knowing before extending it:
   playwright`. **Unless given `--url` or `E2E_KEEP_STACK=1`, that run ends with
   `docker compose down`** (`global-teardown.ts`), so it stops a compose stack you
   already had up.
+
+**`uv run pswamp test load`** puts the PMU test streamer under load: levels of N
+concurrent clients, each with its own client id and so its own run, on the remote
+history, each checked against thresholds (every frame, no stalls, commands within
+2 s, `/healthz` p99 within 100 ms; `--help` lists them). The driver is
+`app/server-python/tools/loadtest_pmu_test_streamer.py` (one level, in the server's
+environment, like the smoke clients); the lifecycle, the thresholds and the
+report are `tools/src/pswamp_tools/load.py`. Without `--url` it owns the compose
+stack as the smoke test does, with `PMU_TEST_STREAMER_MAX_RUNS` raised to the
+largest level. Each client pauses before it leaves, because an unwatched run
+keeps playing until it is evicted (five minutes), and would load the next level.
 
 Note the api-contract check is the one step that needs the **full server
 environment** rather than just the pinned linter, because it imports the FastAPI
@@ -1732,11 +1749,14 @@ mind when editing that command (`tools/src/pswamp_tools/commands/deploy.py`):
 
 - **`quality-checks.yml`** runs on every pull request (and from the Actions tab):
   four independent merge gates, `dependency-review`, `static-errorcheck`,
-  `unit-tests` and `e2e-smoke-test`, and two more jobs: `playwright-e2e`, which
+  `unit-tests` and `e2e-smoke-test`, and three more jobs: `playwright-e2e`, which
   runs once the last two pass (the Playwright specs against the compose stack:
-  the server, Kafka and both workers), and **`windows-checks`**, which runs
+  the server, Kafka and both workers), **`windows-checks`**, which runs
   `uv run pswamp check` and `uv run pswamp test server` on `windows-latest`, so
-  that the CLI's Windows promise is enforced rather than hoped for. Neither is
+  that the CLI's Windows promise is enforced rather than hoped for, and
+  **`load-test`**, which runs `uv run pswamp test load --clients 8,16` on the
+  compose stack once every other job has finished, whatever their result
+  (`needs` all six, `if: !cancelled()`). None is
   yet a required check. Every job drives the repo through the `pswamp` CLI. The
   workflow publishes nothing. `dependency-review` checks only dependency changes
   between the pull request's base and head, using

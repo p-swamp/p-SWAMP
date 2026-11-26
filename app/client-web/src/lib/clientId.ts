@@ -21,12 +21,40 @@
 // socket with 1008 on anything else. It is not a secret and not
 // authentication — the server says as much — so randomness only has to avoid
 // collisions between colleagues, not resist guessing.
+//
+// **`?client_id=<digits>` on any page url overrides it for that tab**, so one
+// browser can be several clients: a load test in tabs, two clients side by
+// side. Private windows share one localStorage, so they cannot do that. The
+// override is kept in sessionStorage, which is per tab: a navigation (which
+// drops the query) and a reload keep it, and the profile's id in localStorage
+// is left alone.
 
 const STORAGE_KEY = 'pswamp.client-id'
+const TAB_STORAGE_KEY = 'pswamp.client-id.tab'
+const ID = /^\d{1,20}$/
 
 /** Positive, and inside the signed-32-bit range every consumer of this parses. */
 function randomSeed(): string {
   return String(Math.floor(Math.random() * 2_147_483_647) + 1)
+}
+
+/** The tab's override: `?client_id=` in the url, else one kept from earlier in this tab. */
+function tabClientId(): string | null {
+  const requested = new URLSearchParams(window.location.search).get('client_id')
+  if (requested !== null && !ID.test(requested)) {
+    console.warn(`ignoring ?client_id=${requested}: it must be 1 to 20 digits`)
+  }
+  const fromUrl = requested !== null && ID.test(requested) ? requested : null
+  try {
+    if (fromUrl) {
+      window.sessionStorage.setItem(TAB_STORAGE_KEY, fromUrl)
+      return fromUrl
+    }
+    const kept = window.sessionStorage.getItem(TAB_STORAGE_KEY)
+    return kept && ID.test(kept) ? kept : null
+  } catch {
+    return fromUrl // storage disabled: the url's id still applies to this page load
+  }
 }
 
 function resolveClientId(): string {
@@ -37,7 +65,7 @@ function resolveClientId(): string {
   // the behaviour this file replaced.
   try {
     const stored = window.localStorage.getItem(STORAGE_KEY)
-    if (stored && /^\d{1,20}$/.test(stored)) return stored
+    if (stored && ID.test(stored)) return stored
 
     const fresh = randomSeed()
     window.localStorage.setItem(STORAGE_KEY, fresh)
@@ -47,5 +75,5 @@ function resolveClientId(): string {
   }
 }
 
-/** This browser's client id. Resolved once; every socket sends the same value. */
-export const CLIENT_ID = resolveClientId()
+/** This tab's client id: the url's override, else the browser's. Resolved once; every socket sends the same value. */
+export const CLIENT_ID = tabClientId() ?? resolveClientId()
