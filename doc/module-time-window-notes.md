@@ -11,7 +11,7 @@ for the whole run. Anything stored on `self` is still there on the next
 `process` call. The existing modules already rely on this:
 
 - `frame-stats` caches its column indices
-  ([module.py](modules/frame-stats/src/pswamp_modules/frame_stats/module.py)).
+  ([module.py](../modules/frame-stats/src/pswamp_modules/frame_stats/module.py)).
 - `excursion` remembers `self._in_band` to detect a band crossing.
 
 A rolling buffer of recent frames works the same way: a `deque` on `self`.
@@ -20,7 +20,7 @@ A rolling buffer of recent frames works the same way: a `deque` on `self`.
 
 - **One instance per run key.** On a recording, every client has its own
   instance and therefore its own buffer. On a live source there is one shared
-  instance ([server-data-architecture.md](doc/server-data-architecture.md),
+  instance ([server-data-architecture.md](server-data-architecture.md),
   "modules: one instance per client / one instance, results shared").
 - **It is in memory only.** The host drops the instance when the run publishes
   `PipelineClosed`, after five minutes with no input, or when its worker
@@ -51,7 +51,7 @@ frames' timestamps.
 | Action | What arrives at the module |
 |---|---|
 | Play | Frames with increasing timestamps |
-| Step back, `n = -k` | **One** frame, about k frame intervals earlier than the last one ([playable.py](core/src/pswamp_core/playable.py), `_pl_step`) |
+| Step back, `n = -k` | **One** frame, about k frame intervals earlier than the last one ([playable.py](../core/src/pswamp_core/playable.py), `_pl_step`) |
 | Several single steps back | One frame per step, each earlier than the one before |
 | Seek or loop backwards | A frame earlier than the last one, then play continues from there |
 | Seek forward, or pacing dropping frames | A frame later than expected: a gap in the buffer |
@@ -91,7 +91,7 @@ With trimming alone, a jump beyond the margin leaves a partly full window that
 refills as playback continues. If the analysis really needs a full window at
 once, the module can read the history itself: set `reads_sources = True` and
 read the missing span with `self.sources.consume(start, end)`, as
-[range_summary/module.py](modules/range-summary/src/pswamp_modules/range_summary/module.py)
+[range_summary/module.py](../modules/range-summary/src/pswamp_modules/range_summary/module.py)
 does. That read awaits, so the work moves into an async method, and the
 module's worker needs the app's source settings (module cookbook, "A module
 that reads the sources"). Use this only if a partial window is unacceptable.

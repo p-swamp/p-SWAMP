@@ -6,8 +6,8 @@ of which embedded Python in heredocs and none of which ran on Windows.
 
     uv run pswamp --help
 
-**The help text of every command and group is the documentation** (`uv run pswamp
-<group> --help`); this file is only the map.
+**The help text of every command and group is the documentation**
+(`uv run pswamp <group> --help`); this file is only the map.
 
 | Command | What it does |
 |---|---|
@@ -22,6 +22,7 @@ of which embedded Python in heredocs and none of which ran on Windows.
 | `pswamp dev server\|client` | The hot-reloaded local dev loop. |
 | `pswamp deploy minikube\|logs` | Build into a local minikube cluster and deploy `k8s/overlays/minikube`; follow its logs. |
 | `pswamp deps update` | Pull every dependency forward and report what moved. |
+| `pswamp docs serve\|build` | Preview the documentation site with live reload; build it `--strict`, as CI does. |
 
 Behaviour worth knowing:
 

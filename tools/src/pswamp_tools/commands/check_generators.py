@@ -38,7 +38,10 @@ or not, untracked files included):
      socket in the server's tests/), the generated source's tests (its project's
      tests/ folder, which run SourceConformance), and the layering tests over the
      result, then both example scripts (examples/), run as plain scripts;
-  4. load the module-worker's pipeline files and modules as patched into
+  4. `pswamp docs build` (--strict): the module and the source each have a
+     section on the documentation site, their API pages render, and the
+     Modules page mentions both;
+  5. load the module-worker's pipeline files and modules as patched into
      docker-compose.yml and k8s/base/p-swamp.yaml, from the pipelines/
      folder, as a worker does (its pipeline files are relative to it).
 
@@ -47,7 +50,7 @@ linked in (a directory junction on Windows) rather than reinstalled; without one
 `pswamp check` runs `npm ci` there. The worktree is removed on every exit path.
 """
 
-# Step 4, run in the worktree's server environment from pipelines/ (outside the
+# Step 5, run in the worktree's server environment from pipelines/ (outside the
 # server tree, as a worker runs). argv: module slug, then a JSON file of {path: pattern}.
 WORKER_CHECK = """\
 import json, re, sys
@@ -237,6 +240,14 @@ def check_generators() -> None:
         step(
             "The generated source's example runs from a plain script",
             ["uv", "run", "python", f"modules/{SOURCE}/examples/read_{source_pkg}.py"],
+            tree,
+        )
+        # Each generated project is a section of the site, with an API page read
+        # from its docstrings, and is described on the Modules page: the strict
+        # build fails if any of that is not so.
+        step(
+            "The documentation site builds with them (--strict)",
+            ["uv", "run", "pswamp", "docs", "build"],
             tree,
         )
         # The script and its patterns go through files, not the command line,

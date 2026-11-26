@@ -51,6 +51,14 @@ SERVER_TESTS = Path("app/server-python/tests")
 # The pipeline files, one per app (pipelines/<app>.toml), at the repo root.
 PIPELINES = Path("pipelines")
 SERVER_MANIFEST = Path("app/server-python/pyproject.toml")
+# The documentation site's Modules page: one plain-language line per module,
+# in the table of its kind. The site's build fails on a module it does not
+# mention, so the generator adds the line, and the author rewords it.
+DOC_MODULES_INDEX = Path("doc/modules/index.md")
+DOC_MODULES_TABLES = {
+    "source": "Sources",
+    "module": "Analysis modules",
+}
 # Test folders that run in one pytest session with the server's and are not
 # packages, so a test file name must be unique across all of them. The module
 # projects' are globbed.
@@ -341,8 +349,20 @@ def namespace_packages(root: Path) -> set[str]:
     }
 
 
+def _doc_modules_row(p: Plan) -> None:
+    """A row for the new module or source in its table of doc/modules/index.md."""
+    n = p.names
+    heading = re.escape(DOC_MODULES_TABLES[p.template_set])
+    # The heading, the header row, the rule, then every row: the new row goes last.
+    table = rf"^## {heading}\n\n\|[^\n]*\|\n\|---\|---\|\n(?:\|[^\n]*\n)*"
+    row = f"| [{n.slug}]({n.slug}/index.md) | {n.label}. Say here, in plain words, what it is for. |\n"
+    p.edit(DOC_MODULES_INDEX, table, row)
+
+
 def _plan_registries(p: Plan) -> None:
     n = p.names
+    if p.template_set in DOC_MODULES_TABLES:
+        _doc_modules_row(p)
     if p.template_set == "source":
         # Only a dependency of the server (with its workspace source), so the
         # entry point resolves where a pipeline file names it. Anchored on the

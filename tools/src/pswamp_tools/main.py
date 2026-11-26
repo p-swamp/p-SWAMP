@@ -10,7 +10,7 @@ from . import _ui
 from ._docker import ContainerToolMissing
 from ._paths import RepoNotFound
 from ._proc import ToolMissing, repair_path
-from .commands import api, deploy, deps, dev, modules, new, pipelines, test
+from .commands import api, deploy, deps, dev, docs, modules, new, pipelines, test
 from .commands.check import HELP as CHECK_HELP
 from .commands.check import check
 from .commands.check_generators import HELP as CHECK_GENERATORS_HELP
@@ -34,7 +34,7 @@ app = _App(
     name="pswamp",
     help=(
         "The p-SWAMP repo CLI: checks, the api contract, tests, modules and pipelines, scaffolding, the dev "
-        "loop, deploys and "
+        "loop, deploys, the documentation site and "
         "dependency upgrades, on Windows, macOS and Linux.\n\n"
         "Run it as `uv run pswamp …` from anywhere in the repo. Every command and group has --help, "
         "and that help is the documentation. A missing tool (uv, node/npm/npx, docker/podman, git, "
@@ -64,6 +64,7 @@ app.command("check-generators", help=CHECK_GENERATORS_HELP)(check_generators)
 app.add_typer(dev.app, name="dev")
 app.add_typer(deploy.app, name="deploy")
 app.add_typer(deps.app, name="deps")
+app.add_typer(docs.app, name="docs")
 
 
 if __name__ == "__main__":

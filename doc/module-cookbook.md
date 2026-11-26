@@ -297,6 +297,27 @@ reloads the server and restarts the workers.
   `keep_up = KeepUp(max_input_age_s=..., report_every_s=...)`, or
   `keep_up = None` to stay quiet.
 
+### Document it
+
+The module is on the [documentation site](https://p-swamp.github.io/p-SWAMP/)
+with nothing to configure, as a section of the Modules tab:
+
+- **Its README is the overview page.** Write it to be read on its own: what the
+  module is for, what it reads, emits and accepts, its parameters, how to run it.
+  Relative links to its code and examples work there as on GitHub.
+- **Its docstrings are its API reference** (Google style: `Args:`,
+  `Returns:`, `Raises:`), with those of its messages in `pswamp_models`.
+- **A `docs/` folder beside the README is optional**, for what does not fit in
+  one page: a design note, a worked example with figures. Every `.md` in it
+  becomes a page of the section, and every other file (an image) is published
+  beside it; a `docs/SUMMARY.md` (a bullet list of links) sets their order,
+  alphabetical otherwise. `index.md` and `api.md` are taken.
+- **One line in `doc/modules/index.md`** says, in plain words, what the module
+  is for. The generator adds it; reword it. The site's build fails on a module
+  that page does not mention.
+
+`uv run pswamp docs serve` previews the site as you write.
+
 ## Part 2: The frontend
 
 The generator wrote a web API and a page. How a result gets from the module

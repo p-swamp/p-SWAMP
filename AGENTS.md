@@ -29,7 +29,7 @@ Where things are:
 | `pipelines/<app>.toml` | One pipeline file per app: its modules, its sources, its enrichment. Data, not a project. |
 | `tools/` | `pswamp-tools`: the `pswamp` CLI, which is all of the repo's automation. |
 | `e2e/` | The Playwright browser specs. |
-| `doc/` | The documentation; `doc/adr/` holds the decision records. |
+| `doc/` | The documentation, and the source of the documentation site (`mkdocs.yml`, `tools/docs_site/`); `doc/adr/` holds the decision records. |
 
 The second started life as a separate proof-of-concept repo for working out the
 client-server shape of P-SWAMP — tech stack, repo structure, local dev
@@ -166,8 +166,9 @@ under "The server data architecture"):
   folder holds **only** `pyproject.toml` (with its entry point in
   `[project.entry-points."pswamp.modules"]`, named after the module's `name`),
   `README.md` (what it reads, emits and accepts; its parameters),
-  `src/pswamp_modules/<pkg>/`, `tests/` and `examples/` (scripts running it with
-  no server). A data file the code reads (`sample_data.txt`) goes under `src/`,
+  `src/pswamp_modules/<pkg>/`, `tests/`, `examples/` (scripts running it with
+  no server) and, optionally, `docs/` (pages of its own on the documentation
+  site, beside its README; see "The documentation site"). A data file the code reads (`sample_data.txt`) goes under `src/`,
   beside that code. **`pswamp_modules` is a PEP 420 namespace**: there is no
   `src/pswamp_modules/__init__.py` anywhere, so each project adds its own
   `pswamp_modules.<pkg>`; `uv_build` builds it with a dotted
@@ -1254,6 +1255,45 @@ anything a second app would otherwise duplicate in `src/shared.py`; the per-app
 `states` dict, `state_message`, any ticker, and command dispatch deliberately
 stay per-package, so each api reads top-to-bottom.
 
+## The documentation site
+
+`mkdocs.yml` at the root builds the site published at
+`https://p-swamp.github.io/p-SWAMP/` (MkDocs, Material theme, styled like
+LazyCIM's). `doc/project/deploying-docs.md` is the account; the rules to keep:
+
+- **`docs_dir` is `doc/`**: the folder the documentation always lived in, so
+  every path cited here and in the READMEs stays valid. `doc/WIP-*.md`,
+  `doc/includes/` and the ADR template are kept off the site (`exclude_docs`).
+- **Write for the page's reader.** Home, Getting started (`doc/start/`) and
+  Concepts (`doc/concepts/`) are for someone who is not a software engineer:
+  no code jargon, every power-system term explained on first use. The
+  developer pages stay as they are.
+- **A module's documentation lives with the module**, and the site collects it
+  with no edit (`tools/docs_site/gen_pages.py`): its README is its overview
+  page, an optional `modules/<name>/docs/` folder adds pages and images (in the
+  order of a `docs/SUMMARY.md`, else alphabetical; `index.md` and `api.md` are
+  taken), and its API page is generated from its docstrings and its messages'.
+  So a module README must read well on its own. **`doc/modules/index.md` says
+  in plain words what each module is for**; a module it does not link fails the
+  strict build. `pswamp new module` adds the line; reword it.
+- **Links are written as on GitHub**, relative to the file. A hook
+  (`tools/docs_site/hooks.py`) resolves each against the file it was written
+  in (`tools/docs_site/layout.py` is the one table of which file becomes which
+  page) and points it at the page on the site, or at the file on GitHub for
+  code and for pages kept off the site. Don't hard-code site URLs between pages.
+- **Docstrings are Google style** (`Args:`, `Returns:`, `Raises:`), read
+  statically by mkdocstrings. RST literal blocks (`Example::` and an indented
+  block) are fenced as code at build time (`tools/docs_site/rst_literals.py`),
+  so they need no rewriting. The core's reference pages are hand-written stubs
+  in `doc/reference/python/` (add a `:::` line for a new core module); the
+  messages' and the Web API's are generated.
+- **`uv run pswamp docs build`** (strict) before finishing a change to the
+  docs, a module README or a docstring; `pswamp docs serve` previews on :8001.
+  The builders are the `docs` dependency group of `pswamp-tools`, installed by
+  the command and never by `uv sync`, and never in the image.
+- **Material for MkDocs reaches end of life on 2027-05-05**; its successor is
+  Zensical. The move is planned in `doc/project/deploying-docs.md`.
+
 ## Common commands
 
 Dev (each command is the stable interface and live-reloads; they hide the
@@ -1379,7 +1419,8 @@ uv run pswamp test server # the server, models, core, modules and tools unit tes
 uv run pswamp test module frame-stats # one module project's tests (modules/<name>/tests/)
 uv run pswamp test desktop   # the desktop package's tests (desktop/tests/) in its `full` env; needs Kafka/NQKafka/MQTT/Qt infra — run deliberately, not in CI.
 uv run pswamp test smoke | playwright   # the real container: wire-level smoke test, browser specs (need docker or podman)
-uv run pswamp check-generators        # both generators, in a throwaway worktree: their output passes pswamp check and its tests
+uv run pswamp check-generators        # both generators, in a throwaway worktree: their output passes pswamp check, its tests and the docs build
+uv run pswamp docs serve|build        # the documentation site: live preview on :8001; strict build into site/, as CI does
 uv run pswamp pipelines validate      # load and check every pipelines/*.toml (or the files given), as the server and workers do
 uv run pswamp modules list            # every installed module (pswamp.modules entry points): reads, emits, commands, distribution
 KAFKA_TEST_BOOTSTRAP_SERVERS=127.0.0.1:19092 uv run pswamp test server -k kafka   # the transport suite against the compose broker (docker compose up -d kafka)
@@ -1641,7 +1682,7 @@ mind when editing that command (`tools/src/pswamp_tools/commands/deploy.py`):
   of `uv run pswamp` (`tools/`): `check`, `api generate`, `test
   server|module|desktop|smoke|playwright`, `new subapp|module`, `modules list`,
   `pipelines validate`, `check-generators`, `dev server|client`, `deploy
-  minikube|logs`, `deps update`. **`uv run pswamp --help` and each group's
+  minikube|logs`, `deps update`, `docs serve|build`. **`uv run pswamp --help` and each group's
   `--help` are the reference** — the help text is the documentation, so change it
   with the command. Don't add shell scripts (the one-line `.githooks/pre-push`,
   which Git for Windows runs through its bundled sh, is the exception).
@@ -1660,8 +1701,8 @@ mind when editing that command (`tools/src/pswamp_tools/commands/deploy.py`):
   lesson from the old scripts still holds: a check that *silently does nothing* is
   worse than one that fails, so prefer a construct that errors loudly to one that
   degrades.
-- **A module folder holds only `pyproject.toml`, `README.md`, `src/`, `tests/` and
-  `examples/`; its messages live in `pswamp_models`, never in the module; test
+- **A module folder holds only `pyproject.toml`, `README.md`, `src/`, `tests/`,
+  `examples/` and an optional `docs/`; its messages live in `pswamp_models`, never in the module; test
   file basenames are unique repo-wide.** Details under "The Python projects in
   one repo"; all three are enforced by tests, not by good intentions.
 - **A new module or source comes from the generator.** `uv run pswamp new module`
@@ -1687,7 +1728,7 @@ mind when editing that command (`tools/src/pswamp_tools/commands/deploy.py`):
 
 ## CI
 
-**Two workflows under `.github/workflows/`, one per concern:**
+**Three workflows under `.github/workflows/`, one per concern:**
 
 - **`quality-checks.yml`** runs on every pull request (and from the Actions tab):
   four independent merge gates, `dependency-review`, `static-errorcheck`,
@@ -1721,6 +1762,12 @@ mind when editing that command (`tools/src/pswamp_tools/commands/deploy.py`):
   its pull request; a branch built by hand has passed only the `/healthz` check.
   Its job is `build-container`; it needs no secret, since the automatic
   `GITHUB_TOKEN` with `packages: write` covers GHCR.
+- **`docs.yml`** builds the documentation site (`pswamp docs build`, strict) on
+  every pull request and attaches it as the `site-preview` artifact; on a push
+  to `main` its `deploy-docs` job publishes that build to GitHub Pages
+  (`actions/deploy-pages`; the repo's Pages source must be "GitHub Actions").
+  `build-docs` is not a required check yet. The site is public, unlike the
+  image.
 
 A branch with no PR open runs nothing on its own.
 

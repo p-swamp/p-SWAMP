@@ -35,7 +35,7 @@ and installs it through an extra of its own, rather than importing it:
 `frame-stats/examples/rtsim_frame_stats.py` runs `frame-stats` over the live grid
 simulation of Nordic44, in an embedded Oxigraph store of the script's own.
 
-Each module folder holds exactly:
+Each module folder holds:
 
 ```
 modules/<name>/
@@ -45,7 +45,13 @@ modules/<name>/
                               pswamp_modules is a PEP 420 namespace)
   tests/           its tests
   examples/        runnable scripts using it with no server
+  docs/            optional: pages of its own on the documentation site
 ```
+
+The documentation site gives each module a section: its README as the
+overview, the pages of its `docs/` folder if it has one (in the order of a
+`docs/SUMMARY.md`, or alphabetical), and an API reference generated from its
+docstrings.
 
 ## Rules
 

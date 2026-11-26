@@ -1,0 +1,204 @@
+site_name: p-SWAMP
+site_description: >-
+  Power Stability Wide Area Monitoring and Protection: a platform for
+  developing and testing WAMPAC applications on synchrophasor (PMU) data.
+site_author: p-SWAMP contributors
+
+# The address is case-sensitive on GitHub Pages. It affects the canonical links
+# and the sitemap only. doc/project/deploying-docs.md lists every place it is
+# written, which have to change together if it moves.
+site_url: https://p-swamp.github.io/p-SWAMP/
+
+repo_url: https://github.com/p-swamp/p-SWAMP
+repo_name: p-swamp/p-SWAMP
+edit_uri: edit/main/doc/
+
+copyright: >-
+  Apache-2.0. p-SWAMP is hosted by
+  <a href="https://lfenergy.org/">LF Energy</a>.
+
+# The site is built from doc/, the folder the repository's documentation has
+# always lived in, so every path AGENTS.md and the READMEs cite stays valid.
+docs_dir: doc
+
+# Kept in the repository, kept off the site: working notes that are meant to be
+# deleted, and the ADR template. (The nav files literate-nav reads, SUMMARY.md,
+# are kept off by tools/docs_site/hooks.py: most are generated, after this
+# list is applied.)
+exclude_docs: |
+  WIP-*.md
+  includes/
+  adr/template.md
+  api/openapi.json
+
+theme:
+  name: material
+  custom_dir: doc/overrides
+  logo: assets/swamp-icon-color.svg
+  favicon: assets/swamp-icon-color.svg
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.top
+    - navigation.indexes
+    - navigation.tracking
+    - content.code.copy
+    - content.code.annotate
+    - content.tabs.link
+    - content.action.edit
+    - search.suggest
+    - search.highlight
+    - toc.follow
+  icon:
+    repo: fontawesome/brands/github
+
+extra_css:
+  - stylesheets/lfenergy.css
+
+markdown_extensions:
+  - abbr
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+  - pymdownx.inlinehilite
+  # Every page gets the shared abbreviations, so "PMU" explains itself on hover.
+  - pymdownx.snippets:
+      auto_append:
+        - doc/includes/abbreviations.md
+  - pymdownx.keys
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+
+hooks:
+  # Points each relative link at the page on the site, or at the file on GitHub.
+  - tools/docs_site/hooks.py
+
+# Sources outside doc/ that the site is built from, so `pswamp docs serve`
+# rebuilds when one of them changes.
+watch:
+  - tools/docs_site
+  - modules
+  - tools/README.md
+  - k8s/README.md
+
+plugins:
+  - search
+  # Publishes the pages that live elsewhere in the repo (tools/docs_site/layout.py).
+  - gen-files:
+      scripts:
+        - tools/docs_site/gen_pages.py
+  # Lets the nav below name a folder (adr/, modules/) and take its pages from
+  # that folder's SUMMARY.md, which gen_pages.py writes.
+  - literate-nav
+  # The API reference, read from the docstrings (statically: nothing is
+  # imported). pswamp_modules is a namespace package spread over every module's
+  # src/, which the glob collects.
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: [core/src, models/src, modules/*/src]
+          options:
+            # RST literal blocks ("Example::" and an indented block) read as
+            # running text in Markdown; this fences them as they load.
+            extensions:
+              - tools/docs_site/rst_literals.py:RstLiterals
+            docstring_style: google
+            show_source: true
+            show_root_heading: false
+            show_root_full_path: false
+            show_symbol_type_heading: true
+            show_symbol_type_toc: true
+            members_order: source
+            separate_signature: true
+            signature_crossrefs: true
+            merge_init_into_class: true
+            filters: ["!^_"]
+  # The web api's REST operations, rendered from the committed contract
+  # (doc/api/openapi.json) at build time: static, searchable, no script.
+  - neoteroi.mkdocsoad:
+      use_pymdownx: true
+
+nav:
+  - Home: index.md
+  - Getting started:
+      - What you need: start/what-you-need.md
+      - Start it: start/first-run.md
+      - A tour: start/tour.md
+      - From a script: start/from-a-script.md
+  - Concepts:
+      - Wide area monitoring: concepts/wampac.md
+      - How p-SWAMP works: concepts/how-it-works.md
+      - Glossary: concepts/glossary.md
+  - Modules: modules/
+  - For developers:
+      - The client-server rig: client-server-rig.md
+      - The server data architecture: server-data-architecture.md
+      - The module cookbook: module-cookbook.md
+      - Keeping a time window in a module: module-time-window-notes.md
+      - The client-server API: the-client-server-api.md
+      - The remote data contract: remote-data-integration-contract.md
+      - Module projects: developers/module-projects.md
+      - The pswamp command line: developers/cli.md
+      - Deploying on Kubernetes: developers/deploying.md
+      - Architecture decisions: adr/
+  - Reference:
+      - Python API:
+          - reference/python/index.md
+          - Modules: reference/python/core-modules.md
+          - Sources: reference/python/core-sources.md
+          - Pipelines: reference/python/core-pipelines.md
+          - Transport: reference/python/core-transport.md
+          - The CIM graph: reference/python/core-cim.md
+          - Scripts and testing: reference/python/core-scripts-testing.md
+          - Messages: reference/python/models/
+      - Web API: reference/web-api.md
+  - Project:
+      - Contributing: project/contributing.md
+      - About: project/about.md
+      - Contributors: project/contributors.md
+      - Data licensing: project/data-licensing.md
+      - How the core contributors work together: how-the-core-contributors-work-together.md
+      - Dependency licences: dependency-license-inventory.md
+      - Licence and vulnerability checks: dependency-license-and-vulnerability-checks.md
+      - How this site is built: project/deploying-docs.md
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/p-swamp/p-SWAMP
+      name: p-SWAMP on GitHub
+    - icon: fontawesome/solid/bolt
+      link: https://lfenergy.org/
+      name: LF Energy
