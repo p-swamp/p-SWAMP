@@ -44,6 +44,11 @@ class Engine:
     def compose_cmd(self, *args: str) -> list[str]:
         return [*self.compose, *args]
 
+    def up_supports_wait(self) -> bool:
+        """Whether ``compose up`` takes ``--wait`` (podman-compose does not)."""
+        works, output = _answers(self.compose_cmd("up", "--help"))
+        return works and "--wait" in output
+
 
 def _answers(argv: list[str]) -> tuple[bool, str]:
     """Whether ``argv`` runs and exits 0, plus its combined output."""
