@@ -36,6 +36,7 @@ from ._proc import capture, require_tool, run, uv_server
 
 DEFAULT_URL = "http://127.0.0.1:8000"
 HEALTHZ_ATTEMPTS = 30
+STARTUP_ATTEMPTS = 120
 IMAGE = "p-swamp:latest"
 
 
@@ -141,6 +142,23 @@ def server_logs(engine: Engine) -> None:
     run(engine.compose_cmd("logs", "--tail", "50", "server"), cwd=repo_root())
 
 
+def compose_up(engine: Engine, base: str, env: dict[str, str] | None = None) -> int:
+    """Build and start the stack from scratch and wait until the server is healthy; the exit code.
+
+    --build and --force-recreate because compose otherwise reuses a stale image or container.
+    --wait blocks until the compose healthchecks pass; a compose without it (podman-compose)
+    is followed by polling ``/healthz`` instead, for as long as a cold start takes.
+    """
+    wait = engine.up_supports_wait()
+    argv = engine.compose_cmd("up", "-d", "--build", "--force-recreate", *(["--wait"] if wait else []))
+    code = run(argv, cwd=repo_root(), env=env)
+    if code == 0 and not wait:
+        _ui.info("This compose has no `up --wait`: waiting for /healthz instead…")
+        if not wait_for_healthz(base, attempts=STARTUP_ATTEMPTS):
+            return 1
+    return code
+
+
 def unreachable_hint(base: str, engine: Engine | None) -> str:
     hint = f"the server did not answer on {base}/healthz after {HEALTHZ_ATTEMPTS}s."
     if engine is not None and engine.is_podman:
@@ -176,10 +194,8 @@ def smoke(url: str | None) -> int:
             _ui.info("Clearing any running p-swamp containers…")
             teardown(engine)
             _ui.info("Starting the compose server from scratch (builds the image)…")
-            # --wait blocks until the compose healthcheck passes; --build and
-            # --force-recreate because compose otherwise reuses a stale image or container.
             started = True
-            code = run(engine.compose_cmd("up", "-d", "--build", "--force-recreate", "--wait"), cwd=repo_root())
+            code = compose_up(engine, base)
             if code != 0:
                 _ui.error("the server did not come up (`compose up` failed)")
                 server_logs(engine)

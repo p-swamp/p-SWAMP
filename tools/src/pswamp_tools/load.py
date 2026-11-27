@@ -34,7 +34,7 @@ from . import _ui
 from ._docker import ContainerToolMissing, Engine, find_engine
 from ._paths import repo_root, server_dir
 from ._proc import capture, require_tool, run, uv_server
-from .smoke import DEFAULT_URL, http_get, server_logs, teardown, unreachable_hint, wait_for_healthz
+from .smoke import DEFAULT_URL, compose_up, http_get, server_logs, teardown, unreachable_hint, wait_for_healthz
 
 CAP_VARIABLE = "PMU_TEST_STREAMER_MAX_RUNS"
 DRIVER = "loadtest_pmu_test_streamer.py"
@@ -416,11 +416,7 @@ def load(
             teardown(engine)
             _ui.info(f"Starting the compose stack from scratch (builds the image), {CAP_VARIABLE}={cap}…")
             started = True
-            code = run(
-                engine.compose_cmd("up", "-d", "--build", "--force-recreate", "--wait"),
-                cwd=repo_root(),
-                env={CAP_VARIABLE: str(cap)},
-            )
+            code = compose_up(engine, base, env={CAP_VARIABLE: str(cap)})
             if code != 0:
                 _ui.error("the stack did not come up (`compose up` failed)")
                 server_logs(engine)

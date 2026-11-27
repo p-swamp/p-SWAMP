@@ -38,9 +38,11 @@ def test_it_is_configured_from_its_env_block(monkeypatch):
     monkeypatch.setenv("T", "kafka:pswamp_core.transport.kafka:KafkaTransport")
     monkeypatch.setenv("KAFKA_BOOTSTRAP_SERVERS", "a:9092, b:9092")
     monkeypatch.setenv("KAFKA_REPLICATION_FACTOR", "3")
+    monkeypatch.setenv("KAFKA_MAX_BATCH_SIZE", "65536")
     transport = transport_from_env("T")
     assert isinstance(transport, KafkaTransport)
     assert transport.bootstrap_servers == ["a:9092", "b:9092"] and transport.replication_factor == 3
+    assert transport.max_batch_size == 65536
     monkeypatch.delenv("KAFKA_BOOTSTRAP_SERVERS")
     with pytest.raises(MissingSettingError):
         transport_from_env("T")

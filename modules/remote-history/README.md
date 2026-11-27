@@ -21,15 +21,39 @@ named `remote`; a script passes keywords):
 | Setting | | |
 |---|---|---|
 | `url` | required | Base URL of the service, `http://remote-data:8100` |
-| `timeout` | `30` | Seconds to wait for an answer to start, and for each line |
+| `timeout` | `30` | Seconds to wait for an answer to start, and for the lines of each timestamp |
 | `coverage_timeout` | `10` | Seconds to wait for the coverage, which a seek and a switch to this source wait on |
 | `page` | `30000` | Records per query; a full page is followed by the next |
 | `gap` | `1` | Seconds without frames that the player crosses at once and reports (every playable source has it) |
 
-`coverage` is `GET /v1/coverage?model=pmu.frame`; `read` is `POST /v1/queries`,
-a page of at most `page` records at a time, whose NDJSON answer is read a line
+`coverage` is `GET /v1/coverage` and returns a `TimeRange` (or `None`);
+`read` is `POST /v1/queries`, whose NDJSON answer is read a line
 at a time, so closing the stream early (a seek) closes the connection, which is
-the service's cue to stop. A full page is followed by a query from one
+the service's cue to stop. Each record describes one station at one timestamp,
+ordered by timestamp then station. Consecutive records with equal `msg.ts` are
+combined into one `PmuFrame`; the last group is emitted on the terminal `end`
+line. Frames use a 20 ms interval (50 Hz) and station IDs as labels. Each station
+contributes six columns, computed here from its record; the individual phasors
+are not passed on:
+
+| Measurement | Unit | From |
+|---|---|---|
+| `f`, `df` | Hz, Hz/s | the record's `frequency` and `rocof` |
+| `P`, `Q` | MW, Mvar | what passes the station: for each feeder (the current phasors of one station, level and bank whose names differ only by phase), `P = V·I·cos(a)` and `Q = V·I·sin(a)` with the voltage of the same station, level and phase and `a` the voltage angle minus the current angle, summed over the phases. The station's value is the larger of the feeders' positive and negative sums, so the direction the current is counted in does not matter. Voltage is phase to neutral. Empty without a feeder |
+| `v_dev` | % | the voltage magnitude furthest from the nominal `kv/√3` of its level, signed |
+| `VUF` | % | voltage unbalance factor: negative-sequence over positive-sequence voltage; the worst of the levels with all three phases |
+
+The sequences assume the usual rotation: L2 lags L1 by 120°, L3 leads it by 120°.
+A phasor with magnitude 0 is taken as missing and left out of every column.
+
+The service is trusted: a line is decoded by `msgspec` straight into the fields the source
+uses, with no pydantic model per record (the largest cost of reading). `msgspec` checks the
+types of those fields, ignores the others, and does not check what they mean. A line that
+lacks a field the source uses, has one of the wrong type, or has an unknown `kind` fails the
+stream naming the request and the line.
+
+A page includes every station at its final timestamp, even if this exceeds
+`page`. A full page is followed by a query from one
 microsecond after its last record, so a gap of weeks costs one query. A paused
 replay reads nothing and is not timed out.
 
@@ -58,10 +82,12 @@ its end, so the source holds no connection between reads.
     uv run python modules/remote-history/examples/read_remote.py --url http://127.0.0.1:8100
 
 The remote data stub (`examples/remote_data_stub/`, `python -m remote_data_stub` with
-`examples/` on the `PYTHONPATH`) is a service to try it against: it serves the records of any
-history source, `sample-replay` by default (`REMOTE_DATA_STUB_SOURCE=name:entry-point`).
+`examples/` on the `PYTHONPATH`) is a service to try it against: it generates two
+synthetic stations at 50 Hz over the coverage of a history source,
+`sample-replay` by default (`REMOTE_DATA_STUB_SOURCE=name:entry-point`).
 Compose and k8s run it with `history:synthetic-history`: a year with outages, as
-a long-term store would hold.
+a long-term store would hold. It yields the NDJSON lines for all stations at a
+timestamp together, without changing the one-record-per-line format.
 
 ## Tests
 

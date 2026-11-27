@@ -157,6 +157,84 @@ async def eventually(condition, timeout: float = 2.0) -> None:
     await asyncio.wait_for(poll(), timeout)
 
 
+class Overlapping(InMemoryTransport):
+    """Takes every message at once, and delivers it when the test says."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.handed: list = []
+        self.pending: list[asyncio.Future] = []
+
+    async def send(self, message, *, app, key):
+        future = asyncio.get_running_loop().create_future()
+        self.handed.append(message)
+        self.pending.append(future)
+        return future
+
+
+async def test_data_is_handed_over_without_waiting_for_each_acknowledgement():
+    broker = Overlapping()
+    outbox = Outbox(broker, app="a", key="k")
+    outbox.start()
+    messages = [measurement(i) for i in range(5)]
+    for message in messages:
+        outbox.publish(message)
+    await eventually(lambda: len(broker.handed) == 5)  # none acknowledged yet
+    assert broker.handed == messages and outbox.published == 0
+    for future in broker.pending:
+        future.set_result(None)
+    await eventually(lambda: outbox.published == 5)
+    assert (outbox.failed, outbox.dropped) == (0, 0)
+    await outbox.close()
+
+
+async def test_a_message_the_broker_fails_to_deliver_is_counted_and_dropped():
+    broker = Overlapping()
+    outbox = Outbox(broker, app="a", key="k")
+    outbox.start()
+    for i in range(3):
+        outbox.publish(measurement(i))
+    await eventually(lambda: len(broker.pending) == 3)
+    broker.pending[0].set_result(None)
+    broker.pending[1].set_exception(ConnectionError("broker down"))
+    broker.pending[2].set_result(None)
+    await eventually(lambda: outbox.published + outbox.failed == 3)
+    assert (outbox.published, outbox.failed) == (2, 1)
+    await outbox.close()
+
+
+async def test_the_outbox_waits_when_its_in_flight_limit_is_reached(monkeypatch):
+    monkeypatch.setattr(transport_module, "_MAX_IN_FLIGHT", 2)
+    broker = Overlapping()
+    outbox = Outbox(broker, app="a", key="k")
+    outbox.start()
+    for i in range(4):
+        outbox.publish(measurement(i))
+    await eventually(lambda: len(broker.handed) == 2)
+    await asyncio.sleep(0.05)
+    assert len(broker.handed) == 2  # the others wait for room
+    broker.pending[0].set_result(None)
+    await eventually(lambda: len(broker.handed) == 3)
+    for future in broker.pending[1:]:
+        future.set_result(None)
+    await eventually(lambda: len(broker.handed) == 4)
+    broker.pending[3].set_result(None)
+    await eventually(lambda: outbox.published == 4)
+    await outbox.close()
+
+
+async def test_closing_the_outbox_waits_for_what_is_in_flight():
+    broker = Overlapping()
+    outbox = Outbox(broker, app="a", key="k")
+    outbox.start()
+    outbox.publish(measurement(1))
+    await eventually(lambda: broker.pending)
+    asyncio.get_running_loop().call_later(0.05, broker.pending[0].set_result, None)
+    began = asyncio.get_running_loop().time()
+    await outbox.close()
+    assert asyncio.get_running_loop().time() - began >= 0.04 and outbox.published == 1
+
+
 async def test_the_outbox_publishes_a_command_again_until_the_transport_takes_it(monkeypatch):
     monkeypatch.setattr(transport_module, "_RETRY_S", 0.01)
     broker, undelivered = Refusing(refusals=2), []

@@ -4,8 +4,9 @@
 #
 # A member of the uv workspace rooted at the repo root (one uv.lock there). It
 # depends on pswamp-core and pswamp-models and nothing else in this repo, plus
-# httpx for the service's REST contract; it never imports the web backend or the
-# desktop package (tools/tests/test_tools_layering.py checks both).
+# httpx for the service's REST contract, and msgspec for fast decoding; it never
+# imports the web backend or the desktop package (tools/tests/test_tools_layering.py
+# checks both).
 #
 # The package is a portion of the pswamp_modules namespace (PEP 420): there is
 # deliberately no src/pswamp_modules/__init__.py, so every module project adds
@@ -18,7 +19,12 @@ description = "The remote history source (remote-history): a history served by a
 readme = "README.md"
 license = "Apache-2.0"
 requires-python = ">=3.12"
-dependencies = ["pswamp-core", "pswamp-models", "httpx>=0.28,<1"]
+dependencies = [
+    "pswamp-core",
+    "pswamp-models",
+    "httpx>=0.28,<1",
+    "msgspec>=0.19,<1",
+]
 
 # How a pipeline finds the source by name: the entry point's name is the
 # source's `name` (what a pipeline file's [[sources]] `module` says).

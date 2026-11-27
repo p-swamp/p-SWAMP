@@ -241,7 +241,12 @@ The deployment picks the implementation with `PSWAMP_TRANSPORT`
 (`name:module.path:Class`, plus that name's `{NAME}_{SETTING}` variables).
 Unset, it is the `InMemoryTransport`. The player and modules publish
 synchronously into an `Outbox`, which sends in order and, when full, drops the
-oldest data message, but never a command, an answer to one, or an error. One
+oldest data message, but never a command, an answer to one, or an error. It hands
+data to the transport with `Transport.send`, which returns once the transport has
+taken the message and gives the delivery as a future, so up to 64 data messages
+are in flight at once and a broker's round trip does not cap the rate (the
+default `send` publishes and waits, as the in-memory transport does). A command,
+an answer or an error is published with `publish`, which waits. One
 of those the transport refuses is sent again until 10 s after it was queued
 (`CONTROL_DEADLINE_S`), then given up and reported.
 
@@ -272,7 +277,11 @@ in the order it was sent: a pause then a play sent meanwhile arrive in that
 order. A broker that lost its topics
 (a new one, with no volume) is noticed on both sides, and the topics are made
 again: a failed publish makes its topic on the next try, and the consumer
-checks every 2 s that the topics it holds still exist. Compose runs the broker as
+checks every 2 s that the topics it holds still exist. The producer
+(aiokafka) has one request in flight to a broker at a time, so throughput is
+the messages packed into a request per round trip: `KAFKA_MAX_BATCH_SIZE`
+(default 256 KiB, aiokafka's own is 16 KiB) is how much of a topic's backlog one
+request carries, which matters when a frame is large. Compose runs the broker as
 `kafka` (Apache Kafka, one KRaft node, no volume).
 
 *Where.* `core/src/pswamp_core/transport/`, `subscription.py`, `settings.py`
@@ -732,7 +741,12 @@ each input had been in flight when read (transports stamp the send time,
 `pswamp_models.common.sent_at`, never on the wire). Past the module's `keep_up` policy (by
 default any drop, or input older than 2 s), it reports once on falling behind,
 at most every 5 s while behind, and once on catching up. A run's outbox does
-the same when it has to drop what it cannot publish.
+the same when it has to drop what it cannot publish, and its report adds where
+the time goes: how long its last data messages took to be acknowledged (median,
+95th percentile, maximum), the transport's own steps (Kafka: serialising,
+handing over to the producer, waiting for the acknowledgement), how many are in
+flight of the 64 allowed (at the limit the outbox waits and its queue fills), and
+how late the event loop wakes a task that asked for 50 ms.
 
 *Why.* Dropping stale frames is right for a live stream, and silent. Under
 load, that silence hides exactly what an operator needs to know. The reports

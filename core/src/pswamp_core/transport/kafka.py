@@ -34,8 +34,11 @@
   consumer checks every ``_TOPIC_CHECK_S`` that the topics it holds still
   exist, and reopens if not; assigning, it asks the broker which exist rather
   than trusting what this process made, and makes the others again.
-- **Backpressure.** ``publish`` waits for the broker's acknowledgement, so a
-  slow broker backs up into the caller's ``Outbox``, which drops old data.
+- **Backpressure.** ``publish`` waits for the broker's acknowledgement. ``send``
+  hands a message over without waiting and returns the acknowledgement as a
+  future: the ``Outbox`` sends its data that way, with a bounded number in
+  flight, so the broker's round trip does not cap the rate, and a broker too
+  slow for that backs up into the ``Outbox``, which drops old data.
 
 Needs the ``kafka`` extra. aiokafka is imported where it is used, so naming
 this class costs nothing without it.
@@ -46,6 +49,7 @@ from __future__ import annotations
 import asyncio
 import heapq
 import time
+from collections import deque
 from collections.abc import Sequence
 from typing import TYPE_CHECKING, Any
 
@@ -53,12 +57,12 @@ from pswamp_models.common import Command, stamp_sent_at
 
 from ..log import get_logger
 from ..settings import EnvSetting
-from . import _CONTROL, Transport
+from . import _CONTROL, Transport, _percentiles
 
 if TYPE_CHECKING:
     from pswamp_models.common import DataModel
 
-__all__ = ["LIVE_TOPIC_CONFIGS", "KafkaTransport"]
+__all__ = ["DEFAULT_MAX_BATCH_SIZE", "LIVE_TOPIC_CONFIGS", "KafkaTransport"]
 
 logger = get_logger("pswamp_core.transport.kafka")
 
@@ -80,6 +84,15 @@ _RECONNECT_DELAY, _MAX_RECONNECT_DELAY = 1.0, 30.0
 #: How often the consumer checks that the topics it holds still exist.
 _TOPIC_CHECK_S = 2.0
 
+#: How many publishes' step times the transport keeps, for the outbox's drop report.
+_TIMED_PUBLISHES = 512
+
+#: aiokafka's producer sends one request at a time to a broker, carrying one batch per
+#: topic. Its own batch size is 16 KiB: a frame that is a good part of that fills the
+#: batch, and the next waits for the request in flight. Held to 256 KiB, well under
+#: the broker's default message limit (about 1 MiB), a request carries several frames.
+DEFAULT_MAX_BATCH_SIZE = 256 * 1024
+
 
 class KafkaTransport(Transport):
     """Keyed publish/subscribe over a Kafka broker. See the module docstring."""
@@ -87,6 +100,13 @@ class KafkaTransport(Transport):
     env_settings = (
         EnvSetting("BOOTSTRAP_SERVERS", "Broker addresses, e.g. kafka:9092", required=True, kind="list"),
         EnvSetting("REPLICATION_FACTOR", "For the topics this transport creates", default="1", kind="int"),
+        EnvSetting(
+            "MAX_BATCH_SIZE",
+            "Bytes the producer packs into one batch per topic. The producer has one request to a "
+            "broker in flight at a time, so a message that fills a batch waits for the one before it",
+            default=str(DEFAULT_MAX_BATCH_SIZE),
+            kind="int",
+        ),
     )
 
     def __init__(
@@ -95,10 +115,12 @@ class KafkaTransport(Transport):
         bootstrap_servers: str | Sequence[str] = "localhost:9092",
         *,
         replication_factor: int = 1,
+        max_batch_size: int = DEFAULT_MAX_BATCH_SIZE,
     ) -> None:
         super().__init__(name)
         self.bootstrap_servers = bootstrap_servers if isinstance(bootstrap_servers, str) else list(bootstrap_servers)
         self.replication_factor = replication_factor
+        self.max_batch_size = max_batch_size
         self._producer: Any | None = None
         self._admin: Any | None = None
         self._open_lock = asyncio.Lock()
@@ -109,6 +131,11 @@ class KafkaTransport(Transport):
         #: consumer resumes.
         self._resume_at: dict[str, int] = {}
         self._consumer_task: asyncio.Task | None = None
+        #: How long each step of the last publishes took (seconds), and how big each message was (bytes).
+        self._steps: dict[str, deque[float]] = {
+            name: deque(maxlen=_TIMED_PUBLISHES) for name in ("serialise", "hand over", "ack")
+        }
+        self._sizes: deque[int] = deque(maxlen=_TIMED_PUBLISHES)
 
     async def open(self) -> None:
         async with self._open_lock:
@@ -116,10 +143,14 @@ class KafkaTransport(Transport):
                 return
             from aiokafka import AIOKafkaProducer
 
-            producer = AIOKafkaProducer(bootstrap_servers=self.bootstrap_servers, request_timeout_ms=10_000)
+            producer = AIOKafkaProducer(
+                bootstrap_servers=self.bootstrap_servers,
+                request_timeout_ms=10_000,
+                max_batch_size=self.max_batch_size,
+            )
             await producer.start()
             self._producer = producer
-            logger.info("%s: connected to %s", self.name, self.bootstrap_servers)
+            logger.info("%s: connected to %s (batches up to %d bytes)", self.name, self.bootstrap_servers, self.max_batch_size)
 
     async def close(self) -> None:
         task, self._consumer_task = self._consumer_task, None
@@ -137,16 +168,50 @@ class KafkaTransport(Transport):
         if admin is not None:
             await admin.close()
 
-    async def publish(self, message: DataModel, *, app: str, key: str) -> None:
+    async def send(self, message: DataModel, *, app: str, key: str) -> asyncio.Future[None]:
+        """Hand ``message`` to the producer and return its acknowledgement, which the
+        broker resolves later: calls made in order are sent in order."""
         if self._producer is None:
             await self.open()
         topic = self.topic(type(message), app)
         await self._create(topic)
+        began = time.perf_counter()
         try:
-            await self._producer.send_and_wait(topic, value=message.model_dump_json().encode(), key=key.encode())
+            value = message.model_dump_json().encode()
+            serialised = time.perf_counter()
+            pending = await self._producer.send(topic, value=value, key=key.encode())
         except Exception:
             self._created.discard(topic)  # it may be gone: make it again on the next try
             raise
+        handed_over = time.perf_counter()
+        self._steps["serialise"].append(serialised - began)
+        self._steps["hand over"].append(handed_over - serialised)
+        self._sizes.append(len(value))
+
+        def acknowledged(done: asyncio.Future) -> None:
+            if done.cancelled():
+                return
+            if done.exception() is not None:
+                self._created.discard(topic)  # as above
+            else:
+                self._steps["ack"].append(time.perf_counter() - handed_over)
+
+        pending.add_done_callback(acknowledged)
+        return pending
+
+    async def publish(self, message: DataModel, *, app: str, key: str) -> None:
+        pending = await self.send(message, app=app, key=key)
+        await pending  # the broker's acknowledgement
+
+    def timing(self) -> str | None:
+        if not self._steps["ack"]:
+            return None
+        steps = []
+        for name, seconds in self._steps.items():
+            median, p95, _ = _percentiles(seconds)
+            steps.append(f"{name} {median:.1f}/{p95:.1f}")
+        size_median, size_p95, _ = _percentiles(self._sizes, scale=1 / 1024)
+        return f"{', '.join(steps)} ms median/p95; message {size_median:.0f}/{size_p95:.0f} KiB median/p95"
 
     async def _create(self, topic: str) -> None:
         """Create ``topic`` if the broker lacks it. A refusal is logged and left
