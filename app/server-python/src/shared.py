@@ -34,8 +34,8 @@ which every app over a core pipeline uses:
 
     transport()           the process's transport, from PSWAMP_TRANSPORT
     app_pipeline(app)     an app's pipeline, from pipelines/<app>.toml
-    run_registry(...)     an app's runs, one per client, each reporting what it cannot
-                          put on the transport straight to the tray
+    run_registry(...)     an app's runs, one per client, at most <APP>_MAX_RUNS (8), each
+                          reporting what it cannot put on the transport straight to the tray
     serve_pipeline(...)   an app's lifespan: its shared live runs, its errors
                           forwarded to the tray, its modules hosted here when the
                           transport is in-memory, and every run stopped on the way out
@@ -59,6 +59,7 @@ from pydantic import BaseModel
 from pswamp_core.command_routing import CommandRefused, NoReceiver
 from pswamp_core.host import serve_hosts
 from pswamp_core.pipeline import CapacityError, Pipeline, PipelineRegistry, PipelineRun, start_live_runs
+from pswamp_core.settings import env_key
 from pswamp_core.subscription import Overflow
 from pswamp_core.transport import Transport, transport_from_env
 from pswamp_core.util.tasks import cancel_and_wait
@@ -199,10 +200,31 @@ async def lifespan(app: FastAPI):
             await closing.close()
 
 
+#: Runs an app keeps at once when ``<APP>_MAX_RUNS`` is unset.
+DEFAULT_MAX_RUNS = 8
+
+
+def max_runs(app: str) -> int:
+    """The app's run cap: ``<APP>_MAX_RUNS`` (``PMU_TEST_STREAMER_MAX_RUNS``),
+    else ``DEFAULT_MAX_RUNS``. Raises ``ValueError`` for anything but a
+    positive integer, at import of the app's package, so the server does not start."""
+    variable = env_key(app, "MAX_RUNS")
+    value = os.environ.get(variable, "").strip()
+    if not value:
+        return DEFAULT_MAX_RUNS
+    if not value.isdigit() or int(value) < 1:
+        raise ValueError(f"{variable} must be a positive whole number of runs, not {value!r}")
+    logger.info("%s: at most %s runs (%s)", app, value, variable)
+    return int(value)
+
+
 def run_registry(pipeline: Pipeline, **options) -> PipelineRegistry[PipelineRun]:
     """An app's runs, one per client, over the process's transport. What a
     run cannot put on the transport (a command not delivered in time) goes to
-    the client's tray directly. ``options`` go to ``PipelineRegistry``."""
+    the client's tray directly. ``options`` go to ``PipelineRegistry``; the
+    cap is ``<APP>_MAX_RUNS`` (``max_runs``) unless they give ``max_runs``."""
+    if "max_runs" not in options:
+        options["max_runs"] = max_runs(pipeline.app)
     registry: PipelineRegistry[PipelineRun] = PipelineRegistry(
         lambda client_id: PipelineRun(client_id, pipeline, transport(), on_error=report), **options
     )
