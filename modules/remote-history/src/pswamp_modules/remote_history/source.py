@@ -20,7 +20,8 @@ and knows nothing of the store::
   queries and a gap of weeks costs none. The connection paces the service, and
   closing the stream early (a seek) closes the connection, which is the
   service's cue to stop.
-- ``TIMEOUT`` bounds the wait for a response to start and for each line;
+- ``TIMEOUT`` bounds the wait for a response to start and for the lines of each
+  stream chunk;
   a paused replay reads nothing and is not timed out.
 - ``COVERAGE_TIMEOUT`` bounds the coverage call, which a seek and a switch
   to this source wait on.
@@ -36,15 +37,17 @@ from __future__ import annotations
 
 import asyncio
 import cmath
+import collections
 import contextlib
 import itertools
 import math
 from collections.abc import AsyncIterator, AsyncGenerator
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any
 from uuid import uuid4
 
 import httpx
+import msgspec
 
 from pswamp_core.time_range import TimeRange
 from pswamp_core.playable import Playable
@@ -52,20 +55,52 @@ from pswamp_core.settings import EnvSetting
 from pswamp_core.sources import SourceModule
 from pswamp_core.util.time import ensure_utc
 from pswamp_models.pmu import PmuFrame, PmuHeader
-from pswamp_models.remote_data import (
-    RemoteDataQuery,
-    RESULT_ADAPTER,
-    ErrorResponse,
-    ErrorMessage,
-    EndResponse,
-    Phasor,
-    RecordResponse,
-    RecordMessage,
-)
+from pswamp_models.remote_data import Phasor, RecordMessage, RemoteDataQuery
 
 __all__ = ["RemoteHistory"]
 
 _MICROSECOND = timedelta(microseconds=1)
+
+
+# Use msgspec as c json parser instead of pydantic for performance
+class _Phasor(msgspec.Struct):
+    name: str
+    station: str
+    kv: int
+    phase: str
+    kind: str
+    magnitude: float
+    angle: float
+    bank: str | None = None
+class _Record(msgspec.Struct):
+    ts: datetime
+    id: str
+    frequency: float
+    rocof: float
+    phasors: list[_Phasor]
+class _RecordLine(msgspec.Struct, tag_field="kind", tag="record"):
+    msg: _Record
+
+
+class _EndBody(msgspec.Struct):
+    count: int
+class _EndLine(msgspec.Struct, tag_field="kind", tag="end"):
+    msg: _EndBody
+
+
+class _ErrorBody(msgspec.Struct):
+    message: str
+class _ErrorLine(msgspec.Struct, tag_field="kind", tag="error"):
+    msg: _ErrorBody
+
+
+_LINE = msgspec.json.Decoder(_RecordLine | _EndLine | _ErrorLine)
+
+
+# The summaries below take either, by attribute: what is read off the wire, and the models.
+PhasorLike = Phasor | _Phasor
+RecordLike = RecordMessage | _Record
+
 
 #: What each station contributes to a frame: (measurement, unit).
 _STATION_COLUMNS = (
@@ -82,16 +117,16 @@ _STATION_COLUMNS = (
 _PHASE_OFFSET_DEG = {"L1": 0.0, "L2": -120.0, "L3": 120.0}
 
 
-def _voltage_groups(phasors: list[Phasor]) -> list[tuple[int, dict[str, Phasor]]]:
+def _voltage_groups(phasors: list[PhasorLike]) -> list[tuple[int, dict[str, PhasorLike]]]:
     """The voltage phasors by station, level and bank: ``(kv, {phase: phasor})`` each."""
-    groups: dict[tuple, tuple[int, dict[str, Phasor]]] = {}
+    groups: dict[tuple, tuple[int, dict[str, PhasorLike]]] = {}
     for phasor in phasors:
         if phasor.kind == "U":
             groups.setdefault((phasor.station, phasor.kv, phasor.bank), (phasor.kv, {}))[1][phasor.phase] = phasor
     return list(groups.values())
 
 
-def _sequences(group: dict[str, Phasor]) -> tuple[complex, complex] | None:
+def _sequences(group: dict[str, PhasorLike]) -> tuple[complex, complex] | None:
     """The positive and the negative sequence phasor (V, phase to neutral) of a complete
     group, with the service's phase rotation as the positive one; ``None`` if a phase is missing."""
     if group.keys() != _PHASE_OFFSET_DEG.keys():
@@ -105,7 +140,7 @@ def _sequences(group: dict[str, Phasor]) -> tuple[complex, complex] | None:
     return positive / 3, negative / 3
 
 
-def _voltage_unbalance(phasors: list[Phasor]) -> float | None:
+def _voltage_unbalance(phasors: list[PhasorLike]) -> float | None:
     """Percent: negative-sequence over positive-sequence voltage; the worst of the levels."""
     ratios = []
     for _, group in _voltage_groups(phasors):
@@ -115,7 +150,7 @@ def _voltage_unbalance(phasors: list[Phasor]) -> float | None:
     return max(ratios, default=None)
 
 
-def _voltage_deviation(phasors: list[Phasor]) -> float | None:
+def _voltage_deviation(phasors: list[PhasorLike]) -> float | None:
     """Percent by which a voltage magnitude (V, phase to neutral) misses the nominal
     ``kv / sqrt(3)`` of its level; the one furthest off, with its sign."""
     return max(
@@ -126,13 +161,13 @@ def _voltage_deviation(phasors: list[Phasor]) -> float | None:
     )
 
 
-def _feeder_flows(phasors: list[Phasor]) -> list[tuple[float, float]]:
+def _feeder_flows(phasors: list[PhasorLike]) -> list[tuple[float, float]]:
     """Three-phase active (MW) and reactive (Mvar) power of each feeder: each of its current
     phasors with the voltage phasor of the same station, level and phase (the first, if
     several), ``P = V I cos(a)`` and ``Q = V I sin(a)`` with ``a`` the voltage angle minus
     the current angle, summed over the phases. A feeder is the current phasors of one station,
     level and bank whose names differ only by phase."""
-    voltages: dict[tuple, Phasor] = {}
+    voltages: dict[tuple, PhasorLike] = {}
     for phasor in phasors:
         if phasor.kind == "U":
             voltages.setdefault((phasor.station, phasor.kv, phasor.phase), phasor)
@@ -156,7 +191,7 @@ def _through(flows: list[float]) -> float:
     return max(sum(f for f in flows if f > 0), -sum(f for f in flows if f < 0))
 
 
-def _power(phasors: list[Phasor]) -> tuple[float | None, float | None]:
+def _power(phasors: list[PhasorLike]) -> tuple[float | None, float | None]:
     """Active (MW) and reactive (Mvar) power through the station; ``None`` without a feeder."""
     flows = _feeder_flows(phasors)
     if not flows:
@@ -173,7 +208,7 @@ class RemoteHistory(Playable, SourceModule):
     outputs = (PmuFrame,)
     env_settings = (
         EnvSetting("URL", "Base URL of the remote data service, e.g. http://remote-data:8100", required=True),
-        EnvSetting("TIMEOUT", "Seconds to wait for an answer to start, and for each line", default="30", kind="seconds"),
+        EnvSetting("TIMEOUT", "Seconds to wait for an answer to start, and for the lines of each timestamp", default="30", kind="seconds"),
         EnvSetting("COVERAGE_TIMEOUT", "Seconds to wait for the coverage, which a seek waits on", default="10", kind="seconds"),
         EnvSetting("PAGE", "Records per query; a full page is followed by the next", default="30000", kind="int"),
     )
@@ -243,23 +278,17 @@ class RemoteHistory(Playable, SourceModule):
                 )
                 received = 0
                 last: datetime | None = None
-                group: list[RecordMessage] = []
                 wanted = TimeRange(page_start, window.end)  # a service may send more; it is dropped
                 # aclosing: a stream closed early (a seek) closes this page's connection at once.
-                async with contextlib.aclosing(self._records(http, page_id, query)) as records:
-                    async for record in records:
-                        received += 1
-                        timestamp = ensure_utc(record.msg.ts)
+                async with contextlib.aclosing(self._groups(http, page_id, query)) as groups:
+                    async for records in groups:
+                        received += len(records)
+                        timestamp = records[0].ts
                         if last is not None and timestamp < last:
                             raise RuntimeError(f"{self.source}: records are not in timestamp order")
-                        if group and timestamp != last:
-                            if wanted.contains(ensure_utc(group[0].ts)):
-                                yield self._frame(group)
-                            group = []
                         last = timestamp
-                        group.append(record.msg)
-                if group and wanted.contains(ensure_utc(group[0].ts)):
-                    yield self._frame(group)
+                        if wanted.contains(timestamp):
+                            yield self._frame(records)
                 if received < self.page or last is None:
                     return  # the service has no more
                 following = last + _MICROSECOND
@@ -270,13 +299,20 @@ class RemoteHistory(Playable, SourceModule):
                 page_start = following
 
 
-    async def _records(
+    async def _groups(
         self,
         http: Any,
         request_id: str,
         query: RemoteDataQuery,
-    ) -> AsyncIterator[RecordResponse]:
-        """One page, finishing the last timestamp even if it exceeds the limit."""
+    ) -> AsyncIterator[list[_Record]]:
+        """One page as the records of each timestamp, finishing the last timestamp even if it
+        exceeds the limit. The lines are decoded by msgspec into the fields the source uses, with
+        no model per record: the service is trusted for what the fields mean, and a line that does
+        not fit what is read of it fails the stream.
+
+        ``TIMEOUT`` bounds the lines of one timestamp (a frame), not each line: arming it per
+        line was a noticeable part of the cost of reading. It never spans a ``yield``, which a
+        paused replay may hold for as long as it likes."""
         request = http.build_request(
             "POST", "/v1/queries", json=query.model_dump(mode="json"),
             headers={"x-request-id": request_id}, timeout=httpx.Timeout(self.timeout, read=None)
@@ -292,37 +328,75 @@ class RemoteHistory(Playable, SourceModule):
             if response.status_code != 200:
                 await response.aread()
                 raise RuntimeError(f"{self.source}: query refused: HTTP {response.status_code} {response.text[:200]}")
-            lines = response.aiter_lines()
+            chunks = response.aiter_bytes()
+            ready: collections.deque[bytes] = collections.deque()  # whole lines, not yet read
+            pending = b""  # the start of a line whose end has not arrived
+            exhausted = False
             sent = 0
-            last: datetime | None = None
-            while True:
-                try:
-                    async with asyncio.timeout(self.timeout):
-                        line = await anext(lines)
-                except StopAsyncIteration:
-                    raise RuntimeError(
-                        f"{self.source}: the answer to request {request_id} stopped without an end line"
-                    ) from None
-                if not line.strip():
-                    continue
-                result = RESULT_ADAPTER.validate_json(line)
-                match result:
-                    case EndResponse():
-                        return
-                    case ErrorResponse(msg=ErrorMessage(message=message)):
-                        raise RuntimeError(f"{self.source}: request {request_id} failed at the service: {message}")
-                    case RecordResponse():
-                        timestamp = ensure_utc(result.msg.ts)
-                        if query.limit is not None and sent >= query.limit and timestamp != last:
-                            return  # the service ignored the limit
+            carried: _Record | None = None  # the first record of the next timestamp
+            finished = False
+            while not finished:
+                group: list[_Record] = [] if carried is None else [carried]
+                sent += len(group)
+                carried = None
+                async with asyncio.timeout(self.timeout):
+                    while True:
+                        # Lines are cut here out of the chunks as they arrive (one chunk may hold
+                        # several lines, or end in the middle of one), which is cheaper than
+                        # httpx's text decoding and line splitting: the lines go to msgspec as bytes.
+                        while not ready:
+                            if exhausted:
+                                raise RuntimeError(f"{self.source}: the answer to request {request_id} stopped without an end line")
+                            try:
+                                chunk = await anext(chunks)
+                            except StopAsyncIteration:
+                                exhausted = True
+                                ready.append(pending)  # a last line with no newline
+                                pending = b""
+                                continue
+                            *complete, pending = (pending + chunk).split(b"\n")
+                            ready.extend(complete)
+                        line = ready.popleft()
+                        if not line.strip():
+                            continue
+                        record = self._parse(line, request_id)
+                        if record is None:  # the end line
+                            finished = True
+                            break
+                        if group and record.ts != group[0].ts:
+                            if query.limit is not None and sent >= query.limit:
+                                finished = True  # the service ignored the limit
+                            else:
+                                carried = record
+                            break
+                        group.append(record)
                         sent += 1
-                        last = timestamp
-                        yield result
+                if group:
+                    yield group
         finally:
             await response.aclose()  # closing early closes the connection: the service stops
 
 
-    def _frame(self, records: list[RecordMessage]) -> PmuFrame:
+    def _parse(self, line: bytes, request_id: str) -> _Record | None:
+        """A record line as a ``_Record``; ``None`` for the end line; an error line fails the stream."""
+        try:
+            result = _LINE.decode(line)
+        except msgspec.DecodeError as error:
+            raise RuntimeError(
+                f"{self.source}: request {request_id}: a line the contract does not describe "
+                f"({error}): {line[:200].decode('utf-8', 'replace')}"
+            ) from error
+        if isinstance(result, _RecordLine):
+            record = result.msg
+            if record.ts.tzinfo is not timezone.utc:
+                record.ts = ensure_utc(record.ts)
+            return record
+        if isinstance(result, _ErrorLine):
+            raise RuntimeError(f"{self.source}: request {request_id} failed at the service: {result.msg.message}")
+        return None
+
+
+    def _frame(self, records: list[RecordLike]) -> PmuFrame:
         measurements = [m for m, _ in _STATION_COLUMNS]
         units = [u for _, u in _STATION_COLUMNS]
         station: list[str] = []

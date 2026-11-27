@@ -21,7 +21,7 @@ named `remote`; a script passes keywords):
 | Setting | | |
 |---|---|---|
 | `url` | required | Base URL of the service, `http://remote-data:8100` |
-| `timeout` | `30` | Seconds to wait for an answer to start, and for each line |
+| `timeout` | `30` | Seconds to wait for an answer to start, and for the lines of each timestamp |
 | `coverage_timeout` | `10` | Seconds to wait for the coverage, which a seek and a switch to this source wait on |
 | `page` | `30000` | Records per query; a full page is followed by the next |
 | `gap` | `1` | Seconds without frames that the player crosses at once and reports (every playable source has it) |
@@ -45,6 +45,12 @@ are not passed on:
 
 The sequences assume the usual rotation: L2 lags L1 by 120°, L3 leads it by 120°.
 A phasor with magnitude 0 is taken as missing and left out of every column.
+
+The service is trusted: a line is decoded by `msgspec` straight into the fields the source
+uses, with no pydantic model per record (the largest cost of reading). `msgspec` checks the
+types of those fields, ignores the others, and does not check what they mean. A line that
+lacks a field the source uses, has one of the wrong type, or has an unknown `kind` fails the
+stream naming the request and the line.
 
 A page includes every station at its final timestamp, even if this exceeds
 `page`. A full page is followed by a query from one
@@ -80,7 +86,8 @@ The remote data stub (`examples/remote_data_stub/`, `python -m remote_data_stub`
 synthetic stations at 50 Hz over the coverage of a history source,
 `sample-replay` by default (`REMOTE_DATA_STUB_SOURCE=name:entry-point`).
 Compose and k8s run it with `history:synthetic-history`: a year with outages, as
-a long-term store would hold.
+a long-term store would hold. It yields the NDJSON lines for all stations at a
+timestamp together, without changing the one-record-per-line format.
 
 ## Tests
 

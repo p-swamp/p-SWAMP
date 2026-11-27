@@ -33,7 +33,10 @@ def main() -> int:
     if not (issubclass(cls, SourceModule) and cls.kind == "history"):
         print(f"REMOTE_DATA_STUB_SOURCE: {entry!r} is not a history source", file=sys.stderr)
         return 2
-    uvicorn.run(create_app(cls.from_env(name)), host="0.0.0.0", port=int(os.environ.get("REMOTE_DATA_STUB_PORT", "8100")))
+    uvicorn.run(
+        create_app(cls.from_env(name), stations=122),
+        host="0.0.0.0", port=int(os.environ.get("REMOTE_DATA_STUB_PORT", "8100")),
+    )
     return 0
 
 

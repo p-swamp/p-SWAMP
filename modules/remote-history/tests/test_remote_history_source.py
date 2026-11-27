@@ -314,6 +314,27 @@ async def test_the_stub_sends_a_page_and_its_end():
     assert [r.msg.id for r in results[:-1]] == ["NO 12345", "NO 54321"] * 3
 
 
+async def test_the_stub_yields_one_chunk_per_timestamp():
+    from fastapi import Request
+    from pswamp_models.remote_data import RemoteDataQuery
+
+    app = create_app(Served("served"), stations=3)
+    endpoint = next(route.endpoint for route in app.routes if route.path == "/v1/queries")
+    response = await endpoint(
+        RemoteDataQuery(start=T0, end=FRAMES[3].timestamp, limit=4),
+        Request({"type": "http", "headers": [(b"x-request-id", b"q")]}),
+    )
+    chunks = [chunk async for chunk in response.body_iterator]
+    assert len(chunks) == 3
+    records = [[json.loads(line) for line in chunk.splitlines()] for chunk in chunks[:2]]
+    for i, group in enumerate(records):
+        assert [datetime.fromisoformat(row["msg"]["ts"].replace("Z", "+00:00")) for row in group] == [FRAMES[i].timestamp] * 3
+        assert [row["msg"]["id"] for row in group] == ["NO 12345", "NO 20000", "NO 54321"]
+    assert [row["seq"] for group in records for row in group] == list(range(1, 7))
+    end = json.loads(chunks[-1])
+    assert (end["kind"], end["seq"], end["msg"]["count"]) == ("end", 7, 6)
+
+
 @pytest.mark.parametrize("request_id", ["caller-request.1", None])
 async def test_the_stub_echoes_or_generates_a_request_id(request_id):
     from uuid import UUID

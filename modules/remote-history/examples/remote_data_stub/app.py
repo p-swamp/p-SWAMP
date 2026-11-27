@@ -41,10 +41,35 @@ logger = get_logger("remote-data-stub")
 STREAM_HEADERS = {"X-Accel-Buffering": "no", "Cache-Control": "no-cache"}
 
 
-def create_app(source: SourceModule) -> FastAPI:
+#: The two stations ``RecordResponse.test_record`` knows; any further station is a relabelled copy of one.
+BASE_STATIONS = ("NO 12345", "NO 54321")
+
+
+def station_ids(count: int) -> list[str]:
+    """``count`` station ids: the two base stations, then copies named ``NO 20000``, ``NO 20001``, ..."""
+    return [*BASE_STATIONS, *(f"NO {20000 + n}" for n in range(max(count - len(BASE_STATIONS), 0)))][:count]
+
+
+def _record(request_id: str, ts: datetime, seq: int, station_id: str, index: int) -> RecordResponse:
+    if station_id in BASE_STATIONS:
+        return RecordResponse.test_record(request_id, ts, seq, station_id=station_id)
+    record = RecordResponse.test_record(request_id, ts, seq, station_id=BASE_STATIONS[index % len(BASE_STATIONS)])
+    tag = station_id.replace(" ", "")
+    phasors = [
+        phasor.model_copy(
+            update={"station": tag, "name": phasor.name.replace(f"{phasor.kv}_{phasor.station}", f"{phasor.kv}_{tag}", 1)}
+        )
+        for phasor in record.msg.phasors
+    ]
+    msg = record.msg.model_copy(update={"id": station_id, "name": f"{station_id} stasjon", "phasors": phasors})
+    return record.model_copy(update={"msg": msg})
+
+
+def create_app(source: SourceModule, *, stations: int = len(BASE_STATIONS)) -> FastAPI:
     # A set of one reads the source as the core does: opened on first use, a
     # record without a timestamp dropped, nothing at or past the range's end.
     sources = SourceSet([source])
+    all_stations = station_ids(stations)
 
     @contextlib.asynccontextmanager
     async def lifespan(app: FastAPI):
@@ -73,6 +98,7 @@ def create_app(source: SourceModule) -> FastAPI:
             "stations": [
                 {"id": "NO 12345", "name": "NO 12345 stasjon AB3"},
                 {"id": "NO 54321", "name": "NO 54321 stasjon BA1"},
+                *({"id": station, "name": f"{station} stasjon"} for station in all_stations[len(BASE_STATIONS):]),
             ],
         }
 
@@ -95,7 +121,7 @@ def create_app(source: SourceModule) -> FastAPI:
     async def answer(request_id: str, query: RemoteDataQuery) -> AsyncIterator[bytes]:
         logger.info(f"query {request_id}: {query.stations} [{query.start}, {query.end}) limit {query.limit}")
 
-        stations = sorted(query.stations if query.stations is not None else ["NO 12345", "NO 54321"])
+        stations = sorted(query.stations if query.stations is not None else all_stations)
 
         step = timedelta(milliseconds=20)
         seq = 1
@@ -112,14 +138,12 @@ def create_app(source: SourceModule) -> FastAPI:
                 steps, remainder = divmod(start - held.start, step)
                 ts = held.start + (steps + bool(remainder)) * step
             while ts is not None and end is not None and ts < end and stations:
-                for station in stations:
-                    yield RecordResponse.test_record(
-                        request_id,
-                        ts,
-                        seq,
-                        station_id=station,
-                    ).to_line()
-                    seq += 1
+                # every station at a timestamp is sent, even past the limit
+                yield b"".join(
+                    _record(request_id, ts, seq + index, station, index).to_line()
+                    for index, station in enumerate(stations)
+                )
+                seq += len(stations)
                 if query.limit is not None and seq > query.limit:
                     break
                 ts += step
