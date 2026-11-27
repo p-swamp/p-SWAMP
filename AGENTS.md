@@ -1514,8 +1514,8 @@ keeps playing until it is evicted (five minutes), and would load the next level.
 A warm-up comes first, judged on nothing (`--warmup`, 15 s; 0: none): it waits
 until the CIM graph is loaded and the live grid is streaming, which the server
 does in the background after `/healthz` answers, then plays one client, so the
-server's start-up stays out of the first level. It runs on Nordic44, in CI too
-(no `PSWAMP_CIM_PATH`, unlike the other jobs), so the live grid's cost is measured.
+server's start-up stays out of the first level. It runs on Nordic44 unless
+`PSWAMP_CIM_PATH` says otherwise, so the live grid's cost is measured.
 
 Note the api-contract check is the one step that needs the **full server
 environment** rather than just the pinned linter, because it imports the FastAPI
@@ -1754,14 +1754,11 @@ mind when editing that command (`tools/src/pswamp_tools/commands/deploy.py`):
 
 - **`quality-checks.yml`** runs on every pull request (and from the Actions tab):
   four independent merge gates, `dependency-review`, `static-errorcheck`,
-  `unit-tests` and `e2e-smoke-test`, and three more jobs: `playwright-e2e`, which
+  `unit-tests` and `e2e-smoke-test`, and two more jobs: `playwright-e2e`, which
   runs once the last two pass (the Playwright specs against the compose stack:
-  the server, Kafka and both workers), **`windows-checks`**, which runs
+  the server, Kafka and both workers), and **`windows-checks`**, which runs
   `uv run pswamp check` and `uv run pswamp test server` on `windows-latest`, so
-  that the CLI's Windows promise is enforced rather than hoped for, and
-  **`load-test`**, which runs `uv run pswamp test load --clients 8` on the
-  compose stack once every other job has finished, whatever their result
-  (`needs` all six, `if: !cancelled()`). None is
+  that the CLI's Windows promise is enforced rather than hoped for. Neither is
   yet a required check. Every job drives the repo through the `pswamp` CLI. The
   workflow publishes nothing. `dependency-review` checks only dependency changes
   between the pull request's base and head, using
