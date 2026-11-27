@@ -38,7 +38,8 @@ test.describe('PMU test streamer', () => {
   test('opens paused on the recording, with the CIM reference and module results', async ({ page }) => {
     await open(page)
     await expect(page.getByText(/^Recorded · Paused$/)).toBeVisible()
-    await expect(page.getByRole('row')).toHaveCount(6) // five stations
+    // the frame table, not the column legend in the page header: a header row and five stations
+    await expect(page.locator('table[data-slot="table"]').getByRole('row')).toHaveCount(6)
     await expect(page.getByText(/^CIM reference: (?!none$)\S+$/)).toBeVisible() // the grid in the CIM graph
     await expect(page.getByTestId('stats-readout')).toHaveText(/^mean f \d+\.\d{4} Hz · .* · 5 stations$/)
     await expect(page.getByTestId('excursion-readout')).toContainText('in band')
